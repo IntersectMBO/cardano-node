@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- | This module exports the 'Config' datatype, which you can use to configure</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- the Snap HTTP server.</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Snap.Http.Server.Config</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#Config"><span class="hs-identifier">Config</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#ConfigLog"><span class="hs-identifier">ConfigLog</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#ProxyType"><span class="hs-identifier">ProxyType</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#emptyConfig"><span class="hs-identifier">emptyConfig</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#defaultConfig"><span class="hs-identifier">defaultConfig</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#commandLineConfig"><span class="hs-identifier">commandLineConfig</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#extendedCommandLineConfig"><span class="hs-identifier">extendedCommandLineConfig</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#completeConfig"><span class="hs-identifier">completeConfig</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#optDescrs"><span class="hs-identifier">optDescrs</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#fmapOpt"><span class="hs-identifier">fmapOpt</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getAccessLog"><span class="hs-identifier">getAccessLog</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getBind"><span class="hs-identifier">getBind</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getCompression"><span class="hs-identifier">getCompression</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getDefaultTimeout"><span class="hs-identifier">getDefaultTimeout</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getErrorHandler"><span class="hs-identifier">getErrorHandler</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getErrorLog"><span class="hs-identifier">getErrorLog</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getHostname"><span class="hs-identifier">getHostname</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getLocale"><span class="hs-identifier">getLocale</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getOther"><span class="hs-identifier">getOther</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getPort"><span class="hs-identifier">getPort</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getProxyType"><span class="hs-identifier">getProxyType</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getSSLBind"><span class="hs-identifier">getSSLBind</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getSSLCert"><span class="hs-identifier">getSSLCert</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getSSLKey"><span class="hs-identifier">getSSLKey</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getSSLChainCert"><span class="hs-identifier">getSSLChainCert</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getSSLPort"><span class="hs-identifier">getSSLPort</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getVerbose"><span class="hs-identifier">getVerbose</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getStartupHook"><span class="hs-identifier">getStartupHook</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getUnixSocket"><span class="hs-identifier">getUnixSocket</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getUnixSocketAccessMode"><span class="hs-identifier">getUnixSocketAccessMode</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setAccessLog"><span class="hs-identifier">setAccessLog</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setBind"><span class="hs-identifier">setBind</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setCompression"><span class="hs-identifier">setCompression</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setDefaultTimeout"><span class="hs-identifier">setDefaultTimeout</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setErrorHandler"><span class="hs-identifier">setErrorHandler</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setErrorLog"><span class="hs-identifier">setErrorLog</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setHostname"><span class="hs-identifier">setHostname</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setLocale"><span class="hs-identifier">setLocale</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setOther"><span class="hs-identifier">setOther</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setPort"><span class="hs-identifier">setPort</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setProxyType"><span class="hs-identifier">setProxyType</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setSSLBind"><span class="hs-identifier">setSSLBind</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setSSLCert"><span class="hs-identifier">setSSLCert</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setSSLKey"><span class="hs-identifier">setSSLKey</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setSSLChainCert"><span class="hs-identifier">setSSLChainCert</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setSSLPort"><span class="hs-identifier">setSSLPort</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setVerbose"><span class="hs-identifier">setVerbose</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setUnixSocket"><span class="hs-identifier">setUnixSocket</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setUnixSocketAccessMode"><span class="hs-identifier">setUnixSocketAccessMode</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#setStartupHook"><span class="hs-identifier">setStartupHook</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#StartupInfo"><span class="hs-identifier">StartupInfo</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getStartupSockets"><span class="hs-identifier">getStartupSockets</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#getStartupConfig"><span class="hs-identifier">getStartupConfig</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Proxy protocol selection</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Http.Server.Config.html#noProxy"><span class="hs-identifier">noProxy</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Http.Server.Config.html#xForwardedFor"><span class="hs-identifier">xForwardedFor</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Http.Server.Config.html#haProxy"><span class="hs-identifier">haProxy</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html"><span class="hs-identifier">Snap.Internal.Http.Server.Config</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-76"></span><span class="annot"><span class="hs-comment">-- | Configure Snap in direct / non-proxying mode.</span></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Snap.Http.Server.Config.html#noProxy"><span class="hs-identifier hs-type">noProxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#ProxyType"><span class="hs-identifier hs-type">ProxyType</span></a></span><span>
+</span><span id="line-78"></span><span id="noProxy"><span class="annot"><span class="annottext">noProxy :: ProxyType
+</span><a href="Snap.Http.Server.Config.html#noProxy"><span class="hs-identifier hs-var hs-var">noProxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProxyType
+</span><a href="Snap.Internal.Http.Server.Config.html#NoProxy"><span class="hs-identifier hs-var">NoProxy</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- | Assert that Snap is running behind an HTTP proxy, and that the proxied</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- connection information will be stored in the \&quot;X-Forwarded-For\&quot; or</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- \&quot;Forwarded-For\&quot; HTTP headers.</span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Snap.Http.Server.Config.html#xForwardedFor"><span class="hs-identifier hs-type">xForwardedFor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#ProxyType"><span class="hs-identifier hs-type">ProxyType</span></a></span><span>
+</span><span id="line-86"></span><span id="xForwardedFor"><span class="annot"><span class="annottext">xForwardedFor :: ProxyType
+</span><a href="Snap.Http.Server.Config.html#xForwardedFor"><span class="hs-identifier hs-var hs-var">xForwardedFor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProxyType
+</span><a href="Snap.Internal.Http.Server.Config.html#X_Forwarded_For"><span class="hs-identifier hs-var">X_Forwarded_For</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- | Assert that Snap is running behind a proxy running the HaProxy protocol</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- (see &lt;http://haproxy.1wt.eu/download/1.5/doc/proxy-protocol.txt&gt;).</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- In this mode connections that don't obey the proxy protocol are rejected.</span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Snap.Http.Server.Config.html#haProxy"><span class="hs-identifier hs-type">haProxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Config.html#ProxyType"><span class="hs-identifier hs-type">ProxyType</span></a></span><span>
+</span><span id="line-93"></span><span id="haProxy"><span class="annot"><span class="annottext">haProxy :: ProxyType
+</span><a href="Snap.Http.Server.Config.html#haProxy"><span class="hs-identifier hs-var hs-var">haProxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProxyType
+</span><a href="Snap.Internal.Http.Server.Config.html#HaProxy"><span class="hs-identifier hs-var">HaProxy</span></a></span><span>
+</span><span id="line-94"></span></pre></body></html>

@@ -1,0 +1,1032 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.UI.Threepenny.Internal</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Synopsis</span></span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-comment">-- | Internal core:</span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-comment">-- 'UI' monad, integrating FRP and JavaScript FFI. garbage collection</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Documentation</span></span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier">Window</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#disconnect"><span class="hs-identifier">disconnect</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#startGUI"><span class="hs-identifier">startGUI</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#loadFile"><span class="hs-identifier">loadFile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#loadDirectory"><span class="hs-identifier">loadDirectory</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier">UI</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#runUI"><span class="hs-identifier">runUI</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#MonadUI"><span class="hs-identifier">MonadUI</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#liftIOLater"><span class="hs-identifier">liftIOLater</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier">askWindow</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier">liftJSWindow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#FFI"><span class="hs-identifier">FFI</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#FromJS"><span class="hs-identifier">FromJS</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#ToJS"><span class="hs-identifier">ToJS</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#JSFunction"><span class="hs-identifier">JSFunction</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier">JSObject</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier">ffi</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier">runFunction</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#callFunction"><span class="hs-identifier">callFunction</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Foreign.JavaScript.Types.html#CallBufferMode"><span class="hs-identifier">CallBufferMode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#setCallBufferMode"><span class="hs-identifier">setCallBufferMode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#flushCallBuffer"><span class="hs-identifier">flushCallBuffer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#ffiExport"><span class="hs-identifier">ffiExport</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#debug"><span class="hs-identifier">debug</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#timestamp"><span class="hs-identifier">timestamp</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier">Element</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier">toJSObject</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#fromJSObject"><span class="hs-identifier">fromJSObject</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#getWindow"><span class="hs-identifier">getWindow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#mkElementNamespace"><span class="hs-identifier">mkElementNamespace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#mkElement"><span class="hs-identifier">mkElement</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#delete"><span class="hs-identifier">delete</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#appendChild"><span class="hs-identifier">appendChild</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#clearChildren"><span class="hs-identifier">clearChildren</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#EventData"><span class="hs-identifier">EventData</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier">domEvent</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#unsafeFromJSON"><span class="hs-identifier">unsafeFromJSON</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html"><span class="hs-identifier">Control.Monad.Catch</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.Fix.html"><span class="hs-identifier">Control.Monad.Fix</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html"><span class="hs-identifier">Control.Monad.Trans.RWS.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Monad</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Dynamic.html"><span class="hs-identifier">Data.Dynamic</span></a></span><span>                          </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>              </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Foreign.JavaScript.html"><span class="hs-identifier">Foreign.JavaScript</span></a></span><span>      </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JS</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Foreign.RemotePtr.html"><span class="hs-identifier">Foreign.RemotePtr</span></a></span><span>       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Foreign.html"><span class="hs-identifier">Foreign</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html"><span class="hs-identifier">Reactive.Threepenny</span></a></span><span>     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">RB</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Foreign.JavaScript.html"><span class="hs-identifier">Foreign.JavaScript</span></a></span><span> </span><span class="hs-keyword">hiding</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Foreign.JavaScript.html#runFunction"><span class="hs-identifier">runFunction</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.html#callFunction"><span class="hs-identifier">callFunction</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html#setCallBufferMode"><span class="hs-identifier">setCallBufferMode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html#flushCallBuffer"><span class="hs-identifier">flushCallBuffer</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span class="annot"><a href="Foreign.JavaScript.Types.html#debug"><span class="hs-identifier">debug</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#timestamp"><span class="hs-identifier">timestamp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier">Window</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Server.html#loadFile"><span class="hs-identifier">loadFile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Server.html#loadDirectory"><span class="hs-identifier">loadDirectory</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Custom Window type
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-44"></span><span class="annot"><span class="hs-comment">-- | The type 'Window' represents a browser window.</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">data</span><span> </span><span id="Window"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-var">Window</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Window"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-var">Window</span></a></span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="jsWindow"><span class="annot"><span class="annottext">Window -&gt; Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#jsWindow"><span class="hs-identifier hs-var hs-var">jsWindow</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">JS.Window</span></a></span><span>  </span><span class="hs-comment">-- JavaScript window</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="eDisconnect"><span class="annot"><span class="annottext">Window -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#eDisconnect"><span class="hs-identifier hs-var hs-var">eDisconnect</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">RB.Event</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- event that happens when client disconnects</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="wEvents"><span class="annot"><span class="annottext">Window -&gt; Vendor Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#wEvents"><span class="hs-identifier hs-var hs-var">wEvents</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.RemotePtr.html#Vendor"><span class="hs-identifier hs-type">Foreign.Vendor</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Events"><span class="hs-identifier hs-type">Events</span></a></span><span>
+</span><span id="line-49"></span><span>                     </span><span class="hs-comment">-- events associated to 'Element's</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="wChildren"><span class="annot"><span class="annottext">Window -&gt; Vendor ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#wChildren"><span class="hs-identifier hs-var hs-var">wChildren</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.RemotePtr.html#Vendor"><span class="hs-identifier hs-type">Foreign.Vendor</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>                     </span><span class="hs-comment">-- children reachable from 'Element's</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><span class="hs-comment">-- | Start server for GUI sessions.</span></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#startGUI"><span class="hs-identifier hs-type">startGUI</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span>               </span><span class="annot"><span class="hs-comment">-- ^ Server configuration.</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Action to run whenever a client browser connects.</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span id="startGUI"><span class="annot"><span class="annottext">startGUI :: Config -&gt; (Window -&gt; UI ()) -&gt; IO ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#startGUI"><span class="hs-identifier hs-var hs-var">startGUI</span></a></span></span><span> </span><span id="local-6989586621679116267"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679116267"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679116268"><span class="annot"><span class="annottext">Window -&gt; UI ()
+</span><a href="#local-6989586621679116268"><span class="hs-identifier hs-var">initialize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Config -&gt; (Window -&gt; IO ()) -&gt; IO ()
+</span><a href="Foreign.JavaScript.html#serve"><span class="hs-identifier hs-var">JS.serve</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679116267"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; IO ()) -&gt; (Window -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116270"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116270"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- set up disconnect event</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679116271"><span class="annot"><span class="annottext">Event ()
+</span><a href="#local-6989586621679116271"><span class="hs-identifier hs-var">eDisconnect</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679116272"><span class="annot"><span class="annottext">Handler ()
+</span><a href="#local-6989586621679116272"><span class="hs-identifier hs-var">handleDisconnect</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Event (), Handler ())
+forall a. IO (Event a, Handler a)
+</span><a href="Reactive.Threepenny.html#newEvent"><span class="hs-identifier hs-var">RB.newEvent</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; IO () -&gt; IO ()
+</span><a href="Foreign.JavaScript.Types.html#onDisconnect"><span class="hs-identifier hs-var">JS.onDisconnect</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116270"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Handler ()
+</span><a href="#local-6989586621679116272"><span class="hs-identifier hs-var">handleDisconnect</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- make window</span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679116275"><span class="annot"><span class="annottext">Vendor Events
+</span><a href="#local-6989586621679116275"><span class="hs-identifier hs-var">wEvents</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Vendor Events)
+forall a. IO (Vendor a)
+</span><a href="Foreign.RemotePtr.html#newVendor"><span class="hs-identifier hs-var">Foreign.newVendor</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679116277"><span class="annot"><span class="annottext">Vendor ()
+</span><a href="#local-6989586621679116277"><span class="hs-identifier hs-var">wChildren</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Vendor ())
+forall a. IO (Vendor a)
+</span><a href="Foreign.RemotePtr.html#newVendor"><span class="hs-identifier hs-var">Foreign.newVendor</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679116278"><span class="annot"><span class="annottext">window :: Window
+</span><a href="#local-6989586621679116278"><span class="hs-identifier hs-var hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">jsWindow :: Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#jsWindow"><span class="hs-identifier hs-var">jsWindow</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116270"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-69"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">eDisconnect :: Event ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#eDisconnect"><span class="hs-identifier hs-var">eDisconnect</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event ()
+</span><a href="#local-6989586621679116271"><span class="hs-identifier hs-var">eDisconnect</span></a></span><span>
+</span><span id="line-70"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">wEvents :: Vendor Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#wEvents"><span class="hs-identifier hs-var">wEvents</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vendor Events
+</span><a href="#local-6989586621679116275"><span class="hs-identifier hs-var">wEvents</span></a></span><span>
+</span><span id="line-71"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">wChildren :: Vendor ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#wChildren"><span class="hs-identifier hs-var">wChildren</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vendor ()
+</span><a href="#local-6989586621679116277"><span class="hs-identifier hs-var">wChildren</span></a></span><span>
+</span><span id="line-72"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- run initialization</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; UI () -&gt; IO ()
+forall a. Window -&gt; UI a -&gt; IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#runUI"><span class="hs-identifier hs-var">runUI</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116278"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">(UI () -&gt; IO ()) -&gt; UI () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; UI ()
+</span><a href="#local-6989586621679116268"><span class="hs-identifier hs-var">initialize</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116278"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Event that occurs whenever the client has disconnected,</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- be it by closing the browser window or by exception.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- Note: DOM Elements in a browser window that has been closed</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- can no longer be manipulated.</span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#disconnect"><span class="hs-identifier hs-type">disconnect</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">RB.Event</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span id="disconnect"><span class="annot"><span class="annottext">disconnect :: Window -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#disconnect"><span class="hs-identifier hs-var hs-var">disconnect</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#eDisconnect"><span class="hs-identifier hs-var">eDisconnect</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><span class="hs-comment">-- | Begin to serve a local file with a given 'MimeType' under a relative URI.</span></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#loadFile"><span class="hs-identifier hs-type">loadFile</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ MIME type</span></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Local path to the file</span></span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Relative URI under which this file is now accessible</span></span><span>
+</span><span id="line-90"></span><span id="loadFile"><span class="annot"><span class="annottext">loadFile :: String -&gt; String -&gt; UI String
+</span><a href="Graphics.UI.Threepenny.Internal.html#loadFile"><span class="hs-identifier hs-var hs-var">loadFile</span></a></span></span><span> </span><span id="local-6989586621679116281"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116281"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679116282"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116282"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO String) -&gt; UI String
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO String) -&gt; UI String)
+-&gt; (Window -&gt; IO String) -&gt; UI String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116283"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116283"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Server -&gt; String -&gt; String -&gt; IO String
+</span><a href="Foreign.JavaScript.Server.html#loadFile"><span class="hs-identifier hs-var">JS.loadFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; Server
+</span><a href="Foreign.JavaScript.Types.html#getServer"><span class="hs-identifier hs-var">JS.getServer</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116283"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116281"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116282"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">-- | Make a local directory available under a relative URI.</span></span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#loadDirectory"><span class="hs-identifier hs-type">loadDirectory</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-94"></span><span id="loadDirectory"><span class="annot"><span class="annottext">loadDirectory :: String -&gt; UI String
+</span><a href="Graphics.UI.Threepenny.Internal.html#loadDirectory"><span class="hs-identifier hs-var hs-var">loadDirectory</span></a></span></span><span> </span><span id="local-6989586621679116285"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116285"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO String) -&gt; UI String
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO String) -&gt; UI String)
+-&gt; (Window -&gt; IO String) -&gt; UI String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116286"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116286"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Server -&gt; String -&gt; IO String
+</span><a href="Foreign.JavaScript.Server.html#loadDirectory"><span class="hs-identifier hs-var">JS.loadDirectory</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; Server
+</span><a href="Foreign.JavaScript.Types.html#getServer"><span class="hs-identifier hs-var">JS.getServer</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116286"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116285"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Elements
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-99"></span><span class="hs-keyword">type</span><span> </span><span id="Events"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Events"><span class="hs-identifier hs-var">Events</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">RB.Event</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Reachability information for children of an 'Element'.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- The children of an element are always reachable from this RemotePtr.</span><span>
+</span><span id="line-103"></span><span class="hs-keyword">type</span><span> </span><span id="Children"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Children"><span class="hs-identifier hs-var">Children</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Foreign.RemotePtr.html#RemotePtr"><span class="hs-identifier hs-type">Foreign.RemotePtr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">data</span><span> </span><span id="Element"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-var">Element</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Element"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-var">Element</span></a></span></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="toJSObject"><span class="annot"><span class="annottext">Element -&gt; JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier hs-var hs-var">toJSObject</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JS.JSObject</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Access to the primitive 'JS.JSObject' for roll-your-own foreign calls.</span></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="elEvents"><span class="annot"><span class="annottext">Element -&gt; Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#elEvents"><span class="hs-identifier hs-var hs-var">elEvents</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Events"><span class="hs-identifier hs-type">Events</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ FRP event mapping</span></span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="elChildren"><span class="annot"><span class="annottext">Element -&gt; Children
+</span><a href="Graphics.UI.Threepenny.Internal.html#elChildren"><span class="hs-identifier hs-var hs-var">elChildren</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Children"><span class="hs-identifier hs-type">Children</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ The children of this element</span></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="elWindow"><span class="annot"><span class="annottext">Element -&gt; Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#elWindow"><span class="hs-identifier hs-var hs-var">elWindow</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Window in which the element was created</span></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679116293"><span class="annot"><a href="Foreign.JavaScript.Marshal.html#ToJS"><span class="hs-identifier hs-type">ToJS</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679116297"><span class="annot"><span class="annottext">render :: Element -&gt; IO JSCode
+</span><a href="#local-6989586621679116297"><span class="hs-identifier hs-var hs-var hs-var hs-var">render</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">JSObject -&gt; IO JSCode
+forall a. ToJS a =&gt; a -&gt; IO JSCode
+</span><a href="Foreign.JavaScript.Marshal.html#render"><span class="hs-identifier hs-var">render</span></a></span><span> </span><span class="annot"><span class="annottext">(JSObject -&gt; IO JSCode)
+-&gt; (Element -&gt; JSObject) -&gt; Element -&gt; IO JSCode
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier hs-var">toJSObject</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#getWindow"><span class="hs-identifier hs-type">getWindow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span>
+</span><span id="line-116"></span><span id="getWindow"><span class="annot"><span class="annottext">getWindow :: Element -&gt; IO Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#getWindow"><span class="hs-identifier hs-var hs-var">getWindow</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Window -&gt; IO Window
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO Window)
+-&gt; (Element -&gt; Window) -&gt; Element -&gt; IO Window
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#elWindow"><span class="hs-identifier hs-var">elWindow</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | Lookup or create reachability information for the children of</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- an element that is represented by a JavaScript object.</span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#getChildren"><span class="hs-identifier hs-type">getChildren</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JS.JSObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Children"><span class="hs-identifier hs-type">Children</span></a></span><span>
+</span><span id="line-121"></span><span id="getChildren"><span class="annot"><span class="annottext">getChildren :: JSObject -&gt; Window -&gt; IO Children
+</span><a href="Graphics.UI.Threepenny.Internal.html#getChildren"><span class="hs-identifier hs-var hs-var">getChildren</span></a></span></span><span> </span><span id="local-6989586621679116301"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116301"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">wChildren :: Window -&gt; Vendor ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#wChildren"><span class="hs-identifier hs-var">wChildren</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679116302"><span class="annot"><span class="annottext">Vendor ()
+</span><a href="#local-6989586621679116302"><span class="hs-identifier hs-var">wChildren</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; (Coupon -&gt; JSPtr -&gt; IO Children) -&gt; IO Children
+forall a b. RemotePtr a -&gt; (Coupon -&gt; a -&gt; IO b) -&gt; IO b
+</span><a href="Foreign.RemotePtr.html#withRemotePtr"><span class="hs-identifier hs-var">Foreign.withRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116301"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">((Coupon -&gt; JSPtr -&gt; IO Children) -&gt; IO Children)
+-&gt; (Coupon -&gt; JSPtr -&gt; IO Children) -&gt; IO Children
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116304"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679116304"><span class="hs-identifier hs-var">coupon</span></a></span></span><span> </span><span class="annot"><span class="annottext">JSPtr
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-123"></span><span>        </span><span id="local-6989586621679116305"><span class="annot"><span class="annottext">Maybe Children
+</span><a href="#local-6989586621679116305"><span class="hs-identifier hs-var">mptr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coupon -&gt; Vendor () -&gt; IO (Maybe Children)
+forall a. Coupon -&gt; Vendor a -&gt; IO (Maybe (RemotePtr a))
+</span><a href="Foreign.RemotePtr.html#lookup"><span class="hs-identifier hs-var">Foreign.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679116304"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="annot"><span class="annottext">Vendor ()
+</span><a href="#local-6989586621679116302"><span class="hs-identifier hs-var">wChildren</span></a></span><span>
+</span><span id="line-124"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Children
+</span><a href="#local-6989586621679116305"><span class="hs-identifier hs-var">mptr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-125"></span><span>            </span><span class="annot"><span class="annottext">Maybe Children
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>                </span><span class="hs-comment">-- Create new pointer for reachability information.</span><span>
+</span><span id="line-127"></span><span>                </span><span id="local-6989586621679116307"><span class="annot"><span class="annottext">Children
+</span><a href="#local-6989586621679116307"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coupon -&gt; () -&gt; Vendor () -&gt; IO Children
+forall a. Coupon -&gt; a -&gt; Vendor a -&gt; IO (RemotePtr a)
+</span><a href="Foreign.RemotePtr.html#newRemotePtr"><span class="hs-identifier hs-var">Foreign.newRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679116304"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Vendor ()
+</span><a href="#local-6989586621679116302"><span class="hs-identifier hs-var">wChildren</span></a></span><span>
+</span><span id="line-128"></span><span>                </span><span class="annot"><span class="annottext">JSObject -&gt; Children -&gt; IO ()
+forall a b. RemotePtr a -&gt; RemotePtr b -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#addReachable"><span class="hs-identifier hs-var">Foreign.addReachable</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116301"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Children
+</span><a href="#local-6989586621679116307"><span class="hs-identifier hs-var">ptr</span></a></span><span>
+</span><span id="line-129"></span><span>                </span><span class="annot"><span class="annottext">Children -&gt; IO Children
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Children
+</span><a href="#local-6989586621679116307"><span class="hs-identifier hs-var">ptr</span></a></span><span>
+</span><span id="line-130"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679116310"><span class="annot"><span class="annottext">Children
+</span><a href="#local-6989586621679116310"><span class="hs-identifier hs-var">p</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>                </span><span class="hs-comment">-- Return existing information</span><span>
+</span><span id="line-132"></span><span>                </span><span class="annot"><span class="annottext">Children -&gt; IO Children
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Children
+</span><a href="#local-6989586621679116310"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- | Convert JavaScript object into an Element by attaching relevant information.</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- The JavaScript object may still be subject to garbage collection.</span><span>
+</span><span id="line-136"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#fromJSObject0"><span class="hs-identifier hs-type">fromJSObject0</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JS.JSObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>
+</span><span id="line-137"></span><span id="fromJSObject0"><span class="annot"><span class="annottext">fromJSObject0 :: JSObject -&gt; Window -&gt; IO Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#fromJSObject0"><span class="hs-identifier hs-var hs-var">fromJSObject0</span></a></span></span><span> </span><span id="local-6989586621679116312"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116312"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span id="local-6989586621679116313"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116313"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621679116314"><span class="annot"><span class="annottext">Events
+</span><a href="#local-6989586621679116314"><span class="hs-identifier hs-var">events</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">JSObject -&gt; Window -&gt; IO Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#getEvents"><span class="hs-identifier hs-var">getEvents</span></a></span><span>   </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116312"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116313"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span id="local-6989586621679116316"><span class="annot"><span class="annottext">Children
+</span><a href="#local-6989586621679116316"><span class="hs-identifier hs-var">children</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">JSObject -&gt; Window -&gt; IO Children
+</span><a href="Graphics.UI.Threepenny.Internal.html#getChildren"><span class="hs-identifier hs-var">getChildren</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116312"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116313"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="annottext">Element -&gt; IO Element
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Element -&gt; IO Element) -&gt; Element -&gt; IO Element
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject -&gt; Events -&gt; Children -&gt; Window -&gt; Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116312"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Events
+</span><a href="#local-6989586621679116314"><span class="hs-identifier hs-var">events</span></a></span><span> </span><span class="annot"><span class="annottext">Children
+</span><a href="#local-6989586621679116316"><span class="hs-identifier hs-var">children</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116313"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- | Convert JavaScript object into an element.</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- FIXME: For the purpose of garbage collection, this element</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- will always be reachable from the root.</span><span>
+</span><span id="line-146"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#fromJSObject"><span class="hs-identifier hs-type">fromJSObject</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JS.JSObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>
+</span><span id="line-147"></span><span id="fromJSObject"><span class="annot"><span class="annottext">fromJSObject :: JSObject -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#fromJSObject"><span class="hs-identifier hs-var hs-var">fromJSObject</span></a></span></span><span> </span><span id="local-6989586621679116317"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116317"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621679116318"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116318"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="annottext">IO Element -&gt; UI Element
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Element -&gt; UI Element) -&gt; IO Element -&gt; UI Element
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-150"></span><span>        </span><span class="annot"><span class="annottext">Children -&gt; JSObject -&gt; IO ()
+forall a b. RemotePtr a -&gt; RemotePtr b -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#addReachable"><span class="hs-identifier hs-var">Foreign.addReachable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; Children
+</span><a href="Foreign.JavaScript.Types.html#root"><span class="hs-identifier hs-var">JS.root</span></a></span><span> </span><span class="annot"><span class="annottext">(Window -&gt; Children) -&gt; Window -&gt; Children
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#jsWindow"><span class="hs-identifier hs-var">jsWindow</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116318"><span class="hs-identifier hs-var">window</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116317"><span class="hs-identifier hs-var">el</span></a></span><span>
+</span><span id="line-151"></span><span>        </span><span class="annot"><span class="annottext">JSObject -&gt; Window -&gt; IO Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#fromJSObject0"><span class="hs-identifier hs-var">fromJSObject0</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116317"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116318"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="annot"><span class="hs-comment">-- | Add lazy FRP events to a JavaScript object.</span></span><span>
+</span><span id="line-154"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#addEvents"><span class="hs-identifier hs-type">addEvents</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JS.JSObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Events"><span class="hs-identifier hs-type">Events</span></a></span><span>
+</span><span id="line-155"></span><span id="addEvents"><span class="annot"><span class="annottext">addEvents :: JSObject -&gt; Window -&gt; IO Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#addEvents"><span class="hs-identifier hs-var hs-var">addEvents</span></a></span></span><span> </span><span id="local-6989586621679116322"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116322"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">jsWindow :: Window -&gt; Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#jsWindow"><span class="hs-identifier hs-var">jsWindow</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679116323"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116323"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">wEvents :: Window -&gt; Vendor Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#wEvents"><span class="hs-identifier hs-var">wEvents</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679116324"><span class="annot"><span class="annottext">Vendor Events
+</span><a href="#local-6989586621679116324"><span class="hs-identifier hs-var">wEvents</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-comment">-- Lazily create FRP events whenever they are needed.</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679116336"><span class="annot"><span class="annottext">initializeEvent :: (t, b, a) -&gt; IO ()
+</span><a href="#local-6989586621679116336"><span class="hs-identifier hs-var hs-var">initializeEvent</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679116337"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679116337"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span id="local-6989586621679116338"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116338"><span class="hs-identifier hs-var">handler</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-158"></span><span>            </span><span id="local-6989586621679116339"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116339"><span class="hs-identifier hs-var">handlerPtr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; a -&gt; IO JSObject
+forall a. IsHandler a =&gt; Window -&gt; a -&gt; IO JSObject
+</span><a href="Foreign.JavaScript.html#exportHandler"><span class="hs-identifier hs-var">JS.exportHandler</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116323"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116338"><span class="hs-identifier hs-var">handler</span></a></span><span>
+</span><span id="line-159"></span><span>            </span><span class="hs-comment">-- make handler reachable from element</span><span>
+</span><span id="line-160"></span><span>            </span><span class="annot"><span class="annottext">JSObject -&gt; JSObject -&gt; IO ()
+forall a b. RemotePtr a -&gt; RemotePtr b -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#addReachable"><span class="hs-identifier hs-var">Foreign.addReachable</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116322"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116339"><span class="hs-identifier hs-var">handlerPtr</span></a></span><span>
+</span><span id="line-161"></span><span>            </span><span class="annot"><span class="annottext">Window -&gt; JSFunction () -&gt; IO ()
+</span><a href="Foreign.JavaScript.html#runFunction"><span class="hs-identifier hs-var">JS.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116323"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; IO ()) -&gt; JSFunction () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-162"></span><span>                </span><span class="annot"><span class="annottext">String -&gt; JSObject -&gt; t -&gt; JSObject -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Haskell.on(%1,%2,%3)&quot;</span></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116322"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679116337"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116339"><span class="hs-identifier hs-var">handlerPtr</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span>    </span><span id="local-6989586621679116341"><span class="annot"><span class="annottext">Events
+</span><a href="#local-6989586621679116341"><span class="hs-identifier hs-var">events</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Handler (String, Event Value, Handler Value) -&gt; IO Events
+forall name a.
+Ord name =&gt;
+Handler (name, Event a, Handler a) -&gt; IO (name -&gt; Event a)
+</span><a href="Reactive.Threepenny.html#newEventsNamed"><span class="hs-identifier hs-var">RB.newEventsNamed</span></a></span><span> </span><span class="annot"><span class="annottext">Handler (String, Event Value, Handler Value)
+forall {a} {t} {b}. (IsHandler a, ToJS t) =&gt; (t, b, a) -&gt; IO ()
+</span><a href="#local-6989586621679116336"><span class="hs-identifier hs-var">initializeEvent</span></a></span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-comment">-- Create new pointer and add reachability.</span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; (Coupon -&gt; JSPtr -&gt; IO ()) -&gt; IO ()
+forall a b. RemotePtr a -&gt; (Coupon -&gt; a -&gt; IO b) -&gt; IO b
+</span><a href="Foreign.RemotePtr.html#withRemotePtr"><span class="hs-identifier hs-var">Foreign.withRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116322"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">((Coupon -&gt; JSPtr -&gt; IO ()) -&gt; IO ())
+-&gt; (Coupon -&gt; JSPtr -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116343"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679116343"><span class="hs-identifier hs-var">coupon</span></a></span></span><span> </span><span class="annot"><span class="annottext">JSPtr
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-168"></span><span>        </span><span id="local-6989586621679116344"><span class="annot"><span class="annottext">RemotePtr Events
+</span><a href="#local-6989586621679116344"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coupon -&gt; Events -&gt; Vendor Events -&gt; IO (RemotePtr Events)
+forall a. Coupon -&gt; a -&gt; Vendor a -&gt; IO (RemotePtr a)
+</span><a href="Foreign.RemotePtr.html#newRemotePtr"><span class="hs-identifier hs-var">Foreign.newRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679116343"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="annot"><span class="annottext">Events
+</span><a href="#local-6989586621679116341"><span class="hs-identifier hs-var">events</span></a></span><span> </span><span class="annot"><span class="annottext">Vendor Events
+</span><a href="#local-6989586621679116324"><span class="hs-identifier hs-var">wEvents</span></a></span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">JSObject -&gt; RemotePtr Events -&gt; IO ()
+forall a b. RemotePtr a -&gt; RemotePtr b -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#addReachable"><span class="hs-identifier hs-var">Foreign.addReachable</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116322"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">RemotePtr Events
+</span><a href="#local-6989586621679116344"><span class="hs-identifier hs-var">ptr</span></a></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><span class="annottext">Events -&gt; IO Events
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Events
+</span><a href="#local-6989586621679116341"><span class="hs-identifier hs-var">events</span></a></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="annot"><span class="hs-comment">-- | Lookup or create lazy events for a JavaScript object.</span></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#getEvents"><span class="hs-identifier hs-type">getEvents</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JS.JSObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Events"><span class="hs-identifier hs-type">Events</span></a></span><span>
+</span><span id="line-175"></span><span id="getEvents"><span class="annot"><span class="annottext">getEvents :: JSObject -&gt; Window -&gt; IO Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#getEvents"><span class="hs-identifier hs-var hs-var">getEvents</span></a></span></span><span> </span><span id="local-6989586621679116345"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116345"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span id="local-6989586621679116346"><span class="annot"><span class="annottext">window :: Window
+</span><a href="#local-6989586621679116346"><span class="hs-identifier hs-var">window</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">wEvents :: Window -&gt; Vendor Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#wEvents"><span class="hs-identifier hs-var">wEvents</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679116347"><span class="annot"><span class="annottext">Vendor Events
+</span><a href="#local-6989586621679116347"><span class="hs-identifier hs-var">wEvents</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; (Coupon -&gt; JSPtr -&gt; IO Events) -&gt; IO Events
+forall a b. RemotePtr a -&gt; (Coupon -&gt; a -&gt; IO b) -&gt; IO b
+</span><a href="Foreign.RemotePtr.html#withRemotePtr"><span class="hs-identifier hs-var">Foreign.withRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116345"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">((Coupon -&gt; JSPtr -&gt; IO Events) -&gt; IO Events)
+-&gt; (Coupon -&gt; JSPtr -&gt; IO Events) -&gt; IO Events
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116348"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679116348"><span class="hs-identifier hs-var">coupon</span></a></span></span><span> </span><span class="annot"><span class="annottext">JSPtr
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-177"></span><span>        </span><span id="local-6989586621679116349"><span class="annot"><span class="annottext">Maybe (RemotePtr Events)
+</span><a href="#local-6989586621679116349"><span class="hs-identifier hs-var">mptr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coupon -&gt; Vendor Events -&gt; IO (Maybe (RemotePtr Events))
+forall a. Coupon -&gt; Vendor a -&gt; IO (Maybe (RemotePtr a))
+</span><a href="Foreign.RemotePtr.html#lookup"><span class="hs-identifier hs-var">Foreign.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679116348"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="annot"><span class="annottext">Vendor Events
+</span><a href="#local-6989586621679116347"><span class="hs-identifier hs-var">wEvents</span></a></span><span>
+</span><span id="line-178"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (RemotePtr Events)
+</span><a href="#local-6989586621679116349"><span class="hs-identifier hs-var">mptr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-179"></span><span>            </span><span class="annot"><span class="annottext">Maybe (RemotePtr Events)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">JSObject -&gt; Window -&gt; IO Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#addEvents"><span class="hs-identifier hs-var">addEvents</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116345"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116346"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-180"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679116350"><span class="annot"><span class="annottext">RemotePtr Events
+</span><a href="#local-6989586621679116350"><span class="hs-identifier hs-var">p</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RemotePtr Events -&gt; (Coupon -&gt; Events -&gt; IO Events) -&gt; IO Events
+forall a b. RemotePtr a -&gt; (Coupon -&gt; a -&gt; IO b) -&gt; IO b
+</span><a href="Foreign.RemotePtr.html#withRemotePtr"><span class="hs-identifier hs-var">Foreign.withRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">RemotePtr Events
+</span><a href="#local-6989586621679116350"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">((Coupon -&gt; Events -&gt; IO Events) -&gt; IO Events)
+-&gt; (Coupon -&gt; Events -&gt; IO Events) -&gt; IO Events
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Coupon
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Events -&gt; IO Events
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- | Events may carry data. At the moment, they may return</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- a single JSON value, as defined in the &quot;Data.Aeson&quot; module.</span><span>
+</span><span id="line-184"></span><span class="hs-keyword">type</span><span> </span><span id="EventData"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#EventData"><span class="hs-identifier hs-var">EventData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="hs-comment">-- | Convert event data to a Haskell value.</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- Throws an exception when the data cannot be converted.</span><span>
+</span><span id="line-188"></span><span id="local-6989586621679116043"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#unsafeFromJSON"><span class="hs-identifier hs-type">unsafeFromJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679116043"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#EventData"><span class="hs-identifier hs-type">EventData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679116043"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-189"></span><span id="unsafeFromJSON"><span class="annot"><span class="annottext">unsafeFromJSON :: forall a. FromJSON a =&gt; Value -&gt; a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unsafeFromJSON"><span class="hs-identifier hs-var hs-var">unsafeFromJSON</span></a></span></span><span> </span><span id="local-6989586621679116352"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679116352"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Success</span></span><span> </span><span id="local-6989586621679116355"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116355"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Result a
+forall a. FromJSON a =&gt; Value -&gt; Result a
+</span><span class="hs-identifier hs-var">JSON.fromJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679116352"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116355"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="annot"><span class="hs-comment">-- | Obtain DOM event for a given element.</span></span><span>
+</span><span id="line-192"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-type">domEvent</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-194"></span><span>        </span><span class="hs-comment">-- ^ Event name. A full list can be found at</span><span>
+</span><span id="line-195"></span><span>        </span><span class="hs-comment">--   &lt;http://www.w3schools.com/jsref/dom_obj_event.asp&gt;.</span><span>
+</span><span id="line-196"></span><span>        </span><span class="hs-comment">--   Note that the @on@-prefix is not included,</span><span>
+</span><span id="line-197"></span><span>        </span><span class="hs-comment">--   the name is @click@ and so on.</span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>          </span><span class="annot"><span class="hs-comment">-- ^ Element where the event is to occur.</span></span><span>
+</span><span id="line-199"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">RB.Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#EventData"><span class="hs-identifier hs-type">EventData</span></a></span><span>
+</span><span id="line-200"></span><span id="domEvent"><span class="annot"><span class="annottext">domEvent :: String -&gt; Element -&gt; Event Value
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var hs-var">domEvent</span></a></span></span><span> </span><span id="local-6989586621679116357"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116357"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679116358"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116358"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Element -&gt; Events
+</span><a href="Graphics.UI.Threepenny.Internal.html#elEvents"><span class="hs-identifier hs-var">elEvents</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116358"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116357"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="annot"><span class="hs-comment">-- | Make a new DOM element with a given tag name.</span></span><span>
+</span><span id="line-203"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#mkElement"><span class="hs-identifier hs-type">mkElement</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>
+</span><span id="line-204"></span><span id="mkElement"><span class="annot"><span class="annottext">mkElement :: String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#mkElement"><span class="hs-identifier hs-var hs-var">mkElement</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#mkElementNamespace"><span class="hs-identifier hs-var">mkElementNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- | Make a new DOM element with a namespace and a given tag name.</span><span>
+</span><span id="line-207"></span><span class="hs-comment">--</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- A namespace 'Nothing' corresponds to the default HTML namespace.</span><span>
+</span><span id="line-209"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#mkElementNamespace"><span class="hs-identifier hs-type">mkElementNamespace</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>
+</span><span id="line-210"></span><span id="mkElementNamespace"><span class="annot"><span class="annottext">mkElementNamespace :: Maybe String -&gt; String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#mkElementNamespace"><span class="hs-identifier hs-var hs-var">mkElementNamespace</span></a></span></span><span> </span><span id="local-6989586621679116359"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679116359"><span class="hs-identifier hs-var">namespace</span></a></span></span><span> </span><span id="local-6989586621679116360"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116360"><span class="hs-identifier hs-var">tag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-211"></span><span>    </span><span id="local-6989586621679116361"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116361"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-212"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679116362"><span class="annot"><span class="annottext">w :: Window
+</span><a href="#local-6989586621679116362"><span class="hs-identifier hs-var hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#jsWindow"><span class="hs-identifier hs-var">jsWindow</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116361"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><span class="annottext">IO Element -&gt; UI Element
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Element -&gt; UI Element) -&gt; IO Element -&gt; UI Element
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-214"></span><span>        </span><span id="local-6989586621679116363"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116363"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; JSFunction NewJSObject -&gt; IO JSObject
+</span><a href="Foreign.JavaScript.html#unsafeCreateJSObject"><span class="hs-identifier hs-var">JS.unsafeCreateJSObject</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116362"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction NewJSObject -&gt; IO JSObject)
+-&gt; JSFunction NewJSObject -&gt; IO JSObject
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679116359"><span class="hs-identifier hs-var">namespace</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-215"></span><span>            </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; JSFunction NewJSObject
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;document.createElement(%1)&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116360"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-216"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679116365"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116365"><span class="hs-identifier hs-var">ns</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String -&gt; JSFunction NewJSObject
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;document.createElementNS(%1,%2)&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116365"><span class="hs-identifier hs-var">ns</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116360"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-217"></span><span>        </span><span class="annot"><span class="annottext">JSObject -&gt; Window -&gt; IO Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#fromJSObject0"><span class="hs-identifier hs-var">fromJSObject0</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116363"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116361"><span class="hs-identifier hs-var">window</span></a></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- | Delete the given element.</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--</span><span>
+</span><span id="line-221"></span><span class="hs-comment">-- This operation removes the element from the browser window DOM</span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- and marks it for garbage collection on the Haskell side.</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- The element is unusable afterwards.</span><span>
+</span><span id="line-224"></span><span class="hs-comment">--</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- NOTE: If you wish to temporarily remove an element from the DOM tree,</span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- change the 'children' property of its parent element instead.</span><span>
+</span><span id="line-227"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#delete"><span class="hs-identifier hs-type">delete</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span id="delete"><span class="annot"><span class="annottext">delete :: Element -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#delete"><span class="hs-identifier hs-var hs-var">delete</span></a></span></span><span> </span><span id="local-6989586621679116366"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116366"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; UI ()) -&gt; (Window -&gt; IO ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116367"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116367"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-229"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; JSFunction () -&gt; IO ()
+</span><a href="Foreign.JavaScript.html#runFunction"><span class="hs-identifier hs-var">JS.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116367"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; IO ()) -&gt; JSFunction () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;$(%1).detach()&quot;</span></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116366"><span class="hs-identifier hs-var">el</span></a></span><span>
+</span><span id="line-230"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; IO ()
+forall a. RemotePtr a -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#destroy"><span class="hs-identifier hs-var">Foreign.destroy</span></a></span><span> </span><span class="annot"><span class="annottext">(JSObject -&gt; IO ()) -&gt; JSObject -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier hs-var">toJSObject</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116366"><span class="hs-identifier hs-var">el</span></a></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span class="annot"><span class="hs-comment">-- | Remove all child elements.</span></span><span>
+</span><span id="line-233"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#clearChildren"><span class="hs-identifier hs-type">clearChildren</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span id="clearChildren"><span class="annot"><span class="annottext">clearChildren :: Element -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#clearChildren"><span class="hs-identifier hs-var hs-var">clearChildren</span></a></span></span><span> </span><span id="local-6989586621679116369"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116369"><span class="hs-identifier hs-var">element</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; UI ()) -&gt; (Window -&gt; IO ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116370"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116370"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-235"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679116371"><span class="annot"><span class="annottext">el :: JSObject
+</span><a href="#local-6989586621679116371"><span class="hs-identifier hs-var hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Element -&gt; JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier hs-var">toJSObject</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116369"><span class="hs-identifier hs-var">element</span></a></span><span>
+</span><span id="line-236"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; (Coupon -&gt; JSPtr -&gt; IO ()) -&gt; IO ()
+forall a b. RemotePtr a -&gt; (Coupon -&gt; a -&gt; IO b) -&gt; IO b
+</span><a href="Foreign.RemotePtr.html#withRemotePtr"><span class="hs-identifier hs-var">Foreign.withRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116371"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">((Coupon -&gt; JSPtr -&gt; IO ()) -&gt; IO ())
+-&gt; (Coupon -&gt; JSPtr -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Coupon
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">JSPtr
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-237"></span><span>        </span><span class="hs-comment">-- Previous children are no longer reachable from this element</span><span>
+</span><span id="line-238"></span><span>        </span><span class="annot"><span class="annottext">Window -&gt; JSFunction () -&gt; IO ()
+</span><a href="Foreign.JavaScript.html#runFunction"><span class="hs-identifier hs-var">JS.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116370"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; IO ()) -&gt; JSFunction () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSObject -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;$(%1).contents().detach()&quot;</span></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116371"><span class="hs-identifier hs-var">el</span></a></span><span>
+</span><span id="line-239"></span><span>        </span><span class="annot"><span class="annottext">Children -&gt; IO ()
+forall a. RemotePtr a -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#clearReachable"><span class="hs-identifier hs-var">Foreign.clearReachable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Element -&gt; Children
+</span><a href="Graphics.UI.Threepenny.Internal.html#elChildren"><span class="hs-identifier hs-var">elChildren</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116369"><span class="hs-identifier hs-var">element</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="annot"><span class="hs-comment">-- | Append a child element.</span></span><span>
+</span><span id="line-242"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#appendChild"><span class="hs-identifier hs-type">appendChild</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span id="appendChild"><span class="annot"><span class="annottext">appendChild :: Element -&gt; Element -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#appendChild"><span class="hs-identifier hs-var hs-var">appendChild</span></a></span></span><span> </span><span id="local-6989586621679116373"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116373"><span class="hs-identifier hs-var">parent</span></a></span></span><span> </span><span id="local-6989586621679116374"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116374"><span class="hs-identifier hs-var">child</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; UI ()) -&gt; (Window -&gt; IO ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116375"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116375"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-244"></span><span>    </span><span class="hs-comment">-- FIXME: We have to stop the child being reachable from its</span><span>
+</span><span id="line-245"></span><span>    </span><span class="hs-comment">-- /previous/ parent.</span><span>
+</span><span id="line-246"></span><span>    </span><span class="annot"><span class="annottext">Children -&gt; JSObject -&gt; IO ()
+forall a b. RemotePtr a -&gt; RemotePtr b -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#addReachable"><span class="hs-identifier hs-var">Foreign.addReachable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Element -&gt; Children
+</span><a href="Graphics.UI.Threepenny.Internal.html#elChildren"><span class="hs-identifier hs-var">elChildren</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116373"><span class="hs-identifier hs-var">parent</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Element -&gt; JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier hs-var">toJSObject</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116374"><span class="hs-identifier hs-var">child</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-247"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; JSFunction () -&gt; IO ()
+</span><a href="Foreign.JavaScript.html#runFunction"><span class="hs-identifier hs-var">JS.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116375"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; IO ()) -&gt; JSFunction () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSObject -&gt; JSObject -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;$(%1).append($(%2))&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Element -&gt; JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier hs-var">toJSObject</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116373"><span class="hs-identifier hs-var">parent</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Element -&gt; JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#toJSObject"><span class="hs-identifier hs-var">toJSObject</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679116374"><span class="hs-identifier hs-var">child</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span><span>
+</span><span id="line-249"></span><span>
+</span><span id="line-250"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    UI monad
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-253"></span><span class="annot"><span class="hs-comment">{- |
+
+User interface elements are created and manipulated in the 'UI' monad.
+
+This monad is essentially just a thin wrapper around the familiar 'IO' monad.
+Use the 'liftIO' function to access 'IO' operations like reading
+and writing from files.
+
+There are several subtle reasons why Threepenny
+uses a custom 'UI' monad instead of the standard 'IO' monad:
+
+* More convenience when calling JavaScript.
+The monad keeps track of a browser 'Window' context
+in which JavaScript function calls are executed.
+
+* Recursion for functional reactive programming.
+
+-}</span></span><span>
+</span><span id="line-271"></span><span class="hs-keyword">newtype</span><span> </span><span id="UI"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span></span><span> </span><span id="local-6989586621679116050"><span class="annot"><a href="#local-6989586621679116050"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UI"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unUI"><span class="annot"><span class="annottext">forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var hs-var">unUI</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#RWST"><span class="hs-identifier hs-type">Monad.RWST</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116050"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-272"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-273"></span><span>
+</span><span id="line-274"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116053"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadUI"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#MonadUI"><span class="hs-identifier hs-var">MonadUI</span></a></span></span><span> </span><span id="local-6989586621679116053"><span class="annot"><a href="#local-6989586621679116053"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-275"></span><span>    </span><span class="hs-comment">-- | Lift a computation from the 'UI' monad.</span><span>
+</span><span id="line-276"></span><span>    </span><span id="liftUI"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#liftUI"><span class="hs-identifier hs-type">liftUI</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679116055"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116055"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679116053"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116055"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-277"></span><span>
+</span><span id="line-278"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#MonadUI"><span class="hs-identifier hs-type">MonadUI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-279"></span><span>    </span><span id="local-6989586621679116384"><span class="annot"><span class="annottext">liftUI :: forall a. UI a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftUI"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftUI</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UI a -&gt; UI a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-280"></span><span>
+</span><span id="line-281"></span><span class="hs-comment">-- | Access to the primitive 'JS.Window' object,</span><span>
+</span><span id="line-282"></span><span class="hs-comment">--   for roll-your-own JS foreign calls.</span><span>
+</span><span id="line-283"></span><span id="local-6989586621679116015"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-type">liftJSWindow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">JS.Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116015"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116015"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-284"></span><span id="liftJSWindow"><span class="annot"><span class="annottext">liftJSWindow :: forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var hs-var">liftJSWindow</span></a></span></span><span> </span><span id="local-6989586621679116388"><span class="annot"><span class="annottext">Window -&gt; IO a
+</span><a href="#local-6989586621679116388"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span> </span><span class="annot"><span class="annottext">UI Window -&gt; (Window -&gt; UI a) -&gt; UI a
+forall a b. UI a -&gt; (a -&gt; UI b) -&gt; UI b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; UI a
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; UI a) -&gt; (Window -&gt; IO a) -&gt; Window -&gt; UI a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; IO a
+</span><a href="#local-6989586621679116388"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO a) -&gt; (Window -&gt; Window) -&gt; Window -&gt; IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#jsWindow"><span class="hs-identifier hs-var">jsWindow</span></a></span><span>
+</span><span id="line-285"></span><span>
+</span><span id="line-286"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679116391"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-287"></span><span>    </span><span id="local-6989586621679116399"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; UI a -&gt; UI b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679116400"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679116400"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO b -&gt; UI b
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO b -&gt; UI b)
+-&gt; (UI a -&gt; RWST Window [IO ()] () IO b) -&gt; UI a -&gt; UI b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; b)
+-&gt; RWST Window [IO ()] () IO a -&gt; RWST Window [IO ()] () IO b
+forall a b.
+(a -&gt; b)
+-&gt; RWST Window [IO ()] () IO a -&gt; RWST Window [IO ()] () IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679116400"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO a -&gt; RWST Window [IO ()] () IO b)
+-&gt; (UI a -&gt; RWST Window [IO ()] () IO a)
+-&gt; UI a
+-&gt; RWST Window [IO ()] () IO b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UI a -&gt; RWST Window [IO ()] () IO a
+forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var">unUI</span></a></span><span>
+</span><span id="line-288"></span><span>
+</span><span id="line-289"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679116406"><span id="local-6989586621679116410"><span id="local-6989586621679116413"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-290"></span><span>    </span><span id="local-6989586621679116419"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; UI a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a -&gt; UI a
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO a -&gt; UI a)
+-&gt; (a -&gt; RWST Window [IO ()] () IO a) -&gt; a -&gt; UI a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; RWST Window [IO ()] () IO a
+forall a. a -&gt; RWST Window [IO ()] () IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-291"></span><span>    </span><span id="local-6989586621679116421"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. UI (a -&gt; b) -&gt; UI a -&gt; UI b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;*&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UI (a -&gt; b) -&gt; UI a -&gt; UI b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#ap"><span class="hs-identifier hs-var">ap</span></a></span><span>
+</span><span id="line-292"></span><span>
+</span><span id="line-293"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679116427"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-294"></span><span>    </span><span id="local-6989586621679116432"><span class="annot"><span class="annottext">return :: forall a. a -&gt; UI a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; UI a
+forall a. a -&gt; UI a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-295"></span><span>    </span><span id="local-6989586621679116435"><span class="annot"><span class="annottext">UI a
+</span><a href="#local-6989586621679116435"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679116436"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. UI a -&gt; (a -&gt; UI b) -&gt; UI b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;=</span></a></span></span><span> </span><span id="local-6989586621679116437"><span class="annot"><span class="annottext">a -&gt; UI b
+</span><a href="#local-6989586621679116437"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO b -&gt; UI b
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO b -&gt; UI b)
+-&gt; RWST Window [IO ()] () IO b -&gt; UI b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UI a -&gt; RWST Window [IO ()] () IO a
+forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var">unUI</span></a></span><span> </span><span class="annot"><span class="annottext">UI a
+</span><a href="#local-6989586621679116435"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a
+-&gt; (a -&gt; RWST Window [IO ()] () IO b)
+-&gt; RWST Window [IO ()] () IO b
+forall a b.
+RWST Window [IO ()] () IO a
+-&gt; (a -&gt; RWST Window [IO ()] () IO b)
+-&gt; RWST Window [IO ()] () IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">UI b -&gt; RWST Window [IO ()] () IO b
+forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var">unUI</span></a></span><span> </span><span class="annot"><span class="annottext">(UI b -&gt; RWST Window [IO ()] () IO b)
+-&gt; (a -&gt; UI b) -&gt; a -&gt; RWST Window [IO ()] () IO b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; UI b
+</span><a href="#local-6989586621679116437"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-296"></span><span>
+</span><span id="line-297"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-298"></span><span>    </span><span id="local-6989586621679116446"><span class="annot"><span class="annottext">liftIO :: forall a. IO a -&gt; UI a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a -&gt; UI a
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO a -&gt; UI a)
+-&gt; (IO a -&gt; RWST Window [IO ()] () IO a) -&gt; IO a -&gt; UI a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; RWST Window [IO ()] () IO a
+forall a. IO a -&gt; RWST Window [IO ()] () IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span>
+</span><span id="line-299"></span><span>
+</span><span id="line-300"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.Fix.html#MonadFix"><span class="hs-identifier hs-type">MonadFix</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-301"></span><span>    </span><span id="local-6989586621679116456"><span class="annot"><span class="annottext">mfix :: forall a. (a -&gt; UI a) -&gt; UI a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.Fix.html#mfix"><span class="hs-identifier hs-var hs-var hs-var hs-var">mfix</span></a></span></span><span> </span><span id="local-6989586621679116457"><span class="annot"><span class="annottext">a -&gt; UI a
+</span><a href="#local-6989586621679116457"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a -&gt; UI a
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO a -&gt; UI a)
+-&gt; RWST Window [IO ()] () IO a -&gt; UI a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; RWST Window [IO ()] () IO a) -&gt; RWST Window [IO ()] () IO a
+forall a.
+(a -&gt; RWST Window [IO ()] () IO a) -&gt; RWST Window [IO ()] () IO a
+forall (m :: * -&gt; *) a. MonadFix m =&gt; (a -&gt; m a) -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.Fix.html#mfix"><span class="hs-identifier hs-var">mfix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UI a -&gt; RWST Window [IO ()] () IO a
+forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var">unUI</span></a></span><span> </span><span class="annot"><span class="annottext">(UI a -&gt; RWST Window [IO ()] () IO a)
+-&gt; (a -&gt; UI a) -&gt; a -&gt; RWST Window [IO ()] () IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; UI a
+</span><a href="#local-6989586621679116457"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-302"></span><span>
+</span><span id="line-303"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier hs-type">MonadThrow</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-304"></span><span>    </span><span id="local-6989586621679116472"><span class="annot"><span class="annottext">throwM :: forall e a. (HasCallStack, Exception e) =&gt; e -&gt; UI a
+</span><a href="#local-6989586621679116472"><span class="hs-identifier hs-var hs-var hs-var hs-var">throwM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a -&gt; UI a
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO a -&gt; UI a)
+-&gt; (e -&gt; RWST Window [IO ()] () IO a) -&gt; e -&gt; UI a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; RWST Window [IO ()] () IO a
+forall e a.
+(HasCallStack, Exception e) =&gt;
+e -&gt; RWST Window [IO ()] () IO a
+forall (m :: * -&gt; *) e a.
+(MonadThrow m, HasCallStack, Exception e) =&gt;
+e -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#throwM"><span class="hs-identifier hs-var">throwM</span></a></span><span>
+</span><span id="line-305"></span><span>
+</span><span id="line-306"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier hs-type">MonadCatch</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-307"></span><span>    </span><span id="local-6989586621679116488"><span class="annot"><span class="annottext">catch :: forall e a.
+(HasCallStack, Exception e) =&gt;
+UI a -&gt; (e -&gt; UI a) -&gt; UI a
+</span><a href="#local-6989586621679116488"><span class="hs-identifier hs-var hs-var hs-var hs-var">catch</span></a></span></span><span> </span><span id="local-6989586621679116490"><span class="annot"><span class="annottext">UI a
+</span><a href="#local-6989586621679116490"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679116491"><span class="annot"><span class="annottext">e -&gt; UI a
+</span><a href="#local-6989586621679116491"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a -&gt; UI a
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO a -&gt; UI a)
+-&gt; RWST Window [IO ()] () IO a -&gt; UI a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a
+-&gt; (e -&gt; RWST Window [IO ()] () IO a)
+-&gt; RWST Window [IO ()] () IO a
+forall e a.
+(HasCallStack, Exception e) =&gt;
+RWST Window [IO ()] () IO a
+-&gt; (e -&gt; RWST Window [IO ()] () IO a)
+-&gt; RWST Window [IO ()] () IO a
+forall (m :: * -&gt; *) e a.
+(MonadCatch m, HasCallStack, Exception e) =&gt;
+m a -&gt; (e -&gt; m a) -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#catch"><span class="hs-identifier hs-var">catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UI a -&gt; RWST Window [IO ()] () IO a
+forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var">unUI</span></a></span><span> </span><span class="annot"><span class="annottext">UI a
+</span><a href="#local-6989586621679116490"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UI a -&gt; RWST Window [IO ()] () IO a
+forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var">unUI</span></a></span><span> </span><span class="annot"><span class="annottext">(UI a -&gt; RWST Window [IO ()] () IO a)
+-&gt; (e -&gt; UI a) -&gt; e -&gt; RWST Window [IO ()] () IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; UI a
+</span><a href="#local-6989586621679116491"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-308"></span><span>
+</span><span id="line-309"></span><span class="hs-comment">-- | Execute an 'UI' action in a particular browser window.</span><span>
+</span><span id="line-310"></span><span class="hs-comment">-- Also runs all scheduled 'IO' actions.</span><span>
+</span><span id="line-311"></span><span id="local-6989586621679116014"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#runUI"><span class="hs-identifier hs-type">runUI</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116014"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116014"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-312"></span><span id="runUI"><span class="annot"><span class="annottext">runUI :: forall a. Window -&gt; UI a -&gt; IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#runUI"><span class="hs-identifier hs-var hs-var">runUI</span></a></span></span><span> </span><span id="local-6989586621679116498"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116498"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span id="local-6989586621679116499"><span class="annot"><span class="annottext">UI a
+</span><a href="#local-6989586621679116499"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-313"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679116500"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116500"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679116501"><span class="annot"><span class="annottext">[IO ()]
+</span><a href="#local-6989586621679116501"><span class="hs-identifier hs-var">actions</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO a -&gt; Window -&gt; () -&gt; IO (a, (), [IO ()])
+forall r w s (m :: * -&gt; *) a.
+RWST r w s m a -&gt; r -&gt; s -&gt; m (a, s, w)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#runRWST"><span class="hs-identifier hs-var">Monad.runRWST</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UI a -&gt; RWST Window [IO ()] () IO a
+forall a. UI a -&gt; RWST Window [IO ()] () IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unUI"><span class="hs-identifier hs-var">unUI</span></a></span><span> </span><span class="annot"><span class="annottext">UI a
+</span><a href="#local-6989586621679116499"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116498"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-314"></span><span>    </span><span class="annot"><span class="annottext">[IO ()] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Foldable t, Monad m) =&gt;
+t (m a) -&gt; m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#sequence_"><span class="hs-identifier hs-var">sequence_</span></a></span><span> </span><span class="annot"><span class="annottext">[IO ()]
+</span><a href="#local-6989586621679116501"><span class="hs-identifier hs-var">actions</span></a></span><span>
+</span><span id="line-315"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116500"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-316"></span><span>
+</span><span id="line-317"></span><span class="annot"><span class="hs-comment">-- | Retrieve current 'Window' context in the 'UI' monad.</span></span><span>
+</span><span id="line-318"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-type">askWindow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span>
+</span><span id="line-319"></span><span id="askWindow"><span class="annot"><span class="annottext">askWindow :: UI Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var hs-var">askWindow</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO Window -&gt; UI Window
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO Window
+forall w (m :: * -&gt; *) r s. (Monoid w, Monad m) =&gt; RWST r w s m r
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#ask"><span class="hs-identifier hs-var">Monad.ask</span></a></span><span>
+</span><span id="line-320"></span><span>
+</span><span id="line-321"></span><span class="annot"><span class="hs-comment">-- | Schedule an 'IO' action to be run later.</span></span><span>
+</span><span id="line-322"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#liftIOLater"><span class="hs-identifier hs-type">liftIOLater</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-323"></span><span id="liftIOLater"><span class="annot"><span class="annottext">liftIOLater :: IO () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftIOLater"><span class="hs-identifier hs-var hs-var">liftIOLater</span></a></span></span><span> </span><span id="local-6989586621679116505"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679116505"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RWST Window [IO ()] () IO () -&gt; UI ()
+forall a. RWST Window [IO ()] () IO a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-var">UI</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST Window [IO ()] () IO () -&gt; UI ())
+-&gt; RWST Window [IO ()] () IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[IO ()] -&gt; RWST Window [IO ()] () IO ()
+forall (m :: * -&gt; *) w r s. Monad m =&gt; w -&gt; RWST r w s m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#tell"><span class="hs-identifier hs-var">Monad.tell</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679116505"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-324"></span><span>
+</span><span id="line-325"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    FFI
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-328"></span><span class="hs-comment">-- | Run a JavaScript function, but do not wait for a result.</span><span>
+</span><span id="line-329"></span><span class="hs-comment">--</span><span>
+</span><span id="line-330"></span><span class="hs-comment">-- The client window uses JavaScript's @eval()@ function to run the code.</span><span>
+</span><span id="line-331"></span><span class="hs-comment">--</span><span>
+</span><span id="line-332"></span><span class="hs-comment">-- NOTE: The JavaScript function need not be executed immediately,</span><span>
+</span><span id="line-333"></span><span class="hs-comment">-- it can be buffered and sent to the browser window at a later time.</span><span>
+</span><span id="line-334"></span><span class="hs-comment">-- See 'setCallBufferMode' and 'flushCallBuffer' for more.</span><span>
+</span><span id="line-335"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-type">runFunction</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#JSFunction"><span class="hs-identifier hs-type">JSFunction</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-336"></span><span id="runFunction"><span class="annot"><span class="annottext">runFunction :: JSFunction () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var hs-var">runFunction</span></a></span></span><span> </span><span id="local-6989586621679116507"><span class="annot"><span class="annottext">JSFunction ()
+</span><a href="#local-6989586621679116507"><span class="hs-identifier hs-var">fun</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; UI ()) -&gt; (Window -&gt; IO ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116508"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116508"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Window -&gt; JSFunction () -&gt; IO ()
+</span><a href="Foreign.JavaScript.html#runFunction"><span class="hs-identifier hs-var">JS.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116508"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">JSFunction ()
+</span><a href="#local-6989586621679116507"><span class="hs-identifier hs-var">fun</span></a></span><span>
+</span><span id="line-337"></span><span>
+</span><span id="line-338"></span><span class="hs-comment">-- | Call a JavaScript function and wait for the result.</span><span>
+</span><span id="line-339"></span><span class="hs-comment">--</span><span>
+</span><span id="line-340"></span><span class="hs-comment">-- The client window uses JavaScript's @eval()@ function to run the code.</span><span>
+</span><span id="line-341"></span><span id="local-6989586621679116153"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#callFunction"><span class="hs-identifier hs-type">callFunction</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#JSFunction"><span class="hs-identifier hs-type">JSFunction</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116153"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116153"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-342"></span><span id="callFunction"><span class="annot"><span class="annottext">callFunction :: forall a. JSFunction a -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#callFunction"><span class="hs-identifier hs-var hs-var">callFunction</span></a></span></span><span> </span><span id="local-6989586621679116509"><span class="annot"><span class="annottext">JSFunction a
+</span><a href="#local-6989586621679116509"><span class="hs-identifier hs-var">fun</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO a) -&gt; UI a
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO a) -&gt; UI a) -&gt; (Window -&gt; IO a) -&gt; UI a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116510"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116510"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Window -&gt; JSFunction a -&gt; IO a
+forall a. Window -&gt; JSFunction a -&gt; IO a
+</span><a href="Foreign.JavaScript.html#callFunction"><span class="hs-identifier hs-var">JS.callFunction</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116510"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">JSFunction a
+</span><a href="#local-6989586621679116509"><span class="hs-identifier hs-var">fun</span></a></span><span>
+</span><span id="line-343"></span><span>
+</span><span id="line-344"></span><span class="annot"><span class="hs-comment">-- | Set the call buffering mode for the browser window.</span></span><span>
+</span><span id="line-345"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#setCallBufferMode"><span class="hs-identifier hs-type">setCallBufferMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#CallBufferMode"><span class="hs-identifier hs-type">CallBufferMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-346"></span><span id="setCallBufferMode"><span class="annot"><span class="annottext">setCallBufferMode :: CallBufferMode -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#setCallBufferMode"><span class="hs-identifier hs-var hs-var">setCallBufferMode</span></a></span></span><span> </span><span id="local-6989586621679116511"><span class="annot"><span class="annottext">CallBufferMode
+</span><a href="#local-6989586621679116511"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; UI ()) -&gt; (Window -&gt; IO ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116512"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116512"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Window -&gt; CallBufferMode -&gt; IO ()
+</span><a href="Foreign.JavaScript.CallBuffer.html#setCallBufferMode"><span class="hs-identifier hs-var">JS.setCallBufferMode</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116512"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">CallBufferMode
+</span><a href="#local-6989586621679116511"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-347"></span><span>
+</span><span id="line-348"></span><span class="hs-comment">-- | Flush the call buffer,</span><span>
+</span><span id="line-349"></span><span class="hs-comment">-- i.e. send all outstanding JavaScript to the client in one single message.</span><span>
+</span><span id="line-350"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#flushCallBuffer"><span class="hs-identifier hs-type">flushCallBuffer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-351"></span><span id="flushCallBuffer"><span class="annot"><span class="annottext">flushCallBuffer :: UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#flushCallBuffer"><span class="hs-identifier hs-var hs-var">flushCallBuffer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; UI ()) -&gt; (Window -&gt; IO ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116513"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116513"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Window -&gt; IO ()
+</span><a href="Foreign.JavaScript.CallBuffer.html#flushCallBuffer"><span class="hs-identifier hs-var">JS.flushCallBuffer</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116513"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-352"></span><span>
+</span><span id="line-353"></span><span class="hs-comment">-- | Export the given Haskell function so that it can be called</span><span>
+</span><span id="line-354"></span><span class="hs-comment">-- from JavaScript code.</span><span>
+</span><span id="line-355"></span><span class="hs-comment">--</span><span>
+</span><span id="line-356"></span><span class="hs-comment">-- NOTE: At the moment, the 'JSObject' representing the exported function</span><span>
+</span><span id="line-357"></span><span class="hs-comment">-- will be referenced by the browser 'Window' in which it was created,</span><span>
+</span><span id="line-358"></span><span class="hs-comment">-- preventing garbage collection until this browser 'Window' is disconnected.</span><span>
+</span><span id="line-359"></span><span class="hs-comment">--</span><span>
+</span><span id="line-360"></span><span class="hs-comment">-- This makes it possible to use it as an event handler on the JavaScript side,</span><span>
+</span><span id="line-361"></span><span class="hs-comment">-- but it also means that the Haskell runtime has no way to detect</span><span>
+</span><span id="line-362"></span><span class="hs-comment">-- early when it is no longer needed.</span><span>
+</span><span id="line-363"></span><span class="hs-comment">--</span><span>
+</span><span id="line-364"></span><span class="hs-comment">-- In contrast, if you use the function 'domEvent' to register an</span><span>
+</span><span id="line-365"></span><span class="hs-comment">-- event handler to an 'Element',</span><span>
+</span><span id="line-366"></span><span class="hs-comment">-- then the handler will be garbage collected</span><span>
+</span><span id="line-367"></span><span class="hs-comment">-- as soon as the associated 'Element' is garbage collected.</span><span>
+</span><span id="line-368"></span><span id="local-6989586621679116157"><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#ffiExport"><span class="hs-identifier hs-type">ffiExport</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Marshal.html#IsHandler"><span class="hs-identifier hs-type">JS.IsHandler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116157"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679116157"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JSObject</span></a></span></span><span>
+</span><span id="line-369"></span><span id="ffiExport"><span class="annot"><span class="annottext">ffiExport :: forall a. IsHandler a =&gt; a -&gt; UI JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#ffiExport"><span class="hs-identifier hs-var hs-var">ffiExport</span></a></span></span><span> </span><span id="local-6989586621679116519"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116519"><span class="hs-identifier hs-var">fun</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO JSObject) -&gt; UI JSObject
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO JSObject) -&gt; UI JSObject)
+-&gt; (Window -&gt; IO JSObject) -&gt; UI JSObject
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116520"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116520"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-370"></span><span>    </span><span id="local-6989586621679116521"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116521"><span class="hs-identifier hs-var">handlerPtr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; a -&gt; IO JSObject
+forall a. IsHandler a =&gt; Window -&gt; a -&gt; IO JSObject
+</span><a href="Foreign.JavaScript.html#exportHandler"><span class="hs-identifier hs-var">JS.exportHandler</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116520"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679116519"><span class="hs-identifier hs-var">fun</span></a></span><span>
+</span><span id="line-371"></span><span>    </span><span class="annot"><span class="annottext">Children -&gt; JSObject -&gt; IO ()
+forall a b. RemotePtr a -&gt; RemotePtr b -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#addReachable"><span class="hs-identifier hs-var">Foreign.addReachable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; Children
+</span><a href="Foreign.JavaScript.Types.html#root"><span class="hs-identifier hs-var">JS.root</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116520"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116521"><span class="hs-identifier hs-var">handlerPtr</span></a></span><span>
+</span><span id="line-372"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; IO JSObject
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679116521"><span class="hs-identifier hs-var">handlerPtr</span></a></span><span>
+</span><span id="line-373"></span><span>
+</span><span id="line-374"></span><span class="annot"><span class="hs-comment">-- | Print a message on the client console if the client has debugging enabled.</span></span><span>
+</span><span id="line-375"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#debug"><span class="hs-identifier hs-type">debug</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-376"></span><span id="debug"><span class="annot"><span class="annottext">debug :: String -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#debug"><span class="hs-identifier hs-var hs-var">debug</span></a></span></span><span> </span><span id="local-6989586621679116522"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116522"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">((Window -&gt; IO ()) -&gt; UI ()) -&gt; (Window -&gt; IO ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679116523"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116523"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Window -&gt; String -&gt; IO ()
+</span><a href="Foreign.JavaScript.Types.html#debug"><span class="hs-identifier hs-var">JS.debug</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679116523"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679116522"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-377"></span><span>
+</span><span id="line-378"></span><span class="hs-comment">-- | Print a timestamp and the difference to the previous timestamp</span><span>
+</span><span id="line-379"></span><span class="hs-comment">-- on the client console if the client has debugging enabled.</span><span>
+</span><span id="line-380"></span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#timestamp"><span class="hs-identifier hs-type">timestamp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-381"></span><span id="timestamp"><span class="annot"><span class="annottext">timestamp :: UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#timestamp"><span class="hs-identifier hs-var hs-var">timestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Window -&gt; IO ()) -&gt; UI ()
+forall a. (Window -&gt; IO a) -&gt; UI a
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftJSWindow"><span class="hs-identifier hs-var">liftJSWindow</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; IO ()
+</span><a href="Foreign.JavaScript.Types.html#timestamp"><span class="hs-identifier hs-var">JS.timestamp</span></a></span><span>
+</span><span id="line-382"></span><span>
+</span><span id="line-383"></span></pre></body></html>

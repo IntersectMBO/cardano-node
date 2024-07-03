@@ -1,0 +1,502 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#mkNoNodesInfo"><span class="hs-identifier">mkNoNodesInfo</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#hideNoNodes"><span class="hs-identifier">hideNoNodes</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#showNoNodes"><span class="hs-identifier">showNoNodes</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Configuration.html"><span class="hs-identifier">Cardano.Tracer.Configuration</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Img.Icons.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Img.Icons</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Utils</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.OldList.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/613z6z2nyihzblh63yjqxlih5zrdclav-string-qq-lib-string-qq-0.0.6-haddock-doc/share/doc/string-qq/html/src/Data.String.QQ.html"><span class="hs-identifier">Data.String.QQ</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.html"><span class="hs-identifier">Graphics.UI.Threepenny</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- | If the user doesn't see connected nodes - possible reason of it is</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--   misconfiguration of 'cardano-tracer' and/or 'cardano-node'.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--   So we have to show basic explanation, which is based on current</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--   configuration of 'cardano-tracer'.</span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#mkNoNodesInfo"><span class="hs-identifier hs-type">mkNoNodesInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#Network"><span class="hs-identifier hs-type">Network</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>
+</span><span id="line-27"></span><span id="mkNoNodesInfo"><span class="annot"><span class="annottext">mkNoNodesInfo :: Network -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#mkNoNodesInfo"><span class="hs-identifier hs-var hs-var">mkNoNodesInfo</span></a></span></span><span> </span><span id="local-6989586621679613558"><span class="annot"><span class="annottext">Network
+</span><a href="#local-6989586621679613558"><span class="hs-identifier hs-var">networkConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679613559"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613559"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679613561"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679613561"><span class="hs-identifier hs-var">closeIt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#button"><span class="hs-identifier hs-var">UI.button</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;delete&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#attr"><span class="hs-identifier hs-var">UI.attr</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;aria-label&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;delete&quot;</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="annottext">(Element -&gt; Event ()) -&gt; Element -&gt; (() -&gt; UI ()) -&gt; UI ()
+forall element a void.
+(element -&gt; Event a) -&gt; element -&gt; (a -&gt; UI void) -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#on"><span class="hs-identifier hs-var">on</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; Event ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Events.html#click"><span class="hs-identifier hs-var">UI.click</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679613561"><span class="hs-identifier hs-var">closeIt</span></a></span><span> </span><span class="annot"><span class="annottext">((() -&gt; UI ()) -&gt; UI ())
+-&gt; (UI () -&gt; () -&gt; UI ()) -&gt; UI () -&gt; UI ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UI () -&gt; () -&gt; UI ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(UI () -&gt; UI ()) -&gt; UI () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndHide"><span class="hs-identifier hs-var">findAndHide</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613559"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no-nodes-info&quot;</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#div"><span class="hs-identifier hs-var">UI.div</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;no-nodes&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;container is-max-widescreen&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;has-text-centered&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-34"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#image"><span class="hs-identifier hs-var">image</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rt-view-no-nodes-icon&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Img.Icons.html#noNodesSVG"><span class="hs-identifier hs-var">noNodesSVG</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;no-nodes-icon&quot;</span></span><span>
+</span><span id="line-35"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;no-nodes-message&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rt-view-no-nodes-message&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;There are no connected nodes. Yet.&quot;</span></span><span>
+</span><span id="line-38"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#div"><span class="hs-identifier hs-var">UI.div</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rt-view-no-nodes-progress&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#mkElement"><span class="hs-identifier hs-var">UI.mkElement</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;progress&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;no-nodes-progress&quot;</span></span><span class="hs-cpp">
+                                  #. &quot;progress is-small is-link&quot;
+</span><span class="hs-cpp">                                  # set UI.value &quot;0&quot;
+</span><span class="hs-cpp">                                  # set (attr &quot;max&quot;) &quot;60&quot;
+</span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#mkElement"><span class="hs-identifier hs-var">UI.mkElement</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;article&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;no-nodes-info&quot;</span></span><span class="hs-cpp">
+                             #. &quot;container message is-link rt-view-no-nodes-info&quot; #+
+</span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#div"><span class="hs-identifier hs-var">UI.div</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;message-header&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-48"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&#171;Hey, where are my nodes?&#187;&quot;</span></span><span>
+</span><span id="line-49"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Element -&gt; UI Element
+forall (m :: * -&gt; *) w. (MonadIO m, Widget w) =&gt; w -&gt; m Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#element"><span class="hs-identifier hs-var">element</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679613561"><span class="hs-identifier hs-var">closeIt</span></a></span><span>
+</span><span id="line-50"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#div"><span class="hs-identifier hs-var">UI.div</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;message-body&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-52"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-53"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#html"><span class="hs-identifier hs-var">UI.html</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613585"><span class="hs-identifier hs-var">pleaseWait</span></a></span><span>
+</span><span id="line-54"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mt-5&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-56"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613586"><span class="hs-identifier hs-var">intro</span></a></span><span>
+</span><span id="line-57"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mt-5&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-59"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#html"><span class="hs-identifier hs-var">UI.html</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613587"><span class="hs-identifier hs-var">cardanoTracerNote</span></a></span><span>
+</span><span id="line-60"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mt-5&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-62"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#html"><span class="hs-identifier hs-var">UI.html</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613588"><span class="hs-identifier hs-var">localNote</span></a></span><span>
+</span><span id="line-63"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mt-5&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-65"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#html"><span class="hs-identifier hs-var">UI.html</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613589"><span class="hs-identifier hs-var">sshNote</span></a></span><span>
+</span><span id="line-66"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#anchor"><span class="hs-identifier hs-var">UI.anchor</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Attributes.html#href"><span class="hs-identifier hs-var">UI.href</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#distributed-scenario&quot;</span></span><span class="hs-cpp">
+                            # set text &quot;here&quot;
+</span><span class="hs-cpp">                            # set UI.target &quot;_blank&quot;
+</span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#image"><span class="hs-identifier hs-var">image</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rt-view-href-icon&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Img.Icons.html#externalLinkSVG"><span class="hs-identifier hs-var">externalLinkSVG</span></a></span><span>
+</span><span id="line-70"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-71"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mt-5&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-73"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#html"><span class="hs-identifier hs-var">UI.html</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613594"><span class="hs-identifier hs-var">nodeNameNote</span></a></span><span>
+</span><span id="line-74"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#p"><span class="hs-identifier hs-var">UI.p</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mt-5&quot;</span></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-76"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;For more details, please read &quot;</span></span><span>
+</span><span id="line-77"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#anchor"><span class="hs-identifier hs-var">UI.anchor</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Attributes.html#href"><span class="hs-identifier hs-var">UI.href</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#configuration&quot;</span></span><span class="hs-cpp">
+                            # set text &quot;our documentation&quot;
+</span><span class="hs-cpp">                            # set UI.target &quot;_blank&quot;
+</span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#image"><span class="hs-identifier hs-var">image</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rt-view-href-icon&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Img.Icons.html#externalLinkSVG"><span class="hs-identifier hs-var">externalLinkSVG</span></a></span><span>
+</span><span id="line-81"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-82"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-86"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679613585"><span class="annot"><span class="annottext">pleaseWait :: String
+</span><a href="#local-6989586621679613585"><span class="hs-identifier hs-var hs-var">pleaseWait</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;If your nodes and &lt;code&gt;cardano-tracer&lt;/code&gt; are configured properly, &quot;</span></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;the connection between them will be established automatically, &quot;</span></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;but it may take some time.&quot;</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679613586"><span class="annot"><span class="annottext">intro :: String
+</span><a href="#local-6989586621679613586"><span class="hs-identifier hs-var hs-var">intro</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;However, if there is no connection after 1 minute, please check your configuration.&quot;</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621679613587"><span class="annot"><span class="annottext">cardanoTracerNote :: String
+</span><a href="#local-6989586621679613587"><span class="hs-identifier hs-var hs-var">cardanoTracerNote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="#local-6989586621679613558"><span class="hs-identifier hs-var">networkConfig</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#AcceptAt"><span class="hs-identifier hs-type">AcceptAt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Configuration.html#LocalSocket"><span class="hs-identifier hs-type">LocalSocket</span></a></span><span> </span><span id="local-6989586621679613633"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613633"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Currently, your &lt;code&gt;cardano-tracer&lt;/code&gt; is configured as a server, &quot;</span></span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;so it accepts connections from your nodes via the local socket &lt;code&gt;&quot;</span></span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613633"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;/code&gt;. Correspondingly, your nodes should be configured to &quot;</span></span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;initiate connections using tracing socket.&quot;</span></span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#ConnectTo"><span class="hs-identifier hs-type">ConnectTo</span></a></span><span> </span><span id="local-6989586621679613635"><span class="annot"><span class="annottext">NonEmpty Address
+</span><a href="#local-6989586621679613635"><span class="hs-identifier hs-var">addrs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613640"><span class="annot"><span class="annottext">manySocks :: Bool
+</span><a href="#local-6989586621679613640"><span class="hs-identifier hs-var hs-var">manySocks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty Address -&gt; Int
+forall a. NonEmpty a -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.NonEmpty.html#length"><span class="hs-identifier hs-var">NE.length</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Address
+</span><a href="#local-6989586621679613635"><span class="hs-identifier hs-var">addrs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Currently, your &lt;code&gt;cardano-tracer&lt;/code&gt; is configured as a client, &quot;</span></span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;so it connects to your &quot;</span></span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679613640"><span class="hs-identifier hs-var">manySocks</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;nodes&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;node&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; via the local &quot;</span></span><span>
+</span><span id="line-108"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679613640"><span class="hs-identifier hs-var">manySocks</span></a></span><span>
+</span><span id="line-109"></span><span>              </span><span class="hs-keyword">then</span><span>
+</span><span id="line-110"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613648"><span class="annot"><span class="annottext">socks :: [String]
+</span><a href="#local-6989586621679613648"><span class="hs-identifier hs-var hs-var">socks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Address -&gt; String) -&gt; [Address] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Configuration.html#LocalSocket"><span class="hs-identifier hs-type">LocalSocket</span></a></span><span> </span><span id="local-6989586621679613649"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613649"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;code&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613649"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;/code&gt;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Address] -&gt; [String]) -&gt; [Address] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Address -&gt; [Address]
+forall a. NonEmpty a -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.NonEmpty.html#toList"><span class="hs-identifier hs-var">NE.toList</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Address
+</span><a href="#local-6989586621679613635"><span class="hs-identifier hs-var">addrs</span></a></span><span>
+</span><span id="line-111"></span><span>                </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;sockets &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; String
+forall a. [a] -&gt; [[a]] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.OldList.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679613648"><span class="hs-identifier hs-var">socks</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-112"></span><span>              </span><span class="hs-keyword">else</span><span>
+</span><span id="line-113"></span><span>                </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;socket &lt;code&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#LocalSocket"><span class="hs-identifier hs-type">LocalSocket</span></a></span><span> </span><span id="local-6989586621679613651"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613651"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty Address -&gt; Address
+forall a. NonEmpty a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.NonEmpty.html#head"><span class="hs-identifier hs-var">NE.head</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty Address
+</span><a href="#local-6989586621679613635"><span class="hs-identifier hs-var">addrs</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613651"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;/code&gt;.&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; Correspondingly, our nodes should be configured to accept connections using tracing socket.&quot;</span></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679613588"><span class="annot"><span class="annottext">localNote :: String
+</span><a href="#local-6989586621679613588"><span class="hs-identifier hs-var hs-var">localNote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="#local-6989586621679613558"><span class="hs-identifier hs-var">networkConfig</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#AcceptAt"><span class="hs-identifier hs-type">AcceptAt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Configuration.html#LocalSocket"><span class="hs-identifier hs-type">LocalSocket</span></a></span><span> </span><span id="local-6989586621679613667"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613667"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-119"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Thus, if your &lt;code&gt;cardano-tracer&lt;/code&gt; and your nodes are running on the same machine, run &quot;</span></span><span>
+</span><span id="line-120"></span><span>         </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;the nodes with this argument: &lt;code&gt;--tracer-socket-path-connect &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613667"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;/code&gt;.&quot;</span></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#ConnectTo"><span class="hs-identifier hs-type">ConnectTo</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Thus, if your &lt;code&gt;cardano-tracer&lt;/code&gt; and your nodes are running on the same machine, run &quot;</span></span><span>
+</span><span id="line-123"></span><span>         </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;the nodes with this argument: &lt;code&gt;--tracer-socket-path-accept SOCKET&lt;/code&gt;, where &quot;</span></span><span>
+</span><span id="line-124"></span><span>         </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;code&gt;SOCKET&lt;/code&gt; is the path to one of sockets specified in &lt;code&gt;ConnectTo&lt;/code&gt;-list &quot;</span></span><span>
+</span><span id="line-125"></span><span>         </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;in &lt;code&gt;cardano-tracer&lt;/code&gt; configuration file.&quot;</span></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679613589"><span class="annot"><span class="annottext">sshNote :: String
+</span><a href="#local-6989586621679613589"><span class="hs-identifier hs-var hs-var">sshNote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;But if your &lt;code&gt;cardano-tracer&lt;/code&gt; and your nodes are running on different machines, the only &quot;</span></span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;way to connect them is SSH tunneling with your credentials. Please see an explanation with the &quot;</span></span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;real-life example &quot;</span></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621679613594"><span class="annot"><span class="annottext">nodeNameNote :: String
+</span><a href="#local-6989586621679613594"><span class="hs-identifier hs-var hs-var">nodeNameNote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Also, please add a meaningful name for your nodes using &lt;code&gt;TraceOptionNodeName&lt;/code&gt; field&quot;</span></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; in their configuration files. For example: &lt;pre&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#traceOptionNodeName"><span class="hs-identifier hs-var">traceOptionNodeName</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;/pre&gt;&quot;</span></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#traceOptionNodeName"><span class="hs-identifier hs-type">traceOptionNodeName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-137"></span><span id="traceOptionNodeName"><span class="annot"><span class="annottext">traceOptionNodeName :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#traceOptionNodeName"><span class="hs-identifier hs-var hs-var">traceOptionNodeName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+&quot;TraceOptionNodeName&quot;: &quot;stk-a-1-IOG1&quot;
+|]</span></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#hideNoNodes"><span class="hs-identifier hs-type">hideNoNodes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#showNoNodes"><span class="hs-identifier hs-type">showNoNodes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">UI.Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">UI.Timer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span id="hideNoNodes"><span class="annot"><span class="annottext">hideNoNodes :: Window -&gt; Timer -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#hideNoNodes"><span class="hs-identifier hs-var hs-var">hideNoNodes</span></a></span></span><span> </span><span id="local-6989586621679613681"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613681"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span id="local-6989586621679613682"><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679613682"><span class="hs-identifier hs-var">aTimer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndHide"><span class="hs-identifier hs-var">findAndHide</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613681"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no-nodes&quot;</span></span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndHide"><span class="hs-identifier hs-var">findAndHide</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613681"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no-nodes-info&quot;</span></span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="annottext">Timer -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Timer.html#stop"><span class="hs-identifier hs-var">UI.stop</span></a></span><span> </span><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679613682"><span class="hs-identifier hs-var">aTimer</span></a></span><span>
+</span><span id="line-146"></span><span id="showNoNodes"><span class="annot"><span class="annottext">showNoNodes :: Window -&gt; Timer -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes.html#showNoNodes"><span class="hs-identifier hs-var hs-var">showNoNodes</span></a></span></span><span> </span><span id="local-6989586621679613684"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613684"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span id="local-6989586621679613685"><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679613685"><span class="hs-identifier hs-var">aTimer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613687"><span class="annot"><span class="annottext">elId :: Text
+</span><a href="#local-6989586621679613687"><span class="hs-identifier hs-var hs-var">elId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no-nodes-progress&quot;</span></span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element String String
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String String
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#value"><span class="hs-identifier hs-var">UI.value</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;0&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613684"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613687"><span class="hs-identifier hs-var">elId</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#visibleOnly"><span class="hs-identifier hs-var">visibleOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613684"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613687"><span class="hs-identifier hs-var">elId</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndShow"><span class="hs-identifier hs-var">findAndShow</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613684"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no-nodes&quot;</span></span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndShow"><span class="hs-identifier hs-var">findAndShow</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613684"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no-nodes-info&quot;</span></span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><span class="annottext">Timer -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Timer.html#start"><span class="hs-identifier hs-var">UI.start</span></a></span><span> </span><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679613685"><span class="hs-identifier hs-var">aTimer</span></a></span><span>
+</span><span id="line-153"></span></pre></body></html>

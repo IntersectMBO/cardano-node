@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.DeltaQ.TraceStatsSupport</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- This module is making use of hackage statistical libraries. They</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- are not the most efficient approaches for this particular use</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- case, and they may increase the package dependencies for the final</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- binaries (they have a lot of dependencies).</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- It may well be worthwhile constructing specialised version for the</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- specific use case, but building those and creating the associated</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- test suite was not deemed a good use of time (at the time of</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- creation).</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Definite space/time optimisation task here.</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Mux.DeltaQ.TraceTypes.html"><span class="hs-identifier">Network.Mux.DeltaQ.TraceTypes</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Statistics.LinearRegression</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><a href="Network.Mux.DeltaQ.TraceStatsSupport.html#estimateGS"><span class="hs-identifier hs-type">estimateGS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.DeltaQ.TraceTypes.html#SISec"><span class="hs-identifier hs-type">SISec</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span id="estimateGS"><span class="annot"><span class="annottext">estimateGS :: [(Int, SISec)] -&gt; (Double, Double, Double)
+</span><a href="Network.Mux.DeltaQ.TraceStatsSupport.html#estimateGS"><span class="hs-identifier hs-var hs-var">estimateGS</span></a></span></span><span> </span><span id="local-6989586621679114771"><span class="annot"><span class="annottext">[(Int, SISec)]
+</span><a href="#local-6989586621679114771"><span class="hs-identifier hs-var">xys</span></a></span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679114772"><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679114772"><span class="hs-identifier hs-var">xs'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679114773"><span class="annot"><span class="annottext">[SISec]
+</span><a href="#local-6989586621679114773"><span class="hs-identifier hs-var">ys'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Int, SISec)] -&gt; ([Int], [SISec])
+forall a b. [(a, b)] -&gt; ([a], [b])
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#unzip"><span class="hs-identifier hs-var">unzip</span></a></span><span> </span><span class="annot"><span class="annottext">[(Int, SISec)]
+</span><a href="#local-6989586621679114771"><span class="hs-identifier hs-var">xys</span></a></span><span>
+</span><span id="line-23"></span><span>        </span><span id="local-6989586621679114786"><span class="annot"><span class="annottext">xs :: Vector Double
+</span><a href="#local-6989586621679114786"><span class="hs-identifier hs-var hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Double] -&gt; Vector Double
+forall a. Unbox a =&gt; [a] -&gt; Vector a
+</span><span class="hs-identifier hs-var">V.fromList</span></span><span> </span><span class="annot"><span class="annottext">([Double] -&gt; Vector Double) -&gt; [Double] -&gt; Vector Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Double) -&gt; [Int] -&gt; [Double]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679114772"><span class="hs-identifier hs-var">xs'</span></a></span><span>
+</span><span id="line-24"></span><span>        </span><span id="local-6989586621679114798"><span class="annot"><span class="annottext">ys :: Vector Double
+</span><a href="#local-6989586621679114798"><span class="hs-identifier hs-var hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Double] -&gt; Vector Double
+forall a. Unbox a =&gt; [a] -&gt; Vector a
+</span><span class="hs-identifier hs-var">V.fromList</span></span><span> </span><span class="annot"><span class="annottext">([Double] -&gt; Vector Double) -&gt; [Double] -&gt; Vector Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(SISec -&gt; Double) -&gt; [SISec] -&gt; [Double]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.DeltaQ.TraceTypes.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span id="local-6989586621679114800"><span class="annot"><span class="annottext">Float
+</span><a href="#local-6989586621679114800"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Double
+forall a. Fractional a =&gt; Rational -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromRational"><span class="hs-identifier hs-var">fromRational</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Double) -&gt; (Float -&gt; Rational) -&gt; Float -&gt; Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Float -&gt; Rational
+forall a. Real a =&gt; a -&gt; Rational
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#toRational"><span class="hs-identifier hs-var">toRational</span></a></span><span> </span><span class="annot"><span class="annottext">(Float -&gt; Double) -&gt; Float -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Float
+</span><a href="#local-6989586621679114800"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[SISec]
+</span><a href="#local-6989586621679114773"><span class="hs-identifier hs-var">ys'</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Vector Double -&gt; (Double, Double, Double)
+forall (v :: * -&gt; *).
+Vector v Double =&gt;
+v Double -&gt; v Double -&gt; (Double, Double, Double)
+</span><span class="hs-identifier hs-var">linearRegressionRSqr</span></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679114786"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679114798"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-26"></span></pre></body></html>

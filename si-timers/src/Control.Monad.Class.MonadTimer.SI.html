@@ -1,0 +1,848 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE InstanceSigs        #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase          #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores  #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Monad.Class.MonadTimer.SI</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Type classes</span></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadDelay"><span class="hs-identifier">MonadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadTimer"><span class="hs-identifier">MonadTimer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Auxiliary functions</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier">diffTimeToMicrosecondsAsInt</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier">microsecondsAsIntToDiffTime</span></a></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Re-exports</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier">DiffTime</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MonadFork</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier">MonadMonotonicTime</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MonadTime</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier">TimeoutState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Default implementations</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelay"><span class="hs-identifier">defaultRegisterDelay</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelayCancellable"><span class="hs-identifier">defaultRegisterDelayCancellable</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#assert"><span class="hs-identifier">assert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadFork</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html"><span class="hs-identifier">Control.Monad.Class.MonadTime.SI</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTimer</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MonadTimer</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html"><span class="hs-identifier">Control.Monad.Class.MonadTimer.NonStandard</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier">TimeoutState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html"><span class="hs-identifier">Control.Monad.Class.MonadTimer.NonStandard</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NonStandard</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.html"><span class="hs-identifier">Control.Monad.Reader</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Bifunctor.html#bimap"><span class="hs-identifier">bimap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html"><span class="hs-identifier">Data.Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%24%3E"><span class="hs-operator">($&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#diffTimeToPicoseconds"><span class="hs-identifier">diffTimeToPicoseconds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Convert 'DiffTime' in seconds to microseconds represented by an 'Int'.</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- Note that on 32bit systems it can only represent `2^31-1` seconds, which is</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- only ~35 minutes.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- It doesn't prevent under- or overflows; when assertions are on it will thrown</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- an assertion exception.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-type">diffTimeToMicrosecondsAsInt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-50"></span><span id="diffTimeToMicrosecondsAsInt"><span class="annot"><span class="annottext">diffTimeToMicrosecondsAsInt :: DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var hs-var">diffTimeToMicrosecondsAsInt</span></a></span></span><span> </span><span id="local-6989586621679067761"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067761"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679067762"><span class="hs-identifier hs-type">usec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-52"></span><span>        </span><span id="local-6989586621679067762"><span class="annot"><span class="annottext">usec :: Integer
+</span><a href="#local-6989586621679067762"><span class="hs-identifier hs-var hs-var">usec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Integer
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#diffTimeToPicoseconds"><span class="hs-identifier hs-var">diffTimeToPicoseconds</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067761"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1_000_000</span></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Int -&gt; Int
+forall a. (?callStack::CallStack) =&gt; Bool -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#assert"><span class="hs-identifier hs-var hs-var">assert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679067762"><span class="hs-identifier hs-var">usec</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>         </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679067762"><span class="hs-identifier hs-var">usec</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Int -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">Integer -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679067762"><span class="hs-identifier hs-var">usec</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- | Convert time in microseconds in 'DiffTime' (measured in seconds).</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-type">microsecondsAsIntToDiffTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-61"></span><span id="microsecondsAsIntToDiffTime"><span class="annot"><span class="annottext">microsecondsAsIntToDiffTime :: Int -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-var hs-var">microsecondsAsIntToDiffTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; DiffTime
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">1_000_000</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(DiffTime -&gt; DiffTime) -&gt; (Int -&gt; DiffTime) -&gt; Int -&gt; DiffTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; DiffTime
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTimer.MonadDelay</span></span><span> </span><span class="annot"><a href="#local-6989586621679067633"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-type">MonadMonotonicTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067633"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadDelay"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadDelay"><span class="hs-identifier hs-var">MonadDelay</span></a></span></span><span> </span><span id="local-6989586621679067633"><span class="annot"><a href="#local-6989586621679067633"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>  </span><span id="threadDelay"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#threadDelay"><span class="hs-identifier hs-type">threadDelay</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067633"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Thread delay. This implementation will not over- or underflow.</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- For delay larger than what `Int` can represent (see</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- `diffTimeToMicrosecondsAsInt`), it will recursively call</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- `Control.Monad.Class.MonadTimer.threadDelay`.</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- For delays smaller than `minBound :: Int` seconds, `minBound :: Int` will be</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- used instead.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadDelay"><span class="hs-identifier hs-type">MonadDelay</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#threadDelay"><span class="hs-identifier hs-type">threadDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679067637"><span class="annot"><a href="#local-6989586621679067637"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-79"></span><span>                 </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadDelay"><span class="hs-identifier hs-type">MonadDelay</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067637"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-80"></span><span>              </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067637"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679067805"><span class="annot"><span class="annottext">threadDelay :: forall (m :: * -&gt; *). MonadDelay m =&gt; DiffTime -&gt; m ()
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#threadDelay"><span class="hs-identifier hs-var hs-var hs-var hs-var">threadDelay</span></a></span></span><span> </span><span id="local-6989586621679067806"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067806"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067806"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span id="local-6989586621679067807"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067807"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067807"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067808"><span class="hs-identifier hs-var">maxDelay</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; m ()
+forall (m :: * -&gt; *). MonadDelay m =&gt; Int -&gt; m ()
+</span><span class="hs-identifier hs-var">MonadTimer.threadDelay</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var">diffTimeToMicrosecondsAsInt</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067807"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><a href="#local-6989586621679067808"><span class="hs-identifier hs-type">maxDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span id="local-6989586621679067808"><span class="annot"><span class="annottext">maxDelay :: DiffTime
+</span><a href="#local-6989586621679067808"><span class="hs-identifier hs-var hs-var">maxDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-var">microsecondsAsIntToDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span id="local-6989586621679067810"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067810"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>      </span><span id="local-6989586621679067811"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067811"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var">getMonotonicTime</span></a></span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679067813"><span class="annot"><span class="annottext">u :: Time
+</span><a href="#local-6989586621679067813"><span class="hs-identifier hs-var hs-var">u</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067810"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Time -&gt; Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#addTime"><span class="hs-operator hs-var">`addTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067811"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067815"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067811"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067813"><span class="hs-identifier hs-var">u</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><a href="#local-6989586621679067816"><span class="hs-identifier hs-type">maxDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-95"></span><span>      </span><span id="local-6989586621679067816"><span class="annot"><span class="annottext">maxDelay :: DiffTime
+</span><a href="#local-6989586621679067816"><span class="hs-identifier hs-var hs-var">maxDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-var">microsecondsAsIntToDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><a href="#local-6989586621679067815"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067637"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>      </span><span id="local-6989586621679067815"><span class="annot"><span class="annottext">go :: Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067815"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679067817"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067817"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679067818"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067818"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067819"><span class="hs-identifier hs-var">d'</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067816"><span class="hs-identifier hs-var">maxDelay</span></a></span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="annottext">Int -&gt; m ()
+forall (m :: * -&gt; *). MonadDelay m =&gt; Int -&gt; m ()
+</span><span class="hs-identifier hs-var">MonadTimer.threadDelay</span></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-102"></span><span>            </span><span id="local-6989586621679067820"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067820"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var">getMonotonicTime</span></a></span><span>
+</span><span id="line-103"></span><span>            </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067815"><span class="hs-identifier hs-var">go</span></a></span><span>  </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067820"><span class="hs-identifier hs-var">c'</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067818"><span class="hs-identifier hs-var">u</span></a></span><span>
+</span><span id="line-104"></span><span>          </span><span class="hs-keyword">else</span><span>
+</span><span id="line-105"></span><span>            </span><span class="annot"><span class="annottext">Int -&gt; m ()
+forall (m :: * -&gt; *). MonadDelay m =&gt; Int -&gt; m ()
+</span><span class="hs-identifier hs-var">MonadTimer.threadDelay</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var">diffTimeToMicrosecondsAsInt</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067819"><span class="hs-identifier hs-var">d'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>          </span><span id="local-6989586621679067819"><span class="annot"><span class="annottext">d' :: DiffTime
+</span><a href="#local-6989586621679067819"><span class="hs-identifier hs-var hs-var">d'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067818"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-operator hs-var">`diffTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067817"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067651"><span id="local-6989586621679067652"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadDelay"><span class="hs-identifier hs-type">MonadDelay</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067651"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadDelay"><span class="hs-identifier hs-type">MonadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067652"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067651"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621679067838"><span class="annot"><span class="annottext">threadDelay :: DiffTime -&gt; ReaderT r m ()
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#threadDelay"><span class="hs-identifier hs-var hs-var hs-var hs-var">threadDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m () -&gt; ReaderT r m ()
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; ReaderT r m ())
+-&gt; (DiffTime -&gt; m ()) -&gt; DiffTime -&gt; ReaderT r m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m ()
+forall (m :: * -&gt; *). MonadDelay m =&gt; DiffTime -&gt; m ()
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTimer.MonadTimer</span></span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-type">MonadMonotonicTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadTimer"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadTimer"><span class="hs-identifier hs-var">MonadTimer</span></a></span></span><span> </span><span id="local-6989586621679067658"><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-comment">-- | A register delay function which safe on 32-bit systems.</span><span>
+</span><span id="line-117"></span><span>  </span><span id="registerDelay"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelay"><span class="hs-identifier hs-type">registerDelay</span></a></span></span><span>            </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-comment">-- | A cancellable register delay which is safe on 32-bit systems and efficient</span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-comment">-- for delays smaller than what `Int` can represent (especially on systems which</span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-comment">-- support native timer manager).</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span>  </span><span id="registerDelayCancellable"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelayCancellable"><span class="hs-identifier hs-type">registerDelayCancellable</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-comment">-- | A timeout function.</span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-comment">-- TODO: 'IO' instance is not safe on 32-bit systems.</span><span>
+</span><span id="line-128"></span><span>  </span><span id="timeout"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#timeout"><span class="hs-identifier hs-type">timeout</span></a></span></span><span>                  </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679067698"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067698"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067658"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067698"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- | A default implementation of `registerDelay` which supports delays longer</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- then `Int`; this is especially important on 32-bit systems where maximum</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- delay expressed in microseconds is around 35 minutes.</span><span>
+</span><span id="line-134"></span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelay"><span class="hs-identifier hs-type">defaultRegisterDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679067661"><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679067664"><span class="annot"><a href="#local-6989586621679067664"><span class="hs-identifier hs-type">timeout</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-136"></span><span>                        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFork</span></span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-137"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-type">MonadMonotonicTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-138"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-139"></span><span>                        </span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>                     </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#NewTimeout"><span class="hs-identifier hs-type">NonStandard.NewTimeout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067664"><span class="hs-identifier hs-type">timeout</span></a></span><span>
+</span><span id="line-141"></span><span>                     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#AwaitTimeout"><span class="hs-identifier hs-type">NonStandard.AwaitTimeout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067664"><span class="hs-identifier hs-type">timeout</span></a></span><span>
+</span><span id="line-142"></span><span>                     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-143"></span><span>                     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span id="defaultRegisterDelay"><span class="annot"><span class="annottext">defaultRegisterDelay :: forall (m :: * -&gt; *) timeout.
+(MonadFork m, MonadMonotonicTime m, MonadSTM m) =&gt;
+NewTimeout m timeout
+-&gt; AwaitTimeout m timeout -&gt; DiffTime -&gt; m (TVar m Bool)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelay"><span class="hs-identifier hs-var hs-var">defaultRegisterDelay</span></a></span></span><span> </span><span id="local-6989586621679067882"><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067882"><span class="hs-identifier hs-var">newTimeout</span></a></span></span><span> </span><span id="local-6989586621679067883"><span class="annot"><span class="annottext">AwaitTimeout m timeout
+</span><a href="#local-6989586621679067883"><span class="hs-identifier hs-var">awaitTimeout</span></a></span></span><span> </span><span id="local-6989586621679067884"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067884"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-145"></span><span>    </span><span id="local-6989586621679067885"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067885"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var">getMonotonicTime</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679067886"><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679067886"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m (TVar m Bool) -&gt; m (TVar m Bool)
+forall a. (?callStack::CallStack) =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, ?callStack::CallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m (TVar m Bool) -&gt; m (TVar m Bool))
+-&gt; STM m (TVar m Bool) -&gt; m (TVar m Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM m (TVar m Bool)
+forall a. a -&gt; STM m (TVar m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; STM m (TVar m a)
+</span><span class="hs-identifier hs-var">newTVar</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621679067889"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679067889"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m () -&gt; m (ThreadId m)
+forall (m :: * -&gt; *). MonadFork m =&gt; m () -&gt; m (ThreadId m)
+</span><span class="hs-identifier hs-var">forkIO</span></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m (ThreadId m)) -&gt; m () -&gt; m (ThreadId m)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m Bool -&gt; Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067891"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679067886"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067885"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067884"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Time -&gt; Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#addTime"><span class="hs-operator hs-var">`addTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067885"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">ThreadId m -&gt; String -&gt; m ()
+forall (m :: * -&gt; *). MonadThread m =&gt; ThreadId m -&gt; String -&gt; m ()
+</span><span class="hs-identifier hs-var">labelThread</span></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679067889"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;delay-thread&quot;</span></span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="annottext">TVar m Bool -&gt; m (TVar m Bool)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679067886"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><a href="#local-6989586621679067893"><span class="hs-identifier hs-type">maxDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span id="local-6989586621679067893"><span class="annot"><span class="annottext">maxDelay :: DiffTime
+</span><a href="#local-6989586621679067893"><span class="hs-identifier hs-var hs-var">maxDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-var">microsecondsAsIntToDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><a href="#local-6989586621679067891"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067661"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>    </span><span id="local-6989586621679067891"><span class="annot"><span class="annottext">go :: TVar m Bool -&gt; Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067891"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679067894"><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679067894"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679067895"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067895"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679067896"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067896"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067896"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-operator hs-var">`diffTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067895"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067893"><span class="hs-identifier hs-var">maxDelay</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-156"></span><span>      </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067882"><span class="hs-identifier hs-var">newTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="annot"><span class="annottext">m timeout -&gt; (timeout -&gt; m Bool) -&gt; m Bool
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">STM m Bool -&gt; m Bool
+forall a. (?callStack::CallStack) =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, ?callStack::CallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m Bool -&gt; m Bool)
+-&gt; AwaitTimeout m timeout -&gt; timeout -&gt; m Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AwaitTimeout m timeout
+</span><a href="#local-6989586621679067883"><span class="hs-identifier hs-var">awaitTimeout</span></a></span><span>
+</span><span id="line-157"></span><span>      </span><span id="local-6989586621679067897"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067897"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var">getMonotonicTime</span></a></span><span>
+</span><span id="line-158"></span><span>      </span><span class="annot"><span class="annottext">TVar m Bool -&gt; Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067891"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679067894"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067897"><span class="hs-identifier hs-var">c'</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067896"><span class="hs-identifier hs-var">u</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><a href="#local-6989586621679067891"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679067898"><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679067898"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679067899"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067899"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679067900"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067900"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-161"></span><span>      </span><span id="local-6989586621679067901"><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679067901"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067882"><span class="hs-identifier hs-var">newTimeout</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var">diffTimeToMicrosecondsAsInt</span></a></span><span> </span><span class="annot"><span class="annottext">(DiffTime -&gt; Int) -&gt; DiffTime -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067900"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-operator hs-var">`diffTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067899"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. (?callStack::CallStack) =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, ?callStack::CallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-163"></span><span>        </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">AwaitTimeout m timeout
+</span><a href="#local-6989586621679067883"><span class="hs-identifier hs-var">awaitTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679067901"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-164"></span><span>        </span><span class="annot"><span class="annottext">TVar m Bool -&gt; Bool -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679067898"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- | A cancellable register delay which is safe on 32-bit systems and efficient</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- for delays smaller than what `Int` can represent (especially on systems which</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- support native timer manager).</span><span>
+</span><span id="line-170"></span><span class="hs-comment">--</span><span>
+</span><span id="line-171"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelayCancellable"><span class="hs-identifier hs-type">defaultRegisterDelayCancellable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679067681"><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679067682"><span class="annot"><a href="#local-6989586621679067682"><span class="hs-identifier hs-type">timeout</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-172"></span><span>                                   </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFork</span></span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-173"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-type">MonadMonotonicTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-174"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-175"></span><span>                                   </span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>                                </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#NewTimeout"><span class="hs-identifier hs-type">NonStandard.NewTimeout</span></a></span><span>    </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067682"><span class="hs-identifier hs-type">timeout</span></a></span><span>
+</span><span id="line-177"></span><span>                                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#ReadTimeout"><span class="hs-identifier hs-type">NonStandard.ReadTimeout</span></a></span><span>   </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067682"><span class="hs-identifier hs-type">timeout</span></a></span><span>
+</span><span id="line-178"></span><span>                                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#CancelTimeout"><span class="hs-identifier hs-type">NonStandard.CancelTimeout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067682"><span class="hs-identifier hs-type">timeout</span></a></span><span>
+</span><span id="line-179"></span><span>                                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#AwaitTimeout"><span class="hs-identifier hs-type">NonStandard.AwaitTimeout</span></a></span><span>  </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067682"><span class="hs-identifier hs-type">timeout</span></a></span><span>
+</span><span id="line-180"></span><span>                                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-181"></span><span>                                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span id="defaultRegisterDelayCancellable"><span class="annot"><span class="annottext">defaultRegisterDelayCancellable :: forall (m :: * -&gt; *) timeout.
+(MonadFork m, MonadMonotonicTime m, MonadSTM m) =&gt;
+NewTimeout m timeout
+-&gt; ReadTimeout m timeout
+-&gt; CancelTimeout m timeout
+-&gt; AwaitTimeout m timeout
+-&gt; DiffTime
+-&gt; m (STM m TimeoutState, m ())
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelayCancellable"><span class="hs-identifier hs-var hs-var">defaultRegisterDelayCancellable</span></a></span></span><span> </span><span id="local-6989586621679067963"><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067963"><span class="hs-identifier hs-var">newTimeout</span></a></span></span><span> </span><span id="local-6989586621679067964"><span class="annot"><span class="annottext">ReadTimeout m timeout
+</span><a href="#local-6989586621679067964"><span class="hs-identifier hs-var">readTimeout</span></a></span></span><span> </span><span id="local-6989586621679067965"><span class="annot"><span class="annottext">CancelTimeout m timeout
+</span><a href="#local-6989586621679067965"><span class="hs-identifier hs-var">cancelTimeout</span></a></span></span><span> </span><span id="local-6989586621679067966"><span class="annot"><span class="annottext">AwaitTimeout m timeout
+</span><a href="#local-6989586621679067966"><span class="hs-identifier hs-var">_awaitTimeout</span></a></span></span><span> </span><span id="local-6989586621679067967"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067967"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067967"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067968"><span class="hs-identifier hs-var">maxDelay</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-184"></span><span>    </span><span id="local-6989586621679067969"><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679067969"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067963"><span class="hs-identifier hs-var">newTimeout</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var">diffTimeToMicrosecondsAsInt</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067967"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><span class="annottext">(STM m TimeoutState, m ()) -&gt; m (STM m TimeoutState, m ())
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadTimeout m timeout
+</span><a href="#local-6989586621679067964"><span class="hs-identifier hs-var">readTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679067969"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CancelTimeout m timeout
+</span><a href="#local-6989586621679067965"><span class="hs-identifier hs-var">cancelTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679067969"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><a href="#local-6989586621679067968"><span class="hs-identifier hs-type">maxDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span id="local-6989586621679067968"><span class="annot"><span class="annottext">maxDelay :: DiffTime
+</span><a href="#local-6989586621679067968"><span class="hs-identifier hs-var hs-var">maxDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-var">microsecondsAsIntToDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelayCancellable"><span class="hs-identifier hs-var">defaultRegisterDelayCancellable</span></a></span><span> </span><span id="local-6989586621679067970"><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067970"><span class="hs-identifier hs-var">newTimeout</span></a></span></span><span> </span><span id="local-6989586621679067971"><span class="annot"><span class="annottext">ReadTimeout m timeout
+</span><a href="#local-6989586621679067971"><span class="hs-identifier hs-var">_readTimeout</span></a></span></span><span> </span><span id="local-6989586621679067972"><span class="annot"><span class="annottext">CancelTimeout m timeout
+</span><a href="#local-6989586621679067972"><span class="hs-identifier hs-var">_cancelTimeout</span></a></span></span><span> </span><span id="local-6989586621679067973"><span class="annot"><span class="annottext">AwaitTimeout m timeout
+</span><a href="#local-6989586621679067973"><span class="hs-identifier hs-var">awaitTimeout</span></a></span></span><span> </span><span id="local-6989586621679067974"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067974"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-comment">-- current time</span><span>
+</span><span id="line-192"></span><span>    </span><span id="local-6989586621679067975"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067975"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var">getMonotonicTime</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-comment">-- timeout state</span><span>
+</span><span id="line-194"></span><span>    </span><span id="local-6989586621679067976"><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679067976"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TimeoutState -&gt; m (TVar m TimeoutState)
+forall a. a -&gt; m (TVar m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; m (TVar m a)
+</span><span class="hs-identifier hs-var">newTVarIO</span></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>
+</span><span id="line-195"></span><span>    </span><span id="local-6989586621679067979"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679067979"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m () -&gt; m (ThreadId m)
+forall (m :: * -&gt; *). MonadFork m =&gt; m () -&gt; m (ThreadId m)
+</span><span class="hs-identifier hs-var">forkIO</span></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m (ThreadId m)) -&gt; m () -&gt; m (ThreadId m)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067980"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679067976"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067975"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067974"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Time -&gt; Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#addTime"><span class="hs-operator hs-var">`addTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679067975"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><span class="annottext">ThreadId m -&gt; String -&gt; m ()
+forall (m :: * -&gt; *). MonadThread m =&gt; ThreadId m -&gt; String -&gt; m ()
+</span><span class="hs-identifier hs-var">labelThread</span></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679067979"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;delay-thread&quot;</span></span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679067997"><span class="annot"><span class="annottext">cancel :: m ()
+</span><a href="#local-6989586621679067997"><span class="hs-identifier hs-var hs-var">cancel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. (?callStack::CallStack) =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, ?callStack::CallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; STM m TimeoutState
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679067976"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">STM m TimeoutState -&gt; (TimeoutState -&gt; STM m ()) -&gt; STM m ()
+forall a b. STM m a -&gt; (a -&gt; STM m b) -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-198"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; STM m ()
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; STM m ()
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; TimeoutState -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679067976"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><span class="annottext">(STM m TimeoutState, m ()) -&gt; m (STM m TimeoutState, m ())
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; STM m TimeoutState
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679067976"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679067997"><span class="hs-identifier hs-var">cancel</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><a href="#local-6989586621679068001"><span class="hs-identifier hs-type">maxDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-204"></span><span>    </span><span id="local-6989586621679068001"><span class="annot"><span class="annottext">maxDelay :: DiffTime
+</span><a href="#local-6989586621679068001"><span class="hs-identifier hs-var hs-var">maxDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-var">microsecondsAsIntToDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><a href="#local-6989586621679067980"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span>
+</span><span id="line-207"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span>
+</span><span id="line-208"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span>
+</span><span id="line-209"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>    </span><span id="local-6989586621679067980"><span class="annot"><span class="annottext">go :: TVar m TimeoutState -&gt; Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067980"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679068002"><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679068002"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679068003"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068003"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679068004"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068004"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068004"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-operator hs-var">`diffTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068003"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068001"><span class="hs-identifier hs-var">maxDelay</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-211"></span><span>      </span><span id="local-6989586621679068005"><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679068005"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067970"><span class="hs-identifier hs-var">newTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-212"></span><span>      </span><span id="local-6989586621679068006"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679068006"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m TimeoutState -&gt; m TimeoutState
+forall a. (?callStack::CallStack) =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, ?callStack::CallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m TimeoutState -&gt; m TimeoutState)
+-&gt; STM m TimeoutState -&gt; m TimeoutState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-213"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; STM m TimeoutState
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679068002"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">STM m TimeoutState
+-&gt; (TimeoutState -&gt; STM m TimeoutState) -&gt; STM m TimeoutState
+forall a b. STM m a -&gt; (a -&gt; STM m b) -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-214"></span><span>           </span><span id="local-6989586621679068007"><span class="annot"><span class="annottext">a :: TimeoutState
+</span><a href="#local-6989586621679068007"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TimeoutState -&gt; STM m TimeoutState
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679068007"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-215"></span><span>           </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; STM m TimeoutState
+forall a. (?callStack::CallStack) =&gt; String -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;registerDelayCancellable: invariant violation!&quot;</span></span><span>
+</span><span id="line-216"></span><span>           </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM m TimeoutState
+forall a. STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a
+</span><span class="hs-identifier hs-var">retry</span></span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>        </span><span class="annot"><span class="annottext">STM m TimeoutState -&gt; STM m TimeoutState -&gt; STM m TimeoutState
+forall a. STM m a -&gt; STM m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a -&gt; STM m a -&gt; STM m a
+</span><span class="hs-operator hs-var">`orElse`</span></span><span>
+</span><span id="line-218"></span><span>        </span><span class="hs-comment">-- the overall timeout is still pending when 't' fires</span><span>
+</span><span id="line-219"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AwaitTimeout m timeout
+</span><a href="#local-6989586621679067973"><span class="hs-identifier hs-var">awaitTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679068005"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">STM m Bool -&gt; TimeoutState -&gt; STM m TimeoutState
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; b -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%24%3E"><span class="hs-operator hs-var">$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-220"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679068006"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-221"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-222"></span><span>          </span><span id="local-6989586621679068011"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068011"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var">getMonotonicTime</span></a></span><span>
+</span><span id="line-223"></span><span>          </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; Time -&gt; Time -&gt; m ()
+</span><a href="#local-6989586621679067980"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679068002"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068011"><span class="hs-identifier hs-var">c'</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068004"><span class="hs-identifier hs-var">u</span></a></span><span>
+</span><span id="line-224"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span>    </span><span class="annot"><a href="#local-6989586621679067980"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679068012"><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679068012"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679068013"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068013"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679068014"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068014"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-227"></span><span>      </span><span id="local-6989586621679068015"><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679068015"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NewTimeout m timeout
+</span><a href="#local-6989586621679067970"><span class="hs-identifier hs-var">newTimeout</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var">diffTimeToMicrosecondsAsInt</span></a></span><span> </span><span class="annot"><span class="annottext">(DiffTime -&gt; Int) -&gt; DiffTime -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068014"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-operator hs-var">`diffTime`</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679068013"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. (?callStack::CallStack) =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, ?callStack::CallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-229"></span><span>        </span><span id="local-6989586621679068016"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679068016"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; STM m TimeoutState
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679068012"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">STM m TimeoutState
+-&gt; (TimeoutState -&gt; STM m TimeoutState) -&gt; STM m TimeoutState
+forall a b. STM m a -&gt; (a -&gt; STM m b) -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-230"></span><span>                 </span><span id="local-6989586621679068017"><span class="annot"><span class="annottext">a :: TimeoutState
+</span><a href="#local-6989586621679068017"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TimeoutState -&gt; STM m TimeoutState
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679068017"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-231"></span><span>                 </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; STM m TimeoutState
+forall a. (?callStack::CallStack) =&gt; String -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;registerDelayCancellable: invariant violation!&quot;</span></span><span>
+</span><span id="line-232"></span><span>                 </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM m TimeoutState
+forall a. STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a
+</span><span class="hs-identifier hs-var">retry</span></span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span><span>              </span><span class="annot"><span class="annottext">STM m TimeoutState -&gt; STM m TimeoutState -&gt; STM m TimeoutState
+forall a. STM m a -&gt; STM m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a -&gt; STM m a -&gt; STM m a
+</span><span class="hs-operator hs-var">`orElse`</span></span><span>
+</span><span id="line-234"></span><span>              </span><span class="hs-comment">-- the overall timeout fires when 't' fires</span><span>
+</span><span id="line-235"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AwaitTimeout m timeout
+</span><a href="#local-6989586621679067973"><span class="hs-identifier hs-var">awaitTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">timeout
+</span><a href="#local-6989586621679068015"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">STM m Bool -&gt; TimeoutState -&gt; STM m TimeoutState
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; b -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%24%3E"><span class="hs-operator hs-var">$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-236"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679068016"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-237"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; TimeoutState -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679068012"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>
+</span><span id="line-238"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><span class="hs-identifier">_</span></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; STM m ()
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- | Like 'GHC.Conc.registerDelay' but safe on 32-bit systems.  When the delay</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- is larger than what `Int` can represent it will fork a thread which will</span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- write to the returned 'TVar' once the delay has passed.  When the delay is</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- small enough it will use the `MonadTimer`'s `registerDelay` (e.g. for `IO`</span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- monad it will use the `GHC`'s `GHC.Conc.registerDelay`).</span><span>
+</span><span id="line-246"></span><span class="hs-comment">--</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- TODO: 'timeout' not safe on 32-bit systems.</span><span>
+</span><span id="line-248"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadTimer"><span class="hs-identifier hs-type">MonadTimer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-249"></span><span>  </span><span id="local-6989586621679068036"><span class="annot"><span class="annottext">registerDelay :: DiffTime -&gt; IO (TVar IO Bool)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelay"><span class="hs-identifier hs-var hs-var hs-var hs-var">registerDelay</span></a></span></span><span> </span><span id="local-6989586621679068037"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068037"><span class="hs-identifier hs-var">d</span></a></span></span><span>
+</span><span id="line-250"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068037"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068038"><span class="hs-identifier hs-var">maxDelay</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-251"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; IO (TVar IO Bool)
+forall (m :: * -&gt; *). MonadTimer m =&gt; Int -&gt; m (TVar m Bool)
+</span><span class="hs-identifier hs-var">MonadTimer.registerDelay</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var">diffTimeToMicrosecondsAsInt</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068037"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-252"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-253"></span><span>        </span><span class="annot"><span class="annottext">NewTimeout IO Timeout
+-&gt; AwaitTimeout IO Timeout -&gt; DiffTime -&gt; IO (TVar IO Bool)
+forall (m :: * -&gt; *) timeout.
+(MonadFork m, MonadMonotonicTime m, MonadSTM m) =&gt;
+NewTimeout m timeout
+-&gt; AwaitTimeout m timeout -&gt; DiffTime -&gt; m (TVar m Bool)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelay"><span class="hs-identifier hs-var">defaultRegisterDelay</span></a></span><span>
+</span><span id="line-254"></span><span>          </span><span class="annot"><span class="annottext">NewTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#newTimeout"><span class="hs-identifier hs-var">NonStandard.newTimeout</span></a></span><span>
+</span><span id="line-255"></span><span>          </span><span class="annot"><span class="annottext">AwaitTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#awaitTimeout"><span class="hs-identifier hs-var">NonStandard.awaitTimeout</span></a></span><span>
+</span><span id="line-256"></span><span>          </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068037"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-257"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-258"></span><span>      </span><span class="annot"><a href="#local-6989586621679068038"><span class="hs-identifier hs-type">maxDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-259"></span><span>      </span><span id="local-6989586621679068038"><span class="annot"><span class="annottext">maxDelay :: DiffTime
+</span><a href="#local-6989586621679068038"><span class="hs-identifier hs-var hs-var">maxDelay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#microsecondsAsIntToDiffTime"><span class="hs-identifier hs-var">microsecondsAsIntToDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-260"></span><span>
+</span><span id="line-261"></span><span>  </span><span id="local-6989586621679068045"><span class="annot"><span class="annottext">registerDelayCancellable :: DiffTime -&gt; IO (STM IO TimeoutState, IO ())
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelayCancellable"><span class="hs-identifier hs-var hs-var hs-var hs-var">registerDelayCancellable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-262"></span><span>    </span><span class="annot"><span class="annottext">NewTimeout IO Timeout
+-&gt; ReadTimeout IO Timeout
+-&gt; CancelTimeout IO Timeout
+-&gt; AwaitTimeout IO Timeout
+-&gt; DiffTime
+-&gt; IO (STM IO TimeoutState, IO ())
+forall (m :: * -&gt; *) timeout.
+(MonadFork m, MonadMonotonicTime m, MonadSTM m) =&gt;
+NewTimeout m timeout
+-&gt; ReadTimeout m timeout
+-&gt; CancelTimeout m timeout
+-&gt; AwaitTimeout m timeout
+-&gt; DiffTime
+-&gt; m (STM m TimeoutState, m ())
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#defaultRegisterDelayCancellable"><span class="hs-identifier hs-var">defaultRegisterDelayCancellable</span></a></span><span>
+</span><span id="line-263"></span><span>      </span><span class="annot"><span class="annottext">NewTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#newTimeout"><span class="hs-identifier hs-var">NonStandard.newTimeout</span></a></span><span>
+</span><span id="line-264"></span><span>      </span><span class="annot"><span class="annottext">ReadTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#readTimeout"><span class="hs-identifier hs-var">NonStandard.readTimeout</span></a></span><span>
+</span><span id="line-265"></span><span>      </span><span class="annot"><span class="annottext">CancelTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#cancelTimeout"><span class="hs-identifier hs-var">NonStandard.cancelTimeout</span></a></span><span>
+</span><span id="line-266"></span><span>      </span><span class="annot"><span class="annottext">AwaitTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#awaitTimeout"><span class="hs-identifier hs-var">NonStandard.awaitTimeout</span></a></span><span>
+</span><span id="line-267"></span><span>
+</span><span id="line-268"></span><span>  </span><span id="local-6989586621679068049"><span class="annot"><span class="annottext">timeout :: forall a. DiffTime -&gt; IO a -&gt; IO (Maybe a)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#timeout"><span class="hs-identifier hs-var hs-var hs-var hs-var">timeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO a -&gt; IO (Maybe a)
+forall a. Int -&gt; IO a -&gt; IO (Maybe a)
+forall (m :: * -&gt; *) a. MonadTimer m =&gt; Int -&gt; m a -&gt; m (Maybe a)
+</span><span class="hs-identifier hs-var">MonadTimer.timeout</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; IO a -&gt; IO (Maybe a))
+-&gt; (DiffTime -&gt; Int) -&gt; DiffTime -&gt; IO a -&gt; IO (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Int
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#diffTimeToMicrosecondsAsInt"><span class="hs-identifier hs-var">diffTimeToMicrosecondsAsInt</span></a></span><span>
+</span><span id="line-269"></span><span>
+</span><span id="line-270"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067707"><span id="local-6989586621679067708"><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadTimer"><span class="hs-identifier hs-type">MonadTimer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067707"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.SI.html#MonadTimer"><span class="hs-identifier hs-type">MonadTimer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067708"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067707"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-271"></span><span>  </span><span id="local-6989586621679068074"><span class="annot"><span class="annottext">registerDelay :: DiffTime -&gt; ReaderT r m (TVar (ReaderT r m) Bool)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelay"><span class="hs-identifier hs-var hs-var hs-var hs-var">registerDelay</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (TVar m Bool) -&gt; ReaderT r m (TVar m Bool)
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m (TVar m Bool) -&gt; ReaderT r m (TVar m Bool))
+-&gt; (DiffTime -&gt; m (TVar m Bool))
+-&gt; DiffTime
+-&gt; ReaderT r m (TVar m Bool)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m (TVar m Bool)
+forall (m :: * -&gt; *). MonadTimer m =&gt; DiffTime -&gt; m (TVar m Bool)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelay"><span class="hs-identifier hs-var">registerDelay</span></a></span><span>
+</span><span id="line-272"></span><span>  </span><span id="local-6989586621679068086"><span class="annot"><span class="annottext">registerDelayCancellable :: DiffTime
+-&gt; ReaderT r m (STM (ReaderT r m) TimeoutState, ReaderT r m ())
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelayCancellable"><span class="hs-identifier hs-var hs-var hs-var hs-var">registerDelayCancellable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((STM m TimeoutState, m ())
+ -&gt; (ReaderT r (STM m) TimeoutState, ReaderT r m ()))
+-&gt; ReaderT r m (STM m TimeoutState, m ())
+-&gt; ReaderT r m (ReaderT r (STM m) TimeoutState, ReaderT r m ())
+forall a b. (a -&gt; b) -&gt; ReaderT r m a -&gt; ReaderT r m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(STM m TimeoutState -&gt; ReaderT r (STM m) TimeoutState)
+-&gt; (m () -&gt; ReaderT r m ())
+-&gt; (STM m TimeoutState, m ())
+-&gt; (ReaderT r (STM m) TimeoutState, ReaderT r m ())
+forall a b c d. (a -&gt; b) -&gt; (c -&gt; d) -&gt; (a, c) -&gt; (b, d)
+forall (p :: * -&gt; * -&gt; *) a b c d.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; (c -&gt; d) -&gt; p a c -&gt; p b d
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Bifunctor.html#bimap"><span class="hs-identifier hs-var">bimap</span></a></span><span> </span><span class="annot"><span class="annottext">STM m TimeoutState -&gt; ReaderT r (STM m) TimeoutState
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">m () -&gt; ReaderT r m ()
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ReaderT r m (STM m TimeoutState, m ())
+ -&gt; ReaderT r m (ReaderT r (STM m) TimeoutState, ReaderT r m ()))
+-&gt; (DiffTime -&gt; ReaderT r m (STM m TimeoutState, m ()))
+-&gt; DiffTime
+-&gt; ReaderT r m (ReaderT r (STM m) TimeoutState, ReaderT r m ())
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">m (STM m TimeoutState, m ())
+-&gt; ReaderT r m (STM m TimeoutState, m ())
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m (STM m TimeoutState, m ())
+ -&gt; ReaderT r m (STM m TimeoutState, m ()))
+-&gt; (DiffTime -&gt; m (STM m TimeoutState, m ()))
+-&gt; DiffTime
+-&gt; ReaderT r m (STM m TimeoutState, m ())
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m (STM m TimeoutState, m ())
+forall (m :: * -&gt; *).
+MonadTimer m =&gt;
+DiffTime -&gt; m (STM m TimeoutState, m ())
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#registerDelayCancellable"><span class="hs-identifier hs-var">registerDelayCancellable</span></a></span><span>
+</span><span id="line-273"></span><span>  </span><span id="local-6989586621679068088"><span class="annot"><span class="annottext">timeout :: forall a. DiffTime -&gt; ReaderT r m a -&gt; ReaderT r m (Maybe a)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#timeout"><span class="hs-identifier hs-var hs-var hs-var hs-var">timeout</span></a></span></span><span> </span><span id="local-6989586621679068089"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068089"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621679068090"><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679068090"><span class="hs-identifier hs-var">f</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m (Maybe a)) -&gt; ReaderT r m (Maybe a)
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m (Maybe a)) -&gt; ReaderT r m (Maybe a))
+-&gt; (r -&gt; m (Maybe a)) -&gt; ReaderT r m (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679068092"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679068092"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m a -&gt; m (Maybe a)
+forall a. DiffTime -&gt; m a -&gt; m (Maybe a)
+forall (m :: * -&gt; *) a.
+MonadTimer m =&gt;
+DiffTime -&gt; m a -&gt; m (Maybe a)
+</span><a href="Control.Monad.Class.MonadTimer.SI.html#timeout"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679068089"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT r m a
+</span><a href="#local-6989586621679068090"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679068092"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span></pre></body></html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Displayed</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier">DisplayedElements</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#PageReloadedFlag"><span class="hs-identifier">PageReloadedFlag</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#cleanupDisplayedValues"><span class="hs-identifier">cleanupDisplayedValues</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#getDisplayedValue"><span class="hs-identifier">getDisplayedValue</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#getDisplayedValuePure"><span class="hs-identifier">getDisplayedValuePure</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#initDisplayedElements"><span class="hs-identifier">initDisplayedElements</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#initPageReloadFlag"><span class="hs-identifier">initPageReloadFlag</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#pageWasReload"><span class="hs-identifier">pageWasReload</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#pageWasNotReload"><span class="hs-identifier">pageWasNotReload</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#saveDisplayedValue"><span class="hs-identifier">saveDisplayedValue</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#updateDisplayedElements"><span class="hs-identifier">updateDisplayedElements</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier">NodeId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier">TVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier">modifyTVar'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier">newTVarIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier">readTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.OldList.html#%5C%5C"><span class="hs-operator">(\\)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">type</span><span> </span><span id="ElementId"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementId"><span class="hs-identifier hs-var">ElementId</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">type</span><span> </span><span id="ElementValue"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementValue"><span class="hs-identifier hs-var">ElementValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | We store all currently displayed values for all elements in each node panel.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--   There are 2 reasons for it:</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--   1. If received 'TraceObject' contains the data with the same value again, we</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--      won't update corresponding element, to keep web-traffic.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--   2. If the user reloaded the page, all previously displayed elements will be</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--      updated in the same state again.</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">type</span><span> </span><span id="DisplayedForNode"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedForNode"><span class="hs-identifier hs-var">DisplayedForNode</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementId"><span class="hs-identifier hs-type">ElementId</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementValue"><span class="hs-identifier hs-type">ElementValue</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">type</span><span> </span><span id="DisplayedElements"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-var">DisplayedElements</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedForNode"><span class="hs-identifier hs-type">DisplayedForNode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#initDisplayedElements"><span class="hs-identifier hs-type">initDisplayedElements</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-42"></span><span id="initDisplayedElements"><span class="annot"><span class="annottext">initDisplayedElements :: IO DisplayedElements
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#initDisplayedElements"><span class="hs-identifier hs-var hs-var">initDisplayedElements</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode -&gt; IO DisplayedElements
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">M.empty</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#cleanupDisplayedValues"><span class="hs-identifier hs-type">cleanupDisplayedValues</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span id="cleanupDisplayedValues"><span class="annot"><span class="annottext">cleanupDisplayedValues :: DisplayedElements -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#cleanupDisplayedValues"><span class="hs-identifier hs-var hs-var">cleanupDisplayedValues</span></a></span></span><span> </span><span id="local-6989586621679610562"><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610562"><span class="hs-identifier hs-var">displayedElements</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">DisplayedElements
+-&gt; (Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610562"><span class="hs-identifier hs-var">displayedElements</span></a></span><span> </span><span class="annot"><span class="annottext">((Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+ -&gt; STM ())
+-&gt; (Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(DisplayedForNode -&gt; DisplayedForNode)
+-&gt; Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#map"><span class="hs-identifier hs-var">M.map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DisplayedForNode -&gt; DisplayedForNode -&gt; DisplayedForNode
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedForNode
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">M.empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#getDisplayedValue"><span class="hs-identifier hs-type">getDisplayedValue</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementId"><span class="hs-identifier hs-type">ElementId</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementValue"><span class="hs-identifier hs-type">ElementValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span id="getDisplayedValue"><span class="annot"><span class="annottext">getDisplayedValue :: DisplayedElements -&gt; NodeId -&gt; ElementId -&gt; IO (Maybe ElementId)
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#getDisplayedValue"><span class="hs-identifier hs-var hs-var">getDisplayedValue</span></a></span></span><span> </span><span id="local-6989586621679610565"><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610565"><span class="hs-identifier hs-var">displayedElements</span></a></span></span><span> </span><span id="local-6989586621679610566"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610566"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span id="local-6989586621679610567"><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610567"><span class="hs-identifier hs-var">elId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">Maybe ElementId
+-&gt; (DisplayedForNode -&gt; Maybe ElementId)
+-&gt; Maybe DisplayedForNode
+-&gt; Maybe ElementId
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ElementId
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ElementId -&gt; DisplayedForNode -&gt; Maybe ElementId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610567"><span class="hs-identifier hs-var">elId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe DisplayedForNode -&gt; Maybe ElementId)
+-&gt; (Map NodeId DisplayedForNode -&gt; Maybe DisplayedForNode)
+-&gt; Map NodeId DisplayedForNode
+-&gt; Maybe ElementId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; Map NodeId DisplayedForNode -&gt; Maybe DisplayedForNode
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610566"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">(Map NodeId DisplayedForNode -&gt; Maybe ElementId)
+-&gt; IO (Map NodeId DisplayedForNode) -&gt; IO (Maybe ElementId)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements -&gt; IO (Map NodeId DisplayedForNode)
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610565"><span class="hs-identifier hs-var">displayedElements</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#getDisplayedValuePure"><span class="hs-identifier hs-type">getDisplayedValuePure</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedForNode"><span class="hs-identifier hs-type">DisplayedForNode</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementId"><span class="hs-identifier hs-type">ElementId</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementValue"><span class="hs-identifier hs-type">ElementValue</span></a></span><span>
+</span><span id="line-63"></span><span id="getDisplayedValuePure"><span class="annot"><span class="annottext">getDisplayedValuePure :: Map NodeId DisplayedForNode
+-&gt; NodeId -&gt; ElementId -&gt; Maybe ElementId
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#getDisplayedValuePure"><span class="hs-identifier hs-var hs-var">getDisplayedValuePure</span></a></span></span><span> </span><span id="local-6989586621679610572"><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610572"><span class="hs-identifier hs-var">displayed</span></a></span></span><span> </span><span id="local-6989586621679610573"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610573"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span id="local-6989586621679610574"><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610574"><span class="hs-identifier hs-var">elId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">Maybe ElementId
+-&gt; (DisplayedForNode -&gt; Maybe ElementId)
+-&gt; Maybe DisplayedForNode
+-&gt; Maybe ElementId
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ElementId
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ElementId -&gt; DisplayedForNode -&gt; Maybe ElementId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610574"><span class="hs-identifier hs-var">elId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe DisplayedForNode -&gt; Maybe ElementId)
+-&gt; (Map NodeId DisplayedForNode -&gt; Maybe DisplayedForNode)
+-&gt; Map NodeId DisplayedForNode
+-&gt; Maybe ElementId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; Map NodeId DisplayedForNode -&gt; Maybe DisplayedForNode
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610573"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">(Map NodeId DisplayedForNode -&gt; Maybe ElementId)
+-&gt; Map NodeId DisplayedForNode -&gt; Maybe ElementId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610572"><span class="hs-identifier hs-var">displayed</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#saveDisplayedValue"><span class="hs-identifier hs-type">saveDisplayedValue</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementId"><span class="hs-identifier hs-type">ElementId</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#ElementValue"><span class="hs-identifier hs-type">ElementValue</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span id="saveDisplayedValue"><span class="annot"><span class="annottext">saveDisplayedValue :: DisplayedElements -&gt; NodeId -&gt; ElementId -&gt; ElementId -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#saveDisplayedValue"><span class="hs-identifier hs-var hs-var">saveDisplayedValue</span></a></span></span><span> </span><span id="local-6989586621679610575"><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610575"><span class="hs-identifier hs-var">displayedElements</span></a></span></span><span> </span><span id="local-6989586621679610576"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610576"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span id="local-6989586621679610577"><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610577"><span class="hs-identifier hs-var">elId</span></a></span></span><span> </span><span id="local-6989586621679610578"><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610578"><span class="hs-identifier hs-var">elValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><span class="annottext">DisplayedElements
+-&gt; (Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610575"><span class="hs-identifier hs-var">displayedElements</span></a></span><span> </span><span class="annot"><span class="annottext">((Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+ -&gt; STM ())
+-&gt; (Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679610579"><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610579"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; Map NodeId DisplayedForNode -&gt; Maybe DisplayedForNode
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610576"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610579"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-75"></span><span>      </span><span class="annot"><span class="annottext">Maybe DisplayedForNode
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeId
+-&gt; DisplayedForNode
+-&gt; Map NodeId DisplayedForNode
+-&gt; Map NodeId DisplayedForNode
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610576"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ElementId -&gt; ElementId -&gt; DisplayedForNode
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#singleton"><span class="hs-identifier hs-var">M.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610577"><span class="hs-identifier hs-var">elId</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610578"><span class="hs-identifier hs-var">elValue</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610579"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679610582"><span class="annot"><span class="annottext">DisplayedForNode
+</span><a href="#local-6989586621679610582"><span class="hs-identifier hs-var">elsForNode</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679610586"><span class="annot"><span class="annottext">elsForNode' :: DisplayedForNode
+</span><a href="#local-6989586621679610586"><span class="hs-identifier hs-var hs-var">elsForNode'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>              </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ElementId -&gt; DisplayedForNode -&gt; Maybe ElementId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610577"><span class="hs-identifier hs-var">elId</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedForNode
+</span><a href="#local-6989586621679610582"><span class="hs-identifier hs-var">elsForNode</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-79"></span><span>                </span><span class="annot"><span class="annottext">Maybe ElementId
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ElementId -&gt; ElementId -&gt; DisplayedForNode -&gt; DisplayedForNode
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610577"><span class="hs-identifier hs-var">elId</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610578"><span class="hs-identifier hs-var">elValue</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedForNode
+</span><a href="#local-6989586621679610582"><span class="hs-identifier hs-var">elsForNode</span></a></span><span>
+</span><span id="line-80"></span><span>                </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ElementId -&gt; ElementId)
+-&gt; ElementId -&gt; DisplayedForNode -&gt; DisplayedForNode
+forall k a. Ord k =&gt; (a -&gt; a) -&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#adjust"><span class="hs-identifier hs-var">M.adjust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ElementId -&gt; ElementId -&gt; ElementId
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610578"><span class="hs-identifier hs-var">elValue</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ElementId
+</span><a href="#local-6989586621679610577"><span class="hs-identifier hs-var">elId</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedForNode
+</span><a href="#local-6989586621679610582"><span class="hs-identifier hs-var">elsForNode</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(DisplayedForNode -&gt; DisplayedForNode)
+-&gt; NodeId
+-&gt; Map NodeId DisplayedForNode
+-&gt; Map NodeId DisplayedForNode
+forall k a. Ord k =&gt; (a -&gt; a) -&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#adjust"><span class="hs-identifier hs-var">M.adjust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DisplayedForNode -&gt; DisplayedForNode -&gt; DisplayedForNode
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedForNode
+</span><a href="#local-6989586621679610586"><span class="hs-identifier hs-var">elsForNode'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679610576"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610579"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Makes 'displayedElements' up-to-date with 'connected'. There are 3 cases:</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--   1. 'displayedElements' contains all node ids from 'connected'</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--      - just keep it.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--   2. 'displayedElements' contains some node ids that is not presented in 'connected'</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--      - remove them, these ids correspond to disconnected nodes.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--   3. 'displayedElements' doesn't contain some node ids that presented in 'connected'</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--      - add them, these ids correspond to newly connected nodes.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--   2-nd and 3-d cases can coexist.</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--</span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#updateDisplayedElements"><span class="hs-identifier hs-type">updateDisplayedElements</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span id="updateDisplayedElements"><span class="annot"><span class="annottext">updateDisplayedElements :: DisplayedElements -&gt; Set NodeId -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#updateDisplayedElements"><span class="hs-identifier hs-var hs-var">updateDisplayedElements</span></a></span></span><span> </span><span id="local-6989586621679610588"><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610588"><span class="hs-identifier hs-var">displayedElements</span></a></span></span><span> </span><span id="local-6989586621679610589"><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679610589"><span class="hs-identifier hs-var">connected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="annottext">DisplayedElements
+-&gt; (Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679610588"><span class="hs-identifier hs-var">displayedElements</span></a></span><span> </span><span class="annot"><span class="annottext">((Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+ -&gt; STM ())
+-&gt; (Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode)
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679610590"><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610590"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679610591"><span class="annot"><span class="annottext">connectedIds :: [NodeId]
+</span><a href="#local-6989586621679610591"><span class="hs-identifier hs-var hs-var">connectedIds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set NodeId -&gt; [NodeId]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">S.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679610589"><span class="hs-identifier hs-var">connected</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span id="local-6989586621679610593"><span class="annot"><span class="annottext">displayedIds :: [NodeId]
+</span><a href="#local-6989586621679610593"><span class="hs-identifier hs-var hs-var">displayedIds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode -&gt; [NodeId]
+forall k a. Map k a -&gt; [k]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#keys"><span class="hs-identifier hs-var">M.keys</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610590"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610593"><span class="hs-identifier hs-var">displayedIds</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId] -&gt; [NodeId] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610591"><span class="hs-identifier hs-var">connectedIds</span></a></span><span>
+</span><span id="line-103"></span><span>         </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610590"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span><span> </span><span class="hs-comment">-- 1-st case.</span><span>
+</span><span id="line-104"></span><span>         </span><span class="hs-keyword">else</span><span>
+</span><span id="line-105"></span><span>           </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679610596"><span class="annot"><span class="annottext">disconnectedIds :: [NodeId]
+</span><a href="#local-6989586621679610596"><span class="hs-identifier hs-var hs-var">disconnectedIds</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610593"><span class="hs-identifier hs-var">displayedIds</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId] -&gt; [NodeId] -&gt; [NodeId]
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.OldList.html#%5C%5C"><span class="hs-operator hs-var">\\</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610591"><span class="hs-identifier hs-var">connectedIds</span></a></span><span> </span><span class="hs-comment">-- In 'displayedIds' but not in 'connectedIds'.</span><span>
+</span><span id="line-106"></span><span>               </span><span id="local-6989586621679610598"><span class="annot"><span class="annottext">newlyConnectedIds :: [NodeId]
+</span><a href="#local-6989586621679610598"><span class="hs-identifier hs-var hs-var">newlyConnectedIds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610591"><span class="hs-identifier hs-var">connectedIds</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId] -&gt; [NodeId] -&gt; [NodeId]
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.OldList.html#%5C%5C"><span class="hs-operator hs-var">\\</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610593"><span class="hs-identifier hs-var">displayedIds</span></a></span><span> </span><span class="hs-comment">-- In 'connectedIds' but not in 'displayedIds'.</span><span>
+</span><span id="line-107"></span><span>               </span><span id="local-6989586621679610599"><span class="annot"><span class="annottext">withoutDisconnected :: Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610599"><span class="hs-identifier hs-var hs-var">withoutDisconnected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[NodeId]
+-&gt; Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode
+forall {a}. [NodeId] -&gt; Map NodeId a -&gt; Map NodeId a
+</span><a href="#local-6989586621679610600"><span class="hs-identifier hs-var">deleteDisconnected</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610596"><span class="hs-identifier hs-var">disconnectedIds</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610590"><span class="hs-identifier hs-var">currentDisplayedEls</span></a></span><span>
+</span><span id="line-108"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">[NodeId]
+-&gt; Map NodeId DisplayedForNode -&gt; Map NodeId DisplayedForNode
+forall {k} {a}.
+[NodeId] -&gt; Map NodeId (Map k a) -&gt; Map NodeId (Map k a)
+</span><a href="#local-6989586621679610601"><span class="hs-identifier hs-var">addNewlyConnected</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeId]
+</span><a href="#local-6989586621679610598"><span class="hs-identifier hs-var">newlyConnectedIds</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId DisplayedForNode
+</span><a href="#local-6989586621679610599"><span class="hs-identifier hs-var">withoutDisconnected</span></a></span><span>
+</span><span id="line-109"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621679610600"><span class="annot"><span class="annottext">deleteDisconnected :: [NodeId] -&gt; Map NodeId a -&gt; Map NodeId a
+</span><a href="#local-6989586621679610600"><span class="hs-identifier hs-var hs-var">deleteDisconnected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[NodeId] -&gt; Map NodeId a -&gt; Map NodeId a
+forall {k} {a}. Ord k =&gt; [k] -&gt; Map k a -&gt; Map k a
+</span><a href="#local-6989586621679610604"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-111"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>    </span><span id="local-6989586621679610604"><span class="annot"><span class="annottext">go :: [k] -&gt; Map k a -&gt; Map k a
+</span><a href="#local-6989586621679610604"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679610610"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679610610"><span class="hs-identifier hs-var">els</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679610610"><span class="hs-identifier hs-var">els</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><a href="#local-6989586621679610604"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679610611"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679610611"><span class="hs-identifier hs-var">anId</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679610612"><span class="annot"><span class="annottext">[k]
+</span><a href="#local-6989586621679610612"><span class="hs-identifier hs-var">ids</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679610613"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679610613"><span class="hs-identifier hs-var">els</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[k] -&gt; Map k a -&gt; Map k a
+</span><a href="#local-6989586621679610604"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[k]
+</span><a href="#local-6989586621679610612"><span class="hs-identifier hs-var">ids</span></a></span><span> </span><span class="annot"><span class="annottext">(Map k a -&gt; Map k a) -&gt; Map k a -&gt; Map k a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; Map k a
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#delete"><span class="hs-identifier hs-var">M.delete</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679610611"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679610613"><span class="hs-identifier hs-var">els</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679610601"><span class="annot"><span class="annottext">addNewlyConnected :: [NodeId] -&gt; Map NodeId (Map k a) -&gt; Map NodeId (Map k a)
+</span><a href="#local-6989586621679610601"><span class="hs-identifier hs-var hs-var">addNewlyConnected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[NodeId] -&gt; Map NodeId (Map k a) -&gt; Map NodeId (Map k a)
+forall {k} {k} {a}.
+Ord k =&gt;
+[k] -&gt; Map k (Map k a) -&gt; Map k (Map k a)
+</span><a href="#local-6989586621679610618"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-116"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679610618"><span class="annot"><span class="annottext">go :: [k] -&gt; Map k (Map k a) -&gt; Map k (Map k a)
+</span><a href="#local-6989586621679610618"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679610623"><span class="annot"><span class="annottext">Map k (Map k a)
+</span><a href="#local-6989586621679610623"><span class="hs-identifier hs-var">els</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k (Map k a)
+</span><a href="#local-6989586621679610623"><span class="hs-identifier hs-var">els</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><a href="#local-6989586621679610618"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679610624"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679610624"><span class="hs-identifier hs-var">anId</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679610625"><span class="annot"><span class="annottext">[k]
+</span><a href="#local-6989586621679610625"><span class="hs-identifier hs-var">ids</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679610626"><span class="annot"><span class="annottext">Map k (Map k a)
+</span><a href="#local-6989586621679610626"><span class="hs-identifier hs-var">els</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[k] -&gt; Map k (Map k a) -&gt; Map k (Map k a)
+</span><a href="#local-6989586621679610618"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[k]
+</span><a href="#local-6989586621679610625"><span class="hs-identifier hs-var">ids</span></a></span><span> </span><span class="annot"><span class="annottext">(Map k (Map k a) -&gt; Map k (Map k a))
+-&gt; Map k (Map k a) -&gt; Map k (Map k a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; Map k (Map k a) -&gt; Map k (Map k a)
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679610624"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">M.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Map k (Map k a)
+</span><a href="#local-6989586621679610626"><span class="hs-identifier hs-var">els</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- | If the user reloaded the web-page, after DOM re-rendering, we have to restore</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--   displayed state of all elements that they have _before_ page's reload.</span><span>
+</span><span id="line-122"></span><span class="hs-keyword">type</span><span> </span><span id="PageReloadedFlag"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#PageReloadedFlag"><span class="hs-identifier hs-var">PageReloadedFlag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#initPageReloadFlag"><span class="hs-identifier hs-type">initPageReloadFlag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#PageReloadedFlag"><span class="hs-identifier hs-type">PageReloadedFlag</span></a></span><span>
+</span><span id="line-125"></span><span id="initPageReloadFlag"><span class="annot"><span class="annottext">initPageReloadFlag :: IO PageReloadedFlag
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#initPageReloadFlag"><span class="hs-identifier hs-var hs-var">initPageReloadFlag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO PageReloadedFlag
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#pageWasReload"><span class="hs-identifier hs-type">pageWasReload</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#pageWasNotReload"><span class="hs-identifier hs-type">pageWasNotReload</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#PageReloadedFlag"><span class="hs-identifier hs-type">PageReloadedFlag</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span id="pageWasReload"><span class="annot"><span class="annottext">pageWasReload :: PageReloadedFlag -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#pageWasReload"><span class="hs-identifier hs-var hs-var">pageWasReload</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PageReloadedFlag -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#setFlag"><span class="hs-identifier hs-var">setFlag</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-129"></span><span id="pageWasNotReload"><span class="annot"><span class="annottext">pageWasNotReload :: PageReloadedFlag -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#pageWasNotReload"><span class="hs-identifier hs-var hs-var">pageWasNotReload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PageReloadedFlag -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#setFlag"><span class="hs-identifier hs-var">setFlag</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#setFlag"><span class="hs-identifier hs-type">setFlag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#PageReloadedFlag"><span class="hs-identifier hs-type">PageReloadedFlag</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span id="setFlag"><span class="annot"><span class="annottext">setFlag :: Bool -&gt; PageReloadedFlag -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#setFlag"><span class="hs-identifier hs-var hs-var">setFlag</span></a></span></span><span> </span><span id="local-6989586621679610628"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679610628"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span id="local-6989586621679610629"><span class="annot"><span class="annottext">PageReloadedFlag
+</span><a href="#local-6989586621679610629"><span class="hs-identifier hs-var">flag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; (Bool -&gt; STM ()) -&gt; Bool -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PageReloadedFlag -&gt; (Bool -&gt; Bool) -&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">PageReloadedFlag
+</span><a href="#local-6989586621679610629"><span class="hs-identifier hs-var">flag</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool -&gt; Bool) -&gt; STM ())
+-&gt; (Bool -&gt; Bool -&gt; Bool) -&gt; Bool -&gt; STM ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; IO ()) -&gt; Bool -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679610628"><span class="hs-identifier hs-var">state</span></a></span><span>
+</span><span id="line-133"></span></pre></body></html>

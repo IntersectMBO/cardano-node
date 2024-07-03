@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679118027"><span id="local-6989586621679118028"></span></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.UI.Threepenny.JQuery</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Default</span></span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    jQuery utilities
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">data</span><span> </span><span id="Easing"><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#Easing"><span class="hs-identifier hs-var">Easing</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Swing"><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#Swing"><span class="hs-identifier hs-var">Swing</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Linear"><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#Linear"><span class="hs-identifier hs-var">Linear</span></a></span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679118069"><span id="local-6989586621679118071"><span class="annot"><span class="annottext">Easing -&gt; Easing -&gt; Bool
+(Easing -&gt; Easing -&gt; Bool)
+-&gt; (Easing -&gt; Easing -&gt; Bool) -&gt; Eq Easing
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Easing -&gt; Easing -&gt; Bool
+== :: Easing -&gt; Easing -&gt; Bool
+$c/= :: Easing -&gt; Easing -&gt; Bool
+/= :: Easing -&gt; Easing -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span id="local-6989586621679118076"><span id="local-6989586621679118084"><span id="local-6989586621679118090"><span id="local-6989586621679118100"><span id="local-6989586621679118102"><span id="local-6989586621679118106"><span id="local-6989586621679118110"><span id="local-6989586621679118114"><span class="annot"><span class="annottext">Int -&gt; Easing
+Easing -&gt; Int
+Easing -&gt; [Easing]
+Easing -&gt; Easing
+Easing -&gt; Easing -&gt; [Easing]
+Easing -&gt; Easing -&gt; Easing -&gt; [Easing]
+(Easing -&gt; Easing)
+-&gt; (Easing -&gt; Easing)
+-&gt; (Int -&gt; Easing)
+-&gt; (Easing -&gt; Int)
+-&gt; (Easing -&gt; [Easing])
+-&gt; (Easing -&gt; Easing -&gt; [Easing])
+-&gt; (Easing -&gt; Easing -&gt; [Easing])
+-&gt; (Easing -&gt; Easing -&gt; Easing -&gt; [Easing])
+-&gt; Enum Easing
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Easing -&gt; Easing
+succ :: Easing -&gt; Easing
+$cpred :: Easing -&gt; Easing
+pred :: Easing -&gt; Easing
+$ctoEnum :: Int -&gt; Easing
+toEnum :: Int -&gt; Easing
+$cfromEnum :: Easing -&gt; Int
+fromEnum :: Easing -&gt; Int
+$cenumFrom :: Easing -&gt; [Easing]
+enumFrom :: Easing -&gt; [Easing]
+$cenumFromThen :: Easing -&gt; Easing -&gt; [Easing]
+enumFromThen :: Easing -&gt; Easing -&gt; [Easing]
+$cenumFromTo :: Easing -&gt; Easing -&gt; [Easing]
+enumFromTo :: Easing -&gt; Easing -&gt; [Easing]
+$cenumFromThenTo :: Easing -&gt; Easing -&gt; Easing -&gt; [Easing]
+enumFromThenTo :: Easing -&gt; Easing -&gt; Easing -&gt; [Easing]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span id="local-6989586621679118118"><span id="local-6989586621679118120"><span id="local-6989586621679118123"><span class="annot"><span class="annottext">Int -&gt; Easing -&gt; ShowS
+[Easing] -&gt; ShowS
+Easing -&gt; String
+(Int -&gt; Easing -&gt; ShowS)
+-&gt; (Easing -&gt; String) -&gt; ([Easing] -&gt; ShowS) -&gt; Show Easing
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Easing -&gt; ShowS
+showsPrec :: Int -&gt; Easing -&gt; ShowS
+$cshow :: Easing -&gt; String
+show :: Easing -&gt; String
+$cshowList :: [Easing] -&gt; ShowS
+showList :: [Easing] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Default</span></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#Easing"><span class="hs-identifier hs-type">Easing</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679118129"><span class="annot"><span class="annottext">def :: Easing
+</span><a href="#local-6989586621679118129"><span class="hs-identifier hs-var hs-var hs-var hs-var">def</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Easing
+</span><a href="Graphics.UI.Threepenny.JQuery.html#Linear"><span class="hs-identifier hs-var">Linear</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><span class="hs-comment">-- | Fade in an element.</span></span><span>
+</span><span id="line-17"></span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#fadeIn"><span class="hs-identifier hs-type">fadeIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#Easing"><span class="hs-identifier hs-type">Easing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span id="fadeIn"><span class="annot"><span class="annottext">fadeIn :: Element -&gt; Int -&gt; Easing -&gt; IO () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.JQuery.html#fadeIn"><span class="hs-identifier hs-var hs-var">fadeIn</span></a></span></span><span> </span><span id="local-6989586621679118132"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679118132"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span id="local-6989586621679118133"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118133"><span class="hs-identifier hs-var">duration</span></a></span></span><span> </span><span id="local-6989586621679118134"><span class="annot"><span class="annottext">Easing
+</span><a href="#local-6989586621679118134"><span class="hs-identifier hs-var">easing</span></a></span></span><span> </span><span id="local-6989586621679118135"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679118135"><span class="hs-identifier hs-var">complete</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-19"></span><span>    </span><span id="local-6989586621679118136"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679118136"><span class="hs-identifier hs-var">callback</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; UI JSObject
+forall a. IsHandler a =&gt; a -&gt; UI JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#ffiExport"><span class="hs-identifier hs-var">ffiExport</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679118135"><span class="hs-identifier hs-var">complete</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Int -&gt; String -&gt; JSObject -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;$(%1).animate({opacity: 1}, %2 * 1, %3, %4)&quot;</span></span><span>
+</span><span id="line-21"></span><span>        </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679118132"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118133"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Unicode.html#toLower"><span class="hs-identifier hs-var">toLower</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Easing -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Easing
+</span><a href="#local-6989586621679118134"><span class="hs-identifier hs-var">easing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679118136"><span class="hs-identifier hs-var">callback</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><span class="hs-comment">-- | Fade out an element.</span></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#fadeOut"><span class="hs-identifier hs-type">fadeOut</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#Easing"><span class="hs-identifier hs-type">Easing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span id="fadeOut"><span class="annot"><span class="annottext">fadeOut :: Element -&gt; Int -&gt; Easing -&gt; IO () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.JQuery.html#fadeOut"><span class="hs-identifier hs-var hs-var">fadeOut</span></a></span></span><span> </span><span id="local-6989586621679118143"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679118143"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span id="local-6989586621679118144"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118144"><span class="hs-identifier hs-var">duration</span></a></span></span><span> </span><span id="local-6989586621679118145"><span class="annot"><span class="annottext">Easing
+</span><a href="#local-6989586621679118145"><span class="hs-identifier hs-var">easing</span></a></span></span><span> </span><span id="local-6989586621679118146"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679118146"><span class="hs-identifier hs-var">complete</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>    </span><span id="local-6989586621679118147"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679118147"><span class="hs-identifier hs-var">callback</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; UI JSObject
+forall a. IsHandler a =&gt; a -&gt; UI JSObject
+</span><a href="Graphics.UI.Threepenny.Internal.html#ffiExport"><span class="hs-identifier hs-var">ffiExport</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679118146"><span class="hs-identifier hs-var">complete</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Int -&gt; String -&gt; JSObject -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;$(%1).animate({opacity: 0}, %2 * 1, %3, %4)&quot;</span></span><span>
+</span><span id="line-28"></span><span>        </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679118143"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118144"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Unicode.html#toLower"><span class="hs-identifier hs-var">toLower</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Easing -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Easing
+</span><a href="#local-6989586621679118145"><span class="hs-identifier hs-var">easing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679118147"><span class="hs-identifier hs-var">callback</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | The 'sendValue' event happens whenever the return key is pressed</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- while the element has focus. Its data is the event value.</span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#sendValue"><span class="hs-identifier hs-type">sendValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-33"></span><span id="sendValue"><span class="annot"><span class="annottext">sendValue :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.JQuery.html#sendValue"><span class="hs-identifier hs-var hs-var">sendValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(EventData -&gt; String) -&gt; Event EventData -&gt; Event String
+forall a b. (a -&gt; b) -&gt; Event a -&gt; Event b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">EventData -&gt; String
+forall a. FromJSON a =&gt; EventData -&gt; a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unsafeFromJSON"><span class="hs-identifier hs-var">unsafeFromJSON</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;sendvalue&quot;</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | Focus an element.</span></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#setFocus"><span class="hs-identifier hs-type">setFocus</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span id="setFocus"><span class="annot"><span class="annottext">setFocus :: Element -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.JQuery.html#setFocus"><span class="hs-identifier hs-var hs-var">setFocus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ())
+-&gt; (Element -&gt; JSFunction ()) -&gt; Element -&gt; UI ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;$(%1).focus()&quot;</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | Scroll to the bottom of an element.</span></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html#scrollToBottom"><span class="hs-identifier hs-type">scrollToBottom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span id="scrollToBottom"><span class="annot"><span class="annottext">scrollToBottom :: Element -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.JQuery.html#scrollToBottom"><span class="hs-identifier hs-var hs-var">scrollToBottom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ())
+-&gt; (Element -&gt; JSFunction ()) -&gt; Element -&gt; UI ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;jquery_scrollToBottom(%1)&quot;</span></span><span>
+</span><span id="line-42"></span></pre></body></html>

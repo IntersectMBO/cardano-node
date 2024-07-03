@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Crypto.Cipher.Twofish</span><span>
+</span><span id="line-2"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier">Twofish128</span></a></span><span>
+</span><span id="line-3"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier">Twofish192</span></a></span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier">Twofish256</span></a></span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.Primitive.html"><span class="hs-identifier">Crypto.Cipher.Twofish.Primitive</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Crypto.Cipher.Types.html"><span class="hs-identifier">Crypto.Cipher.Types</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Crypto.Cipher.Utils.html"><span class="hs-identifier">Crypto.Cipher.Utils</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">newtype</span><span> </span><span id="Twofish128"><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-var">Twofish128</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Twofish128"><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-var">Twofish128</span></a></span></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.Primitive.html#Twofish"><span class="hs-identifier hs-type">Twofish</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Crypto.Cipher.Types.Base.html#Cipher"><span class="hs-identifier hs-type">Cipher</span></a></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-type">Twofish128</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>    </span><span id="local-6989586621679223823"><span class="annot"><span class="annottext">cipherName :: Twofish128 -&gt; String
+</span><a href="#local-6989586621679223823"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherName</span></a></span></span><span>    </span><span class="annot"><span class="annottext">Twofish128
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Twofish128&quot;</span></span><span>
+</span><span id="line-15"></span><span>    </span><span id="local-6989586621679223825"><span class="annot"><span class="annottext">cipherKeySize :: Twofish128 -&gt; KeySizeSpecifier
+</span><a href="#local-6989586621679223825"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherKeySize</span></a></span></span><span> </span><span class="annot"><span class="annottext">Twofish128
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; KeySizeSpecifier
+</span><a href="Crypto.Cipher.Types.Base.html#KeySizeFixed"><span class="hs-identifier hs-var">KeySizeFixed</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span>
+</span><span id="line-16"></span><span>    </span><span id="local-6989586621679223840"><span class="annot"><span class="annottext">cipherInit :: forall key. ByteArray key =&gt; key -&gt; CryptoFailable Twofish128
+</span><a href="#local-6989586621679223840"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherInit</span></a></span></span><span> </span><span id="local-6989586621679223842"><span class="annot"><span class="annottext">key
+</span><a href="#local-6989586621679223842"><span class="hs-identifier hs-var">key</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; Twofish128
+</span><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-var">Twofish128</span></a></span><span> </span><span class="annot"><span class="annottext">(Twofish -&gt; Twofish128)
+-&gt; CryptoFailable Twofish -&gt; CryptoFailable Twofish128
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">key -&gt; CryptoFailable Twofish
+forall key. ByteArray key =&gt; key -&gt; CryptoFailable Twofish
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#initTwofish"><span class="hs-identifier hs-var">initTwofish</span></a></span><span> </span><span class="annot"><span class="annottext">(key -&gt; CryptoFailable Twofish)
+-&gt; CryptoFailable key -&gt; CryptoFailable Twofish
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish128 -&gt; key -&gt; CryptoFailable key
+forall key cipher.
+(ByteArrayAccess key, Cipher cipher) =&gt;
+cipher -&gt; key -&gt; CryptoFailable key
+</span><a href="Crypto.Cipher.Utils.html#validateKeySize"><span class="hs-identifier hs-var">validateKeySize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Twofish128
+forall a. HasCallStack =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#undefined"><span class="hs-identifier hs-var">undefined</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-type">Twofish128</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">key
+</span><a href="#local-6989586621679223842"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679223854"><span id="local-6989586621679223860"><span id="local-6989586621679223865"><span id="local-6989586621679223870"><span id="local-6989586621679223875"><span id="local-6989586621679223880"><span class="annot"><a href="Crypto.Cipher.Types.Block.html#BlockCipher"><span class="hs-identifier hs-type">BlockCipher</span></a></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-type">Twofish128</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>    </span><span id="local-6989586621679223885"><span class="annot"><span class="annottext">blockSize :: Twofish128 -&gt; Int
+</span><a href="#local-6989586621679223885"><span class="hs-identifier hs-var hs-var hs-var hs-var">blockSize</span></a></span></span><span>                 </span><span class="annot"><span class="annottext">Twofish128
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span>
+</span><span id="line-20"></span><span>    </span><span id="local-6989586621679223889"><span class="annot"><span class="annottext">ecbEncrypt :: forall ba. ByteArray ba =&gt; Twofish128 -&gt; ba -&gt; ba
+</span><a href="#local-6989586621679223889"><span class="hs-identifier hs-var hs-var hs-var hs-var">ecbEncrypt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-type">Twofish128</span></a></span><span> </span><span id="local-6989586621679223891"><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223891"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; ba -&gt; ba
+forall ba. ByteArray ba =&gt; Twofish -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#encrypt"><span class="hs-identifier hs-var">encrypt</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223891"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span id="local-6989586621679223895"><span class="annot"><span class="annottext">ecbDecrypt :: forall ba. ByteArray ba =&gt; Twofish128 -&gt; ba -&gt; ba
+</span><a href="#local-6989586621679223895"><span class="hs-identifier hs-var hs-var hs-var hs-var">ecbDecrypt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish128"><span class="hs-identifier hs-type">Twofish128</span></a></span><span> </span><span id="local-6989586621679223897"><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223897"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; ba -&gt; ba
+forall ba. ByteArray ba =&gt; Twofish -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#decrypt"><span class="hs-identifier hs-var">decrypt</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223897"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">newtype</span><span> </span><span id="Twofish192"><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-var">Twofish192</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Twofish192"><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-var">Twofish192</span></a></span></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.Primitive.html#Twofish"><span class="hs-identifier hs-type">Twofish</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Crypto.Cipher.Types.Base.html#Cipher"><span class="hs-identifier hs-type">Cipher</span></a></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-type">Twofish192</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>    </span><span id="local-6989586621679223904"><span class="annot"><span class="annottext">cipherName :: Twofish192 -&gt; String
+</span><a href="Crypto.Cipher.Types.Base.html#cipherName"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherName</span></a></span></span><span>    </span><span class="annot"><span class="annottext">Twofish192
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Twofish192&quot;</span></span><span>
+</span><span id="line-27"></span><span>    </span><span id="local-6989586621679223905"><span class="annot"><span class="annottext">cipherKeySize :: Twofish192 -&gt; KeySizeSpecifier
+</span><a href="Crypto.Cipher.Types.Base.html#cipherKeySize"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherKeySize</span></a></span></span><span> </span><span class="annot"><span class="annottext">Twofish192
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; KeySizeSpecifier
+</span><a href="Crypto.Cipher.Types.Base.html#KeySizeFixed"><span class="hs-identifier hs-var">KeySizeFixed</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">24</span></span><span>
+</span><span id="line-28"></span><span>    </span><span id="local-6989586621679223915"><span class="annot"><span class="annottext">cipherInit :: forall key. ByteArray key =&gt; key -&gt; CryptoFailable Twofish192
+</span><a href="Crypto.Cipher.Types.Base.html#cipherInit"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherInit</span></a></span></span><span> </span><span id="local-6989586621679223916"><span class="annot"><span class="annottext">key
+</span><a href="#local-6989586621679223916"><span class="hs-identifier hs-var">key</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; Twofish192
+</span><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-var">Twofish192</span></a></span><span> </span><span class="annot"><span class="annottext">(Twofish -&gt; Twofish192)
+-&gt; CryptoFailable Twofish -&gt; CryptoFailable Twofish192
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">key -&gt; CryptoFailable Twofish
+forall key. ByteArray key =&gt; key -&gt; CryptoFailable Twofish
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#initTwofish"><span class="hs-identifier hs-var">initTwofish</span></a></span><span> </span><span class="annot"><span class="annottext">(key -&gt; CryptoFailable Twofish)
+-&gt; CryptoFailable key -&gt; CryptoFailable Twofish
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish192 -&gt; key -&gt; CryptoFailable key
+forall key cipher.
+(ByteArrayAccess key, Cipher cipher) =&gt;
+cipher -&gt; key -&gt; CryptoFailable key
+</span><a href="Crypto.Cipher.Utils.html#validateKeySize"><span class="hs-identifier hs-var">validateKeySize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Twofish192
+forall a. HasCallStack =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#undefined"><span class="hs-identifier hs-var">undefined</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-type">Twofish192</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">key
+</span><a href="#local-6989586621679223916"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679223923"><span id="local-6989586621679223929"><span id="local-6989586621679223934"><span id="local-6989586621679223939"><span id="local-6989586621679223944"><span id="local-6989586621679223949"><span class="annot"><a href="Crypto.Cipher.Types.Block.html#BlockCipher"><span class="hs-identifier hs-type">BlockCipher</span></a></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-type">Twofish192</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>    </span><span id="local-6989586621679223953"><span class="annot"><span class="annottext">blockSize :: Twofish192 -&gt; Int
+</span><a href="Crypto.Cipher.Types.Block.html#blockSize"><span class="hs-identifier hs-var hs-var hs-var hs-var">blockSize</span></a></span></span><span>                 </span><span class="annot"><span class="annottext">Twofish192
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span>
+</span><span id="line-32"></span><span>    </span><span id="local-6989586621679223956"><span class="annot"><span class="annottext">ecbEncrypt :: forall ba. ByteArray ba =&gt; Twofish192 -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Types.Block.html#ecbEncrypt"><span class="hs-identifier hs-var hs-var hs-var hs-var">ecbEncrypt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-type">Twofish192</span></a></span><span> </span><span id="local-6989586621679223957"><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223957"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; ba -&gt; ba
+forall ba. ByteArray ba =&gt; Twofish -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#encrypt"><span class="hs-identifier hs-var">encrypt</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223957"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span id="local-6989586621679223960"><span class="annot"><span class="annottext">ecbDecrypt :: forall ba. ByteArray ba =&gt; Twofish192 -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Types.Block.html#ecbDecrypt"><span class="hs-identifier hs-var hs-var hs-var hs-var">ecbDecrypt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish192"><span class="hs-identifier hs-type">Twofish192</span></a></span><span> </span><span id="local-6989586621679223961"><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223961"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; ba -&gt; ba
+forall ba. ByteArray ba =&gt; Twofish -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#decrypt"><span class="hs-identifier hs-var">decrypt</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679223961"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">newtype</span><span> </span><span id="Twofish256"><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-var">Twofish256</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Twofish256"><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-var">Twofish256</span></a></span></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.Primitive.html#Twofish"><span class="hs-identifier hs-type">Twofish</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Crypto.Cipher.Types.Base.html#Cipher"><span class="hs-identifier hs-type">Cipher</span></a></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-type">Twofish256</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679223967"><span class="annot"><span class="annottext">cipherName :: Twofish256 -&gt; String
+</span><a href="Crypto.Cipher.Types.Base.html#cipherName"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherName</span></a></span></span><span>    </span><span class="annot"><span class="annottext">Twofish256
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Twofish256&quot;</span></span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679223968"><span class="annot"><span class="annottext">cipherKeySize :: Twofish256 -&gt; KeySizeSpecifier
+</span><a href="Crypto.Cipher.Types.Base.html#cipherKeySize"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherKeySize</span></a></span></span><span> </span><span class="annot"><span class="annottext">Twofish256
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; KeySizeSpecifier
+</span><a href="Crypto.Cipher.Types.Base.html#KeySizeFixed"><span class="hs-identifier hs-var">KeySizeFixed</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">32</span></span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679223978"><span class="annot"><span class="annottext">cipherInit :: forall key. ByteArray key =&gt; key -&gt; CryptoFailable Twofish256
+</span><a href="Crypto.Cipher.Types.Base.html#cipherInit"><span class="hs-identifier hs-var hs-var hs-var hs-var">cipherInit</span></a></span></span><span> </span><span id="local-6989586621679223979"><span class="annot"><span class="annottext">key
+</span><a href="#local-6989586621679223979"><span class="hs-identifier hs-var">key</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; Twofish256
+</span><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-var">Twofish256</span></a></span><span> </span><span class="annot"><span class="annottext">(Twofish -&gt; Twofish256)
+-&gt; CryptoFailable Twofish -&gt; CryptoFailable Twofish256
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">key -&gt; CryptoFailable Twofish
+forall key. ByteArray key =&gt; key -&gt; CryptoFailable Twofish
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#initTwofish"><span class="hs-identifier hs-var">initTwofish</span></a></span><span> </span><span class="annot"><span class="annottext">(key -&gt; CryptoFailable Twofish)
+-&gt; CryptoFailable key -&gt; CryptoFailable Twofish
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish256 -&gt; key -&gt; CryptoFailable key
+forall key cipher.
+(ByteArrayAccess key, Cipher cipher) =&gt;
+cipher -&gt; key -&gt; CryptoFailable key
+</span><a href="Crypto.Cipher.Utils.html#validateKeySize"><span class="hs-identifier hs-var">validateKeySize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Twofish256
+forall a. HasCallStack =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#undefined"><span class="hs-identifier hs-var">undefined</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-type">Twofish256</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">key
+</span><a href="#local-6989586621679223979"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679223986"><span id="local-6989586621679223992"><span id="local-6989586621679223997"><span id="local-6989586621679224002"><span id="local-6989586621679224007"><span id="local-6989586621679224012"><span class="annot"><a href="Crypto.Cipher.Types.Block.html#BlockCipher"><span class="hs-identifier hs-type">BlockCipher</span></a></span><span> </span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-type">Twofish256</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679224016"><span class="annot"><span class="annottext">blockSize :: Twofish256 -&gt; Int
+</span><a href="Crypto.Cipher.Types.Block.html#blockSize"><span class="hs-identifier hs-var hs-var hs-var hs-var">blockSize</span></a></span></span><span>                 </span><span class="annot"><span class="annottext">Twofish256
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621679224019"><span class="annot"><span class="annottext">ecbEncrypt :: forall ba. ByteArray ba =&gt; Twofish256 -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Types.Block.html#ecbEncrypt"><span class="hs-identifier hs-var hs-var hs-var hs-var">ecbEncrypt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-type">Twofish256</span></a></span><span> </span><span id="local-6989586621679224020"><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679224020"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; ba -&gt; ba
+forall ba. ByteArray ba =&gt; Twofish -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#encrypt"><span class="hs-identifier hs-var">encrypt</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679224020"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621679224023"><span class="annot"><span class="annottext">ecbDecrypt :: forall ba. ByteArray ba =&gt; Twofish256 -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Types.Block.html#ecbDecrypt"><span class="hs-identifier hs-var hs-var hs-var hs-var">ecbDecrypt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Crypto.Cipher.Twofish.html#Twofish256"><span class="hs-identifier hs-type">Twofish256</span></a></span><span> </span><span id="local-6989586621679224024"><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679224024"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Twofish -&gt; ba -&gt; ba
+forall ba. ByteArray ba =&gt; Twofish -&gt; ba -&gt; ba
+</span><a href="Crypto.Cipher.Twofish.Primitive.html#decrypt"><span class="hs-identifier hs-var">decrypt</span></a></span><span> </span><span class="annot"><span class="annottext">Twofish
+</span><a href="#local-6989586621679224024"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-46"></span></pre></body></html>

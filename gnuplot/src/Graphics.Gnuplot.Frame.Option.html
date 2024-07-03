@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.Gnuplot.Frame.Option</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>   </span><span class="hs-comment">-- hide Cons constructor</span><span>
+</span><span id="line-3"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier">T</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#custom"><span class="hs-identifier">custom</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#title"><span class="hs-identifier">title</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#grid"><span class="hs-identifier">grid</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#size"><span class="hs-identifier">size</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#key"><span class="hs-identifier">key</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#border"><span class="hs-identifier">border</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#pm3d"><span class="hs-identifier">pm3d</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#view"><span class="hs-identifier">view</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xRange"><span class="hs-identifier">xRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yRange"><span class="hs-identifier">yRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zRange"><span class="hs-identifier">zRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xLabel"><span class="hs-identifier">xLabel</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yLabel"><span class="hs-identifier">yLabel</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zLabel"><span class="hs-identifier">zLabel</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xTicks"><span class="hs-identifier">xTicks</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yTicks"><span class="hs-identifier">yTicks</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zTicks"><span class="hs-identifier">zTicks</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xLogScale"><span class="hs-identifier">xLogScale</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yLogScale"><span class="hs-identifier">yLogScale</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zLogScale"><span class="hs-identifier">zLogScale</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xData"><span class="hs-identifier">xData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yData"><span class="hs-identifier">yData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zData"><span class="hs-identifier">zData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xFormat"><span class="hs-identifier">xFormat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yFormat"><span class="hs-identifier">yFormat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zFormat"><span class="hs-identifier">zFormat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#timeFmt"><span class="hs-identifier">timeFmt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html"><span class="hs-identifier">Graphics.Gnuplot.Private.FrameOption</span></a></span><span>
+</span><span id="line-43"></span></pre></body></html>

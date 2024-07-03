@@ -1,0 +1,381 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-unused-do-bind #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.UI.Threepenny.Widgets</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Synopsis</span></span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-comment">-- | Widgets are reusable building blocks for a graphical user interface.</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-comment">-- This module collects useful widgets that are designed to work</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- with functional reactive programming (FRP).</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-comment">-- </span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-comment">-- For more details and information on how to write your own widgets, see the</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-comment">-- &lt;https://github.com/HeinrichApfelmus/threepenny-gui/blob/master/doc/design-widgets.md widget design guide&gt;.</span><span>
+</span><span id="line-11"></span><span>    </span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Tidings</span></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Reactive.Threepenny.html#Tidings"><span class="hs-identifier">Tidings</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#rumors"><span class="hs-identifier">rumors</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#facts"><span class="hs-identifier">facts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#tidings"><span class="hs-identifier">tidings</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Widgets</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Input widgets</span></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#TextEntry"><span class="hs-identifier">TextEntry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#entry"><span class="hs-identifier">entry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#userText"><span class="hs-identifier">userText</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** ListBox</span></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#ListBox"><span class="hs-identifier">ListBox</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#listBox"><span class="hs-identifier">listBox</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#userSelection"><span class="hs-identifier">userSelection</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span>                          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Attributes.html"><span class="hs-identifier">Graphics.UI.Threepenny.Attributes</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Events.html"><span class="hs-identifier">Graphics.UI.Threepenny.Events</span></a></span><span>     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Elements.html"><span class="hs-identifier">Graphics.UI.Threepenny.Elements</span></a></span><span>   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html"><span class="hs-identifier">Reactive.Threepenny</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Input widgets
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | A single-line text entry.</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">data</span><span> </span><span id="TextEntry"><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#TextEntry"><span class="hs-identifier hs-var">TextEntry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TextEntry"><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#TextEntry"><span class="hs-identifier hs-var">TextEntry</span></a></span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="_elementTE"><span class="annot"><span class="annottext">TextEntry -&gt; Element
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_elementTE"><span class="hs-identifier hs-var hs-var">_elementTE</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_userTE"><span class="annot"><span class="annottext">TextEntry -&gt; Tidings String
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_userTE"><span class="hs-identifier hs-var hs-var">_userTE</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Tidings"><span class="hs-identifier hs-type">Tidings</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#Widget"><span class="hs-identifier hs-type">Widget</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#TextEntry"><span class="hs-identifier hs-type">TextEntry</span></a></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679119195"><span class="annot"><span class="annottext">getElement :: TextEntry -&gt; Element
+</span><a href="#local-6989586621679119195"><span class="hs-identifier hs-var hs-var hs-var hs-var">getElement</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEntry -&gt; Element
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_elementTE"><span class="hs-identifier hs-var">_elementTE</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><span class="hs-comment">-- | User changes to the text value.</span></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#userText"><span class="hs-identifier hs-type">userText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#TextEntry"><span class="hs-identifier hs-type">TextEntry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Tidings"><span class="hs-identifier hs-type">Tidings</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-43"></span><span id="userText"><span class="annot"><span class="annottext">userText :: TextEntry -&gt; Tidings String
+</span><a href="Graphics.UI.Threepenny.Widgets.html#userText"><span class="hs-identifier hs-var hs-var">userText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEntry -&gt; Tidings String
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_userTE"><span class="hs-identifier hs-var">_userTE</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><span class="hs-comment">-- | Create a single-line text entry.</span></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#entry"><span class="hs-identifier hs-type">entry</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Behavior"><span class="hs-identifier hs-type">Behavior</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Display value when the element does not have focus.</span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#TextEntry"><span class="hs-identifier hs-type">TextEntry</span></a></span><span>
+</span><span id="line-49"></span><span id="entry"><span class="annot"><span class="annottext">entry :: Behavior String -&gt; UI TextEntry
+</span><a href="Graphics.UI.Threepenny.Widgets.html#entry"><span class="hs-identifier hs-var hs-var">entry</span></a></span></span><span> </span><span id="local-6989586621679119197"><span class="annot"><span class="annottext">Behavior String
+</span><a href="#local-6989586621679119197"><span class="hs-identifier hs-var">bValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- single text entry</span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621679119198"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119198"><span class="hs-identifier hs-var">input</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="Graphics.UI.Threepenny.Elements.html#input"><span class="hs-identifier hs-var">UI.input</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679119200"><span class="annot"><span class="annottext">Behavior Bool
+</span><a href="#local-6989586621679119200"><span class="hs-identifier hs-var">bEditing</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Event Bool -&gt; UI (Behavior Bool)
+forall (m :: * -&gt; *) a. MonadIO m =&gt; a -&gt; Event a -&gt; m (Behavior a)
+</span><a href="Reactive.Threepenny.html#stepper"><span class="hs-identifier hs-var">stepper</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Event Bool -&gt; UI (Behavior Bool))
+-&gt; Event Bool -&gt; UI (Behavior Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Bool] -&gt; Bool
+forall (t :: * -&gt; *). Foldable t =&gt; t Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#and"><span class="hs-identifier hs-var">and</span></a></span><span> </span><span class="annot"><span class="annottext">([Bool] -&gt; Bool) -&gt; Event [Bool] -&gt; Event Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><span class="annottext">[Event Bool] -&gt; Event [Bool]
+forall a. [Event a] -&gt; Event [a]
+</span><a href="Reactive.Threepenny.html#unions"><span class="hs-identifier hs-var">unions</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Event () -&gt; Event Bool
+forall a b. a -&gt; Event b -&gt; Event a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Events.html#focus"><span class="hs-identifier hs-var">UI.focus</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119198"><span class="hs-identifier hs-var">input</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Event () -&gt; Event Bool
+forall a b. a -&gt; Event b -&gt; Event a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%24"><span class="hs-operator hs-var">&lt;$</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Events.html#blur"><span class="hs-identifier hs-var">UI.blur</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119198"><span class="hs-identifier hs-var">input</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>    </span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679119208"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679119208"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Internal.html#liftIOLater"><span class="hs-identifier hs-var">liftIOLater</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ()) -&gt; IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior String -&gt; Handler String -&gt; IO ()
+forall a. Behavior a -&gt; Handler a -&gt; IO ()
+</span><a href="Reactive.Threepenny.html#onChange"><span class="hs-identifier hs-var">onChange</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior String
+</span><a href="#local-6989586621679119197"><span class="hs-identifier hs-var">bValue</span></a></span><span> </span><span class="annot"><span class="annottext">(Handler String -&gt; IO ()) -&gt; Handler String -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679119212"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679119212"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Window -&gt; UI () -&gt; IO ()
+forall a. Window -&gt; UI a -&gt; IO a
+</span><a href="Graphics.UI.Threepenny.Internal.html#runUI"><span class="hs-identifier hs-var">runUI</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679119208"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">(UI () -&gt; IO ()) -&gt; UI () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>        </span><span id="local-6989586621679119214"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679119214"><span class="hs-identifier hs-var">editing</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; UI Bool
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; UI Bool) -&gt; IO Bool -&gt; UI Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior Bool -&gt; IO Bool
+forall (m :: * -&gt; *) a. MonadIO m =&gt; Behavior a -&gt; m a
+</span><a href="Reactive.Threepenny.html#currentValue"><span class="hs-identifier hs-var">currentValue</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior Bool
+</span><a href="#local-6989586621679119200"><span class="hs-identifier hs-var">bEditing</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; UI () -&gt; UI ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679119214"><span class="hs-identifier hs-var">editing</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(UI () -&gt; UI ()) -&gt; UI () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; UI ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(UI Element -&gt; UI ()) -&gt; UI Element -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; UI Element
+forall (m :: * -&gt; *) w. (MonadIO m, Widget w) =&gt; w -&gt; m Element
+</span><a href="Graphics.UI.Threepenny.Core.html#element"><span class="hs-identifier hs-var">element</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119198"><span class="hs-identifier hs-var">input</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String String
+-&gt; String -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String String
+</span><a href="Graphics.UI.Threepenny.Core.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679119212"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679119222"><span class="annot"><span class="annottext">_elementTE :: Element
+</span><a href="#local-6989586621679119222"><span class="hs-identifier hs-var hs-var">_elementTE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119198"><span class="hs-identifier hs-var">input</span></a></span><span>
+</span><span id="line-61"></span><span>        </span><span id="local-6989586621679119223"><span class="annot"><span class="annottext">_userTE :: Tidings String
+</span><a href="#local-6989586621679119223"><span class="hs-identifier hs-var hs-var">_userTE</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Behavior String -&gt; Event String -&gt; Tidings String
+forall a. Behavior a -&gt; Event a -&gt; Tidings a
+</span><a href="Reactive.Threepenny.html#tidings"><span class="hs-identifier hs-var">tidings</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior String
+</span><a href="#local-6989586621679119197"><span class="hs-identifier hs-var">bValue</span></a></span><span> </span><span class="annot"><span class="annottext">(Event String -&gt; Tidings String) -&gt; Event String -&gt; Tidings String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.Events.html#valueChange"><span class="hs-identifier hs-var">UI.valueChange</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119198"><span class="hs-identifier hs-var">input</span></a></span><span> </span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">TextEntry -&gt; UI TextEntry
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#TextEntry"><span class="hs-identifier hs-type">TextEntry</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">Tidings String
+Element
+_elementTE :: Element
+_userTE :: Tidings String
+_elementTE :: Element
+_userTE :: Tidings String
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_elementTE"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    List box
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-67"></span><span class="annot"><span class="hs-comment">-- | A list of values. The user can select entries.</span></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">data</span><span> </span><span id="ListBox"><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#ListBox"><span class="hs-identifier hs-var">ListBox</span></a></span></span><span> </span><span id="local-6989586621679119114"><span class="annot"><a href="#local-6989586621679119114"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ListBox"><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#ListBox"><span class="hs-identifier hs-var">ListBox</span></a></span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="_elementLB"><span class="annot"><span class="annottext">forall a. ListBox a -&gt; Element
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_elementLB"><span class="hs-identifier hs-var hs-var">_elementLB</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="_selectionLB"><span class="annot"><span class="annottext">forall a. ListBox a -&gt; Tidings (Maybe a)
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_selectionLB"><span class="hs-identifier hs-var hs-var">_selectionLB</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Tidings"><span class="hs-identifier hs-type">Tidings</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119114"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679119119"><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#Widget"><span class="hs-identifier hs-type">Widget</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#ListBox"><span class="hs-identifier hs-type">ListBox</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119119"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679119230"><span class="annot"><span class="annottext">getElement :: ListBox a -&gt; Element
+</span><a href="Graphics.UI.Threepenny.Core.html#getElement"><span class="hs-identifier hs-var hs-var hs-var hs-var">getElement</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListBox a -&gt; Element
+forall a. ListBox a -&gt; Element
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_elementLB"><span class="hs-identifier hs-var">_elementLB</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><span class="hs-comment">-- | User changes to the current selection (possibly empty).</span></span><span>
+</span><span id="line-76"></span><span id="local-6989586621679119231"><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#userSelection"><span class="hs-identifier hs-type">userSelection</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#ListBox"><span class="hs-identifier hs-type">ListBox</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119231"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Tidings"><span class="hs-identifier hs-type">Tidings</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119231"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-77"></span><span id="userSelection"><span class="annot"><span class="annottext">userSelection :: forall a. ListBox a -&gt; Tidings (Maybe a)
+</span><a href="Graphics.UI.Threepenny.Widgets.html#userSelection"><span class="hs-identifier hs-var hs-var">userSelection</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListBox a -&gt; Tidings (Maybe a)
+forall a. ListBox a -&gt; Tidings (Maybe a)
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_selectionLB"><span class="hs-identifier hs-var">_selectionLB</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><span class="hs-comment">-- | Create a 'ListBox'.</span></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#listBox"><span class="hs-identifier hs-type">listBox</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679119121"><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Behavior"><span class="hs-identifier hs-type">Behavior</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>               </span><span class="annot"><span class="hs-comment">-- ^ list of items</span></span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Behavior"><span class="hs-identifier hs-type">Behavior</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>         </span><span class="annot"><span class="hs-comment">-- ^ selected item</span></span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Behavior"><span class="hs-identifier hs-type">Behavior</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ display for an item</span></span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#ListBox"><span class="hs-identifier hs-type">ListBox</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span id="listBox"><span class="annot"><span class="annottext">listBox :: forall a.
+Ord a =&gt;
+Behavior [a]
+-&gt; Behavior (Maybe a)
+-&gt; Behavior (a -&gt; UI Element)
+-&gt; UI (ListBox a)
+</span><a href="Graphics.UI.Threepenny.Widgets.html#listBox"><span class="hs-identifier hs-var hs-var">listBox</span></a></span></span><span> </span><span id="local-6989586621679119258"><span class="annot"><span class="annottext">Behavior [a]
+</span><a href="#local-6989586621679119258"><span class="hs-identifier hs-var">bitems</span></a></span></span><span> </span><span id="local-6989586621679119259"><span class="annot"><span class="annottext">Behavior (Maybe a)
+</span><a href="#local-6989586621679119259"><span class="hs-identifier hs-var">bsel</span></a></span></span><span> </span><span id="local-6989586621679119260"><span class="annot"><span class="annottext">Behavior (a -&gt; UI Element)
+</span><a href="#local-6989586621679119260"><span class="hs-identifier hs-var">bdisplay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621679119261"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119261"><span class="hs-identifier hs-var">list</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="Graphics.UI.Threepenny.Elements.html#select"><span class="hs-identifier hs-var">UI.select</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- animate output items</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">Element -&gt; UI Element
+forall (m :: * -&gt; *) w. (MonadIO m, Widget w) =&gt; w -&gt; m Element
+</span><a href="Graphics.UI.Threepenny.Core.html#element"><span class="hs-identifier hs-var">element</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119261"><span class="hs-identifier hs-var">list</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element [UI Element] ()
+-&gt; Behavior [UI Element] -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; Behavior i -&gt; UI x -&gt; UI x
+</span><a href="Graphics.UI.Threepenny.Core.html#sink"><span class="hs-identifier hs-var">sink</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element [UI Element] ()
+</span><a href="Graphics.UI.Threepenny.Widgets.html#items"><span class="hs-identifier hs-var">items</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; UI Element) -&gt; [a] -&gt; [UI Element]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">((a -&gt; UI Element) -&gt; [a] -&gt; [UI Element])
+-&gt; Behavior (a -&gt; UI Element) -&gt; Behavior ([a] -&gt; [UI Element])
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (a -&gt; UI Element)
+</span><a href="#local-6989586621679119260"><span class="hs-identifier hs-var">bdisplay</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior ([a] -&gt; [UI Element])
+-&gt; Behavior [a] -&gt; Behavior [UI Element]
+forall a b. Behavior (a -&gt; b) -&gt; Behavior a -&gt; Behavior b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior [a]
+</span><a href="#local-6989586621679119258"><span class="hs-identifier hs-var">bitems</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-comment">-- animate output selection</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679119265"><span class="hs-identifier hs-type">bindices</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Behavior"><span class="hs-identifier hs-type">Behavior</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>        </span><span id="local-6989586621679119265"><span class="annot"><span class="annottext">bindices :: Behavior (Map a Int)
+</span><a href="#local-6989586621679119265"><span class="hs-identifier hs-var hs-var">bindices</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(a, Int)] -&gt; Map a Int
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(a, Int)] -&gt; Map a Int)
+-&gt; ([a] -&gt; [(a, Int)]) -&gt; [a] -&gt; Map a Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [Int] -&gt; [(a, Int)]) -&gt; [Int] -&gt; [a] -&gt; [(a, Int)]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [Int] -&gt; [(a, Int)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-glyph">..</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([a] -&gt; Map a Int) -&gt; Behavior [a] -&gt; Behavior (Map a Int)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior [a]
+</span><a href="#local-6989586621679119258"><span class="hs-identifier hs-var">bitems</span></a></span><span>
+</span><span id="line-94"></span><span>        </span><span id="local-6989586621679119273"><span class="annot"><span class="annottext">bindex :: Behavior (Maybe Int)
+</span><a href="#local-6989586621679119273"><span class="hs-identifier hs-var hs-var">bindex</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map a Int -&gt; Maybe a -&gt; Maybe Int
+forall {k} {a}. Ord k =&gt; Map k a -&gt; Maybe k -&gt; Maybe a
+</span><a href="#local-6989586621679119274"><span class="hs-identifier hs-var">lookupIndex</span></a></span><span> </span><span class="annot"><span class="annottext">(Map a Int -&gt; Maybe a -&gt; Maybe Int)
+-&gt; Behavior (Map a Int) -&gt; Behavior (Maybe a -&gt; Maybe Int)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (Map a Int)
+</span><a href="#local-6989586621679119265"><span class="hs-identifier hs-var">bindices</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (Maybe a -&gt; Maybe Int)
+-&gt; Behavior (Maybe a) -&gt; Behavior (Maybe Int)
+forall a b. Behavior (a -&gt; b) -&gt; Behavior a -&gt; Behavior b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (Maybe a)
+</span><a href="#local-6989586621679119259"><span class="hs-identifier hs-var">bsel</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>        </span><span id="local-6989586621679119274"><span class="annot"><span class="annottext">lookupIndex :: Map k a -&gt; Maybe k -&gt; Maybe a
+</span><a href="#local-6989586621679119274"><span class="hs-identifier hs-var hs-var">lookupIndex</span></a></span></span><span> </span><span id="local-6989586621679119279"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679119279"><span class="hs-identifier hs-var">_indices</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe k
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><a href="#local-6989586621679119274"><span class="hs-identifier hs-var">lookupIndex</span></a></span><span> </span><span id="local-6989586621679119280"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679119280"><span class="hs-identifier hs-var">indices</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679119281"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679119281"><span class="hs-identifier hs-var">sel</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; Maybe a
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679119281"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679119280"><span class="hs-identifier hs-var">indices</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">Element -&gt; UI Element
+forall (m :: * -&gt; *) w. (MonadIO m, Widget w) =&gt; w -&gt; m Element
+</span><a href="Graphics.UI.Threepenny.Core.html#element"><span class="hs-identifier hs-var">element</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119261"><span class="hs-identifier hs-var">list</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element (Maybe Int) (Maybe Int)
+-&gt; Behavior (Maybe Int) -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; Behavior i -&gt; UI x -&gt; UI x
+</span><a href="Graphics.UI.Threepenny.Core.html#sink"><span class="hs-identifier hs-var">sink</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element (Maybe Int) (Maybe Int)
+</span><a href="Graphics.UI.Threepenny.Attributes.html#selection"><span class="hs-identifier hs-var">UI.selection</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (Maybe Int)
+</span><a href="#local-6989586621679119273"><span class="hs-identifier hs-var">bindex</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">-- changing the display won't change the current selection</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- eDisplay &lt;- changes display</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">-- sink listBox [ selection :== stepper (-1) $ bSelection &lt;@ eDisplay ]</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">-- user selection</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679119284"><span class="hs-identifier hs-type">bindices2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Behavior"><span class="hs-identifier hs-type">Behavior</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119121"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>        </span><span id="local-6989586621679119284"><span class="annot"><span class="annottext">bindices2 :: Behavior (Map Int a)
+</span><a href="#local-6989586621679119284"><span class="hs-identifier hs-var hs-var">bindices2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Int, a)] -&gt; Map Int a
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(Int, a)] -&gt; Map Int a)
+-&gt; ([a] -&gt; [(Int, a)]) -&gt; [a] -&gt; Map Int a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; [a] -&gt; [(Int, a)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">([a] -&gt; Map Int a) -&gt; Behavior [a] -&gt; Behavior (Map Int a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior [a]
+</span><a href="#local-6989586621679119258"><span class="hs-identifier hs-var">bitems</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span>        </span><span id="local-6989586621679119287"><span class="annot"><span class="annottext">_selectionLB :: Tidings (Maybe a)
+</span><a href="#local-6989586621679119287"><span class="hs-identifier hs-var hs-var">_selectionLB</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Behavior (Maybe a) -&gt; Event (Maybe a) -&gt; Tidings (Maybe a)
+forall a. Behavior a -&gt; Event a -&gt; Tidings a
+</span><a href="Reactive.Threepenny.html#tidings"><span class="hs-identifier hs-var">tidings</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (Maybe a)
+</span><a href="#local-6989586621679119259"><span class="hs-identifier hs-var">bsel</span></a></span><span> </span><span class="annot"><span class="annottext">(Event (Maybe a) -&gt; Tidings (Maybe a))
+-&gt; Event (Maybe a) -&gt; Tidings (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-110"></span><span>            </span><span class="annot"><span class="annottext">Map Int a -&gt; Maybe Int -&gt; Maybe a
+forall {k} {a}. Ord k =&gt; Map k a -&gt; Maybe k -&gt; Maybe a
+</span><a href="#local-6989586621679119274"><span class="hs-identifier hs-var">lookupIndex</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Int a -&gt; Maybe Int -&gt; Maybe a)
+-&gt; Behavior (Map Int a) -&gt; Behavior (Maybe Int -&gt; Maybe a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (Map Int a)
+</span><a href="#local-6989586621679119284"><span class="hs-identifier hs-var">bindices2</span></a></span><span> </span><span class="annot"><span class="annottext">Behavior (Maybe Int -&gt; Maybe a)
+-&gt; Event (Maybe Int) -&gt; Event (Maybe a)
+forall a b. Behavior (a -&gt; b) -&gt; Event a -&gt; Event b
+</span><a href="Reactive.Threepenny.html#%3C%40%3E"><span class="hs-operator hs-var">&lt;@&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; Event (Maybe Int)
+</span><a href="Graphics.UI.Threepenny.Events.html#selectionChange"><span class="hs-identifier hs-var">UI.selectionChange</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119261"><span class="hs-identifier hs-var">list</span></a></span><span>
+</span><span id="line-111"></span><span>        </span><span id="local-6989586621679119290"><span class="annot"><span class="annottext">_elementLB :: Element
+</span><a href="#local-6989586621679119290"><span class="hs-identifier hs-var hs-var">_elementLB</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119261"><span class="hs-identifier hs-var">list</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">ListBox a -&gt; UI (ListBox a)
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#ListBox"><span class="hs-identifier hs-type">ListBox</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">Tidings (Maybe a)
+Element
+_elementLB :: Element
+_selectionLB :: Tidings (Maybe a)
+_selectionLB :: Tidings (Maybe a)
+_elementLB :: Element
+</span><a href="Graphics.UI.Threepenny.Widgets.html#_elementLB"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html#items"><span class="hs-identifier hs-type">items</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#WriteAttr"><span class="hs-identifier hs-type">WriteAttr</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-116"></span><span id="items"><span class="annot"><span class="annottext">items :: ReadWriteAttr Element [UI Element] ()
+</span><a href="Graphics.UI.Threepenny.Widgets.html#items"><span class="hs-identifier hs-var hs-var">items</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([UI Element] -&gt; Element -&gt; UI ())
+-&gt; ReadWriteAttr Element [UI Element] ()
+forall i x. (i -&gt; x -&gt; UI ()) -&gt; WriteAttr x i
+</span><a href="Graphics.UI.Threepenny.Core.html#mkWriteAttr"><span class="hs-identifier hs-var">mkWriteAttr</span></a></span><span> </span><span class="annot"><span class="annottext">(([UI Element] -&gt; Element -&gt; UI ())
+ -&gt; ReadWriteAttr Element [UI Element] ())
+-&gt; ([UI Element] -&gt; Element -&gt; UI ())
+-&gt; ReadWriteAttr Element [UI Element] ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679119292"><span class="annot"><span class="annottext">[UI Element]
+</span><a href="#local-6989586621679119292"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679119293"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119293"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; UI ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(UI Element -&gt; UI ()) -&gt; UI Element -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">Element -&gt; UI Element
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679119293"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; (UI Element -&gt; UI Element) -&gt; UI Element
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="Graphics.UI.Threepenny.Core.html#%23"><span class="hs-operator hs-var">#</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element [Element] ()
+-&gt; [Element] -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element [Element] ()
+</span><a href="Graphics.UI.Threepenny.Core.html#children"><span class="hs-identifier hs-var">children</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span> </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; [UI Element] -&gt; [UI Element]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679119296"><span class="annot"><span class="annottext">UI Element
+</span><a href="#local-6989586621679119296"><span class="hs-identifier hs-var">j</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="Graphics.UI.Threepenny.Elements.html#option"><span class="hs-identifier hs-var">UI.option</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">UI Element
+</span><a href="#local-6989586621679119296"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[UI Element]
+</span><a href="#local-6989586621679119292"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span></pre></body></html>

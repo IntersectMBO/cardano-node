@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.UI.Threepenny</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Introduction</span></span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><span class="hs-comment">-- $intro</span></span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Example</span></span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><span class="hs-comment">-- $example</span></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Modules</span></span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Attributes.html"><span class="hs-identifier">Graphics.UI.Threepenny.Attributes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Canvas.html"><span class="hs-identifier">Graphics.UI.Threepenny.Canvas</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html"><span class="hs-identifier">Graphics.UI.Threepenny.DragNDrop</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Elements.html"><span class="hs-identifier">Graphics.UI.Threepenny.Elements</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Events.html"><span class="hs-identifier">Graphics.UI.Threepenny.Events</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html"><span class="hs-identifier">Graphics.UI.Threepenny.JQuery</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html"><span class="hs-identifier">Graphics.UI.Threepenny.Timer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html"><span class="hs-identifier">Graphics.UI.Threepenny.Widgets</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.Attributes.html"><span class="hs-identifier">Graphics.UI.Threepenny.Attributes</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.Canvas.html"><span class="hs-identifier">Graphics.UI.Threepenny.Canvas</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html"><span class="hs-identifier">Graphics.UI.Threepenny.DragNDrop</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.Elements.html"><span class="hs-identifier">Graphics.UI.Threepenny.Elements</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.Events.html"><span class="hs-identifier">Graphics.UI.Threepenny.Events</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.JQuery.html"><span class="hs-identifier">Graphics.UI.Threepenny.JQuery</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html"><span class="hs-identifier">Graphics.UI.Threepenny.Timer</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Graphics.UI.Threepenny.Widgets.html"><span class="hs-identifier">Graphics.UI.Threepenny.Widgets</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">{- $intro
+
+Welcome to the Threepenny library for graphical user interfaces.
+
+A program written with Threepenny is essentially a small web server
+that displays the user interface as a web page to any browser that connects to it.
+
+For an introduction, see the example below.
+The module &quot;Graphics.UI.Threepenny.Core&quot; contains the main functions.
+
+-}</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><span class="hs-comment">{- $example
+
+The following example should help to get you started with Threepenny.
+(The lines of code below are meant to be concatenated into a single file.)
+
+&gt; module Main where
+
+First, we have to import the library.
+It is a good idea to import the core module verbatim
+and import all other functions with a mandatory @UI@ prefix.
+
+&gt; import qualified Graphics.UI.Threepenny       as UI
+&gt; import           Graphics.UI.Threepenny.Core
+
+We begin by starting a server on port @8023@ using the 'startGUI' function.
+Additional static content is served from the @../wwwroot@ directory.
+
+&gt; main :: IO ()
+&gt; main = do
+&gt;     startGUI defaultConfig
+&gt;         { jsPort       = Just 8023
+&gt;         , jsStatic     = Just &quot;../wwwroot&quot;
+&gt;         } setup
+
+Whenever a browser connects to the server,
+the following function will be executed to start the GUI interaction.
+It builds the initial HTML page.
+
+&gt; setup :: Window -&gt; UI ()
+&gt; setup window = do
+
+First, set the title of the HTML document
+
+&gt;     return window # set UI.title &quot;Hello World!&quot;
+
+Then create a button element
+
+&gt;     button &lt;- UI.button # set UI.text &quot;Click me!&quot;
+
+DOM elements can be accessed much in the same way they are
+accessed from JavaScript; they can be searched, updated, moved and
+inspected. In the line above, we set the 'text' contents.
+
+To actually display the button, we have to attach it to the body of the HTML element.
+The '#+' combinator allows you to nest elements quickly
+in the style of a HTML combinator library.
+
+&gt;     getBody window #+ [element button]
+
+Finally, we register an event handler for the 'click' event,
+which occurs whenever the user clicks on the button.
+When that happens, we change the text of the button.
+
+&gt;     on UI.click button $ const $ do
+&gt;         element button # set UI.text &quot;I have been clicked!&quot;
+
+That's it! Now, run the program and visit the URL &lt;http://localhost:8023/&gt;
+in your browser to interact with the user interface.
+
+The library comes with a
+&lt;https://github.com/HeinrichApfelmus/threepenny-gui/tree/master/samples#readme plethora of additional example code&gt;.
+
+
+-}</span></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span></pre></body></html>

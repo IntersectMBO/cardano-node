@@ -1,0 +1,814 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards, CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RecursiveDo #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Foreign.JavaScript.EventLoop</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#eventLoop"><span class="hs-identifier">eventLoop</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Foreign.JavaScript.Types.html#runEval"><span class="hs-identifier">runEval</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#callEval"><span class="hs-identifier">callEval</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#debug"><span class="hs-identifier">debug</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#onDisconnect"><span class="hs-identifier">onDisconnect</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#newHandler"><span class="hs-identifier">newHandler</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#fromJSStablePtr"><span class="hs-identifier">fromJSStablePtr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#newJSObjectFromCoupon"><span class="hs-identifier">newJSObjectFromCoupon</span></a></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Async</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span>   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span>                  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#deepseq"><span class="hs-identifier">deepseq</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>        </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>               </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span>    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Foreign.RemotePtr.html"><span class="hs-identifier">Foreign.RemotePtr</span></a></span><span>             </span><span class="hs-keyword">as</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Foreign.html"><span class="hs-identifier">Foreign</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html"><span class="hs-identifier">Foreign.JavaScript.CallBuffer</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html"><span class="hs-identifier">Foreign.JavaScript.Types</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#rebug"><span class="hs-identifier hs-type">rebug</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-cpp">
+#ifdef REBUG
+</span><span class="hs-identifier">rebug</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">System.Mem.performGC</span><span class="hs-cpp">
+#else
+</span><span id="rebug"><span class="annot"><span class="annottext">rebug :: IO ()
+</span><a href="Foreign.JavaScript.EventLoop.html#rebug"><span class="hs-identifier hs-var hs-var">rebug</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-30"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Event Loop
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | Handle a single event</span></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#handleEvent"><span class="hs-identifier hs-type">handleEvent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Foreign.RemotePtr.html#Coupon"><span class="hs-identifier hs-type">Coupon</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="handleEvent"><span class="annot"><span class="annottext">handleEvent :: Window -&gt; (Coupon, Value) -&gt; IO ()
+</span><a href="Foreign.JavaScript.EventLoop.html#handleEvent"><span class="hs-identifier hs-var hs-var">handleEvent</span></a></span></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113774"><span id="local-6989586621679113775"><span id="local-6989586621679113776"><span id="local-6989586621679113777"><span id="local-6989586621679113778"><span id="local-6989586621679113779"><span id="local-6989586621679113780"><span id="local-6989586621679113781"><span id="local-6989586621679113782"><span id="local-6989586621679113783"><span id="local-6989586621679113784"><span id="local-6989586621679113785"><span class="annot"><span class="annottext">[Cookie]
+IO ()
+TVar CallBufferMode
+RemotePtr ()
+TMVar (String -&gt; String)
+Vendor JSPtr
+Vendor (Value -&gt; IO ())
+Server
+String -&gt; IO ()
+String -&gt; IO Value
+IO () -&gt; IO ()
+runEval :: Window -&gt; String -&gt; IO ()
+callEval :: Window -&gt; String -&gt; IO Value
+debug :: Window -&gt; String -&gt; IO ()
+onDisconnect :: Window -&gt; IO () -&gt; IO ()
+getServer :: Server
+getCookies :: [Cookie]
+runEval :: String -&gt; IO ()
+callEval :: String -&gt; IO Value
+wCallBuffer :: TMVar (String -&gt; String)
+wCallBufferMode :: TVar CallBufferMode
+timestamp :: IO ()
+debug :: String -&gt; IO ()
+onDisconnect :: IO () -&gt; IO ()
+wRoot :: RemotePtr ()
+wEventHandlers :: Vendor (Value -&gt; IO ())
+wJSObjects :: Vendor JSPtr
+getServer :: Window -&gt; Server
+getCookies :: Window -&gt; [Cookie]
+wCallBuffer :: Window -&gt; TMVar (String -&gt; String)
+wCallBufferMode :: Window -&gt; TVar CallBufferMode
+timestamp :: Window -&gt; IO ()
+wRoot :: Window -&gt; RemotePtr ()
+wEventHandlers :: Window -&gt; Vendor (Value -&gt; IO ())
+wJSObjects :: Window -&gt; Vendor JSPtr
+</span><a href="Foreign.JavaScript.Types.html#runEval"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113794"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113794"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113795"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113795"><span class="hs-identifier hs-var">args</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621679113796"><span class="annot"><span class="annottext">Maybe (RemotePtr (Value -&gt; IO ()))
+</span><a href="#local-6989586621679113796"><span class="hs-identifier hs-var">mhandler</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coupon
+-&gt; Vendor (Value -&gt; IO ())
+-&gt; IO (Maybe (RemotePtr (Value -&gt; IO ())))
+forall a. Coupon -&gt; Vendor a -&gt; IO (Maybe (RemotePtr a))
+</span><a href="Foreign.RemotePtr.html#lookup"><span class="hs-identifier hs-var">Foreign.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113794"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Vendor (Value -&gt; IO ())
+</span><a href="#local-6989586621679113784"><span class="hs-identifier hs-var">wEventHandlers</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (RemotePtr (Value -&gt; IO ()))
+</span><a href="#local-6989586621679113796"><span class="hs-identifier hs-var">mhandler</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-38"></span><span>        </span><span class="annot"><span class="annottext">Maybe (RemotePtr (Value -&gt; IO ()))
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113798"><span class="annot"><span class="annottext">RemotePtr (Value -&gt; IO ())
+</span><a href="#local-6989586621679113798"><span class="hs-identifier hs-var">f</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RemotePtr (Value -&gt; IO ())
+-&gt; (Coupon -&gt; (Value -&gt; IO ()) -&gt; IO ()) -&gt; IO ()
+forall a b. RemotePtr a -&gt; (Coupon -&gt; a -&gt; IO b) -&gt; IO b
+</span><a href="Foreign.RemotePtr.html#withRemotePtr"><span class="hs-identifier hs-var">withRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">RemotePtr (Value -&gt; IO ())
+</span><a href="#local-6989586621679113798"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Coupon
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679113800"><span class="annot"><span class="annottext">Value -&gt; IO ()
+</span><a href="#local-6989586621679113800"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Value -&gt; IO ()
+</span><a href="#local-6989586621679113800"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113795"><span class="hs-identifier hs-var">args</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">type</span><span> </span><span id="Result"><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#Result"><span class="hs-identifier hs-var">Result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | Event loop for a browser window.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Supports concurrent invocations of `runEval` and `callEval`.</span><span>
+</span><span id="line-46"></span><span id="local-6989586621679113670"><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#eventLoop"><span class="hs-identifier hs-type">eventLoop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113670"><span class="hs-identifier hs-type">void</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#EventLoop"><span class="hs-identifier hs-type">EventLoop</span></a></span></span><span>
+</span><span id="line-47"></span><span id="eventLoop"><span class="annot"><span class="annottext">eventLoop :: forall void. (Window -&gt; IO void) -&gt; EventLoop
+</span><a href="Foreign.JavaScript.EventLoop.html#eventLoop"><span class="hs-identifier hs-var hs-var">eventLoop</span></a></span></span><span> </span><span id="local-6989586621679113813"><span class="annot"><span class="annottext">Window -&gt; IO void
+</span><a href="#local-6989586621679113813"><span class="hs-identifier hs-var">initialize</span></a></span></span><span> </span><span id="local-6989586621679113814"><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113814"><span class="hs-identifier hs-var">server</span></a></span></span><span> </span><span id="local-6989586621679113815"><span class="annot"><span class="annottext">[Cookie]
+</span><a href="#local-6989586621679113815"><span class="hs-identifier hs-var">info</span></a></span></span><span> </span><span id="local-6989586621679113816"><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">-- To support concurrent FFI calls, we need three threads.</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-comment">-- A fourth thread supports </span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">-- The thread `multiplexer` reads from the client and</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-comment">--   sorts the messages into the appropriate queue.</span><span>
+</span><span id="line-53"></span><span>    </span><span id="local-6989586621679113818"><span class="annot"><span class="annottext">TQueue (Coupon, Value)
+</span><a href="#local-6989586621679113818"><span class="hs-identifier hs-var">events</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (TQueue (Coupon, Value))
+forall a. IO (TQueue a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#newTQueueIO"><span class="hs-identifier hs-var">newTQueueIO</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679113820"><span class="annot"><span class="annottext">TQueue Result
+</span><a href="#local-6989586621679113820"><span class="hs-identifier hs-var">results</span></a></span></span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (TQueue Result)
+forall a. IO (TQueue a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#newTQueueIO"><span class="hs-identifier hs-var">newTQueueIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#TQueue"><span class="hs-identifier hs-type">TQueue</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">-- The thread `handleCalls` executes FFI calls</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">--    from the Haskell side in order.</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- The corresponding queue records `TMVar`s in which to put the results.</span><span>
+</span><span id="line-58"></span><span>    </span><span id="local-6989586621679113821"><span class="annot"><span class="annottext">TQueue (Maybe (TMVar Result), ServerMsg)
+</span><a href="#local-6989586621679113821"><span class="hs-identifier hs-var">calls</span></a></span></span><span>       </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (TQueue (Maybe (TMVar Result), ServerMsg))
+forall a. IO (TQueue a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#newTQueueIO"><span class="hs-identifier hs-var">newTQueueIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#TQueue"><span class="hs-identifier hs-type">TQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#TMVar"><span class="hs-identifier hs-type">TMVar</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#ServerMsg"><span class="hs-identifier hs-type">ServerMsg</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">-- The thread `handleEvents` handles client Events in order.</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- We only want to make an FFI call when the connection browser&lt;-&gt;server is open</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- Otherwise, throw an exception.</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113831"><span class="annot"><span class="annottext">atomicallyIfOpen :: STM b -&gt; IO b
+</span><a href="#local-6989586621679113831"><span class="hs-identifier hs-var hs-var">atomicallyIfOpen</span></a></span></span><span> </span><span id="local-6989586621679113832"><span class="annot"><span class="annottext">STM b
+</span><a href="#local-6989586621679113832"><span class="hs-identifier hs-var">stm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>            </span><span id="local-6989586621679113833"><span class="annot"><span class="annottext">Either () b
+</span><a href="#local-6989586621679113833"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Either () b) -&gt; IO (Either () b)
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (Either () b) -&gt; IO (Either () b))
+-&gt; STM (Either () b) -&gt; IO (Either () b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-65"></span><span>                </span><span id="local-6989586621679113835"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679113835"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Bool -&gt; STM Bool
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">(TVar Bool -&gt; STM Bool) -&gt; TVar Bool -&gt; STM Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Comm -&gt; TVar Bool
+</span><a href="Foreign.JavaScript.Types.html#commOpen"><span class="hs-identifier hs-var">commOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span><span>
+</span><span id="line-66"></span><span>                </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679113835"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">(b -&gt; Either () b) -&gt; STM b -&gt; STM (Either () b)
+forall a b. (a -&gt; b) -&gt; STM a -&gt; STM b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; Either () b
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">STM b
+</span><a href="#local-6989586621679113832"><span class="hs-identifier hs-var">stm</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Either () b -&gt; STM (Either () b)
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; Either () b
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either () b
+</span><a href="#local-6989586621679113833"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-68"></span><span>                </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679113838"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679113838"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">b -&gt; IO b
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679113838"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-69"></span><span>                </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span>  </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ErrorCall -&gt; IO b
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">(ErrorCall -&gt; IO b) -&gt; ErrorCall -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ErrorCall
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.html#ErrorCall"><span class="hs-identifier hs-var">ErrorCall</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Foreign.JavaScript: Browser &lt;-&gt; Server communication broken.&quot;</span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- FFI calls are made by writing to the `calls` queue.</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113843"><span class="annot"><span class="annottext">run :: ServerMsg -&gt; IO ()
+</span><a href="#local-6989586621679113843"><span class="hs-identifier hs-var hs-var">run</span></a></span></span><span>  </span><span id="local-6989586621679113844"><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113844"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113844"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">ServerMsg -&gt; IO () -&gt; IO ()
+forall a b. NFData a =&gt; a -&gt; b -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#deepseq"><span class="hs-operator hs-var">`deepseq`</span></a></span><span> </span><span class="hs-keyword">do</span><span>     </span><span class="hs-comment">-- see [ServerMsg strictness]</span><span>
+</span><span id="line-73"></span><span>            </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="#local-6989586621679113831"><span class="hs-identifier hs-var">atomicallyIfOpen</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Maybe (TMVar Result), ServerMsg)
+-&gt; (Maybe (TMVar Result), ServerMsg) -&gt; STM ()
+forall a. TQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#writeTQueue"><span class="hs-identifier hs-var">writeTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Maybe (TMVar Result), ServerMsg)
+</span><a href="#local-6989586621679113821"><span class="hs-identifier hs-var">calls</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (TMVar Result)
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113844"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>        </span><span id="local-6989586621679113853"><span class="annot"><span class="annottext">call :: ServerMsg -&gt; IO Value
+</span><a href="#local-6989586621679113853"><span class="hs-identifier hs-var hs-var">call</span></a></span></span><span> </span><span id="local-6989586621679113854"><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113854"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113854"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">ServerMsg -&gt; IO Value -&gt; IO Value
+forall a b. NFData a =&gt; a -&gt; b -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#deepseq"><span class="hs-operator hs-var">`deepseq`</span></a></span><span> </span><span class="hs-keyword">do</span><span>     </span><span class="hs-comment">-- see [ServerMsg strictness]</span><span>
+</span><span id="line-75"></span><span>            </span><span id="local-6989586621679113855"><span class="annot"><span class="annottext">TMVar Result
+</span><a href="#local-6989586621679113855"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (TMVar Result)
+forall a. IO (TMVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#newEmptyTMVarIO"><span class="hs-identifier hs-var">newEmptyTMVarIO</span></a></span><span>
+</span><span id="line-76"></span><span>            </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="#local-6989586621679113831"><span class="hs-identifier hs-var">atomicallyIfOpen</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Maybe (TMVar Result), ServerMsg)
+-&gt; (Maybe (TMVar Result), ServerMsg) -&gt; STM ()
+forall a. TQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#writeTQueue"><span class="hs-identifier hs-var">writeTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Maybe (TMVar Result), ServerMsg)
+</span><a href="#local-6989586621679113821"><span class="hs-identifier hs-var">calls</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TMVar Result -&gt; Maybe (TMVar Result)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar Result
+</span><a href="#local-6989586621679113855"><span class="hs-identifier hs-var">ref</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113854"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>            </span><span id="local-6989586621679113857"><span class="annot"><span class="annottext">Result
+</span><a href="#local-6989586621679113857"><span class="hs-identifier hs-var">er</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM Result -&gt; IO Result
+forall a. STM a -&gt; IO a
+</span><a href="#local-6989586621679113831"><span class="hs-identifier hs-var">atomicallyIfOpen</span></a></span><span> </span><span class="annot"><span class="annottext">(STM Result -&gt; IO Result) -&gt; STM Result -&gt; IO Result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar Result -&gt; STM Result
+forall a. TMVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#takeTMVar"><span class="hs-identifier hs-var">takeTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar Result
+</span><a href="#local-6989586621679113855"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Result
+</span><a href="#local-6989586621679113857"><span class="hs-identifier hs-var">er</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-79"></span><span>                </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span>  </span><span id="local-6989586621679113859"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113859"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">JavaScriptException -&gt; IO Value
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">(JavaScriptException -&gt; IO Value)
+-&gt; JavaScriptException -&gt; IO Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JavaScriptException
+</span><a href="Foreign.JavaScript.Types.html#JavaScriptException"><span class="hs-identifier hs-var">JavaScriptException</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113859"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-80"></span><span>                </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679113861"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113861"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Value -&gt; IO Value
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113861"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span id="local-6989586621679113866"><span class="annot"><span class="annottext">debug :: String -&gt; IO ()
+</span><a href="#local-6989586621679113866"><span class="hs-identifier hs-var hs-var">debug</span></a></span></span><span> </span><span id="local-6989586621679113867"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113867"><span class="hs-identifier hs-var">s</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113867"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO () -&gt; IO ()
+forall a b. NFData a =&gt; a -&gt; b -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#deepseq"><span class="hs-operator hs-var">`deepseq`</span></a></span><span> </span><span class="hs-keyword">do</span><span>       </span><span class="hs-comment">-- see [ServerMsg strictness]</span><span>
+</span><span id="line-82"></span><span>            </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="#local-6989586621679113831"><span class="hs-identifier hs-var">atomicallyIfOpen</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Comm -&gt; ServerMsg -&gt; STM ()
+</span><a href="Foreign.JavaScript.Types.html#writeServer"><span class="hs-identifier hs-var">writeServer</span></a></span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span><span> </span><span class="annot"><span class="annottext">(ServerMsg -&gt; STM ()) -&gt; ServerMsg -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ServerMsg
+</span><a href="Foreign.JavaScript.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113867"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- We also send a separate event when the client disconnects.</span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679113870"><span class="annot"><span class="annottext">TVar (IO ())
+</span><a href="#local-6989586621679113870"><span class="hs-identifier hs-var">disconnect</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO (TVar (IO ()))
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO (TVar (IO ()))) -&gt; IO () -&gt; IO (TVar (IO ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">-- FIXME: Make it possible to store *multiple* event handlers</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113872"><span class="annot"><span class="annottext">onDisconnect :: IO () -&gt; IO ()
+</span><a href="#local-6989586621679113872"><span class="hs-identifier hs-var hs-var">onDisconnect</span></a></span></span><span> </span><span id="local-6989586621679113873"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113873"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (IO ()) -&gt; IO () -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (IO ())
+</span><a href="#local-6989586621679113870"><span class="hs-identifier hs-var">disconnect</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113873"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>    </span><span id="local-6989586621679113875"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113875"><span class="hs-identifier hs-var">w0</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Window
+</span><a href="Foreign.JavaScript.Types.html#newPartialWindow"><span class="hs-identifier hs-var">newPartialWindow</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113877"><span class="annot"><span class="annottext">w :: Window
+</span><a href="#local-6989586621679113877"><span class="hs-identifier hs-var hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113875"><span class="hs-identifier hs-var">w0</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#getServer"><span class="hs-identifier hs-var">getServer</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679113814"><span class="hs-identifier hs-type">server</span></a></span><span>
+</span><span id="line-91"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#getCookies"><span class="hs-identifier hs-var">getCookies</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679113815"><span class="hs-identifier hs-type">info</span></a></span><span>
+</span><span id="line-92"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#runEval"><span class="hs-identifier hs-var">runEval</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679113843"><span class="hs-identifier hs-type">run</span></a></span><span>  </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#RunEval"><span class="hs-identifier hs-type">RunEval</span></a></span><span>
+</span><span id="line-93"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#callEval"><span class="hs-identifier hs-var">callEval</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679113853"><span class="hs-identifier hs-type">call</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#CallEval"><span class="hs-identifier hs-type">CallEval</span></a></span><span>
+</span><span id="line-94"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#debug"><span class="hs-identifier hs-var">debug</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679113866"><span class="hs-identifier hs-type">debug</span></a></span><span>
+</span><span id="line-95"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#timestamp"><span class="hs-identifier hs-var">timestamp</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679113843"><span class="hs-identifier hs-type">run</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span>
+</span><span id="line-96"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#onDisconnect"><span class="hs-identifier hs-var">onDisconnect</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679113872"><span class="hs-identifier hs-type">onDisconnect</span></a></span><span>
+</span><span id="line-97"></span><span>               </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-comment">-- The individual threads are as follows:</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">-- Read client messages and send them to the</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- thread that handles events or the thread that handles FFI calls.</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113884"><span class="annot"><span class="annottext">multiplexer :: IO b
+</span><a href="#local-6989586621679113884"><span class="hs-identifier hs-var hs-var">multiplexer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO b) -&gt; IO () -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-104"></span><span>            </span><span id="local-6989586621679113886"><span class="annot"><span class="annottext">ClientMsg
+</span><a href="#local-6989586621679113886"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Comm -&gt; STM ClientMsg
+</span><a href="Foreign.JavaScript.Types.html#readClient"><span class="hs-identifier hs-var">readClient</span></a></span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span><span>
+</span><span id="line-105"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ClientMsg
+</span><a href="#local-6989586621679113886"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-106"></span><span>                </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span id="local-6989586621679113889"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113889"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679113890"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113890"><span class="hs-identifier hs-var">y</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TQueue (Coupon, Value) -&gt; (Coupon, Value) -&gt; STM ()
+forall a. TQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#writeTQueue"><span class="hs-identifier hs-var">writeTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Coupon, Value)
+</span><a href="#local-6989586621679113818"><span class="hs-identifier hs-var">events</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113889"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113890"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>                </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span id="local-6989586621679113892"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113892"><span class="hs-identifier hs-var">x</span></a></span></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TQueue Result -&gt; Result -&gt; STM ()
+forall a. TQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#writeTQueue"><span class="hs-identifier hs-var">writeTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue Result
+</span><a href="#local-6989586621679113820"><span class="hs-identifier hs-var">results</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Result
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113892"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>                </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span id="local-6989586621679113894"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113894"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TQueue Result -&gt; Result -&gt; STM ()
+forall a. TQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#writeTQueue"><span class="hs-identifier hs-var">writeTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue Result
+</span><a href="#local-6989586621679113820"><span class="hs-identifier hs-var">results</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Result
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span>  </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113894"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- Send FFI calls to client and collect results</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113902"><span class="annot"><span class="annottext">handleCalls :: IO b
+</span><a href="#local-6989586621679113902"><span class="hs-identifier hs-var hs-var">handleCalls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO b) -&gt; IO () -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-112"></span><span>            </span><span id="local-6989586621679113903"><span class="annot"><span class="annottext">Maybe (TMVar Result)
+</span><a href="#local-6989586621679113903"><span class="hs-identifier hs-var">mref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Maybe (TMVar Result)) -&gt; IO (Maybe (TMVar Result))
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (Maybe (TMVar Result)) -&gt; IO (Maybe (TMVar Result)))
+-&gt; STM (Maybe (TMVar Result)) -&gt; IO (Maybe (TMVar Result))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-113"></span><span>                </span><span class="hs-special">(</span><span id="local-6989586621679113904"><span class="annot"><span class="annottext">Maybe (TMVar Result)
+</span><a href="#local-6989586621679113904"><span class="hs-identifier hs-var">mref</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113905"><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113905"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TQueue (Maybe (TMVar Result), ServerMsg)
+-&gt; STM (Maybe (TMVar Result), ServerMsg)
+forall a. TQueue a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#readTQueue"><span class="hs-identifier hs-var">readTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Maybe (TMVar Result), ServerMsg)
+</span><a href="#local-6989586621679113821"><span class="hs-identifier hs-var">calls</span></a></span><span>
+</span><span id="line-114"></span><span>                </span><span class="annot"><span class="annottext">Comm -&gt; ServerMsg -&gt; STM ()
+</span><a href="Foreign.JavaScript.Types.html#writeServer"><span class="hs-identifier hs-var">writeServer</span></a></span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span><span> </span><span class="annot"><span class="annottext">ServerMsg
+</span><a href="#local-6989586621679113905"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-115"></span><span>                </span><span class="annot"><span class="annottext">Maybe (TMVar Result) -&gt; STM (Maybe (TMVar Result))
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (TMVar Result)
+</span><a href="#local-6989586621679113904"><span class="hs-identifier hs-var">mref</span></a></span><span>
+</span><span id="line-116"></span><span>            </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-117"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (TMVar Result)
+</span><a href="#local-6989586621679113903"><span class="hs-identifier hs-var">mref</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-118"></span><span>                    </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113907"><span class="annot"><span class="annottext">TMVar Result
+</span><a href="#local-6989586621679113907"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-119"></span><span>                        </span><span id="local-6989586621679113908"><span class="annot"><span class="annottext">Result
+</span><a href="#local-6989586621679113908"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TQueue Result -&gt; STM Result
+forall a. TQueue a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#readTQueue"><span class="hs-identifier hs-var">readTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue Result
+</span><a href="#local-6989586621679113820"><span class="hs-identifier hs-var">results</span></a></span><span>
+</span><span id="line-120"></span><span>                        </span><span class="annot"><span class="annottext">TMVar Result -&gt; Result -&gt; STM ()
+forall a. TMVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#putTMVar"><span class="hs-identifier hs-var">putTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar Result
+</span><a href="#local-6989586621679113907"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="annot"><span class="annottext">Result
+</span><a href="#local-6989586621679113908"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-121"></span><span>                    </span><span class="annot"><span class="annottext">Maybe (TMVar Result)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-comment">-- Receive events from client and handle them in order.</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113917"><span class="annot"><span class="annottext">handleEvents :: IO ()
+</span><a href="#local-6989586621679113917"><span class="hs-identifier hs-var hs-var">handleEvents</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-125"></span><span>            </span><span id="local-6989586621679113918"><span class="annot"><span class="annottext">Maybe (Coupon, Value)
+</span><a href="#local-6989586621679113918"><span class="hs-identifier hs-var">me</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Maybe (Coupon, Value)) -&gt; IO (Maybe (Coupon, Value))
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (Maybe (Coupon, Value)) -&gt; IO (Maybe (Coupon, Value)))
+-&gt; STM (Maybe (Coupon, Value)) -&gt; IO (Maybe (Coupon, Value))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>                </span><span id="local-6989586621679113919"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679113919"><span class="hs-identifier hs-var">open</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Bool -&gt; STM Bool
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">(TVar Bool -&gt; STM Bool) -&gt; TVar Bool -&gt; STM Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Comm -&gt; TVar Bool
+</span><a href="Foreign.JavaScript.Types.html#commOpen"><span class="hs-identifier hs-var">commOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span><span>
+</span><span id="line-127"></span><span>                </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679113919"><span class="hs-identifier hs-var">open</span></a></span><span>
+</span><span id="line-128"></span><span>                    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">(Coupon, Value) -&gt; Maybe (Coupon, Value)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">((Coupon, Value) -&gt; Maybe (Coupon, Value))
+-&gt; STM (Coupon, Value) -&gt; STM (Maybe (Coupon, Value))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Coupon, Value) -&gt; STM (Coupon, Value)
+forall a. TQueue a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#readTQueue"><span class="hs-identifier hs-var">readTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue (Coupon, Value)
+</span><a href="#local-6989586621679113818"><span class="hs-identifier hs-var">events</span></a></span><span>
+</span><span id="line-129"></span><span>                    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe (Coupon, Value) -&gt; STM (Maybe (Coupon, Value))
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Coupon, Value)
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-comment">-- channel is closed</span><span>
+</span><span id="line-130"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (Coupon, Value)
+</span><a href="#local-6989586621679113918"><span class="hs-identifier hs-var">me</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-131"></span><span>                </span><span class="annot"><span class="annottext">Maybe (Coupon, Value)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>    </span><span class="hs-comment">-- channel is closed, we're done</span><span>
+</span><span id="line-132"></span><span>                </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113921"><span class="annot"><span class="annottext">(Coupon, Value)
+</span><a href="#local-6989586621679113921"><span class="hs-identifier hs-var">e</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-133"></span><span>                    </span><span class="annot"><span class="annottext">Window -&gt; (Coupon, Value) -&gt; IO ()
+</span><a href="Foreign.JavaScript.EventLoop.html#handleEvent"><span class="hs-identifier hs-var">handleEvent</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113877"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(Coupon, Value)
+</span><a href="#local-6989586621679113921"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-134"></span><span>                        </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#onException"><span class="hs-operator hs-var">`E.onException`</span></a></span><span> </span><span class="annot"><span class="annottext">Comm -&gt; IO ()
+</span><a href="Foreign.JavaScript.Types.html#commClose"><span class="hs-identifier hs-var">commClose</span></a></span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span><span> </span><span class="hs-comment">-- close channel in case of exception</span><span>
+</span><span id="line-135"></span><span>                    </span><span class="annot"><span class="annottext">IO ()
+</span><a href="Foreign.JavaScript.EventLoop.html#rebug"><span class="hs-identifier hs-var">rebug</span></a></span><span>
+</span><span id="line-136"></span><span>                    </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113917"><span class="hs-identifier hs-var">handleEvents</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-comment">-- Execute an IO action, but also print any exceptions that it may throw.</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-comment">-- (The exception is rethrown.)</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-141"></span><span>        </span><span id="local-6989586621679113723"><span class="annot"><a href="#local-6989586621679113924"><span class="hs-identifier hs-type">printException</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113723"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113723"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-142"></span><span>        </span><span id="local-6989586621679113924"><span class="annot"><span class="annottext">printException :: forall a. IO a -&gt; IO a
+</span><a href="#local-6989586621679113924"><span class="hs-identifier hs-var hs-var">printException</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; IO a) -&gt; IO a -&gt; IO a
+forall e a. Exception e =&gt; (e -&gt; IO a) -&gt; IO a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#handle"><span class="hs-identifier hs-var">E.handle</span></a></span><span> </span><span class="annot"><span class="annottext">((SomeException -&gt; IO a) -&gt; IO a -&gt; IO a)
+-&gt; (SomeException -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679113932"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679113932"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-143"></span><span>            </span><span class="annot"><span class="annottext">Server -&gt; ByteString -&gt; IO ()
+</span><a href="Foreign.JavaScript.Types.html#sLog"><span class="hs-identifier hs-var">sLog</span></a></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113814"><span class="hs-identifier hs-var">server</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; (String -&gt; ByteString) -&gt; String -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html#pack"><span class="hs-identifier hs-var">BS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; String -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679113932"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">E.SomeException</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>            </span><span class="annot"><span class="annottext">SomeException -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679113932"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-comment">-- NOTE: Due to an issue with `snap-server` library,</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-comment">-- we print the exception ourselves.</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall a. IO a -&gt; IO a
+</span><a href="#local-6989586621679113924"><span class="hs-identifier hs-var">printException</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-149"></span><span>        </span><span class="hs-comment">-- Wrap the main loop into `withRemotePtr` in order to keep the root alive.</span><span>
+</span><span id="line-150"></span><span>        </span><span class="annot"><span class="annottext">RemotePtr () -&gt; (Coupon -&gt; () -&gt; IO ()) -&gt; IO ()
+forall a b. RemotePtr a -&gt; (Coupon -&gt; a -&gt; IO b) -&gt; IO b
+</span><a href="Foreign.RemotePtr.html#withRemotePtr"><span class="hs-identifier hs-var">Foreign.withRemotePtr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; RemotePtr ()
+</span><a href="Foreign.JavaScript.Types.html#wRoot"><span class="hs-identifier hs-var">wRoot</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113877"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Coupon -&gt; () -&gt; IO ()) -&gt; IO ())
+-&gt; (Coupon -&gt; () -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Coupon
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-151"></span><span>        </span><span class="hs-comment">-- run `multiplexer` and `handleCalls` concurrently</span><span>
+</span><span id="line-152"></span><span>        </span><span class="annot"><span class="annottext">IO Any -&gt; (Async Any -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (Async a -&gt; IO b) -&gt; IO b
+</span><span class="hs-identifier hs-var">withAsync</span></span><span> </span><span class="annot"><span class="annottext">IO Any
+forall {b}. IO b
+</span><a href="#local-6989586621679113884"><span class="hs-identifier hs-var">multiplexer</span></a></span><span> </span><span class="annot"><span class="annottext">((Async Any -&gt; IO ()) -&gt; IO ()) -&gt; (Async Any -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Async Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><span class="annottext">IO Any -&gt; (Async Any -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (Async a -&gt; IO b) -&gt; IO b
+</span><span class="hs-identifier hs-var">withAsync</span></span><span> </span><span class="annot"><span class="annottext">IO Any
+forall {b}. IO b
+</span><a href="#local-6989586621679113902"><span class="hs-identifier hs-var">handleCalls</span></a></span><span> </span><span class="annot"><span class="annottext">((Async Any -&gt; IO ()) -&gt; IO ()) -&gt; (Async Any -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Async Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (Async a -&gt; IO b) -&gt; IO b
+</span><span class="hs-identifier hs-var">withAsync</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; IO ()
+</span><a href="Foreign.JavaScript.EventLoop.html#flushCallBufferPeriodically"><span class="hs-identifier hs-var">flushCallBufferPeriodically</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113877"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Async () -&gt; IO ()) -&gt; IO ()) -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Async ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-155"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#finally"><span class="hs-identifier hs-var">E.finally</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; IO void
+</span><a href="#local-6989586621679113813"><span class="hs-identifier hs-var">initialize</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113877"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">IO void -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113917"><span class="hs-identifier hs-var">handleEvents</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-156"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Foreign.JavaScript: Browser window disconnected.&quot;</span></span><span>
+</span><span id="line-157"></span><span>            </span><span class="hs-comment">-- close communication channel if still necessary</span><span>
+</span><span id="line-158"></span><span>            </span><span class="annot"><span class="annottext">Comm -&gt; IO ()
+</span><a href="Foreign.JavaScript.Types.html#commClose"><span class="hs-identifier hs-var">commClose</span></a></span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113816"><span class="hs-identifier hs-var">comm</span></a></span><span>
+</span><span id="line-159"></span><span>            </span><span class="hs-comment">-- trigger the `disconnect` event</span><span>
+</span><span id="line-160"></span><span>            </span><span class="hs-comment">-- FIXME: Asynchronous exceptions should not be masked during the disconnect handler</span><span>
+</span><span id="line-161"></span><span>            </span><span id="local-6989586621679113940"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113940"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (IO ()) -&gt; IO (IO ())
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (IO ()) -&gt; IO (IO ())) -&gt; STM (IO ()) -&gt; IO (IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (IO ()) -&gt; STM (IO ())
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (IO ())
+</span><a href="#local-6989586621679113870"><span class="hs-identifier hs-var">disconnect</span></a></span><span>
+</span><span id="line-162"></span><span>            </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113940"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="annot"><span class="hs-comment">-- | Thread that periodically flushes the call buffer</span></span><span>
+</span><span id="line-165"></span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#flushCallBufferPeriodically"><span class="hs-identifier hs-type">flushCallBufferPeriodically</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span id="flushCallBufferPeriodically"><span class="annot"><span class="annottext">flushCallBufferPeriodically :: Window -&gt; IO ()
+</span><a href="Foreign.JavaScript.EventLoop.html#flushCallBufferPeriodically"><span class="hs-identifier hs-var hs-var">flushCallBufferPeriodically</span></a></span></span><span> </span><span id="local-6989586621679113941"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113941"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="Foreign.JavaScript.Types.html#flushPeriod"><span class="hs-identifier hs-var">flushPeriod</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; IO ()
+</span><a href="Foreign.JavaScript.CallBuffer.html#flushCallBuffer"><span class="hs-identifier hs-var">flushCallBuffer</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113941"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Exports, Imports and garbage collection
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-173"></span><span class="annot"><span class="hs-comment">-- | Turn a Haskell function into an event handler.</span></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#newHandler"><span class="hs-identifier hs-type">newHandler</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#HsEvent"><span class="hs-identifier hs-type">HsEvent</span></a></span><span>
+</span><span id="line-175"></span><span id="newHandler"><span class="annot"><span class="annottext">newHandler :: Window -&gt; ([Value] -&gt; IO ()) -&gt; IO (RemotePtr (Value -&gt; IO ()))
+</span><a href="Foreign.JavaScript.EventLoop.html#newHandler"><span class="hs-identifier hs-var hs-var">newHandler</span></a></span></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113947"><span id="local-6989586621679113948"><span id="local-6989586621679113949"><span id="local-6989586621679113950"><span id="local-6989586621679113951"><span id="local-6989586621679113952"><span id="local-6989586621679113953"><span id="local-6989586621679113954"><span id="local-6989586621679113955"><span id="local-6989586621679113956"><span id="local-6989586621679113957"><span id="local-6989586621679113958"><span class="annot"><span class="annottext">[Cookie]
+IO ()
+TVar CallBufferMode
+RemotePtr ()
+TMVar (String -&gt; String)
+Vendor JSPtr
+Vendor (Value -&gt; IO ())
+Server
+String -&gt; IO ()
+String -&gt; IO Value
+IO () -&gt; IO ()
+runEval :: Window -&gt; String -&gt; IO ()
+callEval :: Window -&gt; String -&gt; IO Value
+debug :: Window -&gt; String -&gt; IO ()
+onDisconnect :: Window -&gt; IO () -&gt; IO ()
+getServer :: Window -&gt; Server
+getCookies :: Window -&gt; [Cookie]
+wCallBuffer :: Window -&gt; TMVar (String -&gt; String)
+wCallBufferMode :: Window -&gt; TVar CallBufferMode
+timestamp :: Window -&gt; IO ()
+wRoot :: Window -&gt; RemotePtr ()
+wEventHandlers :: Window -&gt; Vendor (Value -&gt; IO ())
+wJSObjects :: Window -&gt; Vendor JSPtr
+getServer :: Server
+getCookies :: [Cookie]
+runEval :: String -&gt; IO ()
+callEval :: String -&gt; IO Value
+wCallBuffer :: TMVar (String -&gt; String)
+wCallBufferMode :: TVar CallBufferMode
+timestamp :: IO ()
+debug :: String -&gt; IO ()
+onDisconnect :: IO () -&gt; IO ()
+wRoot :: RemotePtr ()
+wEventHandlers :: Vendor (Value -&gt; IO ())
+wJSObjects :: Vendor JSPtr
+</span><a href="Foreign.JavaScript.Types.html#runEval"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679113959"><span class="annot"><span class="annottext">[Value] -&gt; IO ()
+</span><a href="#local-6989586621679113959"><span class="hs-identifier hs-var">handler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-176"></span><span>    </span><span id="local-6989586621679113960"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113960"><span class="hs-identifier hs-var">coupon</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Vendor (Value -&gt; IO ()) -&gt; IO Coupon
+forall a. Vendor a -&gt; IO Coupon
+</span><a href="Foreign.RemotePtr.html#newCoupon"><span class="hs-identifier hs-var">newCoupon</span></a></span><span> </span><span class="annot"><span class="annottext">Vendor (Value -&gt; IO ())
+</span><a href="#local-6989586621679113957"><span class="hs-identifier hs-var">wEventHandlers</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><span class="annottext">Coupon
+-&gt; (Value -&gt; IO ())
+-&gt; Vendor (Value -&gt; IO ())
+-&gt; IO (RemotePtr (Value -&gt; IO ()))
+forall a. Coupon -&gt; a -&gt; Vendor a -&gt; IO (RemotePtr a)
+</span><a href="Foreign.RemotePtr.html#newRemotePtr"><span class="hs-identifier hs-var">newRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113960"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Value] -&gt; IO ()
+</span><a href="#local-6989586621679113959"><span class="hs-identifier hs-var">handler</span></a></span><span> </span><span class="annot"><span class="annottext">([Value] -&gt; IO ()) -&gt; (Value -&gt; [Value]) -&gt; Value -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; [Value]
+</span><a href="#local-6989586621679113963"><span class="hs-identifier hs-var">parseArgs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Vendor (Value -&gt; IO ())
+</span><a href="#local-6989586621679113957"><span class="hs-identifier hs-var">wEventHandlers</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-179"></span><span>    </span><span id="local-6989586621679113964"><span class="annot"><span class="annottext">fromSuccess :: Result a -&gt; a
+</span><a href="#local-6989586621679113964"><span class="hs-identifier hs-var hs-var">fromSuccess</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JSON.Success</span></span><span> </span><span id="local-6989586621679113966"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679113966"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679113966"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-comment">-- parse a genuine JavaScript array</span><span>
+</span><span id="line-181"></span><span>    </span><span id="local-6989586621679113963"><span class="annot"><span class="annottext">parseArgs :: Value -&gt; [Value]
+</span><a href="#local-6989586621679113963"><span class="hs-identifier hs-var hs-var">parseArgs</span></a></span></span><span> </span><span id="local-6989586621679113971"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113971"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Result [Value] -&gt; [Value]
+forall {a}. Result a -&gt; a
+</span><a href="#local-6989586621679113964"><span class="hs-identifier hs-var">fromSuccess</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Result [Value]
+forall a. FromJSON a =&gt; Value -&gt; Result a
+</span><span class="hs-identifier hs-var">JSON.fromJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113971"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span class="hs-special">]</span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-comment">-- parse a JavaScript arguments object</span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-comment">-- parseArgs x = Map.elems (fromSuccess (JSON.fromJSON x) :: Map.Map String JSON.Value)</span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="annot"><span class="hs-comment">-- | Retrieve 'JSObject' associated with a JavaScript stable pointer.</span></span><span>
+</span><span id="line-187"></span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#fromJSStablePtr"><span class="hs-identifier hs-type">fromJSStablePtr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JSObject</span></a></span><span>
+</span><span id="line-188"></span><span id="fromJSStablePtr"><span class="annot"><span class="annottext">fromJSStablePtr :: Value -&gt; Window -&gt; IO JSObject
+</span><a href="Foreign.JavaScript.EventLoop.html#fromJSStablePtr"><span class="hs-identifier hs-var hs-var">fromJSStablePtr</span></a></span></span><span> </span><span id="local-6989586621679113973"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113973"><span class="hs-identifier hs-var">js</span></a></span></span><span> </span><span id="local-6989586621679113974"><span class="annot"><span class="annottext">w :: Window
+</span><a href="#local-6989586621679113974"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113975"><span id="local-6989586621679113976"><span id="local-6989586621679113977"><span id="local-6989586621679113978"><span id="local-6989586621679113979"><span id="local-6989586621679113980"><span id="local-6989586621679113981"><span id="local-6989586621679113982"><span id="local-6989586621679113983"><span id="local-6989586621679113984"><span id="local-6989586621679113985"><span id="local-6989586621679113986"><span class="annot"><span class="annottext">[Cookie]
+IO ()
+TVar CallBufferMode
+RemotePtr ()
+TMVar (String -&gt; String)
+Vendor JSPtr
+Vendor (Value -&gt; IO ())
+Server
+String -&gt; IO ()
+String -&gt; IO Value
+IO () -&gt; IO ()
+runEval :: Window -&gt; String -&gt; IO ()
+callEval :: Window -&gt; String -&gt; IO Value
+debug :: Window -&gt; String -&gt; IO ()
+onDisconnect :: Window -&gt; IO () -&gt; IO ()
+getServer :: Window -&gt; Server
+getCookies :: Window -&gt; [Cookie]
+wCallBuffer :: Window -&gt; TMVar (String -&gt; String)
+wCallBufferMode :: Window -&gt; TVar CallBufferMode
+timestamp :: Window -&gt; IO ()
+wRoot :: Window -&gt; RemotePtr ()
+wEventHandlers :: Window -&gt; Vendor (Value -&gt; IO ())
+wJSObjects :: Window -&gt; Vendor JSPtr
+getServer :: Server
+getCookies :: [Cookie]
+runEval :: String -&gt; IO ()
+callEval :: String -&gt; IO Value
+wCallBuffer :: TMVar (String -&gt; String)
+wCallBufferMode :: TVar CallBufferMode
+timestamp :: IO ()
+debug :: String -&gt; IO ()
+onDisconnect :: IO () -&gt; IO ()
+wRoot :: RemotePtr ()
+wEventHandlers :: Vendor (Value -&gt; IO ())
+wJSObjects :: Vendor JSPtr
+</span><a href="Foreign.JavaScript.Types.html#runEval"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JSON.Success</span></span><span> </span><span id="local-6989586621679113989"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113989"><span class="hs-identifier hs-var">coupon</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Result Coupon
+forall a. FromJSON a =&gt; Value -&gt; Result a
+</span><span class="hs-identifier hs-var">JSON.fromJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113973"><span class="hs-identifier hs-var">js</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span id="local-6989586621679113990"><span class="annot"><span class="annottext">Maybe JSObject
+</span><a href="#local-6989586621679113990"><span class="hs-identifier hs-var">mhs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coupon -&gt; Vendor JSPtr -&gt; IO (Maybe JSObject)
+forall a. Coupon -&gt; Vendor a -&gt; IO (Maybe (RemotePtr a))
+</span><a href="Foreign.RemotePtr.html#lookup"><span class="hs-identifier hs-var">Foreign.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113989"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="annot"><span class="annottext">Vendor JSPtr
+</span><a href="#local-6989586621679113986"><span class="hs-identifier hs-var">wJSObjects</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe JSObject
+</span><a href="#local-6989586621679113990"><span class="hs-identifier hs-var">mhs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-192"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113991"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679113991"><span class="hs-identifier hs-var">hs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">JSObject -&gt; IO JSObject
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679113991"><span class="hs-identifier hs-var">hs</span></a></span><span>
+</span><span id="line-193"></span><span>        </span><span class="annot"><span class="annottext">Maybe JSObject
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Coupon -&gt; IO JSObject
+</span><a href="Foreign.JavaScript.EventLoop.html#newJSObjectFromCoupon"><span class="hs-identifier hs-var">newJSObjectFromCoupon</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113974"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679113989"><span class="hs-identifier hs-var">coupon</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span class="annot"><span class="hs-comment">-- | Create a new JSObject by registering a new coupon.</span></span><span>
+</span><span id="line-196"></span><span class="annot"><a href="Foreign.JavaScript.EventLoop.html#newJSObjectFromCoupon"><span class="hs-identifier hs-type">newJSObjectFromCoupon</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.RemotePtr.html#Coupon"><span class="hs-identifier hs-type">Foreign.Coupon</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#JSObject"><span class="hs-identifier hs-type">JSObject</span></a></span><span>
+</span><span id="line-197"></span><span id="newJSObjectFromCoupon"><span class="annot"><span class="annottext">newJSObjectFromCoupon :: Window -&gt; Coupon -&gt; IO JSObject
+</span><a href="Foreign.JavaScript.EventLoop.html#newJSObjectFromCoupon"><span class="hs-identifier hs-var hs-var">newJSObjectFromCoupon</span></a></span></span><span> </span><span id="local-6989586621679113992"><span class="annot"><span class="annottext">w :: Window
+</span><a href="#local-6989586621679113992"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113993"><span id="local-6989586621679113994"><span id="local-6989586621679113995"><span id="local-6989586621679113996"><span id="local-6989586621679113997"><span id="local-6989586621679113998"><span id="local-6989586621679113999"><span id="local-6989586621679114000"><span id="local-6989586621679114001"><span id="local-6989586621679114002"><span id="local-6989586621679114003"><span id="local-6989586621679114004"><span class="annot"><span class="annottext">[Cookie]
+IO ()
+TVar CallBufferMode
+RemotePtr ()
+TMVar (String -&gt; String)
+Vendor JSPtr
+Vendor (Value -&gt; IO ())
+Server
+String -&gt; IO ()
+String -&gt; IO Value
+IO () -&gt; IO ()
+runEval :: Window -&gt; String -&gt; IO ()
+callEval :: Window -&gt; String -&gt; IO Value
+debug :: Window -&gt; String -&gt; IO ()
+onDisconnect :: Window -&gt; IO () -&gt; IO ()
+getServer :: Window -&gt; Server
+getCookies :: Window -&gt; [Cookie]
+wCallBuffer :: Window -&gt; TMVar (String -&gt; String)
+wCallBufferMode :: Window -&gt; TVar CallBufferMode
+timestamp :: Window -&gt; IO ()
+wRoot :: Window -&gt; RemotePtr ()
+wEventHandlers :: Window -&gt; Vendor (Value -&gt; IO ())
+wJSObjects :: Window -&gt; Vendor JSPtr
+getServer :: Server
+getCookies :: [Cookie]
+runEval :: String -&gt; IO ()
+callEval :: String -&gt; IO Value
+wCallBuffer :: TMVar (String -&gt; String)
+wCallBufferMode :: TVar CallBufferMode
+timestamp :: IO ()
+debug :: String -&gt; IO ()
+onDisconnect :: IO () -&gt; IO ()
+wRoot :: RemotePtr ()
+wEventHandlers :: Vendor (Value -&gt; IO ())
+wJSObjects :: Vendor JSPtr
+</span><a href="Foreign.JavaScript.Types.html#runEval"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679114005"><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679114005"><span class="hs-identifier hs-var">coupon</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-198"></span><span>    </span><span id="local-6989586621679114006"><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679114006"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coupon -&gt; JSPtr -&gt; Vendor JSPtr -&gt; IO JSObject
+forall a. Coupon -&gt; a -&gt; Vendor a -&gt; IO (RemotePtr a)
+</span><a href="Foreign.RemotePtr.html#newRemotePtr"><span class="hs-identifier hs-var">newRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679114005"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coupon -&gt; JSPtr
+</span><a href="Foreign.JavaScript.Types.html#JSPtr"><span class="hs-identifier hs-var">JSPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679114005"><span class="hs-identifier hs-var">coupon</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Vendor JSPtr
+</span><a href="#local-6989586621679114004"><span class="hs-identifier hs-var">wJSObjects</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; IO () -&gt; IO ()
+forall a. RemotePtr a -&gt; IO () -&gt; IO ()
+</span><a href="Foreign.RemotePtr.html#addFinalizer"><span class="hs-identifier hs-var">addFinalizer</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679114006"><span class="hs-identifier hs-var">ptr</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-200"></span><span>        </span><span class="annot"><span class="annottext">Window -&gt; String -&gt; IO ()
+</span><a href="Foreign.JavaScript.CallBuffer.html#bufferRunEval"><span class="hs-identifier hs-var">bufferRunEval</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113992"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Haskell.freeStablePtr('&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Coupon
+</span><a href="#local-6989586621679114005"><span class="hs-identifier hs-var">coupon</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;')&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><span class="annottext">JSObject -&gt; IO JSObject
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">JSObject
+</span><a href="#local-6989586621679114006"><span class="hs-identifier hs-var">ptr</span></a></span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span></pre></body></html>

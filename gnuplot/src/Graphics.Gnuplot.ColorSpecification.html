@@ -1,0 +1,927 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.Gnuplot.ColorSpecification</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier">T</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#rgb"><span class="hs-identifier">rgb</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#rgb8"><span class="hs-identifier">rgb8</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#name"><span class="hs-identifier">name</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#paletteFrac"><span class="hs-identifier">paletteFrac</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#white"><span class="hs-identifier">white</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#black"><span class="hs-identifier">black</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray0"><span class="hs-identifier">gray0</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey0"><span class="hs-identifier">grey0</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray10"><span class="hs-identifier">gray10</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey10"><span class="hs-identifier">grey10</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray20"><span class="hs-identifier">gray20</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey20"><span class="hs-identifier">grey20</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray30"><span class="hs-identifier">gray30</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey30"><span class="hs-identifier">grey30</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray40"><span class="hs-identifier">gray40</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey40"><span class="hs-identifier">grey40</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray50"><span class="hs-identifier">gray50</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey50"><span class="hs-identifier">grey50</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray60"><span class="hs-identifier">gray60</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey60"><span class="hs-identifier">grey60</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray70"><span class="hs-identifier">gray70</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey70"><span class="hs-identifier">grey70</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray80"><span class="hs-identifier">gray80</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey80"><span class="hs-identifier">grey80</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray90"><span class="hs-identifier">gray90</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey90"><span class="hs-identifier">grey90</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray100"><span class="hs-identifier">gray100</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey100"><span class="hs-identifier">grey100</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray"><span class="hs-identifier">gray</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey"><span class="hs-identifier">grey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGray"><span class="hs-identifier">lightGray</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGrey"><span class="hs-identifier">lightGrey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGray"><span class="hs-identifier">darkGray</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGrey"><span class="hs-identifier">darkGrey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#red"><span class="hs-identifier">red</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightRed"><span class="hs-identifier">lightRed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkRed"><span class="hs-identifier">darkRed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#yellow"><span class="hs-identifier">yellow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightYellow"><span class="hs-identifier">lightYellow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkYellow"><span class="hs-identifier">darkYellow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#green"><span class="hs-identifier">green</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGreen"><span class="hs-identifier">lightGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGreen"><span class="hs-identifier">darkGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#springGreen"><span class="hs-identifier">springGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#forestGreen"><span class="hs-identifier">forestGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#seaGreen"><span class="hs-identifier">seaGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#blue"><span class="hs-identifier">blue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightBlue"><span class="hs-identifier">lightBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkBlue"><span class="hs-identifier">darkBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#midnightBlue"><span class="hs-identifier">midnightBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#navy"><span class="hs-identifier">navy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#mediumBlue"><span class="hs-identifier">mediumBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#royalblue"><span class="hs-identifier">royalblue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#skyblue"><span class="hs-identifier">skyblue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#cyan"><span class="hs-identifier">cyan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightCyan"><span class="hs-identifier">lightCyan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkCyan"><span class="hs-identifier">darkCyan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#magenta"><span class="hs-identifier">magenta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightMagenta"><span class="hs-identifier">lightMagenta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkMagenta"><span class="hs-identifier">darkMagenta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#turquoise"><span class="hs-identifier">turquoise</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightTurquoise"><span class="hs-identifier">lightTurquoise</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkTurquoise"><span class="hs-identifier">darkTurquoise</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#pink"><span class="hs-identifier">pink</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightPink"><span class="hs-identifier">lightPink</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkPink"><span class="hs-identifier">darkPink</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#coral"><span class="hs-identifier">coral</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightCoral"><span class="hs-identifier">lightCoral</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#orangeRed"><span class="hs-identifier">orangeRed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#salmon"><span class="hs-identifier">salmon</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightSalmon"><span class="hs-identifier">lightSalmon</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkSalmon"><span class="hs-identifier">darkSalmon</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#aquamarine"><span class="hs-identifier">aquamarine</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#khaki"><span class="hs-identifier">khaki</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkKhaki"><span class="hs-identifier">darkKhaki</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#goldenrod"><span class="hs-identifier">goldenrod</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGoldenrod"><span class="hs-identifier">lightGoldenrod</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGoldenrod"><span class="hs-identifier">darkGoldenrod</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gold"><span class="hs-identifier">gold</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#beige"><span class="hs-identifier">beige</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#brown"><span class="hs-identifier">brown</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#orange"><span class="hs-identifier">orange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-86"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkOrange"><span class="hs-identifier">darkOrange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#violet"><span class="hs-identifier">violet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkViolet"><span class="hs-identifier">darkViolet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-89"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#plum"><span class="hs-identifier">plum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-90"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#purple"><span class="hs-identifier">purple</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html"><span class="hs-identifier">Graphics.Gnuplot.Private.ColorSpecification</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Color</span></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html"><span class="hs-identifier">Graphics.Gnuplot.Private.ColorSpecification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier">T</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Ord.HT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">limit</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier">Word8</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="annot"><span class="hs-comment">{- |
+Color components for Red, Green, Blue, must be in the range @[0,1]@.
+-}</span></span><span>
+</span><span id="line-103"></span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#rgb"><span class="hs-identifier hs-type">rgb</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-104"></span><span id="rgb"><span class="annot"><span class="annottext">rgb :: Double -&gt; Double -&gt; Double -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#rgb"><span class="hs-identifier hs-var hs-var">rgb</span></a></span></span><span> </span><span id="local-6989586621679076680"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076680"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679076681"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076681"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621679076682"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076682"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>   </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#rgb8"><span class="hs-identifier hs-var">rgb8</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Word8
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#word8FromDouble"><span class="hs-identifier hs-var">word8FromDouble</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076680"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Word8
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#word8FromDouble"><span class="hs-identifier hs-var">word8FromDouble</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076681"><span class="hs-identifier hs-var">g</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Word8
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#word8FromDouble"><span class="hs-identifier hs-var">word8FromDouble</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076682"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#word8FromDouble"><span class="hs-identifier hs-type">word8FromDouble</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>
+</span><span id="line-108"></span><span id="word8FromDouble"><span class="annot"><span class="annottext">word8FromDouble :: Double -&gt; Word8
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#word8FromDouble"><span class="hs-identifier hs-var hs-var">word8FromDouble</span></a></span></span><span> </span><span id="local-6989586621679076684"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076684"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>   </span><span class="annot"><span class="annottext">Double -&gt; Word8
+forall b. Integral b =&gt; Double -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#round"><span class="hs-identifier hs-var">round</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Double, Double) -&gt; Double -&gt; Double
+forall a. Ord a =&gt; (a, a) -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">limit</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679076684"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">255</span></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#rgb8"><span class="hs-identifier hs-type">rgb8</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-112"></span><span id="rgb8"><span class="annot"><span class="annottext">rgb8 :: Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#rgb8"><span class="hs-identifier hs-var hs-var">rgb8</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.Private.ColorSpecification.html#RGB8"><span class="hs-identifier hs-var">Color.RGB8</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#paletteFrac"><span class="hs-identifier hs-type">paletteFrac</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-115"></span><span id="paletteFrac"><span class="annot"><span class="annottext">paletteFrac :: Double -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#paletteFrac"><span class="hs-identifier hs-var hs-var">paletteFrac</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; T
+</span><a href="Graphics.Gnuplot.Private.ColorSpecification.html#PaletteFrac"><span class="hs-identifier hs-var">Color.PaletteFrac</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">{- |
+Specify a color by name.
+You are responsible for choosing an existing name in gnuplot.
+If your color is available as Haskell variable in this module,
+then prefer this one.
+-}</span></span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#name"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-124"></span><span id="name"><span class="annot"><span class="annottext">name :: String -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#name"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.ColorSpecification.html#Name"><span class="hs-identifier hs-var">Color.Name</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">{-
+This function chooses how we represent below colors in gnuplot.
+If we use RGB values then we stay independent from the available color names
+in the current gnuplot version.
+If we use color names, then the generated gnuplot scripts are more readable.
+-}</span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-type">makeColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-134"></span><span id="makeColor"><span class="annot"><span class="annottext">makeColor :: String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var hs-var">makeColor</span></a></span></span><span> </span><span id="local-6989586621679076691"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679076691"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#name"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679076691"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#white"><span class="hs-identifier hs-type">white</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-138"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#black"><span class="hs-identifier hs-type">black</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-139"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray0"><span class="hs-identifier hs-type">gray0</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey0"><span class="hs-identifier hs-type">grey0</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-141"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray10"><span class="hs-identifier hs-type">gray10</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-142"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey10"><span class="hs-identifier hs-type">grey10</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-143"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray20"><span class="hs-identifier hs-type">gray20</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-144"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey20"><span class="hs-identifier hs-type">grey20</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-145"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray30"><span class="hs-identifier hs-type">gray30</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-146"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey30"><span class="hs-identifier hs-type">grey30</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-147"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray40"><span class="hs-identifier hs-type">gray40</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-148"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey40"><span class="hs-identifier hs-type">grey40</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-149"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray50"><span class="hs-identifier hs-type">gray50</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-150"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey50"><span class="hs-identifier hs-type">grey50</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-151"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray60"><span class="hs-identifier hs-type">gray60</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-152"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey60"><span class="hs-identifier hs-type">grey60</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-153"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray70"><span class="hs-identifier hs-type">gray70</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-154"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey70"><span class="hs-identifier hs-type">grey70</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-155"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray80"><span class="hs-identifier hs-type">gray80</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-156"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey80"><span class="hs-identifier hs-type">grey80</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-157"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray90"><span class="hs-identifier hs-type">gray90</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-158"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey90"><span class="hs-identifier hs-type">grey90</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-159"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray100"><span class="hs-identifier hs-type">gray100</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-160"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey100"><span class="hs-identifier hs-type">grey100</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-161"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gray"><span class="hs-identifier hs-type">gray</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-162"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#grey"><span class="hs-identifier hs-type">grey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-163"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGray"><span class="hs-identifier hs-type">lightGray</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-164"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGrey"><span class="hs-identifier hs-type">lightGrey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-165"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGray"><span class="hs-identifier hs-type">darkGray</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-166"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGrey"><span class="hs-identifier hs-type">darkGrey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-167"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#red"><span class="hs-identifier hs-type">red</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-168"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightRed"><span class="hs-identifier hs-type">lightRed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-169"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkRed"><span class="hs-identifier hs-type">darkRed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-170"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#yellow"><span class="hs-identifier hs-type">yellow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-171"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightYellow"><span class="hs-identifier hs-type">lightYellow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-172"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkYellow"><span class="hs-identifier hs-type">darkYellow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-173"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#green"><span class="hs-identifier hs-type">green</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-174"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGreen"><span class="hs-identifier hs-type">lightGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-175"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGreen"><span class="hs-identifier hs-type">darkGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-176"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#springGreen"><span class="hs-identifier hs-type">springGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-177"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#forestGreen"><span class="hs-identifier hs-type">forestGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-178"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#seaGreen"><span class="hs-identifier hs-type">seaGreen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-179"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#blue"><span class="hs-identifier hs-type">blue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-180"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightBlue"><span class="hs-identifier hs-type">lightBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-181"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkBlue"><span class="hs-identifier hs-type">darkBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-182"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#midnightBlue"><span class="hs-identifier hs-type">midnightBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-183"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#navy"><span class="hs-identifier hs-type">navy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-184"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#mediumBlue"><span class="hs-identifier hs-type">mediumBlue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-185"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#royalblue"><span class="hs-identifier hs-type">royalblue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-186"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#skyblue"><span class="hs-identifier hs-type">skyblue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-187"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#cyan"><span class="hs-identifier hs-type">cyan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-188"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightCyan"><span class="hs-identifier hs-type">lightCyan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-189"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkCyan"><span class="hs-identifier hs-type">darkCyan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-190"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#magenta"><span class="hs-identifier hs-type">magenta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-191"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightMagenta"><span class="hs-identifier hs-type">lightMagenta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-192"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkMagenta"><span class="hs-identifier hs-type">darkMagenta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-193"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#turquoise"><span class="hs-identifier hs-type">turquoise</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-194"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightTurquoise"><span class="hs-identifier hs-type">lightTurquoise</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-195"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkTurquoise"><span class="hs-identifier hs-type">darkTurquoise</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-196"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#pink"><span class="hs-identifier hs-type">pink</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-197"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightPink"><span class="hs-identifier hs-type">lightPink</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-198"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkPink"><span class="hs-identifier hs-type">darkPink</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-199"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#coral"><span class="hs-identifier hs-type">coral</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-200"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightCoral"><span class="hs-identifier hs-type">lightCoral</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-201"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#orangeRed"><span class="hs-identifier hs-type">orangeRed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-202"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#salmon"><span class="hs-identifier hs-type">salmon</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-203"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightSalmon"><span class="hs-identifier hs-type">lightSalmon</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-204"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkSalmon"><span class="hs-identifier hs-type">darkSalmon</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-205"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#aquamarine"><span class="hs-identifier hs-type">aquamarine</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-206"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#khaki"><span class="hs-identifier hs-type">khaki</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-207"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkKhaki"><span class="hs-identifier hs-type">darkKhaki</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-208"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#goldenrod"><span class="hs-identifier hs-type">goldenrod</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-209"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#lightGoldenrod"><span class="hs-identifier hs-type">lightGoldenrod</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-210"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkGoldenrod"><span class="hs-identifier hs-type">darkGoldenrod</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-211"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#gold"><span class="hs-identifier hs-type">gold</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-212"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#beige"><span class="hs-identifier hs-type">beige</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-213"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#brown"><span class="hs-identifier hs-type">brown</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-214"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#orange"><span class="hs-identifier hs-type">orange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-215"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkOrange"><span class="hs-identifier hs-type">darkOrange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-216"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#violet"><span class="hs-identifier hs-type">violet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-217"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#darkViolet"><span class="hs-identifier hs-type">darkViolet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-218"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#plum"><span class="hs-identifier hs-type">plum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-219"></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.ColorSpecification.html#purple"><span class="hs-identifier hs-type">purple</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.ColorSpecification.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span class="hs-comment">{-
+gnuplot&gt; show colornames
+-}</span><span>
+</span><span id="line-224"></span><span>
+</span><span id="line-225"></span><span id="white"><span class="annot"><span class="annottext">white :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#white"><span class="hs-identifier hs-var hs-var">white</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;white&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffffff</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-226"></span><span id="black"><span class="annot"><span class="annottext">black :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#black"><span class="hs-identifier hs-var hs-var">black</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;black&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x000000</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-227"></span><span id="gray0"><span class="annot"><span class="annottext">gray0 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray0"><span class="hs-identifier hs-var hs-var">gray0</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray0&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x000000</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-228"></span><span id="grey0"><span class="annot"><span class="annottext">grey0 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey0"><span class="hs-identifier hs-var hs-var">grey0</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey0&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x000000</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-229"></span><span id="gray10"><span class="annot"><span class="annottext">gray10 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray10"><span class="hs-identifier hs-var hs-var">gray10</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray10&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x1a1a1a</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">26</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">26</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">26</span></span><span>
+</span><span id="line-230"></span><span id="grey10"><span class="annot"><span class="annottext">grey10 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey10"><span class="hs-identifier hs-var hs-var">grey10</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey10&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x1a1a1a</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">26</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">26</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">26</span></span><span>
+</span><span id="line-231"></span><span id="gray20"><span class="annot"><span class="annottext">gray20 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray20"><span class="hs-identifier hs-var hs-var">gray20</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray20&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x333333</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">51</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">51</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">51</span></span><span>
+</span><span id="line-232"></span><span id="grey20"><span class="annot"><span class="annottext">grey20 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey20"><span class="hs-identifier hs-var hs-var">grey20</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey20&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x333333</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">51</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">51</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">51</span></span><span>
+</span><span id="line-233"></span><span id="gray30"><span class="annot"><span class="annottext">gray30 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray30"><span class="hs-identifier hs-var hs-var">gray30</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray30&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x4d4d4d</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">77</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">77</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">77</span></span><span>
+</span><span id="line-234"></span><span id="grey30"><span class="annot"><span class="annottext">grey30 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey30"><span class="hs-identifier hs-var hs-var">grey30</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey30&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x4d4d4d</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">77</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">77</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">77</span></span><span>
+</span><span id="line-235"></span><span id="gray40"><span class="annot"><span class="annottext">gray40 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray40"><span class="hs-identifier hs-var hs-var">gray40</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray40&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x666666</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">102</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">102</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">102</span></span><span>
+</span><span id="line-236"></span><span id="grey40"><span class="annot"><span class="annottext">grey40 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey40"><span class="hs-identifier hs-var hs-var">grey40</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey40&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x666666</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">102</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">102</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">102</span></span><span>
+</span><span id="line-237"></span><span id="gray50"><span class="annot"><span class="annottext">gray50 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray50"><span class="hs-identifier hs-var hs-var">gray50</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray50&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x7f7f7f</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span>
+</span><span id="line-238"></span><span id="grey50"><span class="annot"><span class="annottext">grey50 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey50"><span class="hs-identifier hs-var hs-var">grey50</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey50&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x7f7f7f</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span>
+</span><span id="line-239"></span><span id="gray60"><span class="annot"><span class="annottext">gray60 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray60"><span class="hs-identifier hs-var hs-var">gray60</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray60&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x999999</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">153</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">153</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">153</span></span><span>
+</span><span id="line-240"></span><span id="grey60"><span class="annot"><span class="annottext">grey60 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey60"><span class="hs-identifier hs-var hs-var">grey60</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey60&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x999999</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">153</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">153</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">153</span></span><span>
+</span><span id="line-241"></span><span id="gray70"><span class="annot"><span class="annottext">gray70 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray70"><span class="hs-identifier hs-var hs-var">gray70</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray70&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xb3b3b3</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">179</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">179</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">179</span></span><span>
+</span><span id="line-242"></span><span id="grey70"><span class="annot"><span class="annottext">grey70 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey70"><span class="hs-identifier hs-var hs-var">grey70</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey70&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xb3b3b3</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">179</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">179</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">179</span></span><span>
+</span><span id="line-243"></span><span id="gray80"><span class="annot"><span class="annottext">gray80 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray80"><span class="hs-identifier hs-var hs-var">gray80</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray80&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xcccccc</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">204</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">204</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">204</span></span><span>
+</span><span id="line-244"></span><span id="grey80"><span class="annot"><span class="annottext">grey80 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey80"><span class="hs-identifier hs-var hs-var">grey80</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey80&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xcccccc</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">204</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">204</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">204</span></span><span>
+</span><span id="line-245"></span><span id="gray90"><span class="annot"><span class="annottext">gray90 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray90"><span class="hs-identifier hs-var hs-var">gray90</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray90&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xe5e5e5</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">229</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">229</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">229</span></span><span>
+</span><span id="line-246"></span><span id="grey90"><span class="annot"><span class="annottext">grey90 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey90"><span class="hs-identifier hs-var hs-var">grey90</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey90&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xe5e5e5</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">229</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">229</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">229</span></span><span>
+</span><span id="line-247"></span><span id="gray100"><span class="annot"><span class="annottext">gray100 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray100"><span class="hs-identifier hs-var hs-var">gray100</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray100&quot;</span></span><span>            </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffffff</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-248"></span><span id="grey100"><span class="annot"><span class="annottext">grey100 :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey100"><span class="hs-identifier hs-var hs-var">grey100</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey100&quot;</span></span><span>            </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffffff</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-249"></span><span id="gray"><span class="annot"><span class="annottext">gray :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gray"><span class="hs-identifier hs-var hs-var">gray</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gray&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xbebebe</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">190</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">190</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">190</span></span><span>
+</span><span id="line-250"></span><span id="grey"><span class="annot"><span class="annottext">grey :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#grey"><span class="hs-identifier hs-var hs-var">grey</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grey&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xbebebe</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">190</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">190</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">190</span></span><span>
+</span><span id="line-251"></span><span id="lightGray"><span class="annot"><span class="annottext">lightGray :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightGray"><span class="hs-identifier hs-var hs-var">lightGray</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-gray&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xd3d3d3</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">211</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">211</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">211</span></span><span>
+</span><span id="line-252"></span><span id="lightGrey"><span class="annot"><span class="annottext">lightGrey :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightGrey"><span class="hs-identifier hs-var hs-var">lightGrey</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-grey&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xd3d3d3</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">211</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">211</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">211</span></span><span>
+</span><span id="line-253"></span><span id="darkGray"><span class="annot"><span class="annottext">darkGray :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkGray"><span class="hs-identifier hs-var hs-var">darkGray</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-gray&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xa9a9a9</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">169</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">169</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">169</span></span><span>
+</span><span id="line-254"></span><span id="darkGrey"><span class="annot"><span class="annottext">darkGrey :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkGrey"><span class="hs-identifier hs-var hs-var">darkGrey</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-grey&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xa9a9a9</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">169</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">169</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">169</span></span><span>
+</span><span id="line-255"></span><span id="red"><span class="annot"><span class="annottext">red :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#red"><span class="hs-identifier hs-var hs-var">red</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;red&quot;</span></span><span>                </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xff0000</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-256"></span><span id="lightRed"><span class="annot"><span class="annottext">lightRed :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightRed"><span class="hs-identifier hs-var hs-var">lightRed</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-red&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xf03232</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">240</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">50</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">50</span></span><span>
+</span><span id="line-257"></span><span id="darkRed"><span class="annot"><span class="annottext">darkRed :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkRed"><span class="hs-identifier hs-var hs-var">darkRed</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-red&quot;</span></span><span>           </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x8b0000</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-258"></span><span id="yellow"><span class="annot"><span class="annottext">yellow :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#yellow"><span class="hs-identifier hs-var hs-var">yellow</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;yellow&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffff00</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-259"></span><span id="lightYellow"><span class="annot"><span class="annottext">lightYellow :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightYellow"><span class="hs-identifier hs-var hs-var">lightYellow</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-yellow&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffffe0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">224</span></span><span>
+</span><span id="line-260"></span><span id="darkYellow"><span class="annot"><span class="annottext">darkYellow :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkYellow"><span class="hs-identifier hs-var hs-var">darkYellow</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-yellow&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xc8c800</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">200</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">200</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-261"></span><span id="green"><span class="annot"><span class="annottext">green :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#green"><span class="hs-identifier hs-var hs-var">green</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;green&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x00ff00</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-262"></span><span id="lightGreen"><span class="annot"><span class="annottext">lightGreen :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightGreen"><span class="hs-identifier hs-var hs-var">lightGreen</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-green&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x90ee90</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">144</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">238</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">144</span></span><span>
+</span><span id="line-263"></span><span id="darkGreen"><span class="annot"><span class="annottext">darkGreen :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkGreen"><span class="hs-identifier hs-var hs-var">darkGreen</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-green&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x006400</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">100</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-264"></span><span id="springGreen"><span class="annot"><span class="annottext">springGreen :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#springGreen"><span class="hs-identifier hs-var hs-var">springGreen</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;spring-green&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x00ff7f</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span>
+</span><span id="line-265"></span><span id="forestGreen"><span class="annot"><span class="annottext">forestGreen :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#forestGreen"><span class="hs-identifier hs-var hs-var">forestGreen</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;forest-green&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x228b22</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">34</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">34</span></span><span>
+</span><span id="line-266"></span><span id="seaGreen"><span class="annot"><span class="annottext">seaGreen :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#seaGreen"><span class="hs-identifier hs-var hs-var">seaGreen</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;sea-green&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x2e8b57</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">46</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">87</span></span><span>
+</span><span id="line-267"></span><span id="blue"><span class="annot"><span class="annottext">blue :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#blue"><span class="hs-identifier hs-var hs-var">blue</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;blue&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x0000ff</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-268"></span><span id="lightBlue"><span class="annot"><span class="annottext">lightBlue :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightBlue"><span class="hs-identifier hs-var hs-var">lightBlue</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-blue&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xadd8e6</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">173</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">216</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">230</span></span><span>
+</span><span id="line-269"></span><span id="darkBlue"><span class="annot"><span class="annottext">darkBlue :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkBlue"><span class="hs-identifier hs-var hs-var">darkBlue</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-blue&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x00008b</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span>
+</span><span id="line-270"></span><span id="midnightBlue"><span class="annot"><span class="annottext">midnightBlue :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#midnightBlue"><span class="hs-identifier hs-var hs-var">midnightBlue</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;midnight-blue&quot;</span></span><span>      </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x191970</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">25</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">25</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">112</span></span><span>
+</span><span id="line-271"></span><span id="navy"><span class="annot"><span class="annottext">navy :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#navy"><span class="hs-identifier hs-var hs-var">navy</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;navy&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x000080</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">128</span></span><span>
+</span><span id="line-272"></span><span id="mediumBlue"><span class="annot"><span class="annottext">mediumBlue :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#mediumBlue"><span class="hs-identifier hs-var hs-var">mediumBlue</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;medium-blue&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x0000cd</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">205</span></span><span>
+</span><span id="line-273"></span><span id="royalblue"><span class="annot"><span class="annottext">royalblue :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#royalblue"><span class="hs-identifier hs-var hs-var">royalblue</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;royalblue&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x4169e1</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">65</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">105</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">225</span></span><span>
+</span><span id="line-274"></span><span id="skyblue"><span class="annot"><span class="annottext">skyblue :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#skyblue"><span class="hs-identifier hs-var hs-var">skyblue</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;skyblue&quot;</span></span><span>            </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x87ceeb</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">135</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">206</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">235</span></span><span>
+</span><span id="line-275"></span><span id="cyan"><span class="annot"><span class="annottext">cyan :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#cyan"><span class="hs-identifier hs-var hs-var">cyan</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cyan&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x00ffff</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-276"></span><span id="lightCyan"><span class="annot"><span class="annottext">lightCyan :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightCyan"><span class="hs-identifier hs-var hs-var">lightCyan</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-cyan&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xe0ffff</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">224</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-277"></span><span id="darkCyan"><span class="annot"><span class="annottext">darkCyan :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkCyan"><span class="hs-identifier hs-var hs-var">darkCyan</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-cyan&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x008b8b</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span>
+</span><span id="line-278"></span><span id="magenta"><span class="annot"><span class="annottext">magenta :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#magenta"><span class="hs-identifier hs-var hs-var">magenta</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;magenta&quot;</span></span><span>            </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xff00ff</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-279"></span><span id="lightMagenta"><span class="annot"><span class="annottext">lightMagenta :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightMagenta"><span class="hs-identifier hs-var hs-var">lightMagenta</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-magenta&quot;</span></span><span>      </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xf055f0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">240</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">85</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">240</span></span><span>
+</span><span id="line-280"></span><span id="darkMagenta"><span class="annot"><span class="annottext">darkMagenta :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkMagenta"><span class="hs-identifier hs-var hs-var">darkMagenta</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-magenta&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x8b008b</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">139</span></span><span>
+</span><span id="line-281"></span><span id="turquoise"><span class="annot"><span class="annottext">turquoise :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#turquoise"><span class="hs-identifier hs-var hs-var">turquoise</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;turquoise&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x40e0d0</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">64</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">224</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">208</span></span><span>
+</span><span id="line-282"></span><span id="lightTurquoise"><span class="annot"><span class="annottext">lightTurquoise :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightTurquoise"><span class="hs-identifier hs-var hs-var">lightTurquoise</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-turquoise&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xafeeee</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">175</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">238</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">238</span></span><span>
+</span><span id="line-283"></span><span id="darkTurquoise"><span class="annot"><span class="annottext">darkTurquoise :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkTurquoise"><span class="hs-identifier hs-var hs-var">darkTurquoise</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-turquoise&quot;</span></span><span>     </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x00ced1</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">206</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">209</span></span><span>
+</span><span id="line-284"></span><span id="pink"><span class="annot"><span class="annottext">pink :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#pink"><span class="hs-identifier hs-var hs-var">pink</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pink&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffc0cb</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">192</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">203</span></span><span>
+</span><span id="line-285"></span><span id="lightPink"><span class="annot"><span class="annottext">lightPink :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightPink"><span class="hs-identifier hs-var hs-var">lightPink</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-pink&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffb6c1</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">182</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">193</span></span><span>
+</span><span id="line-286"></span><span id="darkPink"><span class="annot"><span class="annottext">darkPink :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkPink"><span class="hs-identifier hs-var hs-var">darkPink</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-pink&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xff1493</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">20</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">147</span></span><span>
+</span><span id="line-287"></span><span id="coral"><span class="annot"><span class="annottext">coral :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#coral"><span class="hs-identifier hs-var hs-var">coral</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;coral&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xff7f50</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">80</span></span><span>
+</span><span id="line-288"></span><span id="lightCoral"><span class="annot"><span class="annottext">lightCoral :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightCoral"><span class="hs-identifier hs-var hs-var">lightCoral</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-coral&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xf08080</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">240</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">128</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">128</span></span><span>
+</span><span id="line-289"></span><span id="orangeRed"><span class="annot"><span class="annottext">orangeRed :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#orangeRed"><span class="hs-identifier hs-var hs-var">orangeRed</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;orange-red&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xff4500</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">69</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-290"></span><span id="salmon"><span class="annot"><span class="annottext">salmon :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#salmon"><span class="hs-identifier hs-var hs-var">salmon</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;salmon&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xfa8072</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">250</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">128</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">114</span></span><span>
+</span><span id="line-291"></span><span id="lightSalmon"><span class="annot"><span class="annottext">lightSalmon :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightSalmon"><span class="hs-identifier hs-var hs-var">lightSalmon</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-salmon&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffa07a</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">160</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">122</span></span><span>
+</span><span id="line-292"></span><span id="darkSalmon"><span class="annot"><span class="annottext">darkSalmon :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkSalmon"><span class="hs-identifier hs-var hs-var">darkSalmon</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-salmon&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xe9967a</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">233</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">150</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">122</span></span><span>
+</span><span id="line-293"></span><span id="aquamarine"><span class="annot"><span class="annottext">aquamarine :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#aquamarine"><span class="hs-identifier hs-var hs-var">aquamarine</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;aquamarine&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x7fffd4</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">127</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">212</span></span><span>
+</span><span id="line-294"></span><span id="khaki"><span class="annot"><span class="annottext">khaki :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#khaki"><span class="hs-identifier hs-var hs-var">khaki</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;khaki&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xf0e68c</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">240</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">230</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">140</span></span><span>
+</span><span id="line-295"></span><span id="darkKhaki"><span class="annot"><span class="annottext">darkKhaki :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkKhaki"><span class="hs-identifier hs-var hs-var">darkKhaki</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-khaki&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xbdb76b</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">189</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">183</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">107</span></span><span>
+</span><span id="line-296"></span><span id="goldenrod"><span class="annot"><span class="annottext">goldenrod :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#goldenrod"><span class="hs-identifier hs-var hs-var">goldenrod</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;goldenrod&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xdaa520</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">218</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">165</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">32</span></span><span>
+</span><span id="line-297"></span><span id="lightGoldenrod"><span class="annot"><span class="annottext">lightGoldenrod :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#lightGoldenrod"><span class="hs-identifier hs-var hs-var">lightGoldenrod</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;light-goldenrod&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xeedd82</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">238</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">221</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">130</span></span><span>
+</span><span id="line-298"></span><span id="darkGoldenrod"><span class="annot"><span class="annottext">darkGoldenrod :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkGoldenrod"><span class="hs-identifier hs-var hs-var">darkGoldenrod</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-goldenrod&quot;</span></span><span>     </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xb8860b</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">184</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">134</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">11</span></span><span>
+</span><span id="line-299"></span><span id="gold"><span class="annot"><span class="annottext">gold :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#gold"><span class="hs-identifier hs-var hs-var">gold</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gold&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffd700</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">215</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-300"></span><span id="beige"><span class="annot"><span class="annottext">beige :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#beige"><span class="hs-identifier hs-var hs-var">beige</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;beige&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xf5f5dc</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">245</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">245</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">220</span></span><span>
+</span><span id="line-301"></span><span id="brown"><span class="annot"><span class="annottext">brown :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#brown"><span class="hs-identifier hs-var hs-var">brown</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;brown&quot;</span></span><span>              </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xa52a2a</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">165</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">42</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">42</span></span><span>
+</span><span id="line-302"></span><span id="orange"><span class="annot"><span class="annottext">orange :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#orange"><span class="hs-identifier hs-var hs-var">orange</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;orange&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xffa500</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">165</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-303"></span><span id="darkOrange"><span class="annot"><span class="annottext">darkOrange :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkOrange"><span class="hs-identifier hs-var hs-var">darkOrange</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-orange&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xff8c00</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">140</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-304"></span><span id="violet"><span class="annot"><span class="annottext">violet :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#violet"><span class="hs-identifier hs-var hs-var">violet</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;violet&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xee82ee</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">238</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">130</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">238</span></span><span>
+</span><span id="line-305"></span><span id="darkViolet"><span class="annot"><span class="annottext">darkViolet :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#darkViolet"><span class="hs-identifier hs-var hs-var">darkViolet</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dark-violet&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0x9400d3</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">148</span></span><span>   </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">211</span></span><span>
+</span><span id="line-306"></span><span id="plum"><span class="annot"><span class="annottext">plum :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#plum"><span class="hs-identifier hs-var hs-var">plum</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;plum&quot;</span></span><span>               </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xdda0dd</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">221</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">160</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">221</span></span><span>
+</span><span id="line-307"></span><span id="purple"><span class="annot"><span class="annottext">purple :: T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#purple"><span class="hs-identifier hs-var hs-var">purple</span></a></span></span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Word8 -&gt; Word8 -&gt; Word8 -&gt; T
+</span><a href="Graphics.Gnuplot.ColorSpecification.html#makeColor"><span class="hs-identifier hs-var">makeColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;purple&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0xa020f0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">160</span></span><span>  </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">32</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">240</span></span><span>
+</span><span id="line-308"></span></pre></body></html>

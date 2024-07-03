@@ -1,0 +1,256 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Module: Filesystem.Path.CurrentOS</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- Copyright: 2010 John Millikin</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- License: MIT</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Maintainer:  jmillikin@gmail.com</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Portability:  portable</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Re&amp;#x2010;exports contents of &quot;Filesystem.Path.Rules&quot;, defaulting to the</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- current OS&amp;#x2019;s rules when needed.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Also enables 'Show' and 'S.IsString' instances for 'F.FilePath'.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Filesystem.Path.CurrentOS</span><span>
+</span><span id="line-18"></span><span>	</span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Filesystem.Path.html"><span class="hs-identifier">Filesystem.Path</span></a></span><span>
+</span><span id="line-19"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier">currentOS</span></a></span><span>
+</span><span id="line-20"></span><span>	</span><span>
+</span><span id="line-21"></span><span>	</span><span class="annot"><span class="hs-comment">-- * Type conversions</span></span><span>
+</span><span id="line-22"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#toText"><span class="hs-identifier">toText</span></a></span><span>
+</span><span id="line-23"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#fromText"><span class="hs-identifier">fromText</span></a></span><span>
+</span><span id="line-24"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#encode"><span class="hs-identifier">encode</span></a></span><span>
+</span><span id="line-25"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#decode"><span class="hs-identifier">decode</span></a></span><span>
+</span><span id="line-26"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#encodeString"><span class="hs-identifier">encodeString</span></a></span><span>
+</span><span id="line-27"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#decodeString"><span class="hs-identifier">decodeString</span></a></span><span>
+</span><span id="line-28"></span><span>	</span><span>
+</span><span id="line-29"></span><span>	</span><span class="annot"><span class="hs-comment">-- * Rule&amp;#x2010;specific path properties</span></span><span>
+</span><span id="line-30"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#valid"><span class="hs-identifier">valid</span></a></span><span>
+</span><span id="line-31"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#splitSearchPath"><span class="hs-identifier">splitSearchPath</span></a></span><span>
+</span><span id="line-32"></span><span>	</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#splitSearchPathString"><span class="hs-identifier">splitSearchPathString</span></a></span><span>
+</span><span id="line-33"></span><span>	</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier">FilePath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Filesystem.Path.html"><span class="hs-identifier">Filesystem.Path</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Filesystem.Path.html"><span class="hs-identifier">Filesystem.Path</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Filesystem.Path.Rules.html"><span class="hs-identifier">Filesystem.Path.Rules</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">R</span></span><span class="hs-cpp">
+
+#if defined(__HADDOCK__)
+</span><span class="hs-cpp">#  define PLATFORM_PATH_FORMAT platformTextFormat
+</span><span class="hs-cpp">#elif defined(CABAL_OS_WINDOWS) || defined(CABAL_OS_DARWIN)
+</span><span class="hs-cpp">#  define PLATFORM_PATH_FORMAT T.Text
+</span><span class="hs-cpp">#else
+</span><span class="hs-cpp">#  define PLATFORM_PATH_FORMAT B.ByteString
+</span><span class="hs-cpp">#endif
+</span><span>
+</span><span id="line-53"></span><span id="local-6989586621679050955"><span class="annot"><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-type">currentOS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#Rules"><span class="hs-identifier hs-type">R.Rules</span></a></span><span> </span></span><span class="hs-identifier">PLATFORM_PATH_FORMAT</span><span class="hs-cpp">
+#if defined(__HADDOCK__)
+</span><span id="currentOS"><span class="annot"><span class="annottext">currentOS :: forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var hs-var">currentOS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules platformTextFormat
+forall a. HasCallStack =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#undefined"><span class="hs-identifier hs-var">undefined</span></a></span><span class="hs-cpp">
+#elif defined(CABAL_OS_WINDOWS)
+</span><span class="hs-identifier">currentOS</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">R.windows</span><span class="hs-cpp">
+#elif defined(CABAL_OS_DARWIN)
+</span><span class="hs-cpp">#if __GLASGOW_HASKELL__ &gt;= 702
+</span><span class="hs-identifier">currentOS</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">R.darwin_ghc702</span><span class="hs-cpp">
+#else
+</span><span class="hs-identifier">currentOS</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">R.darwin</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#else
+</span><span class="hs-cpp">#if __GLASGOW_HASKELL__ &gt;= 704
+</span><span class="hs-identifier">currentOS</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">R.posix_ghc704</span><span class="hs-cpp">
+#elif __GLASGOW_HASKELL__ &gt;= 702
+</span><span class="hs-identifier">currentOS</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">R.posix_ghc702</span><span class="hs-cpp">
+#else
+</span><span class="hs-identifier">currentOS</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">R.posix</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#endif
+</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">S.IsString</span></a></span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>	</span><span id="local-6989586621679051007"><span class="annot"><span class="annottext">fromString :: String -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules Any -&gt; Text -&gt; FilePath
+forall platformFormat. Rules platformFormat -&gt; Text -&gt; FilePath
+</span><a href="Filesystem.Path.Internal.html#fromText"><span class="hs-identifier hs-var">R.fromText</span></a></span><span> </span><span class="annot"><span class="annottext">Rules Any
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilePath) -&gt; (String -&gt; Text) -&gt; String -&gt; FilePath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679051013"><span id="local-6989586621679051017"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>	</span><span id="local-6989586621679051024"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; FilePath -&gt; ShowS
+</span><a href="#local-6989586621679051024"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span id="local-6989586621679051026"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051026"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621679051027"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679051027"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ShowS -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#showParen"><span class="hs-identifier hs-var">showParen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051026"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="#local-6989586621679051030"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;FilePath &quot;</span></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ShowS
+</span><a href="#local-6989586621679051031"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679051032"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>		</span><span id="local-6989586621679051031"><span class="annot"><span class="annottext">s :: Text -&gt; ShowS
+</span><a href="#local-6989586621679051031"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-80"></span><span>		</span><span id="local-6989586621679051030"><span class="annot"><span class="annottext">ss :: String -&gt; ShowS
+</span><a href="#local-6989586621679051030"><span class="hs-identifier hs-var hs-var">ss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span>
+</span><span id="line-81"></span><span>		</span><span id="local-6989586621679051032"><span class="annot"><span class="annottext">txt :: Text
+</span><a href="#local-6989586621679051032"><span class="hs-identifier hs-var hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Text -&gt; Text) -&gt; Either Text Text -&gt; Text
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Either Text Text
+</span><a href="Filesystem.Path.CurrentOS.html#toText"><span class="hs-identifier hs-var">toText</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679051027"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Attempt to convert a 'F.FilePath' to human&amp;#x2010;readable text.</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- If the path is decoded successfully, the result is a 'Right' containing</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- the decoded text. Successfully decoded text can be converted back to the</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- original path using 'fromText'.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- If the path cannot be decoded, the result is a 'Left' containing an</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- approximation of the original path. If displayed to the user, this value</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- should be accompanied by some warning that the path has an invalid</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- encoding. Approximated text cannot be converted back to the original path.</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- This function ignores the user&amp;#x2019;s locale, and assumes all file paths</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- are encoded in UTF8. If you need to display file paths with an unusual or</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- obscure encoding, use 'encode' and then decode them manually.</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- Since: 0.2</span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#toText"><span class="hs-identifier hs-type">toText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span>
+</span><span id="line-100"></span><span id="toText"><span class="annot"><span class="annottext">toText :: FilePath -&gt; Either Text Text
+</span><a href="Filesystem.Path.CurrentOS.html#toText"><span class="hs-identifier hs-var hs-var">toText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules Any -&gt; FilePath -&gt; Either Text Text
+forall platformFormat.
+Rules platformFormat -&gt; FilePath -&gt; Either Text Text
+</span><a href="Filesystem.Path.Internal.html#toText"><span class="hs-identifier hs-var">R.toText</span></a></span><span> </span><span class="annot"><span class="annottext">Rules Any
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- | Convert human&amp;#x2010;readable text into a 'FilePath'.</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- This function ignores the user&amp;#x2019;s locale, and assumes all file paths</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- are encoded in UTF8. If you need to create file paths with an unusual or</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- obscure encoding, encode them manually and then use 'decode'.</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- Since: 0.2</span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#fromText"><span class="hs-identifier hs-type">fromText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span>
+</span><span id="line-110"></span><span id="fromText"><span class="annot"><span class="annottext">fromText :: Text -&gt; FilePath
+</span><a href="Filesystem.Path.CurrentOS.html#fromText"><span class="hs-identifier hs-var hs-var">fromText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules Any -&gt; Text -&gt; FilePath
+forall platformFormat. Rules platformFormat -&gt; Text -&gt; FilePath
+</span><a href="Filesystem.Path.Internal.html#fromText"><span class="hs-identifier hs-var">R.fromText</span></a></span><span> </span><span class="annot"><span class="annottext">Rules Any
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | Check if a 'FilePath' is valid; it must not contain any illegal</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- characters, and must have a root appropriate to the current 'R.Rules'.</span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#valid"><span class="hs-identifier hs-type">valid</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-115"></span><span id="valid"><span class="annot"><span class="annottext">valid :: FilePath -&gt; Bool
+</span><a href="Filesystem.Path.CurrentOS.html#valid"><span class="hs-identifier hs-var hs-var">valid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules Any -&gt; FilePath -&gt; Bool
+forall platformFormat. Rules platformFormat -&gt; FilePath -&gt; Bool
+</span><a href="Filesystem.Path.Internal.html#valid"><span class="hs-identifier hs-var">R.valid</span></a></span><span> </span><span class="annot"><span class="annottext">Rules Any
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into a list</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- of 'FilePath's.</span><span>
+</span><span id="line-119"></span><span id="local-6989586621679050978"><span class="annot"><a href="Filesystem.Path.CurrentOS.html#splitSearchPath"><span class="hs-identifier hs-type">splitSearchPath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">PLATFORM_PATH_FORMAT</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span></span><span class="hs-identifier">F.FilePath</span><span class="hs-special">]</span><span>
+</span><span id="line-120"></span><span id="splitSearchPath"><span class="annot"><span class="annottext">splitSearchPath :: forall platformTextFormat. platformTextFormat -&gt; [FilePath]
+</span><a href="Filesystem.Path.CurrentOS.html#splitSearchPath"><span class="hs-identifier hs-var hs-var">splitSearchPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules platformTextFormat -&gt; platformTextFormat -&gt; [FilePath]
+forall platformFormat.
+Rules platformFormat -&gt; platformFormat -&gt; [FilePath]
+</span><a href="Filesystem.Path.Internal.html#splitSearchPath"><span class="hs-identifier hs-var">R.splitSearchPath</span></a></span><span> </span><span class="annot"><span class="annottext">Rules platformTextFormat
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | splitSearchPathString is like 'splitSearchPath', but takes a string</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- encoded in the format used by @System.IO@.</span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#splitSearchPathString"><span class="hs-identifier hs-type">splitSearchPathString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-125"></span><span id="splitSearchPathString"><span class="annot"><span class="annottext">splitSearchPathString :: String -&gt; [FilePath]
+</span><a href="Filesystem.Path.CurrentOS.html#splitSearchPathString"><span class="hs-identifier hs-var hs-var">splitSearchPathString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules Any -&gt; String -&gt; [FilePath]
+forall platformFormat. Rules platformFormat -&gt; String -&gt; [FilePath]
+</span><a href="Filesystem.Path.Internal.html#splitSearchPathString"><span class="hs-identifier hs-var">R.splitSearchPathString</span></a></span><span> </span><span class="annot"><span class="annottext">Rules Any
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- | Convert a 'F.FilePath' to a platform&amp;#x2010;specific format, suitable</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- for use with external OS functions.</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- Note: The type @platformTextFormat@ can change depending upon the underlying</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- compilation platform. Consider using 'toText' or 'encodeString' instead.</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- See 'Filesystem.Path.Rules.Rules' for more information.</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- Since: 0.3</span><span>
+</span><span id="line-135"></span><span id="local-6989586621679050982"><span class="annot"><a href="Filesystem.Path.CurrentOS.html#encode"><span class="hs-identifier hs-type">encode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span></span><span class="hs-identifier">PLATFORM_PATH_FORMAT</span><span>
+</span><span id="line-136"></span><span id="encode"><span class="annot"><span class="annottext">encode :: forall platformTextFormat. FilePath -&gt; platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#encode"><span class="hs-identifier hs-var hs-var">encode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules platformTextFormat -&gt; FilePath -&gt; platformTextFormat
+forall platformFormat.
+Rules platformFormat -&gt; FilePath -&gt; platformFormat
+</span><a href="Filesystem.Path.Internal.html#encode"><span class="hs-identifier hs-var">R.encode</span></a></span><span> </span><span class="annot"><span class="annottext">Rules platformTextFormat
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- | Convert a 'F.FilePath' from a platform&amp;#x2010;specific format, suitable</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- for use with external OS functions.</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- Note: The type @platformTextFormat@ can change depending upon the underlying</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- compilation platform. Consider using 'fromText' or 'decodeString' instead.</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- See 'Filesystem.Path.Rules.Rules' for more information.</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- Since: 0.3</span><span>
+</span><span id="line-146"></span><span id="local-6989586621679050985"><span class="annot"><a href="Filesystem.Path.CurrentOS.html#decode"><span class="hs-identifier hs-type">decode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">PLATFORM_PATH_FORMAT</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span></span><span class="hs-identifier">F.FilePath</span><span>
+</span><span id="line-147"></span><span id="decode"><span class="annot"><span class="annottext">decode :: forall platformTextFormat. platformTextFormat -&gt; FilePath
+</span><a href="Filesystem.Path.CurrentOS.html#decode"><span class="hs-identifier hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules platformTextFormat -&gt; platformTextFormat -&gt; FilePath
+forall platformFormat.
+Rules platformFormat -&gt; platformFormat -&gt; FilePath
+</span><a href="Filesystem.Path.Internal.html#decode"><span class="hs-identifier hs-var">R.decode</span></a></span><span> </span><span class="annot"><span class="annottext">Rules platformTextFormat
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- | Attempt to convert a 'F.FilePath' to a string suitable for use with</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- functions in @System.IO@. The contents of this string are</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- platform&amp;#x2010;dependent, and are not guaranteed to be</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- human&amp;#x2010;readable. For converting 'F.FilePath's to a</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- human&amp;#x2010;readable format, use 'toText'.</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- Since: 0.3.1</span><span>
+</span><span id="line-156"></span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#encodeString"><span class="hs-identifier hs-type">encodeString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-157"></span><span id="encodeString"><span class="annot"><span class="annottext">encodeString :: FilePath -&gt; String
+</span><a href="Filesystem.Path.CurrentOS.html#encodeString"><span class="hs-identifier hs-var hs-var">encodeString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules Any -&gt; FilePath -&gt; String
+forall platformFormat. Rules platformFormat -&gt; FilePath -&gt; String
+</span><a href="Filesystem.Path.Internal.html#encodeString"><span class="hs-identifier hs-var">R.encodeString</span></a></span><span> </span><span class="annot"><span class="annottext">Rules Any
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- | Attempt to parse a 'F.FilePath' from a string suitable for use with</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- functions in @System.IO@. Do not use this function for parsing</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- human&amp;#x2010;readable paths, as the character set decoding is</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- platform&amp;#x2010;dependent. For converting human&amp;#x2010;readable text to a</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- 'F.FilePath', use 'fromText'.</span><span>
+</span><span id="line-164"></span><span class="hs-comment">--</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- Since: 0.3.1</span><span>
+</span><span id="line-166"></span><span class="annot"><a href="Filesystem.Path.CurrentOS.html#decodeString"><span class="hs-identifier hs-type">decodeString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Filesystem.Path.Internal.html#FilePath"><span class="hs-identifier hs-type">F.FilePath</span></a></span><span>
+</span><span id="line-167"></span><span id="decodeString"><span class="annot"><span class="annottext">decodeString :: String -&gt; FilePath
+</span><a href="Filesystem.Path.CurrentOS.html#decodeString"><span class="hs-identifier hs-var hs-var">decodeString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rules Any -&gt; String -&gt; FilePath
+forall platformFormat. Rules platformFormat -&gt; String -&gt; FilePath
+</span><a href="Filesystem.Path.Internal.html#decodeString"><span class="hs-identifier hs-var">R.decodeString</span></a></span><span> </span><span class="annot"><span class="annottext">Rules Any
+forall platformTextFormat. Rules platformTextFormat
+</span><a href="Filesystem.Path.CurrentOS.html#currentOS"><span class="hs-identifier hs-var">currentOS</span></a></span><span>
+</span><span id="line-168"></span></pre></body></html>

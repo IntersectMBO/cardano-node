@@ -1,0 +1,373 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-missing-signatures #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.UI.Threepenny.SVG.Elements</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Synopsis</span></span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-comment">-- | SVG elements as defined by W3C, Scalable Vector Graphics (SVG) 1.1</span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-comment">--   (Second Edition) Appendix M &lt;http://www.w3.org/TR/2011/REC-SVG11-20110816/&gt;.</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-comment">-- </span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- Whenever possible, the Haskell identifier for an element is the </span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-comment">-- same as the attribute name. However, sometimes changes are necessary:</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-comment">--     1. Hyphens @-@ are replaced by underscores @_@, e.g. 'font_face'.</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-comment">-- * SVG Elements</span></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#a"><span class="hs-identifier">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#altGlyph"><span class="hs-identifier">altGlyph</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#altGlyphDef"><span class="hs-identifier">altGlyphDef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#altGlyphItem"><span class="hs-identifier">altGlyphItem</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#animate"><span class="hs-identifier">animate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#animateColor"><span class="hs-identifier">animateColor</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#animateMotion"><span class="hs-identifier">animateMotion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#animateTransform"><span class="hs-identifier">animateTransform</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#circle"><span class="hs-identifier">circle</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#clipPath"><span class="hs-identifier">clipPath</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#colorProfile"><span class="hs-identifier">colorProfile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#cursor"><span class="hs-identifier">cursor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#defs"><span class="hs-identifier">defs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#desc"><span class="hs-identifier">desc</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#ellipse"><span class="hs-identifier">ellipse</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feBlend"><span class="hs-identifier">feBlend</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feColorMatrix"><span class="hs-identifier">feColorMatrix</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feComponentTransfer"><span class="hs-identifier">feComponentTransfer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feComposite"><span class="hs-identifier">feComposite</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feConvolveMatrix"><span class="hs-identifier">feConvolveMatrix</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feDiffuseLighting"><span class="hs-identifier">feDiffuseLighting</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feDisplacementMap"><span class="hs-identifier">feDisplacementMap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feDistantLight"><span class="hs-identifier">feDistantLight</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFlood"><span class="hs-identifier">feFlood</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncA"><span class="hs-identifier">feFuncA</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncB"><span class="hs-identifier">feFuncB</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncG"><span class="hs-identifier">feFuncG</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncR"><span class="hs-identifier">feFuncR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feGaussianBlur"><span class="hs-identifier">feGaussianBlur</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feImage"><span class="hs-identifier">feImage</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feMerge"><span class="hs-identifier">feMerge</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feMergeNode"><span class="hs-identifier">feMergeNode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feMorphology"><span class="hs-identifier">feMorphology</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feOffset"><span class="hs-identifier">feOffset</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#fePointLight"><span class="hs-identifier">fePointLight</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feSpecularLighting"><span class="hs-identifier">feSpecularLighting</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feSpotLight"><span class="hs-identifier">feSpotLight</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feTile"><span class="hs-identifier">feTile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#feTurbulence"><span class="hs-identifier">feTurbulence</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#filter"><span class="hs-identifier">filter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#font"><span class="hs-identifier">font</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face"><span class="hs-identifier">font_face</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_format"><span class="hs-identifier">font_face_format</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_name"><span class="hs-identifier">font_face_name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_srv"><span class="hs-identifier">font_face_srv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_uri"><span class="hs-identifier">font_face_uri</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#foreignObject"><span class="hs-identifier">foreignObject</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#g"><span class="hs-identifier">g</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#glyph"><span class="hs-identifier">glyph</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#glyphRef"><span class="hs-identifier">glyphRef</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#hkern"><span class="hs-identifier">hkern</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#image"><span class="hs-identifier">image</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#line"><span class="hs-identifier">line</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#linearGradient"><span class="hs-identifier">linearGradient</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#marker"><span class="hs-identifier">marker</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#mask"><span class="hs-identifier">mask</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#metadata"><span class="hs-identifier">metadata</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#missing_glyph"><span class="hs-identifier">missing_glyph</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#mpath"><span class="hs-identifier">mpath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#path"><span class="hs-identifier">path</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#pattern"><span class="hs-identifier">pattern</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#polygon"><span class="hs-identifier">polygon</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#polyline"><span class="hs-identifier">polyline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#radialGradient"><span class="hs-identifier">radialGradient</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#rect"><span class="hs-identifier">rect</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#script"><span class="hs-identifier">script</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#set"><span class="hs-identifier">set</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#stop"><span class="hs-identifier">stop</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#style"><span class="hs-identifier">style</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#svg"><span class="hs-identifier">svg</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#switch"><span class="hs-identifier">switch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#symbol"><span class="hs-identifier">symbol</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#text"><span class="hs-identifier">text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#textPath"><span class="hs-identifier">textPath</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#title"><span class="hs-identifier">title</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#tref"><span class="hs-identifier">tref</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#tspan"><span class="hs-identifier">tspan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#use"><span class="hs-identifier">use</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#view"><span class="hs-identifier">view</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.SVG.Elements.html#vkern"><span class="hs-identifier">vkern</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#mkElementNamespace"><span class="hs-identifier">mkElementNamespace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span id="tag"><span class="annot"><span class="annottext">tag :: String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var hs-var">tag</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.Internal.html#mkElementNamespace"><span class="hs-identifier hs-var">mkElementNamespace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;http://www.w3.org/2000/svg&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span id="itag"><span class="annot"><span class="annottext">itag :: String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var hs-var">itag</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span id="a"><span class="annot"><span class="annottext">a :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#a"><span class="hs-identifier hs-var hs-var">a</span></a></span></span><span>                     </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;a&quot;</span></span><span>
+</span><span id="line-47"></span><span id="altGlyph"><span class="annot"><span class="annottext">altGlyph :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#altGlyph"><span class="hs-identifier hs-var hs-var">altGlyph</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;altGlyph&quot;</span></span><span>
+</span><span id="line-48"></span><span id="altGlyphDef"><span class="annot"><span class="annottext">altGlyphDef :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#altGlyphDef"><span class="hs-identifier hs-var hs-var">altGlyphDef</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;altGlyphDef&quot;</span></span><span>
+</span><span id="line-49"></span><span id="altGlyphItem"><span class="annot"><span class="annottext">altGlyphItem :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#altGlyphItem"><span class="hs-identifier hs-var hs-var">altGlyphItem</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;altGlyphItem&quot;</span></span><span>
+</span><span id="line-50"></span><span id="animate"><span class="annot"><span class="annottext">animate :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#animate"><span class="hs-identifier hs-var hs-var">animate</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;animate&quot;</span></span><span>
+</span><span id="line-51"></span><span id="animateColor"><span class="annot"><span class="annottext">animateColor :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#animateColor"><span class="hs-identifier hs-var hs-var">animateColor</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;animateColor&quot;</span></span><span>
+</span><span id="line-52"></span><span id="animateMotion"><span class="annot"><span class="annottext">animateMotion :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#animateMotion"><span class="hs-identifier hs-var hs-var">animateMotion</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;animateMotion&quot;</span></span><span>
+</span><span id="line-53"></span><span id="animateTransform"><span class="annot"><span class="annottext">animateTransform :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#animateTransform"><span class="hs-identifier hs-var hs-var">animateTransform</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;animateTransform&quot;</span></span><span>
+</span><span id="line-54"></span><span id="circle"><span class="annot"><span class="annottext">circle :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#circle"><span class="hs-identifier hs-var hs-var">circle</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;circle&quot;</span></span><span>
+</span><span id="line-55"></span><span id="clipPath"><span class="annot"><span class="annottext">clipPath :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#clipPath"><span class="hs-identifier hs-var hs-var">clipPath</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;clipPath&quot;</span></span><span>
+</span><span id="line-56"></span><span id="colorProfile"><span class="annot"><span class="annottext">colorProfile :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#colorProfile"><span class="hs-identifier hs-var hs-var">colorProfile</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;colorProfile&quot;</span></span><span>
+</span><span id="line-57"></span><span id="cursor"><span class="annot"><span class="annottext">cursor :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#cursor"><span class="hs-identifier hs-var hs-var">cursor</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cursor&quot;</span></span><span>
+</span><span id="line-58"></span><span id="defs"><span class="annot"><span class="annottext">defs :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#defs"><span class="hs-identifier hs-var hs-var">defs</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;defs&quot;</span></span><span>
+</span><span id="line-59"></span><span id="desc"><span class="annot"><span class="annottext">desc :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#desc"><span class="hs-identifier hs-var hs-var">desc</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;desc&quot;</span></span><span>
+</span><span id="line-60"></span><span id="ellipse"><span class="annot"><span class="annottext">ellipse :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#ellipse"><span class="hs-identifier hs-var hs-var">ellipse</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ellipse&quot;</span></span><span>
+</span><span id="line-61"></span><span id="feBlend"><span class="annot"><span class="annottext">feBlend :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feBlend"><span class="hs-identifier hs-var hs-var">feBlend</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feBlend&quot;</span></span><span>
+</span><span id="line-62"></span><span id="feColorMatrix"><span class="annot"><span class="annottext">feColorMatrix :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feColorMatrix"><span class="hs-identifier hs-var hs-var">feColorMatrix</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feColorMatrix&quot;</span></span><span>
+</span><span id="line-63"></span><span id="feComponentTransfer"><span class="annot"><span class="annottext">feComponentTransfer :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feComponentTransfer"><span class="hs-identifier hs-var hs-var">feComponentTransfer</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feComponentTransfer&quot;</span></span><span>
+</span><span id="line-64"></span><span id="feComposite"><span class="annot"><span class="annottext">feComposite :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feComposite"><span class="hs-identifier hs-var hs-var">feComposite</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feComposite&quot;</span></span><span>
+</span><span id="line-65"></span><span id="feConvolveMatrix"><span class="annot"><span class="annottext">feConvolveMatrix :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feConvolveMatrix"><span class="hs-identifier hs-var hs-var">feConvolveMatrix</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feConvolveMatrix&quot;</span></span><span>
+</span><span id="line-66"></span><span id="feDiffuseLighting"><span class="annot"><span class="annottext">feDiffuseLighting :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feDiffuseLighting"><span class="hs-identifier hs-var hs-var">feDiffuseLighting</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feDiffuseLighting&quot;</span></span><span>
+</span><span id="line-67"></span><span id="feDisplacementMap"><span class="annot"><span class="annottext">feDisplacementMap :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feDisplacementMap"><span class="hs-identifier hs-var hs-var">feDisplacementMap</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feDisplacementMap&quot;</span></span><span>
+</span><span id="line-68"></span><span id="feDistantLight"><span class="annot"><span class="annottext">feDistantLight :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feDistantLight"><span class="hs-identifier hs-var hs-var">feDistantLight</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feDistantLight&quot;</span></span><span>
+</span><span id="line-69"></span><span id="feFlood"><span class="annot"><span class="annottext">feFlood :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFlood"><span class="hs-identifier hs-var hs-var">feFlood</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feFlood&quot;</span></span><span>
+</span><span id="line-70"></span><span id="feFuncA"><span class="annot"><span class="annottext">feFuncA :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncA"><span class="hs-identifier hs-var hs-var">feFuncA</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feFuncA&quot;</span></span><span>
+</span><span id="line-71"></span><span id="feFuncB"><span class="annot"><span class="annottext">feFuncB :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncB"><span class="hs-identifier hs-var hs-var">feFuncB</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feFuncB&quot;</span></span><span>
+</span><span id="line-72"></span><span id="feFuncG"><span class="annot"><span class="annottext">feFuncG :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncG"><span class="hs-identifier hs-var hs-var">feFuncG</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feFuncG&quot;</span></span><span>
+</span><span id="line-73"></span><span id="feFuncR"><span class="annot"><span class="annottext">feFuncR :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feFuncR"><span class="hs-identifier hs-var hs-var">feFuncR</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feFuncR&quot;</span></span><span>
+</span><span id="line-74"></span><span id="feGaussianBlur"><span class="annot"><span class="annottext">feGaussianBlur :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feGaussianBlur"><span class="hs-identifier hs-var hs-var">feGaussianBlur</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feGaussianBlur&quot;</span></span><span>
+</span><span id="line-75"></span><span id="feImage"><span class="annot"><span class="annottext">feImage :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feImage"><span class="hs-identifier hs-var hs-var">feImage</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feImage&quot;</span></span><span>
+</span><span id="line-76"></span><span id="feMerge"><span class="annot"><span class="annottext">feMerge :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feMerge"><span class="hs-identifier hs-var hs-var">feMerge</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feMerge&quot;</span></span><span>
+</span><span id="line-77"></span><span id="feMergeNode"><span class="annot"><span class="annottext">feMergeNode :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feMergeNode"><span class="hs-identifier hs-var hs-var">feMergeNode</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feMergeNode&quot;</span></span><span>
+</span><span id="line-78"></span><span id="feMorphology"><span class="annot"><span class="annottext">feMorphology :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feMorphology"><span class="hs-identifier hs-var hs-var">feMorphology</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feMorphology&quot;</span></span><span>
+</span><span id="line-79"></span><span id="feOffset"><span class="annot"><span class="annottext">feOffset :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feOffset"><span class="hs-identifier hs-var hs-var">feOffset</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feOffset&quot;</span></span><span>
+</span><span id="line-80"></span><span id="fePointLight"><span class="annot"><span class="annottext">fePointLight :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#fePointLight"><span class="hs-identifier hs-var hs-var">fePointLight</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fePointLight&quot;</span></span><span>
+</span><span id="line-81"></span><span id="feSpecularLighting"><span class="annot"><span class="annottext">feSpecularLighting :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feSpecularLighting"><span class="hs-identifier hs-var hs-var">feSpecularLighting</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feSpecularLighting&quot;</span></span><span>
+</span><span id="line-82"></span><span id="feSpotLight"><span class="annot"><span class="annottext">feSpotLight :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feSpotLight"><span class="hs-identifier hs-var hs-var">feSpotLight</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feSpotLight&quot;</span></span><span>
+</span><span id="line-83"></span><span id="feTile"><span class="annot"><span class="annottext">feTile :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feTile"><span class="hs-identifier hs-var hs-var">feTile</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feTile&quot;</span></span><span>
+</span><span id="line-84"></span><span id="feTurbulence"><span class="annot"><span class="annottext">feTurbulence :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#feTurbulence"><span class="hs-identifier hs-var hs-var">feTurbulence</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feTurbulence&quot;</span></span><span>
+</span><span id="line-85"></span><span id="filter"><span class="annot"><span class="annottext">filter :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#filter"><span class="hs-identifier hs-var hs-var">filter</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;filter&quot;</span></span><span>
+</span><span id="line-86"></span><span id="font"><span class="annot"><span class="annottext">font :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#font"><span class="hs-identifier hs-var hs-var">font</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;font&quot;</span></span><span>
+</span><span id="line-87"></span><span id="font_face"><span class="annot"><span class="annottext">font_face :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face"><span class="hs-identifier hs-var hs-var">font_face</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;font-face&quot;</span></span><span>
+</span><span id="line-88"></span><span id="font_face_format"><span class="annot"><span class="annottext">font_face_format :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_format"><span class="hs-identifier hs-var hs-var">font_face_format</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;font-face-format&quot;</span></span><span>
+</span><span id="line-89"></span><span id="font_face_name"><span class="annot"><span class="annottext">font_face_name :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_name"><span class="hs-identifier hs-var hs-var">font_face_name</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;font-face-name&quot;</span></span><span>
+</span><span id="line-90"></span><span id="font_face_srv"><span class="annot"><span class="annottext">font_face_srv :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_srv"><span class="hs-identifier hs-var hs-var">font_face_srv</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;font-face-src&quot;</span></span><span>
+</span><span id="line-91"></span><span id="font_face_uri"><span class="annot"><span class="annottext">font_face_uri :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#font_face_uri"><span class="hs-identifier hs-var hs-var">font_face_uri</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;font-face-uri&quot;</span></span><span>
+</span><span id="line-92"></span><span id="foreignObject"><span class="annot"><span class="annottext">foreignObject :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#foreignObject"><span class="hs-identifier hs-var hs-var">foreignObject</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;foreignObject&quot;</span></span><span>
+</span><span id="line-93"></span><span id="g"><span class="annot"><span class="annottext">g :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#g"><span class="hs-identifier hs-var hs-var">g</span></a></span></span><span>                     </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;g&quot;</span></span><span>
+</span><span id="line-94"></span><span id="glyph"><span class="annot"><span class="annottext">glyph :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#glyph"><span class="hs-identifier hs-var hs-var">glyph</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;glyph&quot;</span></span><span>
+</span><span id="line-95"></span><span id="glyphRef"><span class="annot"><span class="annottext">glyphRef :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#glyphRef"><span class="hs-identifier hs-var hs-var">glyphRef</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;glyphRef&quot;</span></span><span>
+</span><span id="line-96"></span><span id="hkern"><span class="annot"><span class="annottext">hkern :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#hkern"><span class="hs-identifier hs-var hs-var">hkern</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;hkern&quot;</span></span><span>
+</span><span id="line-97"></span><span id="image"><span class="annot"><span class="annottext">image :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#image"><span class="hs-identifier hs-var hs-var">image</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;image&quot;</span></span><span>
+</span><span id="line-98"></span><span id="line"><span class="annot"><span class="annottext">line :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#line"><span class="hs-identifier hs-var hs-var">line</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;line&quot;</span></span><span>
+</span><span id="line-99"></span><span id="linearGradient"><span class="annot"><span class="annottext">linearGradient :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#linearGradient"><span class="hs-identifier hs-var hs-var">linearGradient</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;linearGradient&quot;</span></span><span>
+</span><span id="line-100"></span><span id="marker"><span class="annot"><span class="annottext">marker :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#marker"><span class="hs-identifier hs-var hs-var">marker</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;marker&quot;</span></span><span>
+</span><span id="line-101"></span><span id="mask"><span class="annot"><span class="annottext">mask :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#mask"><span class="hs-identifier hs-var hs-var">mask</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mask&quot;</span></span><span>
+</span><span id="line-102"></span><span id="metadata"><span class="annot"><span class="annottext">metadata :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#metadata"><span class="hs-identifier hs-var hs-var">metadata</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;metadata&quot;</span></span><span>
+</span><span id="line-103"></span><span id="missing_glyph"><span class="annot"><span class="annottext">missing_glyph :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#missing_glyph"><span class="hs-identifier hs-var hs-var">missing_glyph</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;missing-glyph&quot;</span></span><span>
+</span><span id="line-104"></span><span id="mpath"><span class="annot"><span class="annottext">mpath :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#mpath"><span class="hs-identifier hs-var hs-var">mpath</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mpath&quot;</span></span><span>
+</span><span id="line-105"></span><span id="path"><span class="annot"><span class="annottext">path :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#path"><span class="hs-identifier hs-var hs-var">path</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;path&quot;</span></span><span>
+</span><span id="line-106"></span><span id="pattern"><span class="annot"><span class="annottext">pattern :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#pattern"><span class="hs-identifier hs-var hs-var">pattern</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pattern&quot;</span></span><span>
+</span><span id="line-107"></span><span id="polygon"><span class="annot"><span class="annottext">polygon :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#polygon"><span class="hs-identifier hs-var hs-var">polygon</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;polygon&quot;</span></span><span>
+</span><span id="line-108"></span><span id="polyline"><span class="annot"><span class="annottext">polyline :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#polyline"><span class="hs-identifier hs-var hs-var">polyline</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;polyline&quot;</span></span><span>
+</span><span id="line-109"></span><span id="radialGradient"><span class="annot"><span class="annottext">radialGradient :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#radialGradient"><span class="hs-identifier hs-var hs-var">radialGradient</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;radialGradient&quot;</span></span><span>
+</span><span id="line-110"></span><span id="rect"><span class="annot"><span class="annottext">rect :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#rect"><span class="hs-identifier hs-var hs-var">rect</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rect&quot;</span></span><span>
+</span><span id="line-111"></span><span id="script"><span class="annot"><span class="annottext">script :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#script"><span class="hs-identifier hs-var hs-var">script</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;script&quot;</span></span><span>
+</span><span id="line-112"></span><span id="set"><span class="annot"><span class="annottext">set :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#set"><span class="hs-identifier hs-var hs-var">set</span></a></span></span><span>                   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;set&quot;</span></span><span>
+</span><span id="line-113"></span><span id="stop"><span class="annot"><span class="annottext">stop :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#stop"><span class="hs-identifier hs-var hs-var">stop</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;stop&quot;</span></span><span>
+</span><span id="line-114"></span><span id="style"><span class="annot"><span class="annottext">style :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#style"><span class="hs-identifier hs-var hs-var">style</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;style&quot;</span></span><span>
+</span><span id="line-115"></span><span id="svg"><span class="annot"><span class="annottext">svg :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#svg"><span class="hs-identifier hs-var hs-var">svg</span></a></span></span><span>                   </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;svg&quot;</span></span><span>
+</span><span id="line-116"></span><span id="switch"><span class="annot"><span class="annottext">switch :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#switch"><span class="hs-identifier hs-var hs-var">switch</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;switch&quot;</span></span><span>
+</span><span id="line-117"></span><span id="symbol"><span class="annot"><span class="annottext">symbol :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#symbol"><span class="hs-identifier hs-var hs-var">symbol</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;symbol&quot;</span></span><span>
+</span><span id="line-118"></span><span id="text"><span class="annot"><span class="annottext">text :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#text"><span class="hs-identifier hs-var hs-var">text</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;text&quot;</span></span><span>
+</span><span id="line-119"></span><span id="textPath"><span class="annot"><span class="annottext">textPath :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#textPath"><span class="hs-identifier hs-var hs-var">textPath</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;textPath&quot;</span></span><span>
+</span><span id="line-120"></span><span id="title"><span class="annot"><span class="annottext">title :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#title"><span class="hs-identifier hs-var hs-var">title</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;title&quot;</span></span><span>
+</span><span id="line-121"></span><span id="tref"><span class="annot"><span class="annottext">tref :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tref"><span class="hs-identifier hs-var hs-var">tref</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;tref&quot;</span></span><span>
+</span><span id="line-122"></span><span id="tspan"><span class="annot"><span class="annottext">tspan :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tspan"><span class="hs-identifier hs-var hs-var">tspan</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;tspan&quot;</span></span><span>
+</span><span id="line-123"></span><span id="use"><span class="annot"><span class="annottext">use :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#use"><span class="hs-identifier hs-var hs-var">use</span></a></span></span><span>                   </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#tag"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;use&quot;</span></span><span>
+</span><span id="line-124"></span><span id="view"><span class="annot"><span class="annottext">view :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#view"><span class="hs-identifier hs-var hs-var">view</span></a></span></span><span>                  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;view&quot;</span></span><span>
+</span><span id="line-125"></span><span id="vkern"><span class="annot"><span class="annottext">vkern :: UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#vkern"><span class="hs-identifier hs-var hs-var">vkern</span></a></span></span><span>                 </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="Graphics.UI.Threepenny.SVG.Elements.html#itag"><span class="hs-identifier hs-var">itag</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vkern&quot;</span></span><span>
+</span><span id="line-126"></span></pre></body></html>

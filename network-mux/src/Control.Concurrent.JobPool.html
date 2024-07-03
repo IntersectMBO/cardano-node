@@ -1,0 +1,494 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns        #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | This module allows the management of a multiple Async jobs which</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- are grouped by an 'Ord group =&gt; group' type.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.JobPool</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier">JobPool</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#Job"><span class="hs-identifier">Job</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#withJobPool"><span class="hs-identifier">withJobPool</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#forkJob"><span class="hs-identifier">forkJob</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#readSize"><span class="hs-identifier">readSize</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#readGroupSize"><span class="hs-identifier">readGroupSize</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#waitForJob"><span class="hs-identifier">waitForJob</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#cancelGroup"><span class="hs-identifier">cancelGroup</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html"><span class="hs-identifier">Data.Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%24%3E"><span class="hs-operator">($&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#SomeAsyncException"><span class="hs-identifier">SomeAsyncException</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadAsync</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadFork</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadThread</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadThrow</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- | JobPool allows to submit asynchronous jobs, wait for their completion or</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- cancel.  Jobs are grouped, each group can be cancelled separately.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">data</span><span> </span><span id="JobPool"><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-var">JobPool</span></a></span></span><span> </span><span id="local-6989586621679113988"><span class="annot"><a href="#local-6989586621679113988"><span class="hs-identifier hs-type">group</span></a></span></span><span> </span><span id="local-6989586621679113989"><span class="annot"><a href="#local-6989586621679113989"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679113990"><span class="annot"><a href="#local-6989586621679113990"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="JobPool"><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-var">JobPool</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-36"></span><span>       </span><span id="jobsVar"><span class="annot"><span class="annottext">forall group (m :: * -&gt; *) a.
+JobPool group m a -&gt; TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="Control.Concurrent.JobPool.html#jobsVar"><span class="hs-identifier hs-var hs-var">jobsVar</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679113989"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679113988"><span class="hs-identifier hs-type">group</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ThreadId</span></span><span> </span><span class="annot"><a href="#local-6989586621679113989"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Async</span></span><span> </span><span class="annot"><a href="#local-6989586621679113989"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>       </span><span id="completionQueue"><span class="annot"><span class="annottext">forall group (m :: * -&gt; *) a. JobPool group m a -&gt; TQueue m a
+</span><a href="Control.Concurrent.JobPool.html#completionQueue"><span class="hs-identifier hs-var hs-var">completionQueue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TQueue</span></span><span> </span><span class="annot"><a href="#local-6989586621679113989"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113990"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | An asynchronous job which belongs to some group and its exception handler.</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">data</span><span> </span><span id="Job"><span class="annot"><a href="Control.Concurrent.JobPool.html#Job"><span class="hs-identifier hs-var">Job</span></a></span></span><span> </span><span id="local-6989586621679114144"><span class="annot"><a href="#local-6989586621679114144"><span class="hs-identifier hs-type">group</span></a></span></span><span> </span><span id="local-6989586621679114145"><span class="annot"><a href="#local-6989586621679114145"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679114146"><span class="annot"><a href="#local-6989586621679114146"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>    </span><span id="Job"><span class="annot"><a href="Control.Concurrent.JobPool.html#Job"><span class="hs-identifier hs-var">Job</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679114145"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114146"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>                  </span><span class="annot"><span class="hs-comment">-- ^ job</span></span><span>
+</span><span id="line-44"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114145"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114146"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ error handler</span></span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><a href="#local-6989586621679114144"><span class="hs-identifier hs-type">group</span></a></span><span>                  </span><span class="annot"><span class="hs-comment">-- ^ job group</span></span><span>
+</span><span id="line-46"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>                 </span><span class="annot"><span class="hs-comment">-- ^ thread label</span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Control.Concurrent.JobPool.html#withJobPool"><span class="hs-identifier hs-type">withJobPool</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679114007"><span class="annot"><a href="#local-6989586621679114007"><span class="hs-identifier hs-type">group</span></a></span></span><span> </span><span id="local-6989586621679114003"><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679114008"><span class="annot"><a href="#local-6989586621679114008"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679114009"><span class="annot"><a href="#local-6989586621679114009"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-49"></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadAsync</span></span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadLabelledSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>            </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114007"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114008"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114009"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114009"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-51"></span><span id="withJobPool"><span class="annot"><span class="annottext">withJobPool :: forall group (m :: * -&gt; *) a b.
+(MonadAsync m, MonadThrow m, MonadLabelledSTM m) =&gt;
+(JobPool group m a -&gt; m b) -&gt; m b
+</span><a href="Control.Concurrent.JobPool.html#withJobPool"><span class="hs-identifier hs-var hs-var">withJobPool</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">m (JobPool group m a)
+-&gt; (JobPool group m a -&gt; m ()) -&gt; (JobPool group m a -&gt; m b) -&gt; m b
+forall a b c. m a -&gt; (a -&gt; m b) -&gt; (a -&gt; m c) -&gt; m c
+forall (m :: * -&gt; *) a b c.
+MonadThrow m =&gt;
+m a -&gt; (a -&gt; m b) -&gt; (a -&gt; m c) -&gt; m c
+</span><span class="hs-identifier hs-var">bracket</span></span><span> </span><span class="annot"><span class="annottext">m (JobPool group m a)
+</span><a href="#local-6989586621679114179"><span class="hs-identifier hs-var">create</span></a></span><span> </span><span class="annot"><span class="annottext">JobPool group m a -&gt; m ()
+</span><a href="#local-6989586621679114180"><span class="hs-identifier hs-var">close</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><a href="#local-6989586621679114179"><span class="hs-identifier hs-type">create</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114007"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114008"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679114179"><span class="annot"><span class="annottext">create :: m (JobPool group m a)
+</span><a href="#local-6989586621679114179"><span class="hs-identifier hs-var hs-var">create</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">STM m (JobPool group m a) -&gt; m (JobPool group m a)
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m (JobPool group m a) -&gt; m (JobPool group m a))
+-&gt; STM m (JobPool group m a) -&gt; m (JobPool group m a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; TQueue m a -&gt; JobPool group m a
+forall group (m :: * -&gt; *) a.
+TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; TQueue m a -&gt; JobPool group m a
+</span><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-var">JobPool</span></a></span><span> </span><span class="annot"><span class="annottext">(TVar m (Map (group, ThreadId m) (Async m ()))
+ -&gt; TQueue m a -&gt; JobPool group m a)
+-&gt; STM m (TVar m (Map (group, ThreadId m) (Async m ())))
+-&gt; STM m (TQueue m a -&gt; JobPool group m a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ())
+-&gt; STM m (TVar m (Map (group, ThreadId m) (Async m ())))
+forall a. a -&gt; STM m (TVar m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; STM m (TVar m a)
+</span><span class="hs-identifier hs-var">newTVar</span></span><span> </span><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ())
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="annot"><span class="annottext">STM m (TVar m (Map (group, ThreadId m) (Async m ())))
+-&gt; (TVar m (Map (group, ThreadId m) (Async m ()))
+    -&gt; STM m (TVar m (Map (group, ThreadId m) (Async m ()))))
+-&gt; STM m (TVar m (Map (group, ThreadId m) (Async m ())))
+forall a b. STM m a -&gt; (a -&gt; STM m b) -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679114185"><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114185"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ())) -&gt; String -&gt; STM m ()
+forall a. TVar m a -&gt; String -&gt; STM m ()
+forall (m :: * -&gt; *) a.
+MonadLabelledSTM m =&gt;
+TVar m a -&gt; String -&gt; STM m ()
+</span><span class="hs-identifier hs-var">labelTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114185"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;job-pool&quot;</span></span><span> </span><span class="annot"><span class="annottext">STM m ()
+-&gt; TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; STM m (TVar m (Map (group, ThreadId m) (Async m ())))
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; b -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%24%3E"><span class="hs-operator hs-var">$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114185"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>                </span><span class="annot"><span class="annottext">STM m (TQueue m a -&gt; JobPool group m a)
+-&gt; STM m (TQueue m a) -&gt; STM m (JobPool group m a)
+forall a b. STM m (a -&gt; b) -&gt; STM m a -&gt; STM m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">STM m (TQueue m a)
+forall a. STM m (TQueue m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m (TQueue m a)
+</span><span class="hs-identifier hs-var">newTQueue</span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- 'bracket' requires that the 'close' callback is uninterruptible.  Note</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- also that 'async' library is using 'uninterruptibleClose' in</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- 'withAsync' combinator.  This can only deadlock if the threads in</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- 'JobPool' got deadlocked so that the asynchronous exception cannot be</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- delivered, e.g. deadlock in an ffi call or a tight loop which does not</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- allocate (which is not a deadlock per se, but rather a rare unfortunate</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- condition).</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><a href="#local-6989586621679114180"><span class="hs-identifier hs-type">close</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114007"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114008"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114003"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679114180"><span class="annot"><span class="annottext">close :: JobPool group m a -&gt; m ()
+</span><a href="#local-6989586621679114180"><span class="hs-identifier hs-var hs-var">close</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span class="hs-special">{</span><span id="local-6989586621679114188"><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: forall group (m :: * -&gt; *) a.
+JobPool group m a -&gt; TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="Control.Concurrent.JobPool.html#jobsVar"><span class="hs-identifier hs-var hs-var">jobsVar</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>      </span><span id="local-6989586621679114189"><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ())
+</span><a href="#local-6989586621679114189"><span class="hs-identifier hs-var">jobs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; m (Map (group, ThreadId m) (Async m ()))
+forall a. TVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; m a
+</span><span class="hs-identifier hs-var">readTVarIO</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114188"><span class="hs-identifier hs-var">jobsVar</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">(Async m () -&gt; m ())
+-&gt; Map (group, ThreadId m) (Async m ()) -&gt; m ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="annot"><span class="annottext">Async m () -&gt; m ()
+forall a. Async m a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadAsync m =&gt; Async m a -&gt; m ()
+</span><span class="hs-identifier hs-var">uninterruptibleCancel</span></span><span> </span><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ())
+</span><a href="#local-6989586621679114189"><span class="hs-identifier hs-var">jobs</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Control.Concurrent.JobPool.html#forkJob"><span class="hs-identifier hs-type">forkJob</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679114054"><span class="annot"><a href="#local-6989586621679114054"><span class="hs-identifier hs-type">group</span></a></span></span><span> </span><span id="local-6989586621679114052"><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679114055"><span class="annot"><a href="#local-6989586621679114055"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-73"></span><span>           </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadAsync</span></span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadMask</span></span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-74"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114054"><span class="hs-identifier hs-type">group</span></a></span><span>
+</span><span id="line-75"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>        </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114054"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114055"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-77"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#Job"><span class="hs-identifier hs-type">Job</span></a></span><span>     </span><span class="annot"><a href="#local-6989586621679114054"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114055"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span id="forkJob"><span class="annot"><span class="annottext">forkJob :: forall group (m :: * -&gt; *) a.
+(MonadAsync m, MonadMask m, Ord group) =&gt;
+JobPool group m a -&gt; Job group m a -&gt; m ()
+</span><a href="Control.Concurrent.JobPool.html#forkJob"><span class="hs-identifier hs-var hs-var">forkJob</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span class="hs-special">{</span><span id="local-6989586621679114251"><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: forall group (m :: * -&gt; *) a.
+JobPool group m a -&gt; TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="Control.Concurrent.JobPool.html#jobsVar"><span class="hs-identifier hs-var hs-var">jobsVar</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679114252"><span class="annot"><span class="annottext">TQueue m a
+completionQueue :: forall group (m :: * -&gt; *) a. JobPool group m a -&gt; TQueue m a
+completionQueue :: TQueue m a
+</span><a href="Control.Concurrent.JobPool.html#completionQueue"><span class="hs-identifier hs-var hs-var">completionQueue</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.JobPool.html#Job"><span class="hs-identifier hs-type">Job</span></a></span><span> </span><span id="local-6989586621679114253"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679114253"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span id="local-6989586621679114254"><span class="annot"><span class="annottext">SomeException -&gt; m a
+</span><a href="#local-6989586621679114254"><span class="hs-identifier hs-var">handler</span></a></span></span><span> </span><span id="local-6989586621679114255"><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114255"><span class="hs-identifier hs-var">group</span></a></span></span><span> </span><span id="local-6989586621679114256"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679114256"><span class="hs-keyword hs-var">label</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ()
+forall b. ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadMask m =&gt;
+((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+</span><span class="hs-identifier hs-var">mask</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ())
+-&gt; ((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679114258"><span class="annot"><span class="annottext">forall a. m a -&gt; m a
+</span><a href="#local-6989586621679114258"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>      </span><span id="local-6989586621679114259"><span class="annot"><span class="annottext">Async m ()
+</span><a href="#local-6989586621679114259"><span class="hs-identifier hs-var">jobAsync</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m () -&gt; m (Async m ())
+forall a. m a -&gt; m (Async m a)
+forall (m :: * -&gt; *) a. MonadAsync m =&gt; m a -&gt; m (Async m a)
+</span><span class="hs-identifier hs-var">async</span></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m (Async m ())) -&gt; m () -&gt; m (Async m ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>        </span><span id="local-6989586621679114261"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679114261"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (ThreadId m)
+forall (m :: * -&gt; *). MonadThread m =&gt; m (ThreadId m)
+</span><span class="hs-identifier hs-var">myThreadId</span></span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><span class="annottext">ThreadId m -&gt; (forall a. m a -&gt; m a) -&gt; m ()
+</span><a href="#local-6989586621679114263"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679114261"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">m x -&gt; m x
+forall a. m a -&gt; m a
+</span><a href="#local-6989586621679114258"><span class="hs-identifier hs-var">restore</span></a></span><span>
+</span><span id="line-84"></span><span>          </span><span class="annot"><span class="annottext">m () -&gt; m () -&gt; m ()
+forall a b. m a -&gt; m b -&gt; m a
+forall (m :: * -&gt; *) a b. MonadCatch m =&gt; m a -&gt; m b -&gt; m a
+</span><span class="hs-operator hs-var">`onException`</span></span><span>
+</span><span id="line-85"></span><span>          </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; (Map (group, ThreadId m) (Async m ())
+    -&gt; Map (group, ThreadId m) (Async m ()))
+-&gt; STM m ()
+forall a. TVar m a -&gt; (a -&gt; a) -&gt; STM m ()
+forall (m :: * -&gt; *) a.
+MonadSTM m =&gt;
+TVar m a -&gt; (a -&gt; a) -&gt; STM m ()
+</span><span class="hs-identifier hs-var">modifyTVar'</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114251"><span class="hs-identifier hs-var">jobsVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(group, ThreadId m)
+-&gt; Map (group, ThreadId m) (Async m ())
+-&gt; Map (group, ThreadId m) (Async m ())
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#delete"><span class="hs-identifier hs-var">Map.delete</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114255"><span class="hs-identifier hs-var">group</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679114261"><span class="hs-identifier hs-var">tid</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; (Map (group, ThreadId m) (Async m ())
+    -&gt; Map (group, ThreadId m) (Async m ()))
+-&gt; STM m ()
+forall a. TVar m a -&gt; (a -&gt; a) -&gt; STM m ()
+forall (m :: * -&gt; *) a.
+MonadSTM m =&gt;
+TVar m a -&gt; (a -&gt; a) -&gt; STM m ()
+</span><span class="hs-identifier hs-var">modifyTVar'</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114251"><span class="hs-identifier hs-var">jobsVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(group, ThreadId m)
+-&gt; Map (group, ThreadId m) (Async m ())
+-&gt; Map (group, ThreadId m) (Async m ())
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#delete"><span class="hs-identifier hs-var">Map.delete</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114255"><span class="hs-identifier hs-var">group</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679114261"><span class="hs-identifier hs-var">tid</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679114283"><span class="annot"><span class="annottext">tid :: ThreadId m
+</span><a href="#local-6989586621679114283"><span class="hs-identifier hs-var hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Async m () -&gt; ThreadId m
+forall a. Async m a -&gt; ThreadId m
+forall (m :: * -&gt; *) a. MonadAsync m =&gt; Async m a -&gt; ThreadId m
+</span><span class="hs-identifier hs-var">asyncThreadId</span></span><span> </span><span class="annot"><span class="annottext">Async m ()
+</span><a href="#local-6989586621679114259"><span class="hs-identifier hs-var">jobAsync</span></a></span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; (Map (group, ThreadId m) (Async m ())
+    -&gt; Map (group, ThreadId m) (Async m ()))
+-&gt; STM m ()
+forall a. TVar m a -&gt; (a -&gt; a) -&gt; STM m ()
+forall (m :: * -&gt; *) a.
+MonadSTM m =&gt;
+TVar m a -&gt; (a -&gt; a) -&gt; STM m ()
+</span><span class="hs-identifier hs-var">modifyTVar'</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114251"><span class="hs-identifier hs-var">jobsVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(group, ThreadId m)
+-&gt; Async m ()
+-&gt; Map (group, ThreadId m) (Async m ())
+-&gt; Map (group, ThreadId m) (Async m ())
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114255"><span class="hs-identifier hs-var">group</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679114283"><span class="hs-identifier hs-var">tid</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Async m ()
+ -&gt; Map (group, ThreadId m) (Async m ())
+ -&gt; Map (group, ThreadId m) (Async m ()))
+-&gt; Async m ()
+-&gt; Map (group, ThreadId m) (Async m ())
+-&gt; Map (group, ThreadId m) (Async m ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">Async m ()
+</span><a href="#local-6989586621679114259"><span class="hs-identifier hs-var">jobAsync</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><a href="#local-6989586621679114287"><span class="hs-identifier hs-type">notAsyncExceptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679114287"><span class="annot"><span class="annottext">notAsyncExceptions :: SomeException -&gt; Maybe SomeException
+</span><a href="#local-6989586621679114287"><span class="hs-identifier hs-var hs-var">notAsyncExceptions</span></a></span></span><span> </span><span id="local-6989586621679114288"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679114288"><span class="hs-identifier hs-var">e</span></a></span></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#SomeAsyncException"><span class="hs-identifier hs-type">SomeAsyncException</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe SomeAsyncException
+forall e. Exception e =&gt; SomeException -&gt; Maybe e
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#fromException"><span class="hs-identifier hs-var">fromException</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679114288"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-95"></span><span>                  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SomeException
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-96"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe SomeException
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679114288"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="#local-6989586621679114263"><span class="hs-identifier hs-type">io</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ThreadId</span></span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-99"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679114292"><span class="annot"><a href="#local-6989586621679114292"><span class="hs-identifier hs-type">x</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114292"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114292"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>    </span><span id="local-6989586621679114263"><span class="annot"><span class="annottext">io :: ThreadId m -&gt; (forall a. m a -&gt; m a) -&gt; m ()
+</span><a href="#local-6989586621679114263"><span class="hs-identifier hs-var hs-var">io</span></a></span></span><span> </span><span id="local-6989586621679114293"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679114293"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span id="local-6989586621679114294"><span class="annot"><span class="annottext">forall a. m a -&gt; m a
+</span><a href="#local-6989586621679114294"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">ThreadId m -&gt; String -&gt; m ()
+forall (m :: * -&gt; *). MonadThread m =&gt; ThreadId m -&gt; String -&gt; m ()
+</span><span class="hs-identifier hs-var">labelThread</span></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679114293"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679114256"><span class="hs-keyword hs-var">label</span></a></span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-glyph">!</span><span id="local-6989586621679114296"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679114296"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; Maybe SomeException)
+-&gt; (SomeException -&gt; m a) -&gt; m a -&gt; m a
+forall e b a.
+Exception e =&gt;
+(e -&gt; Maybe b) -&gt; (b -&gt; m a) -&gt; m a -&gt; m a
+forall (m :: * -&gt; *) e b a.
+(MonadCatch m, Exception e) =&gt;
+(e -&gt; Maybe b) -&gt; (b -&gt; m a) -&gt; m a -&gt; m a
+</span><span class="hs-identifier hs-var">handleJust</span></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe SomeException
+</span><a href="#local-6989586621679114287"><span class="hs-identifier hs-var">notAsyncExceptions</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; m a
+</span><a href="#local-6989586621679114254"><span class="hs-identifier hs-var">handler</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; m a) -&gt; m a -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-104"></span><span>              </span><span class="annot"><span class="annottext">m a -&gt; m a
+forall a. m a -&gt; m a
+</span><a href="#local-6989586621679114294"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679114253"><span class="hs-identifier hs-var">action</span></a></span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue m a -&gt; a -&gt; STM m ()
+forall a. TQueue m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TQueue m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTQueue</span></span><span> </span><span class="annot"><span class="annottext">TQueue m a
+</span><a href="#local-6989586621679114252"><span class="hs-identifier hs-var">completionQueue</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679114296"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span id="local-6989586621679114090"><span id="local-6989586621679114091"><span id="local-6989586621679114092"><span class="annot"><a href="Control.Concurrent.JobPool.html#readSize"><span class="hs-identifier hs-type">readSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679114090"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114091"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114090"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114092"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679114090"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span></span></span><span>
+</span><span id="line-108"></span><span id="readSize"><span class="annot"><span class="annottext">readSize :: forall (m :: * -&gt; *) group a.
+MonadSTM m =&gt;
+JobPool group m a -&gt; STM m Int
+</span><a href="Control.Concurrent.JobPool.html#readSize"><span class="hs-identifier hs-var hs-var">readSize</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span class="hs-special">{</span><span id="local-6989586621679114305"><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: forall group (m :: * -&gt; *) a.
+JobPool group m a -&gt; TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="Control.Concurrent.JobPool.html#jobsVar"><span class="hs-identifier hs-var hs-var">jobsVar</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ()) -&gt; Int
+forall k a. Map k a -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#size"><span class="hs-identifier hs-var">Map.size</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (group, ThreadId m) (Async m ()) -&gt; Int)
+-&gt; STM m (Map (group, ThreadId m) (Async m ())) -&gt; STM m Int
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; STM m (Map (group, ThreadId m) (Async m ()))
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114305"><span class="hs-identifier hs-var">jobsVar</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span id="local-6989586621679114099"><span id="local-6989586621679114100"><span id="local-6989586621679114101"><span class="annot"><a href="Control.Concurrent.JobPool.html#readGroupSize"><span class="hs-identifier hs-type">readGroupSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679114099"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-111"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114100"><span class="hs-identifier hs-type">group</span></a></span><span>
+</span><span id="line-112"></span><span>                 </span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>              </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114100"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114099"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114101"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114100"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679114099"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span></span></span><span>
+</span><span id="line-114"></span><span id="readGroupSize"><span class="annot"><span class="annottext">readGroupSize :: forall (m :: * -&gt; *) group a.
+(MonadSTM m, Eq group) =&gt;
+JobPool group m a -&gt; group -&gt; STM m Int
+</span><a href="Control.Concurrent.JobPool.html#readGroupSize"><span class="hs-identifier hs-var hs-var">readGroupSize</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span class="hs-special">{</span><span id="local-6989586621679114316"><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: forall group (m :: * -&gt; *) a.
+JobPool group m a -&gt; TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="Control.Concurrent.JobPool.html#jobsVar"><span class="hs-identifier hs-var hs-var">jobsVar</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679114317"><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114317"><span class="hs-identifier hs-var">group</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ()) -&gt; Int
+forall k a. Map k a -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#size"><span class="hs-identifier hs-var">Map.size</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">(Map (group, ThreadId m) (Async m ()) -&gt; Int)
+-&gt; (Map (group, ThreadId m) (Async m ())
+    -&gt; Map (group, ThreadId m) (Async m ()))
+-&gt; Map (group, ThreadId m) (Async m ())
+-&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((group, ThreadId m) -&gt; Async m () -&gt; Bool)
+-&gt; Map (group, ThreadId m) (Async m ())
+-&gt; Map (group, ThreadId m) (Async m ())
+forall k a. (k -&gt; a -&gt; Bool) -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#filterWithKey"><span class="hs-identifier hs-var">Map.filterWithKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679114320"><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114320"><span class="hs-identifier hs-var">group'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Async m ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114320"><span class="hs-identifier hs-var">group'</span></a></span><span> </span><span class="annot"><span class="annottext">group -&gt; group -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114317"><span class="hs-identifier hs-var">group</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><span class="annottext">(Map (group, ThreadId m) (Async m ()) -&gt; Int)
+-&gt; STM m (Map (group, ThreadId m) (Async m ())) -&gt; STM m Int
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; STM m (Map (group, ThreadId m) (Async m ()))
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114316"><span class="hs-identifier hs-var">jobsVar</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- | Wait for next successfully completed job.  Unlike 'wait' it will not throw</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- if a job errors.</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span id="local-6989586621679114111"><span id="local-6989586621679114112"><span id="local-6989586621679114113"><span class="annot"><a href="Control.Concurrent.JobPool.html#waitForJob"><span class="hs-identifier hs-type">waitForJob</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679114111"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114112"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114111"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114113"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679114111"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114113"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-123"></span><span id="waitForJob"><span class="annot"><span class="annottext">waitForJob :: forall (m :: * -&gt; *) group a.
+MonadSTM m =&gt;
+JobPool group m a -&gt; STM m a
+</span><a href="Control.Concurrent.JobPool.html#waitForJob"><span class="hs-identifier hs-var hs-var">waitForJob</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span class="hs-special">{</span><span id="local-6989586621679114324"><span class="annot"><span class="annottext">TQueue m a
+completionQueue :: forall group (m :: * -&gt; *) a. JobPool group m a -&gt; TQueue m a
+completionQueue :: TQueue m a
+</span><a href="Control.Concurrent.JobPool.html#completionQueue"><span class="hs-identifier hs-var hs-var">completionQueue</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TQueue m a -&gt; STM m a
+forall a. TQueue m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TQueue m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTQueue</span></span><span> </span><span class="annot"><span class="annottext">TQueue m a
+</span><a href="#local-6989586621679114324"><span class="hs-identifier hs-var">completionQueue</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- | Cancel all threads in a given group.  Blocks until all threads terminated.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span id="local-6989586621679114118"><span id="local-6989586621679114119"><span id="local-6989586621679114120"><span class="annot"><a href="Control.Concurrent.JobPool.html#cancelGroup"><span class="hs-identifier hs-type">cancelGroup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadAsync</span></span><span> </span><span class="annot"><a href="#local-6989586621679114118"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-128"></span><span>               </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114119"><span class="hs-identifier hs-type">group</span></a></span><span>
+</span><span id="line-129"></span><span>               </span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>            </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114119"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114118"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114120"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114119"><span class="hs-identifier hs-type">group</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679114118"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-131"></span><span id="cancelGroup"><span class="annot"><span class="annottext">cancelGroup :: forall (m :: * -&gt; *) group a.
+(MonadAsync m, Eq group) =&gt;
+JobPool group m a -&gt; group -&gt; m ()
+</span><a href="Control.Concurrent.JobPool.html#cancelGroup"><span class="hs-identifier hs-var hs-var">cancelGroup</span></a></span></span><span> </span><span class="annot"><a href="Control.Concurrent.JobPool.html#JobPool"><span class="hs-identifier hs-type">JobPool</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679114339"><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: forall group (m :: * -&gt; *) a.
+JobPool group m a -&gt; TVar m (Map (group, ThreadId m) (Async m ()))
+jobsVar :: TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="Control.Concurrent.JobPool.html#jobsVar"><span class="hs-identifier hs-var hs-var">jobsVar</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621679114340"><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114340"><span class="hs-identifier hs-var">group</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-132"></span><span>    </span><span id="local-6989586621679114341"><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ())
+</span><a href="#local-6989586621679114341"><span class="hs-identifier hs-var">jobs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+-&gt; m (Map (group, ThreadId m) (Async m ()))
+forall a. TVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; m a
+</span><span class="hs-identifier hs-var">readTVarIO</span></span><span> </span><span class="annot"><span class="annottext">TVar m (Map (group, ThreadId m) (Async m ()))
+</span><a href="#local-6989586621679114339"><span class="hs-identifier hs-var">jobsVar</span></a></span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="annottext">m (Map (group, ThreadId m) ()) -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Map (group, ThreadId m) ()) -&gt; m ())
+-&gt; m (Map (group, ThreadId m) ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((group, ThreadId m) -&gt; Async m () -&gt; m ())
+-&gt; Map (group, ThreadId m) (Async m ())
+-&gt; m (Map (group, ThreadId m) ())
+forall (t :: * -&gt; *) k a b.
+Applicative t =&gt;
+(k -&gt; a -&gt; t b) -&gt; Map k a -&gt; t (Map k b)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#traverseWithKey"><span class="hs-identifier hs-var">Map.traverseWithKey</span></a></span><span>
+</span><span id="line-134"></span><span>             </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679114343"><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114343"><span class="hs-identifier hs-var">group'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679114344"><span class="annot"><span class="annottext">Async m ()
+</span><a href="#local-6989586621679114344"><span class="hs-identifier hs-var">thread</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>                </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114343"><span class="hs-identifier hs-var">group'</span></a></span><span> </span><span class="annot"><span class="annottext">group -&gt; group -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">group
+</span><a href="#local-6989586621679114340"><span class="hs-identifier hs-var">group</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-136"></span><span>                  </span><span class="annot"><span class="annottext">Async m () -&gt; m ()
+forall a. Async m a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadAsync m =&gt; Async m a -&gt; m ()
+</span><span class="hs-identifier hs-var">cancel</span></span><span> </span><span class="annot"><span class="annottext">Async m ()
+</span><a href="#local-6989586621679114344"><span class="hs-identifier hs-var">thread</span></a></span><span>
+</span><span id="line-137"></span><span>             </span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>             </span><span class="annot"><span class="annottext">Map (group, ThreadId m) (Async m ())
+</span><a href="#local-6989586621679114341"><span class="hs-identifier hs-var">jobs</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span></pre></body></html>

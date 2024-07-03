@@ -1,0 +1,526 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds           #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.TypedProtocol.Codec.CBOR</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">Network.TypedProtocol.Codec</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#DeserialiseFailure"><span class="hs-identifier">DeserialiseFailure</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#mkCodecCborLazyBS"><span class="hs-identifier">mkCodecCborLazyBS</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#mkCodecCborStrictBS"><span class="hs-identifier">mkCodecCborStrictBS</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadST</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadST</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.ST.html"><span class="hs-identifier">Control.Monad.ST</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Codec.CBOR.Decoding</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Decoder</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Codec.CBOR.Encoding</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Encoding</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Codec.CBOR.Read</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Codec.CBOR.Write</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.html"><span class="hs-identifier">Data.ByteString.Builder</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.Extra.html"><span class="hs-identifier">Data.ByteString.Builder.Extra</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html"><span class="hs-identifier">Data.ByteString.Lazy.Internal</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#smallChunkSize"><span class="hs-identifier">smallChunkSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.TypedProtocol.Codec</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.TypedProtocol.Core</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">type</span><span> </span><span id="DeserialiseFailure"><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#DeserialiseFailure"><span class="hs-identifier hs-var">DeserialiseFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.DeserialiseFailure</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- | Construct a 'Codec' for a CBOR based serialisation format, using strict</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- 'BS.ByteString's.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- This is an adaptor between the @cborg@ library and the 'Codec' abstraction.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- It takes encode and decode functions for the protocol messages that use the</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- CBOR library encoder and decoder.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- Note that this is /less/ efficient than the 'mkCodecCborLazyBS' variant</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- because it has to copy and concatenate the result of the encoder (which</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- natively produces chunks).</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#mkCodecCborStrictBS"><span class="hs-identifier hs-type">mkCodecCborStrictBS</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055537"><span class="annot"><a href="#local-6989586621679055537"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span id="local-6989586621679055534"><span class="annot"><a href="#local-6989586621679055534"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadST</span></span><span> </span><span class="annot"><a href="#local-6989586621679055534"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055538"><span class="annot"><a href="#local-6989586621679055538"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PeerRole</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055539"><span class="annot"><a href="#local-6989586621679055539"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679055537"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055541"><span class="annot"><a href="#local-6989586621679055541"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679055537"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-48"></span><span>             </span><span class="annot"><span class="hs-identifier hs-type">PeerHasAgency</span></span><span> </span><span class="annot"><a href="#local-6989586621679055538"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055539"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-49"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Message</span></span><span> </span><span class="annot"><a href="#local-6989586621679055537"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055539"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055541"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Encoding</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055544"><span class="annot"><a href="#local-6989586621679055544"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PeerRole</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055545"><span class="annot"><a href="#local-6989586621679055545"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679055537"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679055546"><span class="annot"><a href="#local-6989586621679055546"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-52"></span><span>             </span><span class="annot"><span class="hs-identifier hs-type">PeerHasAgency</span></span><span> </span><span class="annot"><a href="#local-6989586621679055544"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055545"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-53"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Decoder</span></span><span> </span><span class="annot"><a href="#local-6989586621679055546"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">SomeMessage</span></span><span> </span><span class="annot"><a href="#local-6989586621679055545"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Codec</span></span><span> </span><span class="annot"><a href="#local-6989586621679055537"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#DeserialiseFailure"><span class="hs-identifier hs-type">DeserialiseFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055534"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span>
+</span><span id="line-56"></span><span id="mkCodecCborStrictBS"><span class="annot"><span class="annottext">mkCodecCborStrictBS :: forall ps (m :: * -&gt; *).
+MonadST m =&gt;
+(forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+ PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding)
+-&gt; (forall (pr :: PeerRole) (st :: ps) s.
+    PeerHasAgency pr st -&gt; Decoder s (SomeMessage st))
+-&gt; Codec ps DeserialiseFailure m ByteString
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#mkCodecCborStrictBS"><span class="hs-identifier hs-var hs-var">mkCodecCborStrictBS</span></a></span></span><span> </span><span id="local-6989586621679055661"><span class="annot"><span class="annottext">forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding
+</span><a href="#local-6989586621679055661"><span class="hs-identifier hs-var">cborMsgEncode</span></a></span></span><span> </span><span id="local-6989586621679055662"><span class="annot"><span class="annottext">forall (pr :: PeerRole) (st :: ps) s.
+PeerHasAgency pr st -&gt; Decoder s (SomeMessage st)
+</span><a href="#local-6989586621679055662"><span class="hs-identifier hs-var">cborMsgDecode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Codec</span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">encode :: forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+PeerHasAgency pr st -&gt; Message ps st st' -&gt; ByteString
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679055664"><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055664"><span class="hs-identifier hs-var">stok</span></a></span></span><span> </span><span id="local-6989586621679055665"><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679055665"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Message ps st st' -&gt; Encoding) -&gt; Message ps st st' -&gt; ByteString
+forall a. (a -&gt; Encoding) -&gt; a -&gt; ByteString
+</span><a href="#local-6989586621679055666"><span class="hs-identifier hs-var">convertCborEncoder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding
+forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding
+</span><a href="#local-6989586621679055661"><span class="hs-identifier hs-var">cborMsgEncode</span></a></span><span> </span><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055664"><span class="hs-identifier hs-var">stok</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679055665"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">decode :: forall (pr :: PeerRole) (st :: ps).
+PeerHasAgency pr st
+-&gt; m (DecodeStep ByteString DeserialiseFailure m (SomeMessage st))
+</span><span class="hs-identifier hs-var">decode</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679055668"><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055668"><span class="hs-identifier hs-var">stok</span></a></span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(forall s. Decoder s (SomeMessage st))
+-&gt; m (DecodeStep ByteString DeserialiseFailure m (SomeMessage st))
+forall a.
+(forall s. Decoder s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055669"><span class="hs-identifier hs-var">convertCborDecoder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PeerHasAgency pr st -&gt; Decoder s (SomeMessage st)
+forall (pr :: PeerRole) (st :: ps) s.
+PeerHasAgency pr st -&gt; Decoder s (SomeMessage st)
+</span><a href="#local-6989586621679055662"><span class="hs-identifier hs-var">cborMsgDecode</span></a></span><span> </span><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055668"><span class="hs-identifier hs-var">stok</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679055568"><span class="annot"><a href="#local-6989586621679055666"><span class="hs-identifier hs-type">convertCborEncoder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679055568"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Encoding</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055568"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span></span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679055666"><span class="annot"><span class="annottext">convertCborEncoder :: forall a. (a -&gt; Encoding) -&gt; a -&gt; ByteString
+</span><a href="#local-6989586621679055666"><span class="hs-identifier hs-var hs-var">convertCborEncoder</span></a></span></span><span> </span><span id="local-6989586621679055670"><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679055670"><span class="hs-identifier hs-var">cborEncode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><span class="annottext">Encoding -&gt; ByteString
+</span><span class="hs-identifier hs-var">CBOR.toStrictByteString</span></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">(Encoding -&gt; ByteString) -&gt; (a -&gt; Encoding) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679055670"><span class="hs-identifier hs-var">cborEncode</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679055572"><span class="annot"><a href="#local-6989586621679055669"><span class="hs-identifier hs-type">convertCborDecoder</span></a></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055571"><span class="annot"><a href="#local-6989586621679055571"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Decoder</span></span><span> </span><span class="annot"><a href="#local-6989586621679055571"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055572"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055534"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DecodeStep</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#DeserialiseFailure"><span class="hs-identifier hs-type">DeserialiseFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055534"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055572"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679055669"><span class="annot"><span class="annottext">convertCborDecoder :: forall a.
+(forall s. Decoder s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055669"><span class="hs-identifier hs-var hs-var">convertCborDecoder</span></a></span></span><span> </span><span id="local-6989586621679055674"><span class="annot"><span class="annottext">forall s. Decoder s a
+</span><a href="#local-6989586621679055674"><span class="hs-identifier hs-var">cborDecode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">(forall s.
+ (forall a. ST s a -&gt; m a)
+ -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall b. (forall s. (forall a. ST s a -&gt; m a) -&gt; b) -&gt; b
+forall (m :: * -&gt; *) b.
+MonadST m =&gt;
+(forall s. (forall a. ST s a -&gt; m a) -&gt; b) -&gt; b
+</span><span class="hs-identifier hs-var">withLiftST</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder s a
+-&gt; (forall a. ST s a -&gt; m a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall s (m :: * -&gt; *) a.
+Functor m =&gt;
+Decoder s a
+-&gt; (forall b. ST s b -&gt; m b)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#convertCborDecoderBS"><span class="hs-identifier hs-var">convertCborDecoderBS</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+forall s. Decoder s a
+</span><a href="#local-6989586621679055674"><span class="hs-identifier hs-var">cborDecode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#convertCborDecoderBS"><span class="hs-identifier hs-type">convertCborDecoderBS</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055585"><span class="annot"><a href="#local-6989586621679055585"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621679055584"><span class="annot"><a href="#local-6989586621679055584"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679055586"><span class="annot"><a href="#local-6989586621679055586"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055584"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Decoder</span></span><span> </span><span class="annot"><a href="#local-6989586621679055585"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055586"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055587"><span class="annot"><a href="#local-6989586621679055587"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.ST.html#ST"><span class="hs-identifier hs-type">ST</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055585"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055587"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055584"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055587"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055584"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DecodeStep</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#DeserialiseFailure"><span class="hs-identifier hs-type">DeserialiseFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055584"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055586"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span id="convertCborDecoderBS"><span class="annot"><span class="annottext">convertCborDecoderBS :: forall s (m :: * -&gt; *) a.
+Functor m =&gt;
+Decoder s a
+-&gt; (forall b. ST s b -&gt; m b)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#convertCborDecoderBS"><span class="hs-identifier hs-var hs-var">convertCborDecoderBS</span></a></span></span><span> </span><span id="local-6989586621679055681"><span class="annot"><span class="annottext">Decoder s a
+</span><a href="#local-6989586621679055681"><span class="hs-identifier hs-var">cborDecode</span></a></span></span><span> </span><span id="local-6989586621679055682"><span class="annot"><span class="annottext">forall b. ST s b -&gt; m b
+</span><a href="#local-6989586621679055682"><span class="hs-identifier hs-var">liftST</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">IDecode s a -&gt; DecodeStep ByteString DeserialiseFailure m a
+</span><a href="#local-6989586621679055683"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">(IDecode s a -&gt; DecodeStep ByteString DeserialiseFailure m a)
+-&gt; m (IDecode s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ST s (IDecode s a) -&gt; m (IDecode s a)
+forall b. ST s b -&gt; m b
+</span><a href="#local-6989586621679055682"><span class="hs-identifier hs-var">liftST</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder s a -&gt; ST s (IDecode s a)
+forall s a. Decoder s a -&gt; ST s (IDecode s a)
+</span><span class="hs-identifier hs-var">CBOR.deserialiseIncremental</span></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+</span><a href="#local-6989586621679055681"><span class="hs-identifier hs-var">cborDecode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><a href="#local-6989586621679055683"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.IDecode</span></span><span> </span><span class="annot"><a href="#local-6989586621679055585"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055586"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-82"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DecodeStep</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#DeserialiseFailure"><span class="hs-identifier hs-type">DeserialiseFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055584"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055586"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679055683"><span class="annot"><span class="annottext">go :: IDecode s a -&gt; DecodeStep ByteString DeserialiseFailure m a
+</span><a href="#local-6989586621679055683"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Done</span></span><span>  </span><span id="local-6989586621679055687"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055687"><span class="hs-identifier hs-var">trailing</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteOffset
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679055688"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055688"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055687"><span class="hs-identifier hs-var">trailing</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+-&gt; Maybe ByteString -&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+a -&gt; Maybe bytes -&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodeDone</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055688"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+-&gt; Maybe ByteString -&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+a -&gt; Maybe bytes -&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodeDone</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055688"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055687"><span class="hs-identifier hs-var">trailing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><a href="#local-6989586621679055683"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Fail</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ByteOffset
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679055692"><span class="annot"><span class="annottext">DeserialiseFailure
+</span><a href="#local-6989586621679055692"><span class="hs-identifier hs-var">failure</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DeserialiseFailure -&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+failure -&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodeFail</span></span><span> </span><span class="annot"><span class="annottext">DeserialiseFailure
+</span><a href="#local-6989586621679055692"><span class="hs-identifier hs-var">failure</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><a href="#local-6989586621679055683"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Partial</span></span><span> </span><span id="local-6989586621679055695"><span class="annot"><span class="annottext">Maybe ByteString -&gt; ST s (IDecode s a)
+</span><a href="#local-6989586621679055695"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe ByteString
+ -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+(Maybe bytes -&gt; m (DecodeStep bytes failure m a))
+-&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodePartial</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(IDecode s a -&gt; DecodeStep ByteString DeserialiseFailure m a)
+-&gt; m (IDecode s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">IDecode s a -&gt; DecodeStep ByteString DeserialiseFailure m a
+</span><a href="#local-6989586621679055683"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">(m (IDecode s a)
+ -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; (Maybe ByteString -&gt; m (IDecode s a))
+-&gt; Maybe ByteString
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ST s (IDecode s a) -&gt; m (IDecode s a)
+forall b. ST s b -&gt; m b
+</span><a href="#local-6989586621679055682"><span class="hs-identifier hs-var">liftST</span></a></span><span> </span><span class="annot"><span class="annottext">(ST s (IDecode s a) -&gt; m (IDecode s a))
+-&gt; (Maybe ByteString -&gt; ST s (IDecode s a))
+-&gt; Maybe ByteString
+-&gt; m (IDecode s a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; ST s (IDecode s a)
+</span><a href="#local-6989586621679055695"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- | Construct a 'Codec' for a CBOR based serialisation format, using lazy</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- 'BS.ByteString's.</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- This is an adaptor between the @cborg@ library and the 'Codec' abstraction.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- It takes encode and decode functions for the protocol messages that use the</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- CBOR library encoder and decoder.</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#mkCodecCborLazyBS"><span class="hs-identifier hs-type">mkCodecCborLazyBS</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055607"><span class="annot"><a href="#local-6989586621679055607"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span id="local-6989586621679055606"><span class="annot"><a href="#local-6989586621679055606"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadST</span></span><span> </span><span class="annot"><a href="#local-6989586621679055606"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055608"><span class="annot"><a href="#local-6989586621679055608"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PeerRole</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055609"><span class="annot"><a href="#local-6989586621679055609"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679055607"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055610"><span class="annot"><a href="#local-6989586621679055610"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679055607"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-102"></span><span>             </span><span class="annot"><span class="hs-identifier hs-type">PeerHasAgency</span></span><span> </span><span class="annot"><a href="#local-6989586621679055608"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055609"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-103"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Message</span></span><span> </span><span class="annot"><a href="#local-6989586621679055607"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055609"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055610"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Encoding</span></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055611"><span class="annot"><a href="#local-6989586621679055611"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PeerRole</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055612"><span class="annot"><a href="#local-6989586621679055612"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679055607"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679055613"><span class="annot"><a href="#local-6989586621679055613"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-106"></span><span>             </span><span class="annot"><span class="hs-identifier hs-type">PeerHasAgency</span></span><span> </span><span class="annot"><a href="#local-6989586621679055611"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055612"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-107"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Decoder</span></span><span> </span><span class="annot"><a href="#local-6989586621679055613"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">SomeMessage</span></span><span> </span><span class="annot"><a href="#local-6989586621679055612"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Codec</span></span><span> </span><span class="annot"><a href="#local-6989586621679055607"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.DeserialiseFailure</span></span><span> </span><span class="annot"><a href="#local-6989586621679055606"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span>
+</span><span id="line-110"></span><span id="mkCodecCborLazyBS"><span class="annot"><span class="annottext">mkCodecCborLazyBS :: forall ps (m :: * -&gt; *).
+MonadST m =&gt;
+(forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+ PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding)
+-&gt; (forall (pr :: PeerRole) (st :: ps) s.
+    PeerHasAgency pr st -&gt; Decoder s (SomeMessage st))
+-&gt; Codec ps DeserialiseFailure m ByteString
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#mkCodecCborLazyBS"><span class="hs-identifier hs-var hs-var">mkCodecCborLazyBS</span></a></span></span><span>  </span><span id="local-6989586621679055700"><span class="annot"><span class="annottext">forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding
+</span><a href="#local-6989586621679055700"><span class="hs-identifier hs-var">cborMsgEncode</span></a></span></span><span> </span><span id="local-6989586621679055701"><span class="annot"><span class="annottext">forall (pr :: PeerRole) (st :: ps) s.
+PeerHasAgency pr st -&gt; Decoder s (SomeMessage st)
+</span><a href="#local-6989586621679055701"><span class="hs-identifier hs-var">cborMsgDecode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Codec</span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><span class="annottext">encode :: forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+PeerHasAgency pr st -&gt; Message ps st st' -&gt; ByteString
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679055702"><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055702"><span class="hs-identifier hs-var">stok</span></a></span></span><span> </span><span id="local-6989586621679055703"><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679055703"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Message ps st st' -&gt; Encoding) -&gt; Message ps st st' -&gt; ByteString
+forall a. (a -&gt; Encoding) -&gt; a -&gt; ByteString
+</span><a href="#local-6989586621679055704"><span class="hs-identifier hs-var">convertCborEncoder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding
+forall (pr :: PeerRole) (st :: ps) (st' :: ps).
+PeerHasAgency pr st -&gt; Message ps st st' -&gt; Encoding
+</span><a href="#local-6989586621679055700"><span class="hs-identifier hs-var">cborMsgEncode</span></a></span><span> </span><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055702"><span class="hs-identifier hs-var">stok</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679055703"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">decode :: forall (pr :: PeerRole) (st :: ps).
+PeerHasAgency pr st
+-&gt; m (DecodeStep ByteString DeserialiseFailure m (SomeMessage st))
+</span><span class="hs-identifier hs-var">decode</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679055705"><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055705"><span class="hs-identifier hs-var">stok</span></a></span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(forall s. Decoder s (SomeMessage st))
+-&gt; m (DecodeStep ByteString DeserialiseFailure m (SomeMessage st))
+forall a.
+(forall s. Decoder s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055706"><span class="hs-identifier hs-var">convertCborDecoder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PeerHasAgency pr st -&gt; Decoder s (SomeMessage st)
+forall (pr :: PeerRole) (st :: ps) s.
+PeerHasAgency pr st -&gt; Decoder s (SomeMessage st)
+</span><a href="#local-6989586621679055701"><span class="hs-identifier hs-var">cborMsgDecode</span></a></span><span> </span><span class="annot"><span class="annottext">PeerHasAgency pr st
+</span><a href="#local-6989586621679055705"><span class="hs-identifier hs-var">stok</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-116"></span><span>    </span><span id="local-6989586621679055620"><span class="annot"><a href="#local-6989586621679055704"><span class="hs-identifier hs-type">convertCborEncoder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679055620"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Encoding</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055620"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span></span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679055704"><span class="annot"><span class="annottext">convertCborEncoder :: forall a. (a -&gt; Encoding) -&gt; a -&gt; ByteString
+</span><a href="#local-6989586621679055704"><span class="hs-identifier hs-var hs-var">convertCborEncoder</span></a></span></span><span> </span><span id="local-6989586621679055707"><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679055707"><span class="hs-identifier hs-var">cborEncode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; ByteString
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#toLazyByteString"><span class="hs-identifier hs-var">toLazyByteString</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">(Builder -&gt; ByteString) -&gt; (a -&gt; Builder) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Builder
+</span><span class="hs-identifier hs-var">CBOR.toBuilder</span></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">(Encoding -&gt; Builder) -&gt; (a -&gt; Encoding) -&gt; a -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679055707"><span class="hs-identifier hs-var">cborEncode</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span>    </span><span id="local-6989586621679055624"><span class="annot"><a href="#local-6989586621679055706"><span class="hs-identifier hs-type">convertCborDecoder</span></a></span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055623"><span class="annot"><a href="#local-6989586621679055623"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.Decoder</span></span><span> </span><span class="annot"><a href="#local-6989586621679055623"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055624"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055606"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DecodeStep</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.DeserialiseFailure</span></span><span> </span><span class="annot"><a href="#local-6989586621679055606"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055624"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-125"></span><span>    </span><span id="local-6989586621679055706"><span class="annot"><span class="annottext">convertCborDecoder :: forall a.
+(forall s. Decoder s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055706"><span class="hs-identifier hs-var hs-var">convertCborDecoder</span></a></span></span><span> </span><span id="local-6989586621679055711"><span class="annot"><span class="annottext">forall s. Decoder s a
+</span><a href="#local-6989586621679055711"><span class="hs-identifier hs-var">cborDecode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><span class="annottext">(forall s.
+ (forall a. ST s a -&gt; m a)
+ -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall b. (forall s. (forall a. ST s a -&gt; m a) -&gt; b) -&gt; b
+forall (m :: * -&gt; *) b.
+MonadST m =&gt;
+(forall s. (forall a. ST s a -&gt; m a) -&gt; b) -&gt; b
+</span><span class="hs-identifier hs-var">withLiftST</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder s a
+-&gt; (forall a. ST s a -&gt; m a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall s (m :: * -&gt; *) a.
+Monad m =&gt;
+Decoder s a
+-&gt; (forall b. ST s b -&gt; m b)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#convertCborDecoderLBS"><span class="hs-identifier hs-var">convertCborDecoderLBS</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+forall s. Decoder s a
+</span><a href="#local-6989586621679055711"><span class="hs-identifier hs-var">cborDecode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#convertCborDecoderLBS"><span class="hs-identifier hs-type">convertCborDecoderLBS</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055631"><span class="annot"><a href="#local-6989586621679055631"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621679055630"><span class="annot"><a href="#local-6989586621679055630"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679055632"><span class="annot"><a href="#local-6989586621679055632"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055630"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Decoder</span></span><span> </span><span class="annot"><a href="#local-6989586621679055631"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055632"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679055633"><span class="annot"><a href="#local-6989586621679055633"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.ST.html#ST"><span class="hs-identifier hs-type">ST</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055631"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055633"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055630"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055633"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055630"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DecodeStep</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.DeserialiseFailure</span></span><span> </span><span class="annot"><a href="#local-6989586621679055630"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055632"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span id="convertCborDecoderLBS"><span class="annot"><span class="annottext">convertCborDecoderLBS :: forall s (m :: * -&gt; *) a.
+Monad m =&gt;
+Decoder s a
+-&gt; (forall b. ST s b -&gt; m b)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#convertCborDecoderLBS"><span class="hs-identifier hs-var hs-var">convertCborDecoderLBS</span></a></span></span><span> </span><span id="local-6989586621679055723"><span class="annot"><span class="annottext">Decoder s a
+</span><a href="#local-6989586621679055723"><span class="hs-identifier hs-var">cborDecode</span></a></span></span><span> </span><span id="local-6989586621679055724"><span class="annot"><span class="annottext">forall b. ST s b -&gt; m b
+</span><a href="#local-6989586621679055724"><span class="hs-identifier hs-var">liftST</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">[ByteString]
+-&gt; IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">(IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; m (IDecode s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">ST s (IDecode s a) -&gt; m (IDecode s a)
+forall b. ST s b -&gt; m b
+</span><a href="#local-6989586621679055724"><span class="hs-identifier hs-var">liftST</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder s a -&gt; ST s (IDecode s a)
+forall s a. Decoder s a -&gt; ST s (IDecode s a)
+</span><span class="hs-identifier hs-var">CBOR.deserialiseIncremental</span></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+</span><a href="#local-6989586621679055723"><span class="hs-identifier hs-var">cborDecode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-comment">-- Have to mediate between a CBOR decoder that consumes strict bytestrings</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- and our choice here that consumes lazy bytestrings.</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><a href="#local-6989586621679055725"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.IDecode</span></span><span> </span><span class="annot"><a href="#local-6989586621679055631"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055632"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-139"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679055630"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DecodeStep</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CBOR.DeserialiseFailure</span></span><span> </span><span class="annot"><a href="#local-6989586621679055630"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055632"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>    </span><span id="local-6989586621679055725"><span class="annot"><span class="annottext">go :: [ByteString]
+-&gt; IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055725"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Done</span></span><span>  </span><span id="local-6989586621679055727"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055727"><span class="hs-identifier hs-var">trailing</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteOffset
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679055728"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055728"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055727"><span class="hs-identifier hs-var">trailing</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeStep ByteString DeserialiseFailure m a
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+-&gt; Maybe ByteString -&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+a -&gt; Maybe bytes -&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodeDone</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055728"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeStep ByteString DeserialiseFailure m a
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+-&gt; Maybe ByteString -&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+a -&gt; Maybe bytes -&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodeDone</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055728"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055729"><span class="hs-identifier hs-var">trailing'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>                                </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679055729"><span class="annot"><span class="annottext">trailing' :: ByteString
+</span><a href="#local-6989586621679055729"><span class="hs-identifier hs-var hs-var">trailing'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#fromStrict"><span class="hs-identifier hs-var">LBS.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055727"><span class="hs-identifier hs-var">trailing</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679055731"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679055731"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Done</span></span><span>  </span><span id="local-6989586621679055732"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055732"><span class="hs-identifier hs-var">trailing</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteOffset
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679055733"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055733"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeStep ByteString DeserialiseFailure m a
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+-&gt; Maybe ByteString -&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+a -&gt; Maybe bytes -&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodeDone</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679055733"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055734"><span class="hs-identifier hs-var">trailing'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>                                </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679055734"><span class="annot"><span class="annottext">trailing' :: ByteString
+</span><a href="#local-6989586621679055734"><span class="hs-identifier hs-var hs-var">trailing'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#fromChunks"><span class="hs-identifier hs-var">LBS.fromChunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055732"><span class="hs-identifier hs-var">trailing</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; [ByteString]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679055731"><span class="hs-identifier hs-var">cs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Fail</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ByteOffset
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679055736"><span class="annot"><span class="annottext">DeserialiseFailure
+</span><a href="#local-6989586621679055736"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeStep ByteString DeserialiseFailure m a
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DeserialiseFailure -&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+failure -&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodeFail</span></span><span> </span><span class="annot"><span class="annottext">DeserialiseFailure
+</span><a href="#local-6989586621679055736"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-comment">-- We keep a bunch of chunks and supply the CBOR decoder with them</span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-comment">-- until we run out, when we go get another bunch.</span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055737"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055737"><span class="hs-identifier hs-var">c</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679055738"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679055738"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Partial</span></span><span>  </span><span id="local-6989586621679055739"><span class="annot"><span class="annottext">Maybe ByteString -&gt; ST s (IDecode s a)
+</span><a href="#local-6989586621679055739"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+-&gt; IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679055738"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">(IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; m (IDecode s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">ST s (IDecode s a) -&gt; m (IDecode s a)
+forall b. ST s b -&gt; m b
+</span><a href="#local-6989586621679055724"><span class="hs-identifier hs-var">liftST</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe ByteString -&gt; ST s (IDecode s a)
+</span><a href="#local-6989586621679055739"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055737"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>     </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CBOR.Partial</span></span><span>  </span><span id="local-6989586621679055740"><span class="annot"><span class="annottext">Maybe ByteString -&gt; ST s (IDecode s a)
+</span><a href="#local-6989586621679055740"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeStep ByteString DeserialiseFailure m a
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(DecodeStep ByteString DeserialiseFailure m a
+ -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; DecodeStep ByteString DeserialiseFailure m a
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe ByteString
+ -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; DecodeStep ByteString DeserialiseFailure m a
+forall bytes failure (m :: * -&gt; *) a.
+(Maybe bytes -&gt; m (DecodeStep bytes failure m a))
+-&gt; DecodeStep bytes failure m a
+</span><span class="hs-identifier hs-var">DecodePartial</span></span><span> </span><span class="annot"><span class="annottext">((Maybe ByteString
+  -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+ -&gt; DecodeStep ByteString DeserialiseFailure m a)
+-&gt; (Maybe ByteString
+    -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; DecodeStep ByteString DeserialiseFailure m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679055741"><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679055741"><span class="hs-identifier hs-var">mbs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679055741"><span class="hs-identifier hs-var">mbs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-152"></span><span>                                    </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+-&gt; IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">(IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a))
+-&gt; m (IDecode s a)
+-&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">ST s (IDecode s a) -&gt; m (IDecode s a)
+forall b. ST s b -&gt; m b
+</span><a href="#local-6989586621679055724"><span class="hs-identifier hs-var">liftST</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe ByteString -&gt; ST s (IDecode s a)
+</span><a href="#local-6989586621679055740"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>                                    </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679055742"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055742"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+-&gt; IDecode s a -&gt; m (DecodeStep ByteString DeserialiseFailure m a)
+</span><a href="#local-6989586621679055725"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679055743"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Maybe ByteString -&gt; ST s (IDecode s a)) -&gt; IDecode s a
+forall s a. (Maybe ByteString -&gt; ST s (IDecode s a)) -&gt; IDecode s a
+</span><span class="hs-identifier hs-var">CBOR.Partial</span></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; ST s (IDecode s a)
+</span><a href="#local-6989586621679055740"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>                                      </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679055743"><span class="annot"><span class="annottext">cs :: [ByteString]
+</span><a href="#local-6989586621679055743"><span class="hs-identifier hs-var hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#toChunks"><span class="hs-identifier hs-var">LBS.toChunks</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679055742"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-pragma">{-# NOINLINE</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#toLazyByteString"><span class="hs-pragma hs-type">toLazyByteString</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Network.TypedProtocol.Codec.CBOR.html#toLazyByteString"><span class="hs-identifier hs-type">toLazyByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">BS.Builder</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span>
+</span><span id="line-158"></span><span id="toLazyByteString"><span class="annot"><span class="annottext">toLazyByteString :: Builder -&gt; ByteString
+</span><a href="Network.TypedProtocol.Codec.CBOR.html#toLazyByteString"><span class="hs-identifier hs-var hs-var">toLazyByteString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AllocationStrategy -&gt; ByteString -&gt; Builder -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.Internal.html#toLazyByteStringWith"><span class="hs-identifier hs-var">BS.toLazyByteStringWith</span></a></span><span> </span><span class="annot"><span class="annottext">AllocationStrategy
+</span><a href="#local-6989586621679055746"><span class="hs-identifier hs-var">strategy</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#empty"><span class="hs-identifier hs-var">LBS.empty</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-comment">-- Buffer strategy and sizes better tuned to our network protocol situation.</span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-comment">-- The LBS.smallChunkSize is 4k - heap object overheads, so that</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-comment">-- it does fit in a 4k overall.</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-165"></span><span>    </span><span id="local-6989586621679055746"><span class="annot"><span class="annottext">strategy :: AllocationStrategy
+</span><a href="#local-6989586621679055746"><span class="hs-identifier hs-var hs-var">strategy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; AllocationStrategy
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.Internal.html#untrimmedStrategy"><span class="hs-identifier hs-var">BS.untrimmedStrategy</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">800</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#smallChunkSize"><span class="hs-identifier hs-var">LBS.smallChunkSize</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span></pre></body></html>

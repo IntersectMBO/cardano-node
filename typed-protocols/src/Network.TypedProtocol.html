@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span class="hs-comment">-- | This package defines the typed protocol framework. This module re-exports</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- the public API.</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.TypedProtocol</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Introduction</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- $intro</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-comment">-- * Defining and implementing protocols</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><span class="hs-comment">-- $defining</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html"><span class="hs-identifier">Network.TypedProtocol.Core</span></a></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Protocol proofs and tests</span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-comment">-- $tests</span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Proofs.html"><span class="hs-identifier">Network.TypedProtocol.Proofs</span></a></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Running protocols</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="hs-comment">-- $running</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html"><span class="hs-identifier">Network.TypedProtocol.Driver</span></a></span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Pipelining protocols</span></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- $pipelining</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Pipelined.html"><span class="hs-identifier">Network.TypedProtocol.Pipelined</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.TypedProtocol.Core.html"><span class="hs-identifier">Network.TypedProtocol.Core</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.TypedProtocol.Driver.html"><span class="hs-identifier">Network.TypedProtocol.Driver</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.TypedProtocol.Pipelined.html"><span class="hs-identifier">Network.TypedProtocol.Pipelined</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.TypedProtocol.Proofs.html"><span class="hs-identifier">Network.TypedProtocol.Proofs</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- $intro</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- The typed protocol framework is used to define, test and execute protocols.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- It guarantees:</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- * agreement on which messages can be sent and received;</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- * the absence of race conditions; and</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- * the absence of deadlock.</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- The trade-off to achieve these guarantees is that it places constraints on</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- the kinds of protocol that can be expressed. In particular it requires that</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- protocols be defined as a state transition system. It requires for each</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- protocol state that exactly one of the two peers be able to send and the</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- other must be ready to receive.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- This means it is not possible to express protocols such as TCP where there</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- are protocol states where a single peer can both send and receive, however</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- it is suitable for most application-level protocols. In particular many</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- application-level protocols are completely in-order and synchronous. That</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- said, in many (but not all) cases it is possible to pipeline these protocols</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- so that network latency can be hidden and full use made of the available</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- bandwidth. Special support is provided to run protocols in a pipelined way,</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- without having to change the protocol definition.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- The protocols in this framework assume an underlying \&quot;reliable ordered\&quot;</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- connection. A \&quot;reliable ordered\&quot; connection is a term of art meaning one</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- where the receiving end receives any prefix of the messages sent by the</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- sending end. It is not reliable in the colloquial sense as it does not</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- ensure that anything actually arrives, only that /if/ any message arrives,</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- all the previous messages did too, and that they arrive in the order in</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- which they were sent.</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- The framework also provides:</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- * an abstraction for untyped channels;</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- * a codec abstraction for encoding and decoding protocol messages; and</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- * drivers for running protocol peers with a channel and a codec.</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- $defining</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- The &quot;Network.TypedProtocol.Core&quot; module defines the core of the system.</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- Start reading here to understand:</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--  * how to define new protocols; or</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--  * to write peers that engage in a protocol.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- Typed protocol messages need to be converted to and from untyped</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- serialised forms to send over a transport channel. So part of defining a new</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- protocol is to define the message encoding and the codec for doing the</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- encoding and decoding. This is somewhat (but not significantly) more complex</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- than defining normal data type serialisation because of the need to decode</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- typed protocol messages. The &quot;Network.TypedProtocol.Codec&quot; module provides</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- the codec abstraction to capture this.</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- $tests</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- There are a few proofs about the framework that we can state and implement</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- as Haskell functions (using GADTs and evaluation). A couple of these proofs</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- rely on a few lemmas that should be proved for each protocol. The</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- &quot;Network.TypedProtocol.Proofs&quot; module describes these proof and provides</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- the infrastructure for the simple lemmas that need to be implemented for</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- each protocol.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- This module also provides utilities helpful for testing protocols.</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- $running</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- Typed protocols need to be able to send messages over untyped transport</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- channels. The &quot;Network.TypedProtocol.Channel&quot; module provides such an</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- abstraction. You can use existing example implementations of this interface</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- or define your own to run over other transports.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- Given a protocol peer, and a channel and a codec we can run the protocol</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- peer so that it engages in the protocol sending and receiving messages</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- over the channel. The &quot;Network.TypedProtocol.Driver&quot; module provides drivers</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- for normal and pipelined peers.</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- $pipelining</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- Protocol pipelining is a technique to make effective use of network</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- resources.</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- &lt;&lt;https://upload.wikimedia.org/wikipedia/commons/1/19/HTTP_pipelining2.svg&gt;&gt;</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- As in the above diagram, instead of sending a request and waiting for the</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- response before sending the next request, pipelining involves sending all</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- three requests back-to-back and waiting for the three replies. The server</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- still simply processes the requests in order and the replies come back in</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- the same order as the requests were made.</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- Not only does this save network latency, one round trip versus three in</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- the diagram above, but it also makes effective use of the bandwidth by</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- sending requests and replies back-to-back.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- In the example in the diagram it stops after three requests, but such a</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- pattern can go on indefinately with messages going in both directions,</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- which can saturate the available bandwidth.</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- For many (but not all) protocols that can be defined in the @typed-protocol@</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- framework it is possible to take the protocol, without changing the</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- protocol's state  machine, and to engage in the protocol in a pipelined way.</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- Only the pipelined client has to be written specially. The server side can</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- be used unaltered and can be used with either pipelined or non-pipelined</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- clients.</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span></pre></body></html>

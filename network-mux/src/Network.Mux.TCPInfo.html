@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.TCPInfo</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.Mux.TCPInfo.html#StructTCPInfo"><span class="hs-identifier">StructTCPInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-cpp">
+#if os_HOST_linux
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">SocketOption</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">TCPInfoSocketOption</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span class="hs-cpp">
+
+#if os_HOST_linux
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Network.Mux.TCPInfo.Linux</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">data</span><span> </span><span id="StructTCPInfo"><span class="annot"><a href="Network.Mux.TCPInfo.html#StructTCPInfo"><span class="hs-identifier hs-var">StructTCPInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TCPInfoUnavailable"><span class="annot"><a href="Network.Mux.TCPInfo.html#TCPInfoUnavailable"><span class="hs-identifier hs-var">TCPInfoUnavailable</span></a></span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679114810"><span id="local-6989586621679114812"><span class="annot"><span class="annottext">StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+(StructTCPInfo -&gt; StructTCPInfo -&gt; Bool)
+-&gt; (StructTCPInfo -&gt; StructTCPInfo -&gt; Bool) -&gt; Eq StructTCPInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+== :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+$c/= :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+/= :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679114819"><span id="local-6989586621679114821"><span id="local-6989586621679114823"><span id="local-6989586621679114827"><span id="local-6989586621679114830"><span id="local-6989586621679114833"><span id="local-6989586621679114836"><span class="annot"><span class="annottext">Eq StructTCPInfo
+Eq StructTCPInfo =&gt;
+(StructTCPInfo -&gt; StructTCPInfo -&gt; Ordering)
+-&gt; (StructTCPInfo -&gt; StructTCPInfo -&gt; Bool)
+-&gt; (StructTCPInfo -&gt; StructTCPInfo -&gt; Bool)
+-&gt; (StructTCPInfo -&gt; StructTCPInfo -&gt; Bool)
+-&gt; (StructTCPInfo -&gt; StructTCPInfo -&gt; Bool)
+-&gt; (StructTCPInfo -&gt; StructTCPInfo -&gt; StructTCPInfo)
+-&gt; (StructTCPInfo -&gt; StructTCPInfo -&gt; StructTCPInfo)
+-&gt; Ord StructTCPInfo
+StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+StructTCPInfo -&gt; StructTCPInfo -&gt; Ordering
+StructTCPInfo -&gt; StructTCPInfo -&gt; StructTCPInfo
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: StructTCPInfo -&gt; StructTCPInfo -&gt; Ordering
+compare :: StructTCPInfo -&gt; StructTCPInfo -&gt; Ordering
+$c&lt; :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+&lt; :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+$c&lt;= :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+&lt;= :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+$c&gt; :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+&gt; :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+$c&gt;= :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+&gt;= :: StructTCPInfo -&gt; StructTCPInfo -&gt; Bool
+$cmax :: StructTCPInfo -&gt; StructTCPInfo -&gt; StructTCPInfo
+max :: StructTCPInfo -&gt; StructTCPInfo -&gt; StructTCPInfo
+$cmin :: StructTCPInfo -&gt; StructTCPInfo -&gt; StructTCPInfo
+min :: StructTCPInfo -&gt; StructTCPInfo -&gt; StructTCPInfo
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679114840"><span id="local-6989586621679114842"><span id="local-6989586621679114846"><span class="annot"><span class="annottext">Int -&gt; StructTCPInfo -&gt; ShowS
+[StructTCPInfo] -&gt; ShowS
+StructTCPInfo -&gt; String
+(Int -&gt; StructTCPInfo -&gt; ShowS)
+-&gt; (StructTCPInfo -&gt; String)
+-&gt; ([StructTCPInfo] -&gt; ShowS)
+-&gt; Show StructTCPInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; StructTCPInfo -&gt; ShowS
+showsPrec :: Int -&gt; StructTCPInfo -&gt; ShowS
+$cshow :: StructTCPInfo -&gt; String
+show :: StructTCPInfo -&gt; String
+$cshowList :: [StructTCPInfo] -&gt; ShowS
+showList :: [StructTCPInfo] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-17"></span></pre></body></html>

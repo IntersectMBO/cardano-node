@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell, CPP #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | QuasiQuoter for non-interpolated strings, texts and bytestrings.</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- The &quot;s&quot; quoter contains a multi-line string with no interpolation at all,</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- except that the leading newline is trimmed and carriage returns stripped.</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- {-\# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- import Data.Text (Text)</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- import Data.String.QQ</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- foo :: Text -- &quot;String&quot;, &quot;ByteString&quot; etc also works</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- foo = [s|</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- Well here is a</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--     multi-line string!</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- |]</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- Any instance of the IsString type is permitted.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- </span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- (For GHC versions 6, write &quot;[$s||]&quot; instead of &quot;[s||]&quot;.)</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.String.QQ</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.String.QQ.html#s"><span class="hs-identifier">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.html"><span class="hs-identifier">Language.Haskell.TH</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TH</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Quote.html"><span class="hs-identifier">Language.Haskell.TH.Quote</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><span class="hs-comment">-- | QuasiQuoter for a non-interpolating IsString literal. The pattern portion is undefined.</span></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Data.String.QQ.html#s"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Quote.html#QuasiQuoter"><span class="hs-identifier hs-type">QuasiQuoter</span></a></span><span>
+</span><span id="line-30"></span><span id="s"><span class="annot"><span class="annottext">s :: QuasiQuoter
+</span><a href="Data.String.QQ.html#s"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Q Exp)
+-&gt; ([Char] -&gt; Q Pat)
+-&gt; ([Char] -&gt; Q Type)
+-&gt; ([Char] -&gt; Q [Dec])
+-&gt; QuasiQuoter
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Quote.html#QuasiQuoter"><span class="hs-identifier hs-var">QuasiQuoter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679028620"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679028620"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[|</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.String.html#fromString"><span class="hs-identifier hs-type">fromString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679028620"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">|]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Q Exp) -&gt; ([Char] -&gt; [Char]) -&gt; [Char] -&gt; Q Exp
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char]
+</span><a href="#local-6989586621679028622"><span class="hs-identifier hs-var">trimLeadingNewline</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; [Char]) -&gt; ([Char] -&gt; [Char]) -&gt; [Char] -&gt; [Char]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char]
+</span><a href="#local-6989586621679028623"><span class="hs-identifier hs-var">removeCRs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>                 </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; Q Pat
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Cannot use q as a pattern&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+#if (__GLASGOW_HASKELL__ &gt;= 700)
+</span><span>                 </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; Q Type
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Cannot use q as a type&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>                 </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; Q [Dec]
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Cannot use q as a dec&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>    </span><span id="local-6989586621679028623"><span class="annot"><span class="annottext">removeCRs :: [Char] -&gt; [Char]
+</span><a href="#local-6989586621679028623"><span class="hs-identifier hs-var hs-var">removeCRs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; [Char] -&gt; [Char]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\r'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679028622"><span class="annot"><span class="annottext">trimLeadingNewline :: [Char] -&gt; [Char]
+</span><a href="#local-6989586621679028622"><span class="hs-identifier hs-var hs-var">trimLeadingNewline</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679028628"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679028628"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679028628"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><a href="#local-6989586621679028622"><span class="hs-identifier hs-var">trimLeadingNewline</span></a></span><span> </span><span id="local-6989586621679028629"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679028629"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679028629"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span></pre></body></html>

@@ -1,0 +1,924 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP              #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE Rank2Types       #-}</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Snap.Internal.Routing</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier">Route</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#pRoute"><span class="hs-identifier">pRoute</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#route"><span class="hs-identifier">route</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#routeEarliestNC"><span class="hs-identifier">routeEarliestNC</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-identifier">routeHeight</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#routeLocal"><span class="hs-identifier">routeLocal</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#splitPath"><span class="hs-identifier">splitPath</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator">(&lt;|&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#head"><span class="hs-identifier">head</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#length"><span class="hs-identifier">length</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#null"><span class="hs-identifier">null</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#splitWith"><span class="hs-identifier">splitWith</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#tail"><span class="hs-identifier">tail</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.html"><span class="hs-identifier">Data.ByteString.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#c2w"><span class="hs-identifier">c2w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HashMap</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span>      </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">elems</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">empty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fromList</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">lookup</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">unionWith</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span>                 </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier">empty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#insertWith"><span class="hs-identifier">insertWith</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#unionWith"><span class="hs-identifier">unionWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Snap.Internal.Core.html"><span class="hs-identifier">Snap.Internal.Core</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Core.html#MonadSnap"><span class="hs-identifier">MonadSnap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#getRequest"><span class="hs-identifier">getRequest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#getsRequest"><span class="hs-identifier">getsRequest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#localRequest"><span class="hs-identifier">localRequest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#modifyRequest"><span class="hs-identifier">modifyRequest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#pass"><span class="hs-identifier">pass</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#updateContextPath"><span class="hs-identifier">updateContextPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Snap.Internal.Http.Types.html"><span class="hs-identifier">Snap.Internal.Http.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Http.Types.html#Params"><span class="hs-identifier">Params</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Types.html#Request"><span class="hs-identifier">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Http.Types.html#rqContextPath"><span class="hs-identifier">rqContextPath</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Types.html#rqParams"><span class="hs-identifier">rqParams</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Types.html#rqPathInfo"><span class="hs-identifier">rqPathInfo</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Snap.Internal.Parsing.html"><span class="hs-identifier">Snap.Internal.Parsing</span></a></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Parsing.html#urlDecode"><span class="hs-identifier">urlDecode</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#if !MIN_VERSION_base(4,8,0)
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Monoid</span><span>              </span><span class="hs-special">(</span><span class="hs-identifier">Monoid</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Semigroup.html"><span class="hs-identifier">Data.Semigroup</span></a></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | The internal data type you use to build a routing tree. Matching is</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- done unambiguously.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- 'Capture' and 'Dir' routes can have a &quot;fallback&quot; route:</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   - For 'Capture', the fallback is routed when there is nothing to capture</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--   - For 'Dir', the fallback is routed when we can't find a route in its map</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- Fallback routes are stacked: i.e. for a route like:</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- &gt; Dir [(&quot;foo&quot;, Capture &quot;bar&quot; (Action bar) NoRoute)] baz</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- visiting the URI foo/ will result in the &quot;bar&quot; capture being empty and</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- triggering its fallback. It's NoRoute, so we go to the nearest parent</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- fallback and try that, which is the baz action.</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="Route"><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-var">Route</span></a></span></span><span> </span><span id="local-6989586621679116925"><span class="annot"><a href="#local-6989586621679116925"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679116924"><span class="annot"><a href="#local-6989586621679116924"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Action"><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-var">Action</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Core.html#MonadSnap"><span class="hs-identifier hs-type">MonadSnap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116924"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679116924"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116925"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>   </span><span class="hs-comment">-- wraps a 'Snap' action</span><span>
+</span><span id="line-49"></span><span>               </span><span class="hs-comment">-- captures the dir in a param</span><span>
+</span><span id="line-50"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="Capture"><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116925"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116924"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116925"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116924"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>               </span><span class="hs-comment">-- match on a dir</span><span>
+</span><span id="line-52"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="Dir"><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-var">Dir</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116925"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116924"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116925"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116924"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="NoRoute"><span class="annot"><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679116920"><span id="local-6989586621679116921"><span id="local-6989586621679117065"><span id="local-6989586621679117069"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116920"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116921"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span> </span><span id="local-6989586621679117095"><span class="annot"><span class="annottext">&lt;&gt; :: Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679117096"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117096"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117096"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679117097"><span class="annot"><span class="annottext">l :: Route a m
+</span><a href="#local-6989586621679117097"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span id="local-6989586621679117098"><span class="annot"><span class="annottext">MonadSnap m =&gt; m a
+</span><a href="#local-6989586621679117098"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span id="local-6989586621679117099"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117099"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117099"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-62"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span id="local-6989586621679117100"><span class="annot"><span class="annottext">MonadSnap m =&gt; m a
+</span><a href="#local-6989586621679117100"><span class="hs-identifier hs-var">a'</span></a></span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(MonadSnap m =&gt; m a) -&gt; Route a m
+forall a (m :: * -&gt; *). (MonadSnap m =&gt; m a) -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-var">Action</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a
+MonadSnap m =&gt; m a
+</span><a href="#local-6989586621679117098"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a -&gt; m a
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+MonadSnap m =&gt; m a
+</span><a href="#local-6989586621679117100"><span class="hs-identifier hs-var">a'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span id="local-6989586621679117107"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117107"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679117108"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117108"><span class="hs-identifier hs-var">r'</span></a></span></span><span> </span><span id="local-6989586621679117109"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117109"><span class="hs-identifier hs-var">fb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117107"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117108"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117109"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117097"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-var">Dir</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+forall k v. HashMap k v
+</span><span class="hs-identifier hs-var">H.empty</span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117097"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117099"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117097"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">-- Whenever we're unioning two Captures and their capture variables</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">-- differ, we have an ambiguity. We resolve this in the following order:</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">--   1. Prefer whichever route is longer</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">--   2. Else, prefer whichever has the earliest non-capture</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">--   3. Else, prefer the right-hand side</span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679117110"><span class="annot"><span class="annottext">l :: Route a m
+</span><a href="#local-6989586621679117110"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span id="local-6989586621679117111"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117111"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679117112"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117112"><span class="hs-identifier hs-var">r'</span></a></span></span><span> </span><span id="local-6989586621679117113"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117113"><span class="hs-identifier hs-var">fb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span id="local-6989586621679117114"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117114"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117114"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span class="annot"><span class="annottext">MonadSnap m =&gt; m a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117111"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117112"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117113"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117114"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span id="local-6989586621679117115"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117115"><span class="hs-identifier hs-var">p'</span></a></span></span><span> </span><span id="local-6989586621679117116"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117116"><span class="hs-identifier hs-var">r''</span></a></span></span><span> </span><span id="local-6989586621679117117"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117117"><span class="hs-identifier hs-var">fb'</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117111"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117115"><span class="hs-identifier hs-var">p'</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117111"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117112"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117116"><span class="hs-identifier hs-var">r''</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117113"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117117"><span class="hs-identifier hs-var">fb'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117118"><span class="hs-identifier hs-var">rh'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117120"><span class="hs-identifier hs-var">rh''</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117111"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117112"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117113"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117114"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117118"><span class="hs-identifier hs-var">rh'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117120"><span class="hs-identifier hs-var">rh''</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117115"><span class="hs-identifier hs-var">p'</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117116"><span class="hs-identifier hs-var">r''</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117117"><span class="hs-identifier hs-var">fb'</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117110"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117122"><span class="hs-identifier hs-var">en'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117123"><span class="hs-identifier hs-var">en''</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117111"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117112"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117113"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117114"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117115"><span class="hs-identifier hs-var">p'</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117116"><span class="hs-identifier hs-var">r''</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117117"><span class="hs-identifier hs-var">fb'</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117110"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>          </span><span id="local-6989586621679117118"><span class="annot"><span class="annottext">rh' :: Int
+</span><a href="#local-6989586621679117118"><span class="hs-identifier hs-var hs-var">rh'</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Int
+forall a (m :: * -&gt; *). Route a m -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-identifier hs-var">routeHeight</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117112"><span class="hs-identifier hs-var">r'</span></a></span><span>
+</span><span id="line-82"></span><span>          </span><span id="local-6989586621679117120"><span class="annot"><span class="annottext">rh'' :: Int
+</span><a href="#local-6989586621679117120"><span class="hs-identifier hs-var hs-var">rh''</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Int
+forall a (m :: * -&gt; *). Route a m -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-identifier hs-var">routeHeight</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117116"><span class="hs-identifier hs-var">r''</span></a></span><span>
+</span><span id="line-83"></span><span>          </span><span id="local-6989586621679117122"><span class="annot"><span class="annottext">en' :: Int
+</span><a href="#local-6989586621679117122"><span class="hs-identifier hs-var hs-var">en'</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Int -&gt; Int
+forall a (m :: * -&gt; *). Route a m -&gt; Int -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeEarliestNC"><span class="hs-identifier hs-var">routeEarliestNC</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117112"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-84"></span><span>          </span><span id="local-6989586621679117123"><span class="annot"><span class="annottext">en'' :: Int
+</span><a href="#local-6989586621679117123"><span class="hs-identifier hs-var hs-var">en''</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Int -&gt; Int
+forall a (m :: * -&gt; *). Route a m -&gt; Int -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeEarliestNC"><span class="hs-identifier hs-var">routeEarliestNC</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117116"><span class="hs-identifier hs-var">r''</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span id="local-6989586621679117124"><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117124"><span class="hs-identifier hs-var">rm</span></a></span></span><span> </span><span id="local-6989586621679117125"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117125"><span class="hs-identifier hs-var">fb'</span></a></span></span><span class="hs-special">)</span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-var">Dir</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117124"><span class="hs-identifier hs-var">rm</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117125"><span class="hs-identifier hs-var">fb'</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117110"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117110"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span> </span><span id="local-6989586621679117126"><span class="annot"><span class="annottext">l :: Route a m
+</span><a href="#local-6989586621679117126"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span id="local-6989586621679117127"><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117127"><span class="hs-identifier hs-var">rm</span></a></span></span><span> </span><span id="local-6989586621679117128"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117128"><span class="hs-identifier hs-var">fb</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679117129"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117129"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117129"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span class="annot"><span class="annottext">MonadSnap m =&gt; m a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-var">Dir</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117127"><span class="hs-identifier hs-var">rm</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117128"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117129"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-var">Dir</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117127"><span class="hs-identifier hs-var">rm</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117128"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117129"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span id="local-6989586621679117130"><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117130"><span class="hs-identifier hs-var">rm'</span></a></span></span><span> </span><span id="local-6989586621679117131"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117131"><span class="hs-identifier hs-var">fb'</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-var">Dir</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Route a m -&gt; Route a m -&gt; Route a m)
+-&gt; HashMap ByteString (Route a m)
+-&gt; HashMap ByteString (Route a m)
+-&gt; HashMap ByteString (Route a m)
+forall k v.
+Eq k =&gt;
+(v -&gt; v -&gt; v) -&gt; HashMap k v -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">H.unionWith</span></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117127"><span class="hs-identifier hs-var">rm</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117130"><span class="hs-identifier hs-var">rm'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117128"><span class="hs-identifier hs-var">fb</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117131"><span class="hs-identifier hs-var">fb'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117126"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679116944"><span id="local-6989586621679116945"><span id="local-6989586621679117137"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116944"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116945"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621679117141"><span class="annot"><span class="annottext">mempty :: Route a m
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Route a m
+forall a (m :: * -&gt; *). Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621679117143"><span class="annot"><span class="annottext">mappend :: Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Route a m -&gt; Route a m
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-99"></span><span id="local-6989586621679116935"><span id="local-6989586621679116936"><span class="annot"><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-identifier hs-type">routeHeight</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116935"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116936"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span></span><span>
+</span><span id="line-100"></span><span id="routeHeight"><span class="annot"><span class="annottext">routeHeight :: forall a (m :: * -&gt; *). Route a m -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-identifier hs-var hs-var">routeHeight</span></a></span></span><span> </span><span id="local-6989586621679117153"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117153"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117153"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><span class="annottext">Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span class="annot"><span class="annottext">MonadSnap m =&gt; m a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679117154"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117154"><span class="hs-identifier hs-var">r'</span></a></span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Int
+forall a (m :: * -&gt; *). Route a m -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-identifier hs-var">routeHeight</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117154"><span class="hs-identifier hs-var">r'</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span id="local-6989586621679117156"><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117156"><span class="hs-identifier hs-var">rm</span></a></span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Int -&gt; [Int] -&gt; Int
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Route a m -&gt; Int) -&gt; [Route a m] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Int
+forall a (m :: * -&gt; *). Route a m -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-identifier hs-var">routeHeight</span></a></span><span> </span><span class="annot"><span class="annottext">([Route a m] -&gt; [Int]) -&gt; [Route a m] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m) -&gt; [Route a m]
+forall k v. HashMap k v -&gt; [v]
+</span><span class="hs-identifier hs-var">H.elems</span></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117156"><span class="hs-identifier hs-var">rm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#routeHeight"><span class="hs-pragma hs-type">routeHeight</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-109"></span><span id="local-6989586621679116937"><span id="local-6989586621679116938"><span class="annot"><a href="Snap.Internal.Routing.html#routeEarliestNC"><span class="hs-identifier hs-type">routeEarliestNC</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116937"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116938"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span></span><span>
+</span><span id="line-110"></span><span id="routeEarliestNC"><span class="annot"><span class="annottext">routeEarliestNC :: forall a (m :: * -&gt; *). Route a m -&gt; Int -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeEarliestNC"><span class="hs-identifier hs-var hs-var">routeEarliestNC</span></a></span></span><span> </span><span id="local-6989586621679117161"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117161"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679117162"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117162"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117161"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="annottext">Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117162"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span class="annot"><span class="annottext">MonadSnap m =&gt; m a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117162"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679117163"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117163"><span class="hs-identifier hs-var">r'</span></a></span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Route a m -&gt; Int -&gt; Int
+forall a (m :: * -&gt; *). Route a m -&gt; Int -&gt; Int
+</span><a href="Snap.Internal.Routing.html#routeEarliestNC"><span class="hs-identifier hs-var">routeEarliestNC</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117163"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117162"><span class="hs-identifier hs-var">n</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117162"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-115"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#routeEarliestNC"><span class="hs-pragma hs-type">routeEarliestNC</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- | A web handler which, given a mapping from URL entry points to web</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- handlers, efficiently routes requests to the correct handler.</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- __Usage__</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- The URL entry points are given as relative paths, for example:</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- &gt; route [ (&quot;foo/bar/quux&quot;, fooBarQuux) ]</span><span>
+</span><span id="line-128"></span><span class="hs-comment">--</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- If the URI of the incoming request is @\/foo\/bar\/quux@ or</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- @\/foo\/bar\/quux\/...anything...@ then the request will be routed to</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- @\&quot;fooBarQuux\&quot;@, with 'rqContextPath' set to @\&quot;\/foo\/bar\/quux\/\&quot;@ and</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- 'rqPathInfo' set to @\&quot;...anything...\&quot;@.</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- A path component within an URL entry point beginning with a colon (@\&quot;:\&quot;@)</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- is treated as a /variable capture/; the corresponding path component within</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- the request URI will be entered into the 'rqParams' parameters mapping with</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- the given name. For instance, if the routes were:</span><span>
+</span><span id="line-138"></span><span class="hs-comment">--</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- &gt; route [ (&quot;foo/:bar/baz&quot;, fooBazHandler) ]</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- Then a request for @\&quot;\/foo\/saskatchewan\/baz\&quot;@ would be routed to</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- @fooBazHandler@ with a mapping for @\&quot;bar\&quot; =&gt; \&quot;saskatchewan\&quot;@ in its</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- parameters table.</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- Longer paths are matched first, and specific routes are matched before</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- captures. That is, if given routes:</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- &gt; [ (&quot;a&quot;, h1), (&quot;a/b&quot;, h2), (&quot;a/:x&quot;, h3) ]</span><span>
+</span><span id="line-149"></span><span class="hs-comment">--</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- a request for @\&quot;\/a\/b\&quot;@ will go to @h2@, @\&quot;\/a\/s\&quot;@ for any /s/ will go</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- to @h3@, and @\&quot;\/a\&quot;@ will go to @h1@.</span><span>
+</span><span id="line-152"></span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- The following example matches @\&quot;\/article\&quot;@ to an article index,</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- @\&quot;\/login\&quot;@ to a login, and @\&quot;\/article\/...\&quot;@ to an article renderer.</span><span>
+</span><span id="line-155"></span><span class="hs-comment">--</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- 'route' [ (\&quot;article\&quot;,     renderIndex)</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--       , (\&quot;article\/:id\&quot;, renderArticle)</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--       , (\&quot;login\&quot;,       'Snap.Core.method' POST doLogin) ]</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- __Note: URL decoding__</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- A short note about URL decoding: path matching and variable capture are done</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- on /decoded/ URLs, but the contents of 'rqContextPath' and 'rqPathInfo' will</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- contain the original encoded URL, i.e. what the user entered. For example,</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- in the following scenario:</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- &gt; route [ (&quot;a b c d/&quot;, foo ) ]</span><span>
+</span><span id="line-170"></span><span class="hs-comment">--</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- A request for \&quot;@/a+b+c+d@\&quot; will be sent to @foo@ with 'rqContextPath' set</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- to @\&quot;/a+b+c+d/\&quot;@.</span><span>
+</span><span id="line-173"></span><span class="hs-comment">--</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- This behaviour changed as of Snap 0.6.1; previous versions had unspecified</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- (and buggy!) semantics here.</span><span>
+</span><span id="line-176"></span><span class="hs-comment">--</span><span>
+</span><span id="line-177"></span><span class="hs-comment">--</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- __Example:__</span><span>
+</span><span id="line-179"></span><span class="hs-comment">--</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- ghci&gt; :set -XOverloadedStrings</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- ghci&gt; import qualified &quot;Data.Map&quot; as Map</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- ghci&gt; import qualified &quot;Data.ByteString.Char8&quot; as B8</span><span>
+</span><span id="line-184"></span><span class="hs-comment">-- ghci&gt; import &quot;Snap.Test&quot;</span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- ghci&gt; :{</span><span>
+</span><span id="line-186"></span><span class="hs-comment">-- ghci| let handler = do r \&lt;- 'getRequest'</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- ghci|                  'Snap.Core.writeBS' $ \&quot;rqContextPath: \&quot; \&lt;&gt; 'rqContextPath' r \&lt;&gt; \&quot;\\n\&quot;</span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- ghci|                  'Snap.Core.writeBS' $ \&quot;rqPathInfo: \&quot; \&lt;&gt; 'rqPathInfo' r \&lt;&gt; \&quot;\\n\&quot;</span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- ghci|                  'Snap.Core.writeBS' $ \&quot;rqParams: \&quot; \&lt;&gt; (B8.pack . show $ 'rqParams' r)</span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- ghci| :}</span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- ghci&gt; 'Snap.Test.runHandler' ('Snap.Test.get' \&quot;\/foo\/bar\&quot; &quot;Map.empty&quot;) ('route' [(\&quot;foo\&quot;, handler)])</span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- HTTP\/1.1 200 OK</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- server: Snap\/test</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- date: Sat, 02 Aug 2014 05:16:59 GMT</span><span>
+</span><span id="line-195"></span><span class="hs-comment">--</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- rqContextPath: \/foo\/</span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- rqPathInfo: bar</span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- rqParams: fromList []</span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- ghci&gt; 'Snap.Test.runHandler' ('Snap.Test.get' \&quot;\/foo\/bar\&quot; &quot;Map.empty&quot;) ('route' [(\&quot;foo\/:bar\&quot;, handler)])</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- [...]</span><span>
+</span><span id="line-201"></span><span class="hs-comment">--</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- rqContextPath: \/foo\/bar\/</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- rqPathInfo:</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- rqParams: fromList [(\&quot;bar\&quot;,[\&quot;bar\&quot;])]</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-206"></span><span id="local-6989586621679116961"><span id="local-6989586621679116962"><span class="annot"><a href="Snap.Internal.Routing.html#route"><span class="hs-identifier hs-type">route</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#MonadSnap"><span class="hs-identifier hs-type">MonadSnap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116961"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679116961"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116962"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679116961"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116962"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-207"></span><span id="route"><span class="annot"><span class="annottext">route :: forall (m :: * -&gt; *) a. MonadSnap m =&gt; [(ByteString, m a)] -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route"><span class="hs-identifier hs-var hs-var">route</span></a></span></span><span> </span><span id="local-6989586621679117184"><span class="annot"><span class="annottext">[(ByteString, m a)]
+</span><a href="#local-6989586621679117184"><span class="hs-identifier hs-var">rts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-208"></span><span>  </span><span id="local-6989586621679117185"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117185"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Request -&gt; ByteString) -&gt; m ByteString
+forall (m :: * -&gt; *) a. MonadSnap m =&gt; (Request -&gt; a) -&gt; m a
+</span><a href="Snap.Internal.Core.html#getsRequest"><span class="hs-identifier hs-var">getsRequest</span></a></span><span> </span><span class="annot"><span class="annottext">Request -&gt; ByteString
+</span><a href="Snap.Internal.Http.Types.html#rqPathInfo"><span class="hs-identifier hs-var">rqPathInfo</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(() -&gt; m ()) -&gt; () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><a href="Snap.Internal.Routing.html#splitPath"><span class="hs-identifier hs-var">splitPath</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117185"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Params
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117188"><span class="hs-identifier hs-var">rts'</span></a></span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-211"></span><span>    </span><span id="local-6989586621679117188"><span class="annot"><span class="annottext">rts' :: Route a m
+</span><a href="#local-6989586621679117188"><span class="hs-identifier hs-var hs-var">rts'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Route a m] -&gt; Route a m
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((ByteString, m a) -&gt; Route a m)
+-&gt; [(ByteString, m a)] -&gt; [Route a m]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString, m a) -&gt; Route a m
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+(ByteString, m a) -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#pRoute"><span class="hs-identifier hs-var">pRoute</span></a></span><span> </span><span class="annot"><span class="annottext">[(ByteString, m a)]
+</span><a href="#local-6989586621679117184"><span class="hs-identifier hs-var">rts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-212"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#route"><span class="hs-pragma hs-type">route</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- | The 'routeLocal' function is the same as 'route', except it doesn't</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- change the request's context path. This is useful if you want to route to a</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- particular handler but you want that handler to receive the 'rqPathInfo' as</span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- it is.</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--</span><span>
+</span><span id="line-221"></span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-222"></span><span class="hs-comment">--</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- ghci&gt; :set -XOverloadedStrings</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- ghci&gt; import qualified &quot;Data.Map&quot; as M</span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- ghci&gt; import qualified &quot;Data.ByteString.Char8&quot; as B8</span><span>
+</span><span id="line-227"></span><span class="hs-comment">-- ghci&gt; import &quot;Snap.Test&quot;</span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- ghci&gt; :{</span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- ghci| let handler = do r \&lt;- 'getRequest'</span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- ghci|                  'Snap.Core.writeBS' $ \&quot;rqContextPath: \&quot; \&lt;&gt; 'rqContextPath' r \&lt;&gt; \&quot;\\n\&quot;</span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- ghci|                  'Snap.Core.writeBS' $ \&quot;rqPathInfo: \&quot; \&lt;&gt; 'rqPathInfo' r \&lt;&gt; \&quot;\\n\&quot;</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- ghci|                  'Snap.Core.writeBS' $ \&quot;rqParams: \&quot; \&lt;&gt; (B8.pack . show $ 'rqParams' r)</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- ghci| :}</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- ghci&gt; 'Snap.Test.runHandler' ('Snap.Test.get' \&quot;\/foo\/bar\&quot; M.empty) ('routeLocal' [(\&quot;foo\&quot;, handler)])</span><span>
+</span><span id="line-235"></span><span class="hs-comment">-- HTTP\/1.1 200 OK</span><span>
+</span><span id="line-236"></span><span class="hs-comment">-- server: Snap\/test</span><span>
+</span><span id="line-237"></span><span class="hs-comment">-- date: Sat, 02 Aug 2014 05:17:28 GMT</span><span>
+</span><span id="line-238"></span><span class="hs-comment">--</span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- rqContextPath: \/</span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- rqPathInfo: foo\/bar</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- ghci&gt; 'Snap.Test.runHandler' ('Snap.Test.get' \&quot;\/foo\/bar\&quot; M.empty) ('routeLocal' [(\&quot;foo\/:bar\&quot;, handler)])</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- [...]</span><span>
+</span><span id="line-243"></span><span class="hs-comment">--</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- rqContextPath: \/</span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- rqPathInfo: foo\/bar</span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- rqParams: fromList [(\&quot;bar\&quot;,[\&quot;bar\&quot;])]</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-248"></span><span id="local-6989586621679117222"><span id="local-6989586621679117223"><span class="annot"><a href="Snap.Internal.Routing.html#routeLocal"><span class="hs-identifier hs-type">routeLocal</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#MonadSnap"><span class="hs-identifier hs-type">MonadSnap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117222"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679117222"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117223"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117222"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117223"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-249"></span><span id="routeLocal"><span class="annot"><span class="annottext">routeLocal :: forall (m :: * -&gt; *) a. MonadSnap m =&gt; [(ByteString, m a)] -&gt; m a
+</span><a href="Snap.Internal.Routing.html#routeLocal"><span class="hs-identifier hs-var hs-var">routeLocal</span></a></span></span><span> </span><span id="local-6989586621679117239"><span class="annot"><span class="annottext">[(ByteString, m a)]
+</span><a href="#local-6989586621679117239"><span class="hs-identifier hs-var">rts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-250"></span><span>    </span><span id="local-6989586621679117240"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679117240"><span class="hs-identifier hs-var">req</span></a></span></span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Request
+forall (m :: * -&gt; *). MonadSnap m =&gt; m Request
+</span><a href="Snap.Internal.Core.html#getRequest"><span class="hs-identifier hs-var">getRequest</span></a></span><span>
+</span><span id="line-251"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679117241"><span class="annot"><span class="annottext">ctx :: ByteString
+</span><a href="#local-6989586621679117241"><span class="hs-identifier hs-var hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Request -&gt; ByteString
+</span><a href="Snap.Internal.Http.Types.html#rqContextPath"><span class="hs-identifier hs-var">rqContextPath</span></a></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679117240"><span class="hs-identifier hs-var">req</span></a></span><span>
+</span><span id="line-252"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679117242"><span class="annot"><span class="annottext">p :: ByteString
+</span><a href="#local-6989586621679117242"><span class="hs-identifier hs-var hs-var">p</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Request -&gt; ByteString
+</span><a href="Snap.Internal.Http.Types.html#rqPathInfo"><span class="hs-identifier hs-var">rqPathInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679117240"><span class="hs-identifier hs-var">req</span></a></span><span>
+</span><span id="line-253"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679117273"><span class="annot"><span class="annottext">md :: m ()
+</span><a href="#local-6989586621679117273"><span class="hs-identifier hs-var hs-var">md</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Request -&gt; Request) -&gt; m ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; (Request -&gt; Request) -&gt; m ()
+</span><a href="Snap.Internal.Core.html#modifyRequest"><span class="hs-identifier hs-var">modifyRequest</span></a></span><span> </span><span class="annot"><span class="annottext">((Request -&gt; Request) -&gt; m ()) -&gt; (Request -&gt; Request) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679117274"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679117274"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679117274"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Snap.Internal.Http.Types.html#rqContextPath"><span class="hs-identifier hs-var">rqContextPath</span></a></span><span class="hs-glyph">=</span><span class="annot"><a href="#local-6989586621679117241"><span class="hs-identifier hs-type">ctx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Types.html#rqPathInfo"><span class="hs-identifier hs-var">rqPathInfo</span></a></span><span class="hs-glyph">=</span><span class="annot"><a href="#local-6989586621679117242"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-254"></span><span>
+</span><span id="line-255"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117273"><span class="hs-identifier hs-var">md</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><a href="Snap.Internal.Routing.html#splitPath"><span class="hs-identifier hs-var">splitPath</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117242"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Params
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117275"><span class="hs-identifier hs-var">rts'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a -&gt; m a
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117273"><span class="hs-identifier hs-var">md</span></a></span><span> </span><span class="annot"><span class="annottext">m () -&gt; m a -&gt; m a
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+forall (m :: * -&gt; *) a. MonadSnap m =&gt; m a
+</span><a href="Snap.Internal.Core.html#pass"><span class="hs-identifier hs-var">pass</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-258"></span><span>    </span><span id="local-6989586621679117275"><span class="annot"><span class="annottext">rts' :: Route a m
+</span><a href="#local-6989586621679117275"><span class="hs-identifier hs-var hs-var">rts'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Route a m] -&gt; Route a m
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((ByteString, m a) -&gt; Route a m)
+-&gt; [(ByteString, m a)] -&gt; [Route a m]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString, m a) -&gt; Route a m
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+(ByteString, m a) -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#pRoute"><span class="hs-identifier hs-var">pRoute</span></a></span><span> </span><span class="annot"><span class="annottext">[(ByteString, m a)]
+</span><a href="#local-6989586621679117239"><span class="hs-identifier hs-var">rts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-259"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#routeLocal"><span class="hs-pragma hs-type">routeLocal</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-260"></span><span>
+</span><span id="line-261"></span><span>
+</span><span id="line-262"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-263"></span><span class="annot"><a href="Snap.Internal.Routing.html#splitPath"><span class="hs-identifier hs-type">splitPath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-264"></span><span id="splitPath"><span class="annot"><span class="annottext">splitPath :: ByteString -&gt; [ByteString]
+</span><a href="Snap.Internal.Routing.html#splitPath"><span class="hs-identifier hs-var hs-var">splitPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#splitWith"><span class="hs-identifier hs-var">B.splitWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Word8
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#c2w"><span class="hs-identifier hs-var">c2w</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'/'</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-265"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#splitPath"><span class="hs-pragma hs-type">splitPath</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-266"></span><span>
+</span><span id="line-267"></span><span>
+</span><span id="line-268"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-269"></span><span id="local-6989586621679116983"><span id="local-6989586621679116984"><span class="annot"><a href="Snap.Internal.Routing.html#pRoute"><span class="hs-identifier hs-type">pRoute</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#MonadSnap"><span class="hs-identifier hs-type">MonadSnap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116983"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679116983"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116984"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116984"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116983"><span class="hs-identifier hs-type">m</span></a></span></span></span><span>
+</span><span id="line-270"></span><span id="pRoute"><span class="annot"><span class="annottext">pRoute :: forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+(ByteString, m a) -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#pRoute"><span class="hs-identifier hs-var hs-var">pRoute</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679117309"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117309"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117310"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679117310"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Route a m -&gt; Route a m)
+-&gt; Route a m -&gt; [ByteString] -&gt; Route a m
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m
+forall {a} {m :: * -&gt; *}. ByteString -&gt; Route a m -&gt; Route a m
+</span><a href="#local-6989586621679117312"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(MonadSnap m =&gt; m a) -&gt; Route a m
+forall a (m :: * -&gt; *). (MonadSnap m =&gt; m a) -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-var">Action</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+MonadSnap m =&gt; m a
+</span><a href="#local-6989586621679117310"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117314"><span class="hs-identifier hs-var">hier</span></a></span><span>
+</span><span id="line-271"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-272"></span><span>    </span><span id="local-6989586621679117314"><span class="annot"><span class="annottext">hier :: [ByteString]
+</span><a href="#local-6989586621679117314"><span class="hs-identifier hs-var hs-var">hier</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool) -&gt; [ByteString] -&gt; [ByteString]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (ByteString -&gt; Bool) -&gt; ByteString -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">B.null</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; [ByteString]) -&gt; [ByteString] -&gt; [ByteString]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#splitWith"><span class="hs-identifier hs-var">B.splitWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Word8
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#c2w"><span class="hs-identifier hs-var">c2w</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'/'</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117309"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-273"></span><span>    </span><span id="local-6989586621679117312"><span class="annot"><span class="annottext">f :: ByteString -&gt; Route a m -&gt; Route a m
+</span><a href="#local-6989586621679117312"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679117326"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117326"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679117327"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117327"><span class="hs-identifier hs-var">rt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; ByteString -&gt; Word8
+ByteString -&gt; Word8
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#head"><span class="hs-identifier hs-var">B.head</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117326"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Word8
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#c2w"><span class="hs-identifier hs-var">c2w</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span>
+</span><span id="line-274"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+ByteString -&gt; Route a m -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-var">Capture</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; ByteString -&gt; ByteString
+ByteString -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#tail"><span class="hs-identifier hs-var">B.tail</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117326"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117327"><span class="hs-identifier hs-var">rt</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+forall a (m :: * -&gt; *). Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>
+</span><span id="line-275"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+forall a (m :: * -&gt; *).
+HashMap ByteString (Route a m) -&gt; Route a m -&gt; Route a m
+</span><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-var">Dir</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(ByteString, Route a m)] -&gt; HashMap ByteString (Route a m)
+forall k v. (Eq k, Hashable k) =&gt; [(k, v)] -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">H.fromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117326"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117327"><span class="hs-identifier hs-var">rt</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Route a m
+forall a (m :: * -&gt; *). Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span>
+</span><span id="line-276"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#pRoute"><span class="hs-pragma hs-type">pRoute</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-277"></span><span>
+</span><span id="line-278"></span><span>
+</span><span id="line-279"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-280"></span><span id="local-6989586621679116975"><span id="local-6989586621679116976"><span class="annot"><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-type">route'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Core.html#MonadSnap"><span class="hs-identifier hs-type">MonadSnap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116975"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-281"></span><span>       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679116975"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>           </span><span class="annot"><span class="hs-comment">-- ^ action to run before we call the user handler</span></span><span>
+</span><span id="line-282"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">]</span><span>   </span><span class="hs-comment">-- ^ the \&quot;context\&quot;; the list of path segments we've</span><span>
+</span><span id="line-283"></span><span>                         </span><span class="hs-comment">-- already successfully matched, in reverse order</span><span>
+</span><span id="line-284"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">]</span><span>   </span><span class="annot"><span class="hs-comment">-- ^ the list of path segments we haven't yet matched</span></span><span>
+</span><span id="line-285"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Types.html#Params"><span class="hs-identifier hs-type">Params</span></a></span><span>
+</span><span id="line-286"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Snap.Internal.Routing.html#Route"><span class="hs-identifier hs-type">Route</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116976"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116975"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-287"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679116975"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679116976"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-288"></span><span id="route%27"><span class="annot"><span class="annottext">route' :: forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var hs-var">route'</span></a></span></span><span> </span><span id="local-6989586621679117353"><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117353"><span class="hs-identifier hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117354"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117354"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117355"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117355"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span id="local-6989586621679117356"><span class="annot"><span class="annottext">MonadSnap m =&gt; m a
+</span><a href="#local-6989586621679117356"><span class="hs-identifier hs-var">action</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-289"></span><span>    </span><span class="annot"><span class="annottext">(Request -&gt; Request) -&gt; m a -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+(Request -&gt; Request) -&gt; m a -&gt; m a
+</span><a href="Snap.Internal.Core.html#localRequest"><span class="hs-identifier hs-var">localRequest</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Request -&gt; Request
+</span><a href="Snap.Internal.Core.html#updateContextPath"><span class="hs-identifier hs-var">updateContextPath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">B.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117357"><span class="hs-identifier hs-var">ctx'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Request -&gt; Request) -&gt; (Request -&gt; Request) -&gt; Request -&gt; Request
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Request -&gt; Request
+</span><a href="#local-6989586621679117358"><span class="hs-identifier hs-var">updateParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-290"></span><span>                 </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117353"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">m () -&gt; m a -&gt; m a
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+MonadSnap m =&gt; m a
+</span><a href="#local-6989586621679117356"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-292"></span><span>    </span><span id="local-6989586621679117357"><span class="annot"><span class="annottext">ctx' :: ByteString
+</span><a href="#local-6989586621679117357"><span class="hs-identifier hs-var hs-var">ctx'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#intercalate"><span class="hs-identifier hs-var">B.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Word8] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#pack"><span class="hs-identifier hs-var">B.pack</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char -&gt; Word8
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#c2w"><span class="hs-identifier hs-var">c2w</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'/'</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; [ByteString]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117354"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>    </span><span id="local-6989586621679117358"><span class="annot"><span class="annottext">updateParams :: Request -&gt; Request
+</span><a href="#local-6989586621679117358"><span class="hs-identifier hs-var hs-var">updateParams</span></a></span></span><span> </span><span id="local-6989586621679117362"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679117362"><span class="hs-identifier hs-var">req</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679117362"><span class="hs-identifier hs-var">req</span></a></span><span>
+</span><span id="line-294"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Types.html#rqParams"><span class="hs-identifier hs-var">rqParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#unionWith"><span class="hs-identifier hs-type">Map.unionWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-type">flip</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-type">(++)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679117355"><span class="hs-identifier hs-type">params</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Http.Types.html#rqParams"><span class="hs-identifier hs-var">rqParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117362"><span class="hs-identifier hs-type">req</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-295"></span><span>
+</span><span id="line-296"></span><span class="annot"><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span id="local-6989586621679117364"><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117364"><span class="hs-identifier hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117365"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117365"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117366"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117366"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><span class="hs-identifier">_</span></span><span>  </span><span id="local-6989586621679117367"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117367"><span class="hs-identifier hs-var">fb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-297"></span><span>    </span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117364"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117365"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117366"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117367"><span class="hs-identifier hs-var">fb</span></a></span><span>
+</span><span id="line-298"></span><span>
+</span><span id="line-299"></span><span class="annot"><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span id="local-6989586621679117368"><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117368"><span class="hs-identifier hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117369"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117369"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span id="local-6989586621679117370"><span class="annot"><span class="annottext">paths :: [ByteString]
+</span><a href="#local-6989586621679117370"><span class="hs-identifier hs-var">paths</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679117371"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117371"><span class="hs-identifier hs-var">cwd</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679117372"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117372"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117373"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117373"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Capture"><span class="hs-identifier hs-type">Capture</span></a></span><span> </span><span id="local-6989586621679117374"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117374"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679117375"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117375"><span class="hs-identifier hs-var">rt</span></a></span></span><span> </span><span id="local-6989586621679117376"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117376"><span class="hs-identifier hs-var">fb</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-300"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">B.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117371"><span class="hs-identifier hs-var">cwd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679117377"><span class="hs-identifier hs-var">fallback</span></a></span><span>
+</span><span id="line-301"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679117378"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a -&gt; m a
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679117377"><span class="hs-identifier hs-var">fallback</span></a></span><span>
+</span><span id="line-302"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-303"></span><span>    </span><span id="local-6989586621679117377"><span class="annot"><span class="annottext">fallback :: m a
+</span><a href="#local-6989586621679117377"><span class="hs-identifier hs-var hs-var">fallback</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117368"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117369"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117370"><span class="hs-identifier hs-var">paths</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117373"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117376"><span class="hs-identifier hs-var">fb</span></a></span><span>
+</span><span id="line-304"></span><span>    </span><span id="local-6989586621679117378"><span class="annot"><span class="annottext">m :: m a
+</span><a href="#local-6989586621679117378"><span class="hs-identifier hs-var hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; (ByteString -&gt; m a) -&gt; Maybe ByteString -&gt; m a
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+forall (m :: * -&gt; *) a. MonadSnap m =&gt; m a
+</span><a href="Snap.Internal.Core.html#pass"><span class="hs-identifier hs-var">pass</span></a></span><span>
+</span><span id="line-305"></span><span>              </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679117441"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117441"><span class="hs-identifier hs-var">cwd'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679117443"><span class="annot"><span class="annottext">params' :: Params
+</span><a href="#local-6989586621679117443"><span class="hs-identifier hs-var hs-var">params'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; [ByteString] -&gt; [ByteString])
+-&gt; ByteString -&gt; [ByteString] -&gt; Params -&gt; Params
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#insertWith"><span class="hs-identifier hs-var">Map.insertWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([ByteString] -&gt; [ByteString] -&gt; [ByteString])
+-&gt; [ByteString] -&gt; [ByteString] -&gt; [ByteString]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; [ByteString] -&gt; [ByteString]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">(++)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117374"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117441"><span class="hs-identifier hs-var">cwd'</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117373"><span class="hs-identifier hs-var">params</span></a></span><span>
+</span><span id="line-306"></span><span>                        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117368"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117371"><span class="hs-identifier hs-var">cwd</span></a></span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; [ByteString]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117369"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117372"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117443"><span class="hs-identifier hs-var">params'</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117375"><span class="hs-identifier hs-var">rt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-307"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+</span><a href="Snap.Internal.Parsing.html#urlDecode"><span class="hs-identifier hs-var">urlDecode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117371"><span class="hs-identifier hs-var">cwd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-308"></span><span>
+</span><span id="line-309"></span><span class="annot"><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span id="local-6989586621679117444"><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117444"><span class="hs-identifier hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117445"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117445"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117446"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117446"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679117447"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117447"><span class="hs-identifier hs-var">fb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-310"></span><span>    </span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117444"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117445"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117446"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117447"><span class="hs-identifier hs-var">fb</span></a></span><span>
+</span><span id="line-311"></span><span class="annot"><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span id="local-6989586621679117448"><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117448"><span class="hs-identifier hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117449"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117449"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span id="local-6989586621679117450"><span class="annot"><span class="annottext">paths :: [ByteString]
+</span><a href="#local-6989586621679117450"><span class="hs-identifier hs-var">paths</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679117451"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117451"><span class="hs-identifier hs-var">cwd</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679117452"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117452"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679117453"><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117453"><span class="hs-identifier hs-var">params</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Routing.html#Dir"><span class="hs-identifier hs-type">Dir</span></a></span><span> </span><span id="local-6989586621679117454"><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117454"><span class="hs-identifier hs-var">rtm</span></a></span></span><span> </span><span id="local-6989586621679117455"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117455"><span class="hs-identifier hs-var">fb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-312"></span><span>    </span><span id="local-6989586621679117456"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117456"><span class="hs-identifier hs-var">cwd'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ByteString
+-&gt; (ByteString -&gt; m ByteString) -&gt; Maybe ByteString -&gt; m ByteString
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">m ByteString
+forall (m :: * -&gt; *) a. MonadSnap m =&gt; m a
+</span><a href="Snap.Internal.Core.html#pass"><span class="hs-identifier hs-var">pass</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; m ByteString
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe ByteString -&gt; m ByteString)
+-&gt; Maybe ByteString -&gt; m ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+</span><a href="Snap.Internal.Parsing.html#urlDecode"><span class="hs-identifier hs-var">urlDecode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117451"><span class="hs-identifier hs-var">cwd</span></a></span><span>
+</span><span id="line-313"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; HashMap ByteString (Route a m) -&gt; Maybe (Route a m)
+forall k v. (Eq k, Hashable k) =&gt; k -&gt; HashMap k v -&gt; Maybe v
+</span><span class="hs-identifier hs-var">H.lookup</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117456"><span class="hs-identifier hs-var">cwd'</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString (Route a m)
+</span><a href="#local-6989586621679117454"><span class="hs-identifier hs-var">rtm</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-314"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679117457"><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117457"><span class="hs-identifier hs-var">rt</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117448"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117451"><span class="hs-identifier hs-var">cwd</span></a></span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; [ByteString]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117449"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117452"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117453"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117457"><span class="hs-identifier hs-var">rt</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a -&gt; m a
+forall a. m a -&gt; m a -&gt; m a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span>
+</span><span id="line-315"></span><span>                 </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117448"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117449"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117450"><span class="hs-identifier hs-var">paths</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117453"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117455"><span class="hs-identifier hs-var">fb</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-316"></span><span>      </span><span class="annot"><span class="annottext">Maybe (Route a m)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+forall (m :: * -&gt; *) a.
+MonadSnap m =&gt;
+m () -&gt; [ByteString] -&gt; [ByteString] -&gt; Params -&gt; Route a m -&gt; m a
+</span><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><a href="#local-6989586621679117448"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117449"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679117450"><span class="hs-identifier hs-var">paths</span></a></span><span> </span><span class="annot"><span class="annottext">Params
+</span><a href="#local-6989586621679117453"><span class="hs-identifier hs-var">params</span></a></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="#local-6989586621679117455"><span class="hs-identifier hs-var">fb</span></a></span><span>
+</span><span id="line-317"></span><span>
+</span><span id="line-318"></span><span class="annot"><a href="Snap.Internal.Routing.html#route%27"><span class="hs-identifier hs-var">route'</span></a></span><span> </span><span class="annot"><span class="annottext">m ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Params
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Route a m
+</span><a href="Snap.Internal.Routing.html#NoRoute"><span class="hs-identifier hs-var">NoRoute</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a
+forall (m :: * -&gt; *) a. MonadSnap m =&gt; m a
+</span><a href="Snap.Internal.Core.html#pass"><span class="hs-identifier hs-var">pass</span></a></span><span>
+</span><span id="line-319"></span></pre></body></html>

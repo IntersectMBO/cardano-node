@@ -1,0 +1,562 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns, CPP, DeriveFunctor #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | This module allows for streaming decoding of CSV data. This is</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- useful if you need to parse large amounts of input in constant</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- space. The API also allows you to ignore type conversion errors on</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- a per-record basis.</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Csv.Streaming</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Usage example</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- $example</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Stream representation</span></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- $stream-representation</span></span><span>
+</span><span id="line-14"></span><span>      </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier">Records</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Decoding records</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- $typeconversion</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Index-based record conversion</span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- $indexbased</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Types.html#HasHeader"><span class="hs-identifier">HasHeader</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#decode"><span class="hs-identifier">decode</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#decodeWith"><span class="hs-identifier">decodeWith</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Name-based record conversion</span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="hs-comment">-- $namebased</span></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#decodeByName"><span class="hs-identifier">decodeByName</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#decodeByNameWith"><span class="hs-identifier">decodeByNameWith</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf"><span class="hs-identifier">rnf</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Char8.html"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL8</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier">foldr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Csv.Conversion.html"><span class="hs-identifier">Data.Csv.Conversion</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Csv.Incremental.html"><span class="hs-identifier">Data.Csv.Incremental</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#decode"><span class="hs-identifier">decode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Incremental.html#decodeByName"><span class="hs-identifier">decodeByName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Incremental.html#decodeByNameWith"><span class="hs-identifier">decodeByNameWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>                                    </span><span class="annot"><a href="Data.Csv.Incremental.html#decodeWith"><span class="hs-identifier">decodeWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Data.Csv.Incremental.html"><span class="hs-identifier">Data.Csv.Incremental</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">I</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html"><span class="hs-identifier">Data.Csv.Parser</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Csv.Types.html"><span class="hs-identifier">Data.Csv.Types</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- $example</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- A short usage example:</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- &gt; for_ (decode NoHeader &quot;John,27\r\nJane,28\r\n&quot;) $ \ (name, age :: Int) -&gt;</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- &gt;     putStrLn $ name ++ &quot; is &quot; ++ show age ++ &quot; years old&quot;</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- N.B. The 'Foldable' instance, which is used above, skips records</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- that failed to convert. If you don't want this behavior, work</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- directly with the 'Cons' and 'Nil' constructors.</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- $stream-representation</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- A stream of records is represented as a (lazy) list that may</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- contain errors.</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- $typeconversion</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- Just like in the case of non-streaming decoding, there are two ways</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- to convert CSV records to and from and user-defined data types:</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- index-based conversion and name-based conversion.</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- $indexbased</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- See documentation on index-based conversion in &quot;Data.Csv&quot; for more</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- information.</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- $namebased</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- See documentation on name-based conversion in &quot;Data.Csv&quot; for more</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- information.</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | A stream of parsed records. If type conversion failed for the</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- record, the error is returned as @'Left' errMsg@.</span><span>
+</span><span id="line-79"></span><span class="hs-keyword">data</span><span> </span><span id="Records"><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-var">Records</span></a></span></span><span> </span><span id="local-6989586621679088778"><span class="annot"><a href="#local-6989586621679088778"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | A record or an error message, followed by more records.</span></span><span>
+</span><span id="line-81"></span><span>      </span><span id="Cons"><span class="annot"><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088778"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088778"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-comment">-- | End of stream, potentially due to a parse error. If a parse</span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-comment">-- error occured, the first field contains the error message.</span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-comment">-- The second field contains any unconsumed input.</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Nil"><span class="annot"><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679088834"><span id="local-6989586621679088845"><span class="annot"><span class="annottext">Records a -&gt; Records a -&gt; Bool
+(Records a -&gt; Records a -&gt; Bool)
+-&gt; (Records a -&gt; Records a -&gt; Bool) -&gt; Eq (Records a)
+forall a. Eq a =&gt; Records a -&gt; Records a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Records a -&gt; Records a -&gt; Bool
+== :: Records a -&gt; Records a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Records a -&gt; Records a -&gt; Bool
+/= :: Records a -&gt; Records a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679088852"><span id="local-6989586621679088858"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Records a -&gt; Records b)
+-&gt; (forall a b. a -&gt; Records b -&gt; Records a) -&gt; Functor Records
+forall a b. a -&gt; Records b -&gt; Records a
+forall a b. (a -&gt; b) -&gt; Records a -&gt; Records b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Records a -&gt; Records b
+fmap :: forall a b. (a -&gt; b) -&gt; Records a -&gt; Records b
+$c&lt;$ :: forall a b. a -&gt; Records b -&gt; Records a
+&lt;$ :: forall a b. a -&gt; Records b -&gt; Records a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679088864"><span id="local-6989586621679088878"><span id="local-6989586621679088881"><span class="annot"><span class="annottext">Int -&gt; Records a -&gt; ShowS
+[Records a] -&gt; ShowS
+Records a -&gt; String
+(Int -&gt; Records a -&gt; ShowS)
+-&gt; (Records a -&gt; String)
+-&gt; ([Records a] -&gt; ShowS)
+-&gt; Show (Records a)
+forall a. Show a =&gt; Int -&gt; Records a -&gt; ShowS
+forall a. Show a =&gt; [Records a] -&gt; ShowS
+forall a. Show a =&gt; Records a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Records a -&gt; ShowS
+showsPrec :: Int -&gt; Records a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Records a -&gt; String
+show :: Records a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Records a] -&gt; ShowS
+showList :: [Records a] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><span class="hs-comment">-- | Skips records that failed to convert.</span></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679088888"><span id="local-6989586621679088894"><span id="local-6989586621679088899"><span id="local-6989586621679088905"><span id="local-6989586621679088908"><span id="local-6989586621679088912"><span id="local-6989586621679088915"><span id="local-6989586621679088918"><span id="local-6989586621679088921"><span id="local-6989586621679088924"><span id="local-6989586621679088927"><span id="local-6989586621679088932"><span id="local-6989586621679088937"><span id="local-6989586621679088942"><span id="local-6989586621679088947"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679088952"><span class="annot"><span class="annottext">foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Records a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; b) -&gt; b -&gt; Records a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Records a -&gt; b
+</span><a href="Data.Csv.Streaming.html#foldrRecords"><span class="hs-identifier hs-var">foldrRecords</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679088954"><span class="annot"><span class="annottext">foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Records a -&gt; b
+</span><a href="#local-6989586621679088954"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldl'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; a -&gt; b) -&gt; b -&gt; Records a -&gt; b
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Records a -&gt; b
+</span><a href="Data.Csv.Streaming.html#foldlRecords%27"><span class="hs-identifier hs-var">foldlRecords'</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span id="local-6989586621679088957"><span id="local-6989586621679088958"><span class="annot"><a href="Data.Csv.Streaming.html#foldrRecords"><span class="hs-identifier hs-type">foldrRecords</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679088957"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088958"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088958"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088958"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088957"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088958"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-95"></span><span id="foldrRecords"><span class="annot"><span class="annottext">foldrRecords :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Records a -&gt; b
+</span><a href="Data.Csv.Streaming.html#foldrRecords"><span class="hs-identifier hs-var hs-var">foldrRecords</span></a></span></span><span> </span><span id="local-6989586621679088959"><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679088959"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Records a -&gt; b
+</span><a href="#local-6989586621679088960"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679088960"><span class="annot"><span class="annottext">go :: b -&gt; Records a -&gt; b
+</span><a href="#local-6989586621679088960"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679088961"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088961"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-type">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679088962"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088962"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679088963"><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679088963"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679088959"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088962"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; Records a -&gt; b
+</span><a href="#local-6989586621679088960"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088961"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679088963"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="#local-6989586621679088960"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679088964"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088964"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-type">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679088965"><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679088965"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Records a -&gt; b
+</span><a href="#local-6989586621679088960"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088964"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679088965"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="#local-6989586621679088960"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679088966"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088966"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="annot"><span class="annottext">Records a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088966"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-100"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#foldrRecords"><span class="hs-pragma hs-type">foldrRecords</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span id="local-6989586621679088967"><span id="local-6989586621679088968"><span class="annot"><a href="Data.Csv.Streaming.html#foldlRecords%27"><span class="hs-identifier hs-type">foldlRecords'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679088967"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088968"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088967"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088967"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088968"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679088967"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-103"></span><span id="foldlRecords%27"><span class="annot"><span class="annottext">foldlRecords' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Records a -&gt; b
+</span><a href="Data.Csv.Streaming.html#foldlRecords%27"><span class="hs-identifier hs-var hs-var">foldlRecords'</span></a></span></span><span> </span><span id="local-6989586621679088969"><span class="annot"><span class="annottext">a -&gt; b -&gt; a
+</span><a href="#local-6989586621679088969"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Records b -&gt; a
+</span><a href="#local-6989586621679088970"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621679088970"><span class="annot"><span class="annottext">go :: a -&gt; Records b -&gt; a
+</span><a href="#local-6989586621679088970"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679088971"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088971"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-type">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679088972"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088972"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679088973"><span class="annot"><span class="annottext">Records b
+</span><a href="#local-6989586621679088973"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679088974"><span class="annot"><span class="annottext">z' :: a
+</span><a href="#local-6989586621679088974"><span class="hs-identifier hs-var hs-var">z'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; a
+</span><a href="#local-6989586621679088969"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088971"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679088972"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088974"><span class="hs-identifier hs-var">z'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a b. a -&gt; b -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Records b -&gt; a
+</span><a href="#local-6989586621679088970"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088974"><span class="hs-identifier hs-var">z'</span></a></span><span> </span><span class="annot"><span class="annottext">Records b
+</span><a href="#local-6989586621679088973"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><a href="#local-6989586621679088970"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679088975"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088975"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-type">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679088976"><span class="annot"><span class="annottext">Records b
+</span><a href="#local-6989586621679088976"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Records b -&gt; a
+</span><a href="#local-6989586621679088970"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088975"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Records b
+</span><a href="#local-6989586621679088976"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><a href="#local-6989586621679088970"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679088977"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088977"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="annot"><span class="annottext">Records b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679088977"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-108"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#foldlRecords%27"><span class="hs-pragma hs-type">foldlRecords'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679088984"><span id="local-6989586621679088990"><span id="local-6989586621679088995"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Traversable.html#Traversable"><span class="hs-identifier hs-type">Traversable</span></a></span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>    </span><span id="local-6989586621679089008"><span class="annot"><span class="annottext">traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Records a -&gt; f (Records b)
+</span><a href="#local-6989586621679089008"><span class="hs-identifier hs-var hs-var hs-var hs-var">traverse</span></a></span></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-type">Nil</span></a></span><span> </span><span id="local-6989586621679089010"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679089010"><span class="hs-identifier hs-var">merr</span></a></span></span><span> </span><span id="local-6989586621679089011"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089011"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Records b -&gt; f (Records b)
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Records b -&gt; f (Records b)) -&gt; Records b -&gt; f (Records b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; ByteString -&gt; Records b
+forall a. Maybe String -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679089010"><span class="hs-identifier hs-var">merr</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089011"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span id="local-6989586621679089012"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679089012"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-type">Cons</span></a></span><span> </span><span id="local-6989586621679089013"><span class="annot"><span class="annottext">Either String a
+</span><a href="#local-6989586621679089013"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679089014"><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679089014"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either String b -&gt; Records b -&gt; Records b
+forall a. Either String a -&gt; Records a -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String b -&gt; Records b -&gt; Records b)
+-&gt; f (Either String b) -&gt; f (Records b -&gt; Records b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; f (Either String b)
+forall {a}. Either a a -&gt; f (Either a b)
+</span><a href="#local-6989586621679089016"><span class="hs-identifier hs-var">traverseElem</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a
+</span><a href="#local-6989586621679089013"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">f (Records b -&gt; Records b) -&gt; f (Records b) -&gt; f (Records b)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; Records a -&gt; f (Records b)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Records a -&gt; f (Records b)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679089012"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679089014"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>        </span><span id="local-6989586621679089016"><span class="annot"><span class="annottext">traverseElem :: Either a a -&gt; f (Either a b)
+</span><a href="#local-6989586621679089016"><span class="hs-identifier hs-var hs-var">traverseElem</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679089020"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679089020"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either a b -&gt; f (Either a b)
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a b -&gt; f (Either a b)) -&gt; Either a b -&gt; f (Either a b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either a b
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679089020"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><a href="#local-6989586621679089016"><span class="hs-identifier hs-var">traverseElem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679089021"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679089021"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Either a b
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Either a b) -&gt; f b -&gt; f (Either a b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679089012"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679089021"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679088790"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088790"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088790"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679089037"><span class="annot"><span class="annottext">rnf :: Records a -&gt; ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-type">Cons</span></a></span><span> </span><span id="local-6989586621679089038"><span class="annot"><span class="annottext">Either String a
+</span><a href="#local-6989586621679089038"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679089039"><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679089039"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a
+</span><a href="#local-6989586621679089038"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="annot"><span class="annottext">Records a -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Records a
+</span><a href="#local-6989586621679089039"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-type">Nil</span></a></span><span> </span><span id="local-6989586621679089040"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679089040"><span class="hs-identifier hs-var">errMsg</span></a></span></span><span> </span><span id="local-6989586621679089041"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089041"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679089040"><span class="hs-identifier hs-var">errMsg</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089041"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- | Efficiently deserialize CSV records in a streaming fashion.</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- Equivalent to @'decodeWith' 'defaultDecodeOptions'@.</span><span>
+</span><span id="line-123"></span><span id="local-6989586621679088795"><span class="annot"><a href="Data.Csv.Streaming.html#decode"><span class="hs-identifier hs-type">decode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Csv.Conversion.html#FromRecord"><span class="hs-identifier hs-type">FromRecord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088795"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-124"></span><span>       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Types.html#HasHeader"><span class="hs-identifier hs-type">HasHeader</span></a></span><span>      </span><span class="hs-comment">-- ^ Data contains header that should be</span><span>
+</span><span id="line-125"></span><span>                         </span><span class="hs-comment">-- skipped</span><span>
+</span><span id="line-126"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ CSV data</span></span><span>
+</span><span id="line-127"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088795"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-128"></span><span id="decode"><span class="annot"><span class="annottext">decode :: forall a. FromRecord a =&gt; HasHeader -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#decode"><span class="hs-identifier hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeOptions -&gt; HasHeader -&gt; ByteString -&gt; Records a
+forall a.
+FromRecord a =&gt;
+DecodeOptions -&gt; HasHeader -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#decodeWith"><span class="hs-identifier hs-var">decodeWith</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="Data.Csv.Parser.html#defaultDecodeOptions"><span class="hs-identifier hs-var">defaultDecodeOptions</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="annot"><span class="hs-comment">-- | Like 'decode', but lets you customize how the CSV data is parsed.</span></span><span>
+</span><span id="line-131"></span><span id="local-6989586621679088800"><span class="annot"><a href="Data.Csv.Streaming.html#decodeWith"><span class="hs-identifier hs-type">decodeWith</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Csv.Conversion.html#FromRecord"><span class="hs-identifier hs-type">FromRecord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088800"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-132"></span><span>           </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-type">DecodeOptions</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Decoding options</span></span><span>
+</span><span id="line-133"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Types.html#HasHeader"><span class="hs-identifier hs-type">HasHeader</span></a></span><span>      </span><span class="hs-comment">-- ^ Data contains header that should be</span><span>
+</span><span id="line-134"></span><span>                             </span><span class="hs-comment">-- skipped</span><span>
+</span><span id="line-135"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ CSV data</span></span><span>
+</span><span id="line-136"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088800"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-137"></span><span id="decodeWith"><span class="annot"><span class="annottext">decodeWith :: forall a.
+FromRecord a =&gt;
+DecodeOptions -&gt; HasHeader -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#decodeWith"><span class="hs-identifier hs-var hs-var">decodeWith</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679089047"><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679089047"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679089048"><span class="annot"><span class="annottext">HasHeader
+</span><a href="#local-6989586621679089048"><span class="hs-identifier hs-var">hasHeader</span></a></span></span><span> </span><span id="local-6989586621679089049"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089049"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><span class="annottext">[ByteString] -&gt; Parser a -&gt; Records a
+forall {a}. [ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089050"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#toChunks"><span class="hs-identifier hs-var">BL.toChunks</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089049"><span class="hs-identifier hs-var">s0</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DecodeOptions -&gt; HasHeader -&gt; Parser a
+forall a. FromRecord a =&gt; DecodeOptions -&gt; HasHeader -&gt; Parser a
+</span><a href="Data.Csv.Incremental.html#decodeWith"><span class="hs-identifier hs-var">I.decodeWith</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679089047"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">HasHeader
+</span><a href="#local-6989586621679089048"><span class="hs-identifier hs-var">hasHeader</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-140"></span><span>    </span><span id="local-6989586621679089050"><span class="annot"><span class="annottext">go :: [ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089050"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679089056"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089056"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Done"><span class="hs-identifier hs-type">Done</span></a></span><span> </span><span id="local-6989586621679089058"><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089058"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either String a -&gt; Records a -&gt; Records a)
+-&gt; Records a -&gt; [Either String a] -&gt; Records a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Records a -&gt; Records a
+forall a. Either String a -&gt; Records a -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe String -&gt; ByteString -&gt; Records a
+forall a. Maybe String -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#fromChunks"><span class="hs-identifier hs-var">BL.fromChunks</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089056"><span class="hs-identifier hs-var">ss</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089058"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><a href="#local-6989586621679089050"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679089060"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089060"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Fail"><span class="hs-identifier hs-type">Fail</span></a></span><span> </span><span id="local-6989586621679089062"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089062"><span class="hs-identifier hs-var">rest</span></a></span></span><span> </span><span id="local-6989586621679089063"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089063"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; ByteString -&gt; Records a
+forall a. Maybe String -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089063"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#fromChunks"><span class="hs-identifier hs-var">BL.fromChunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089062"><span class="hs-identifier hs-var">rest</span></a></span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; [ByteString]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089060"><span class="hs-identifier hs-var">ss</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><a href="#local-6989586621679089050"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Many"><span class="hs-identifier hs-type">Many</span></a></span><span> </span><span id="local-6989586621679089065"><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089065"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679089066"><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089066"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either String a -&gt; Records a -&gt; Records a)
+-&gt; Records a -&gt; [Either String a] -&gt; Records a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Records a -&gt; Records a
+forall a. Either String a -&gt; Records a -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089050"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089066"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#empty"><span class="hs-identifier hs-var">B.empty</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089065"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><a href="#local-6989586621679089050"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679089068"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089068"><span class="hs-identifier hs-var">s</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679089069"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089069"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Many"><span class="hs-identifier hs-type">Many</span></a></span><span> </span><span id="local-6989586621679089070"><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089070"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679089071"><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089071"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either String a -&gt; Records a -&gt; Records a)
+-&gt; Records a -&gt; [Either String a] -&gt; Records a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Records a -&gt; Records a
+forall a. Either String a -&gt; Records a -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089050"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089069"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089071"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089068"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089070"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- | Efficiently deserialize CSV in a streaming fashion. The data is</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- assumed to be preceded by a header. Returns @'Left' errMsg@ if</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- parsing the header fails. Equivalent to @'decodeByNameWith'</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- 'defaultDecodeOptions'@.</span><span>
+</span><span id="line-149"></span><span id="local-6989586621679088806"><span class="annot"><a href="Data.Csv.Streaming.html#decodeByName"><span class="hs-identifier hs-type">decodeByName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Csv.Conversion.html#FromNamedRecord"><span class="hs-identifier hs-type">FromNamedRecord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088806"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-150"></span><span>             </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ CSV data</span></span><span>
+</span><span id="line-151"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Types.html#Header"><span class="hs-identifier hs-type">Header</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088806"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-152"></span><span id="decodeByName"><span class="annot"><span class="annottext">decodeByName :: forall a.
+FromNamedRecord a =&gt;
+ByteString -&gt; Either String (Header, Records a)
+</span><a href="Data.Csv.Streaming.html#decodeByName"><span class="hs-identifier hs-var hs-var">decodeByName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeOptions -&gt; ByteString -&gt; Either String (Header, Records a)
+forall a.
+FromNamedRecord a =&gt;
+DecodeOptions -&gt; ByteString -&gt; Either String (Header, Records a)
+</span><a href="Data.Csv.Streaming.html#decodeByNameWith"><span class="hs-identifier hs-var">decodeByNameWith</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="Data.Csv.Parser.html#defaultDecodeOptions"><span class="hs-identifier hs-var">defaultDecodeOptions</span></a></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- TODO: Include something more in error messages?</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- | Like 'decodeByName', but lets you customize how the CSV data is</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- parsed.</span><span>
+</span><span id="line-158"></span><span id="local-6989586621679088810"><span class="annot"><a href="Data.Csv.Streaming.html#decodeByNameWith"><span class="hs-identifier hs-type">decodeByNameWith</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Csv.Conversion.html#FromNamedRecord"><span class="hs-identifier hs-type">FromNamedRecord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088810"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-159"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-type">DecodeOptions</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Decoding options</span></span><span>
+</span><span id="line-160"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ CSV data</span></span><span>
+</span><span id="line-161"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Types.html#Header"><span class="hs-identifier hs-type">Header</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Streaming.html#Records"><span class="hs-identifier hs-type">Records</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679088810"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-162"></span><span id="decodeByNameWith"><span class="annot"><span class="annottext">decodeByNameWith :: forall a.
+FromNamedRecord a =&gt;
+DecodeOptions -&gt; ByteString -&gt; Either String (Header, Records a)
+</span><a href="Data.Csv.Streaming.html#decodeByNameWith"><span class="hs-identifier hs-var hs-var">decodeByNameWith</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679089076"><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679089076"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679089077"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089077"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+-&gt; HeaderParser (Parser a) -&gt; Either String (Header, Records a)
+forall {a}.
+[ByteString]
+-&gt; HeaderParser (Parser a) -&gt; Either String (Header, Records a)
+</span><a href="#local-6989586621679089078"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#toChunks"><span class="hs-identifier hs-var">BL.toChunks</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089077"><span class="hs-identifier hs-var">s0</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DecodeOptions -&gt; HeaderParser (Parser a)
+forall a.
+FromNamedRecord a =&gt;
+DecodeOptions -&gt; HeaderParser (Parser a)
+</span><a href="Data.Csv.Incremental.html#decodeByNameWith"><span class="hs-identifier hs-var">I.decodeByNameWith</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679089076"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-164"></span><span>    </span><span id="local-6989586621679089078"><span class="annot"><span class="annottext">go :: [ByteString]
+-&gt; HeaderParser (Parser a) -&gt; Either String (Header, Records a)
+</span><a href="#local-6989586621679089078"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679089081"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089081"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#DoneH"><span class="hs-identifier hs-type">DoneH</span></a></span><span> </span><span id="local-6989586621679089083"><span class="annot"><span class="annottext">Header
+</span><a href="#local-6989586621679089083"><span class="hs-identifier hs-var">hdr</span></a></span></span><span> </span><span id="local-6989586621679089084"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679089084"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Header, Records a) -&gt; Either String (Header, Records a)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Header
+</span><a href="#local-6989586621679089083"><span class="hs-identifier hs-var">hdr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; Parser a -&gt; Records a
+forall {a}. [ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089085"><span class="hs-identifier hs-var">go2</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089081"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679089084"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><a href="#local-6989586621679089078"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679089086"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089086"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#FailH"><span class="hs-identifier hs-type">FailH</span></a></span><span> </span><span id="local-6989586621679089088"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089088"><span class="hs-identifier hs-var">rest</span></a></span></span><span> </span><span id="local-6989586621679089089"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089089"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String (Header, Records a)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either String (Header, Records a))
+-&gt; String -&gt; Either String (Header, Records a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089089"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; at &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-166"></span><span>                             </span><span class="annot"><span class="annottext">ShowS
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Char8.html#unpack"><span class="hs-identifier hs-var">BL8.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; String)
+-&gt; ([ByteString] -&gt; ByteString) -&gt; [ByteString] -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#fromChunks"><span class="hs-identifier hs-var">BL.fromChunks</span></a></span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; String) -&gt; [ByteString] -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089088"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; [ByteString]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089086"><span class="hs-identifier hs-var">ss</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><a href="#local-6989586621679089078"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#PartialH"><span class="hs-identifier hs-type">PartialH</span></a></span><span> </span><span id="local-6989586621679089094"><span class="annot"><span class="annottext">ByteString -&gt; HeaderParser (Parser a)
+</span><a href="#local-6989586621679089094"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+-&gt; HeaderParser (Parser a) -&gt; Either String (Header, Records a)
+</span><a href="#local-6989586621679089078"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; HeaderParser (Parser a)
+</span><a href="#local-6989586621679089094"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#empty"><span class="hs-identifier hs-var">B.empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><a href="#local-6989586621679089078"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679089095"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089095"><span class="hs-identifier hs-var">s</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679089096"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089096"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#PartialH"><span class="hs-identifier hs-type">PartialH</span></a></span><span> </span><span id="local-6989586621679089097"><span class="annot"><span class="annottext">ByteString -&gt; HeaderParser (Parser a)
+</span><a href="#local-6989586621679089097"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ByteString]
+-&gt; HeaderParser (Parser a) -&gt; Either String (Header, Records a)
+</span><a href="#local-6989586621679089078"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089096"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; HeaderParser (Parser a)
+</span><a href="#local-6989586621679089097"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089095"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span>    </span><span id="local-6989586621679089085"><span class="annot"><span class="annottext">go2 :: [ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089085"><span class="hs-identifier hs-var hs-var">go2</span></a></span></span><span> </span><span id="local-6989586621679089101"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089101"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Done"><span class="hs-identifier hs-type">Done</span></a></span><span> </span><span id="local-6989586621679089102"><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089102"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either String a -&gt; Records a -&gt; Records a)
+-&gt; Records a -&gt; [Either String a] -&gt; Records a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Records a -&gt; Records a
+forall a. Either String a -&gt; Records a -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe String -&gt; ByteString -&gt; Records a
+forall a. Maybe String -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#fromChunks"><span class="hs-identifier hs-var">BL.fromChunks</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089101"><span class="hs-identifier hs-var">ss</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089102"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><a href="#local-6989586621679089085"><span class="hs-identifier hs-var">go2</span></a></span><span> </span><span id="local-6989586621679089103"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089103"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Fail"><span class="hs-identifier hs-type">Fail</span></a></span><span> </span><span id="local-6989586621679089104"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089104"><span class="hs-identifier hs-var">rest</span></a></span></span><span> </span><span id="local-6989586621679089105"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089105"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; ByteString -&gt; Records a
+forall a. Maybe String -&gt; ByteString -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089105"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#fromChunks"><span class="hs-identifier hs-var">BL.fromChunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089104"><span class="hs-identifier hs-var">rest</span></a></span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; [ByteString]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089103"><span class="hs-identifier hs-var">ss</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><a href="#local-6989586621679089085"><span class="hs-identifier hs-var">go2</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Many"><span class="hs-identifier hs-type">Many</span></a></span><span> </span><span id="local-6989586621679089106"><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089106"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679089107"><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089107"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either String a -&gt; Records a -&gt; Records a)
+-&gt; Records a -&gt; [Either String a] -&gt; Records a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Records a -&gt; Records a
+forall a. Either String a -&gt; Records a -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089085"><span class="hs-identifier hs-var">go2</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089107"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#empty"><span class="hs-identifier hs-var">B.empty</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089106"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="annot"><a href="#local-6989586621679089085"><span class="hs-identifier hs-var">go2</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679089108"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089108"><span class="hs-identifier hs-var">s</span></a></span></span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679089109"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089109"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Incremental.html#Many"><span class="hs-identifier hs-type">Many</span></a></span><span> </span><span id="local-6989586621679089110"><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089110"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679089111"><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089111"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either String a -&gt; Records a -&gt; Records a)
+-&gt; Records a -&gt; [Either String a] -&gt; Records a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Records a -&gt; Records a
+forall a. Either String a -&gt; Records a -&gt; Records a
+</span><a href="Data.Csv.Streaming.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; Parser a -&gt; Records a
+</span><a href="#local-6989586621679089085"><span class="hs-identifier hs-var">go2</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089109"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Parser a
+</span><a href="#local-6989586621679089111"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089108"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Either String a]
+</span><a href="#local-6989586621679089110"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-174"></span></pre></body></html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts      #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns        #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes            #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies          #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.Egress</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.Mux.Egress.html#muxer"><span class="hs-identifier">muxer</span></a></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><span class="hs-comment">-- $egress</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- $servicingsSemantics</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Egress.html#EgressQueue"><span class="hs-identifier">EgressQueue</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Egress.html#TranslocationServiceRequest"><span class="hs-identifier">TranslocationServiceRequest</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Egress.html#Wanton"><span class="hs-identifier">Wanton</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.Strict</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadAsync</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadThrow</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTimer.SI</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">timeout</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html"><span class="hs-identifier">Network.Mux.Timeout</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Mux.Types.html"><span class="hs-identifier">Network.Mux.Types</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- $servicingsSemantics</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- = Desired Servicing Semantics</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--  == /Constructing Fairness/</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--   In this context we are defining fairness as:</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--    - no starvation</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--    - when presented with equal demand (from a selection of mini</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--      protocols) deliver &quot;equal&quot; service.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--   Equality here might be in terms of equal service rate of</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   requests (or segmented requests) and/or in terms of effective</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--   (SDU) data rates.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--  Notes:</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--   1) It is assumed that (for a given peer) that bulk delivery of</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--      blocks (i.e. in recovery mode) and normal, interactive,</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--      operation (e.g. chain following) are mutually exclusive. As</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--      such there is no requirement to create a notion of</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--      prioritisation between such traffic.</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--   2) We are assuming that the underlying TCP/IP bearer is managed</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--      so that individual Mux-layer PDUs are paced. a) this is necessary</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--      to mitigate head-of-line blocking effects (i.e. arbitrary</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--      amounts of data accruing in the O/S kernel); b) ensuring that</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--      any host egress data rate limits can be respected / enforced.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--  == /Current Caveats/</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--  1) Not considering how mini-protocol associations are constructed</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--     (depending on deployment model this might be resolved within</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--     the instantiation of the peer relationship)</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--  2) Not yet considered notion of orderly termination - this not</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--     likely to be used in an operational context, but may be needed</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--     for test harness use.</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--  == /Principle of Operation/</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--  Egress direction (mini protocol instance to remote peer)</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--  The request for service (the demand) from a mini protocol is</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--  encapsulated in a `Wanton`, such `Wanton`s are placed in a (finite)</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--  queue (e.g TBMQ) of `TranslocationServiceRequest`s.</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- $egress</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- = Egress Path</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- &gt; &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488; &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488; &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488; &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488; Every mode per miniprotocol</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- &gt; &#9474; muxDuplex &#9474; &#9474; muxDuplex &#9474; &#9474; muxDuplex &#9474; &#9474; muxDuplex &#9474; has a dedicated thread which</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- &gt; &#9474; Initiator &#9474; &#9474; Responder &#9474; &#9474; Initiator &#9474; &#9474; Responder &#9474; will send ByteStrings of CBOR</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- &gt; &#9474; ChainSync &#9474; &#9474; ChainSync &#9474; &#9474; BlockFetch&#9474; &#9474; BlockFetch&#9474; encoded data.</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- &gt; &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496; &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496; &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496; &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- &gt;       &#9474;             &#9474;             &#9474;             &#9474;</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- &gt;       &#9474;             &#9474;             &#9474;             &#9474;</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- &gt;       &#9584;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9583;</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- &gt;                            &#9474;</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- &gt;                     application data</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- &gt;                            &#9474;</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- &gt;                         &#9617;&#9617;&#9617;&#9660;&#9617;&#9617;</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- &gt;                         &#9617;&#9474;  &#9474;&#9617; For a given Mux Bearer there is a single egress</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- &gt;                         &#9617;&#9474;ci&#9474;&#9617; queue shared among all miniprotocols. To ensure</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- &gt;                         &#9617;&#9474;cr&#9474;&#9617; fairness each miniprotocol can at most have one</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- &gt;                         &#9617;&#9492;&#9472;&#9472;&#9496;&#9617; message in the queue, see Desired Servicing</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- &gt;                         &#9617;&#9617;&#9617;&#9474;&#9617;&#9617; Semantics.</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- &gt;                           &#9617;&#9474;&#9617;</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- &gt;                       &#9617;&#9617;&#9617;&#9617;&#9617;&#9660;&#9617;&#9617;&#9617;</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- &gt;                       &#9617;&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;&#9617; The egress queue is served by a dedicated thread</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- &gt;                       &#9617;&#9474; mux &#9474;&#9617; which chops up the CBOR data into MuxSDUs with at</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- &gt;                       &#9617;&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;&#9617; most sduSize bytes of data in them.</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- &gt;                       &#9617;&#9617;&#9617;&#9617;&#9474;&#9617;&#9617;&#9617;&#9617;</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- &gt;                          &#9617;&#9474;&#9617; MuxSDUs</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- &gt;                          &#9617;&#9474;&#9617;</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- &gt;                  &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9660;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- &gt;                  &#9617;&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;&#9617;</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- &gt;                  &#9617;&#9474; Bearer.write() &#9474;&#9617; Mux Bearer implementation specific write</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- &gt;                  &#9617;&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;&#9617;</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- &gt;                  &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9474;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- &gt;                           &#9474; ByteStrings</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- &gt;                           &#9660;</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- &gt;                           &#9679;</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">type</span><span> </span><span id="EgressQueue"><span class="annot"><a href="Network.Mux.Egress.html#EgressQueue"><span class="hs-identifier hs-var">EgressQueue</span></a></span></span><span> </span><span id="local-6989586621679117421"><span class="annot"><a href="#local-6989586621679117421"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StrictTBQueue</span></span><span> </span><span class="annot"><a href="#local-6989586621679117421"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Egress.html#TranslocationServiceRequest"><span class="hs-identifier hs-type">TranslocationServiceRequest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117421"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- | A TranslocationServiceRequest is a demand for the translocation</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--  of a single mini-protocol message. This message can be of</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--  arbitrary (yet bounded) size. This multiplexing layer is</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--  responsible for the segmentation of concrete representation into</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--  appropriate SDU's for onward transmission.</span><span>
+</span><span id="line-120"></span><span class="hs-keyword">data</span><span> </span><span id="TranslocationServiceRequest"><span class="annot"><a href="Network.Mux.Egress.html#TranslocationServiceRequest"><span class="hs-identifier hs-var">TranslocationServiceRequest</span></a></span></span><span> </span><span id="local-6989586621679117411"><span class="annot"><a href="#local-6989586621679117411"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-121"></span><span>     </span><span id="TLSRDemand"><span class="annot"><a href="Network.Mux.Egress.html#TLSRDemand"><span class="hs-identifier hs-var">TLSRDemand</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Egress.html#Wanton"><span class="hs-identifier hs-type">Wanton</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117411"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- | A Wanton represent the concrete data to be translocated, note that the</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--  TVar becoming empty indicates -- that the last fragment of the data has</span><span>
+</span><span id="line-125"></span><span class="hs-comment">--  been enqueued on the -- underlying bearer.</span><span>
+</span><span id="line-126"></span><span class="hs-keyword">newtype</span><span> </span><span id="Wanton"><span class="annot"><a href="Network.Mux.Egress.html#Wanton"><span class="hs-identifier hs-var">Wanton</span></a></span></span><span> </span><span id="local-6989586621679117353"><span class="annot"><a href="#local-6989586621679117353"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Wanton"><span class="annot"><a href="Network.Mux.Egress.html#Wanton"><span class="hs-identifier hs-var">Wanton</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="want"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Wanton m -&gt; StrictTVar m ByteString
+</span><a href="Network.Mux.Egress.html#want"><span class="hs-identifier hs-var hs-var">want</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">StrictTVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679117353"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- | Process the messages from the mini protocols - there is a single</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- shared FIFO that contains the items of work. This is processed so</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- that each active demand gets a `maxSDU`s work of data processed</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- each time it gets to the front of the queue</span><span>
+</span><span id="line-133"></span><span id="local-6989586621679117358"><span id="local-6989586621679117367"><span class="annot"><a href="Network.Mux.Egress.html#muxer"><span class="hs-identifier hs-type">muxer</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadAsync</span></span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-135"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFork</span></span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-136"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadMask</span></span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-137"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTimer</span></span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-139"></span><span>       </span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Egress.html#EgressQueue"><span class="hs-identifier hs-type">EgressQueue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxBearer"><span class="hs-identifier hs-type">MuxBearer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117358"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117367"><span class="hs-identifier hs-type">void</span></a></span></span></span><span>
+</span><span id="line-143"></span><span id="muxer"><span class="annot"><span class="annottext">muxer :: forall (m :: * -&gt; *) void.
+(MonadAsync m, MonadFork m, MonadMask m, MonadThrow (STM m),
+ MonadTimer m) =&gt;
+EgressQueue m -&gt; MuxBearer m -&gt; m void
+</span><a href="Network.Mux.Egress.html#muxer"><span class="hs-identifier hs-var hs-var">muxer</span></a></span></span><span> </span><span id="local-6989586621679117450"><span class="annot"><span class="annottext">EgressQueue m
+</span><a href="#local-6989586621679117450"><span class="hs-identifier hs-var">egressQueue</span></a></span></span><span> </span><span id="local-6989586621679117451"><span class="annot"><span class="annottext">MuxBearer m
+</span><a href="#local-6989586621679117451"><span class="hs-identifier hs-var">bearer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="annottext">(TimeoutFn m -&gt; m void) -&gt; m void
+forall (m :: * -&gt; *) b.
+(MonadAsync m, MonadFork m, MonadMonotonicTime m, MonadTimer m,
+ MonadMask m, MonadThrow (STM m)) =&gt;
+(TimeoutFn m -&gt; m b) -&gt; m b
+</span><a href="Network.Mux.Timeout.html#withTimeoutSerial"><span class="hs-identifier hs-var">withTimeoutSerial</span></a></span><span> </span><span class="annot"><span class="annottext">((TimeoutFn m -&gt; m void) -&gt; m void)
+-&gt; (TimeoutFn m -&gt; m void) -&gt; m void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679117453"><span class="annot"><span class="annottext">TimeoutFn m
+</span><a href="#local-6989586621679117453"><span class="hs-identifier hs-var">timeout</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="annottext">m () -&gt; m void
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m void) -&gt; m () -&gt; m void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><a href="Network.Mux.Egress.html#TLSRDemand"><span class="hs-identifier hs-type">TLSRDemand</span></a></span><span> </span><span id="local-6989586621679117455"><span class="annot"><span class="annottext">MiniProtocolNum
+</span><a href="#local-6989586621679117455"><span class="hs-identifier hs-var">mpc</span></a></span></span><span> </span><span id="local-6989586621679117456"><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="#local-6989586621679117456"><span class="hs-identifier hs-var">md</span></a></span></span><span> </span><span id="local-6989586621679117457"><span class="annot"><span class="annottext">Wanton m
+</span><a href="#local-6989586621679117457"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m (TranslocationServiceRequest m)
+-&gt; m (TranslocationServiceRequest m)
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m (TranslocationServiceRequest m)
+ -&gt; m (TranslocationServiceRequest m))
+-&gt; STM m (TranslocationServiceRequest m)
+-&gt; m (TranslocationServiceRequest m)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EgressQueue m -&gt; STM m (TranslocationServiceRequest m)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; StrictTBQueue m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTBQueue</span></span><span> </span><span class="annot"><span class="annottext">EgressQueue m
+</span><a href="#local-6989586621679117450"><span class="hs-identifier hs-var">egressQueue</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">EgressQueue m
+-&gt; MuxBearer m
+-&gt; TimeoutFn m
+-&gt; MiniProtocolNum
+-&gt; MiniProtocolDir
+-&gt; Wanton m
+-&gt; m ()
+forall (m :: * -&gt; *).
+MonadSTM m =&gt;
+EgressQueue m
+-&gt; MuxBearer m
+-&gt; TimeoutFn m
+-&gt; MiniProtocolNum
+-&gt; MiniProtocolDir
+-&gt; Wanton m
+-&gt; m ()
+</span><a href="Network.Mux.Egress.html#processSingleWanton"><span class="hs-identifier hs-var">processSingleWanton</span></a></span><span> </span><span class="annot"><span class="annottext">EgressQueue m
+</span><a href="#local-6989586621679117450"><span class="hs-identifier hs-var">egressQueue</span></a></span><span> </span><span class="annot"><span class="annottext">MuxBearer m
+</span><a href="#local-6989586621679117451"><span class="hs-identifier hs-var">bearer</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m a -&gt; m (Maybe a)
+TimeoutFn m
+</span><a href="#local-6989586621679117453"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolNum
+</span><a href="#local-6989586621679117455"><span class="hs-identifier hs-var">mpc</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="#local-6989586621679117456"><span class="hs-identifier hs-var">md</span></a></span><span> </span><span class="annot"><span class="annottext">Wanton m
+</span><a href="#local-6989586621679117457"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- | Pull a `maxSDU`s worth of data out out the `Wanton` - if there is</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- data remaining requeue the `TranslocationServiceRequest` (this</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- ensures that any other items on the queue will get some service</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- first.</span><span>
+</span><span id="line-153"></span><span id="local-6989586621679117393"><span class="annot"><a href="Network.Mux.Egress.html#processSingleWanton"><span class="hs-identifier hs-type">processSingleWanton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679117393"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-154"></span><span>                    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Egress.html#EgressQueue"><span class="hs-identifier hs-type">EgressQueue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117393"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-155"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxBearer"><span class="hs-identifier hs-type">MuxBearer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117393"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-156"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">TimeoutFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117393"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-157"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span>
+</span><span id="line-158"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span>
+</span><span id="line-159"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Egress.html#Wanton"><span class="hs-identifier hs-type">Wanton</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117393"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-160"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117393"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-161"></span><span id="processSingleWanton"><span class="annot"><span class="annottext">processSingleWanton :: forall (m :: * -&gt; *).
+MonadSTM m =&gt;
+EgressQueue m
+-&gt; MuxBearer m
+-&gt; TimeoutFn m
+-&gt; MiniProtocolNum
+-&gt; MiniProtocolDir
+-&gt; Wanton m
+-&gt; m ()
+</span><a href="Network.Mux.Egress.html#processSingleWanton"><span class="hs-identifier hs-var hs-var">processSingleWanton</span></a></span></span><span> </span><span id="local-6989586621679117492"><span class="annot"><span class="annottext">EgressQueue m
+</span><a href="#local-6989586621679117492"><span class="hs-identifier hs-var">egressQueue</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxBearer"><span class="hs-identifier hs-type">MuxBearer</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679117494"><span class="annot"><span class="annottext">TimeoutFn m -&gt; MuxSDU -&gt; m Time
+write :: TimeoutFn m -&gt; MuxSDU -&gt; m Time
+write :: forall (m :: * -&gt; *).
+MuxBearer m -&gt; TimeoutFn m -&gt; MuxSDU -&gt; m Time
+</span><a href="#local-6989586621679117494"><span class="hs-identifier hs-var hs-var">write</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117496"><span class="annot"><span class="annottext">SDUSize
+sduSize :: SDUSize
+sduSize :: forall (m :: * -&gt; *). MuxBearer m -&gt; SDUSize
+</span><a href="#local-6989586621679117496"><span class="hs-identifier hs-var hs-var">sduSize</span></a></span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-162"></span><span>                    </span><span id="local-6989586621679117498"><span class="annot"><span class="annottext">TimeoutFn m
+</span><a href="#local-6989586621679117498"><span class="hs-identifier hs-var">timeout</span></a></span></span><span> </span><span id="local-6989586621679117499"><span class="annot"><span class="annottext">MiniProtocolNum
+</span><a href="#local-6989586621679117499"><span class="hs-identifier hs-var">mpc</span></a></span></span><span> </span><span id="local-6989586621679117500"><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="#local-6989586621679117500"><span class="hs-identifier hs-var">md</span></a></span></span><span> </span><span id="local-6989586621679117501"><span class="annot"><span class="annottext">Wanton m
+</span><a href="#local-6989586621679117501"><span class="hs-identifier hs-var">wanton</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-163"></span><span>    </span><span id="local-6989586621679117502"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117502"><span class="hs-identifier hs-var">blob</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m ByteString -&gt; m ByteString
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m ByteString -&gt; m ByteString)
+-&gt; STM m ByteString -&gt; m ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-164"></span><span>      </span><span class="hs-comment">-- extract next SDU</span><span>
+</span><span id="line-165"></span><span>      </span><span id="local-6989586621679117503"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117503"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StrictTVar m ByteString -&gt; STM m ByteString
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; StrictTVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Wanton m -&gt; StrictTVar m ByteString
+forall (m :: * -&gt; *). Wanton m -&gt; StrictTVar m ByteString
+</span><a href="Network.Mux.Egress.html#want"><span class="hs-identifier hs-var">want</span></a></span><span> </span><span class="annot"><span class="annottext">Wanton m
+</span><a href="#local-6989586621679117501"><span class="hs-identifier hs-var">wanton</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679117505"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117505"><span class="hs-identifier hs-var">frag</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117506"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117506"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; ByteString -&gt; (ByteString, ByteString)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#splitAt"><span class="hs-identifier hs-var">BL.splitAt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16 -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SDUSize -&gt; Word16
+</span><a href="Network.Mux.Types.html#getSDUSize"><span class="hs-identifier hs-var">getSDUSize</span></a></span><span> </span><span class="annot"><span class="annottext">SDUSize
+</span><a href="#local-6989586621679117496"><span class="hs-identifier hs-var">sduSize</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117503"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-167"></span><span>      </span><span class="hs-comment">-- if more to process then enqueue remaining work</span><span>
+</span><span id="line-168"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#null"><span class="hs-identifier hs-var">BL.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117506"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-169"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">StrictTVar m ByteString -&gt; ByteString -&gt; STM m ()
+forall (m :: * -&gt; *) a.
+MonadSTM m =&gt;
+StrictTVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Wanton m -&gt; StrictTVar m ByteString
+forall (m :: * -&gt; *). Wanton m -&gt; StrictTVar m ByteString
+</span><a href="Network.Mux.Egress.html#want"><span class="hs-identifier hs-var">want</span></a></span><span> </span><span class="annot"><span class="annottext">Wanton m
+</span><a href="#local-6989586621679117501"><span class="hs-identifier hs-var">wanton</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#empty"><span class="hs-identifier hs-var">BL.empty</span></a></span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-171"></span><span>          </span><span class="hs-comment">-- Note that to preserve bytestream ordering within a given</span><span>
+</span><span id="line-172"></span><span>          </span><span class="hs-comment">-- miniprotocol the readTVar and writeTVar operations</span><span>
+</span><span id="line-173"></span><span>          </span><span class="hs-comment">-- must be inside the same STM transaction.</span><span>
+</span><span id="line-174"></span><span>          </span><span class="annot"><span class="annottext">StrictTVar m ByteString -&gt; ByteString -&gt; STM m ()
+forall (m :: * -&gt; *) a.
+MonadSTM m =&gt;
+StrictTVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Wanton m -&gt; StrictTVar m ByteString
+forall (m :: * -&gt; *). Wanton m -&gt; StrictTVar m ByteString
+</span><a href="Network.Mux.Egress.html#want"><span class="hs-identifier hs-var">want</span></a></span><span> </span><span class="annot"><span class="annottext">Wanton m
+</span><a href="#local-6989586621679117501"><span class="hs-identifier hs-var">wanton</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117506"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-175"></span><span>          </span><span class="annot"><span class="annottext">EgressQueue m -&gt; TranslocationServiceRequest m -&gt; STM m ()
+forall (m :: * -&gt; *) a.
+MonadSTM m =&gt;
+StrictTBQueue m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTBQueue</span></span><span> </span><span class="annot"><span class="annottext">EgressQueue m
+</span><a href="#local-6989586621679117492"><span class="hs-identifier hs-var">egressQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MiniProtocolNum
+-&gt; MiniProtocolDir -&gt; Wanton m -&gt; TranslocationServiceRequest m
+forall (m :: * -&gt; *).
+MiniProtocolNum
+-&gt; MiniProtocolDir -&gt; Wanton m -&gt; TranslocationServiceRequest m
+</span><a href="Network.Mux.Egress.html#TLSRDemand"><span class="hs-identifier hs-var">TLSRDemand</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolNum
+</span><a href="#local-6989586621679117499"><span class="hs-identifier hs-var">mpc</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="#local-6989586621679117500"><span class="hs-identifier hs-var">md</span></a></span><span> </span><span class="annot"><span class="annottext">Wanton m
+</span><a href="#local-6989586621679117501"><span class="hs-identifier hs-var">wanton</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>      </span><span class="hs-comment">-- return data to send</span><span>
+</span><span id="line-177"></span><span>      </span><span class="annot"><span class="annottext">ByteString -&gt; STM m ByteString
+forall a. a -&gt; STM m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117505"><span class="hs-identifier hs-var">frag</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679117513"><span class="annot"><span class="annottext">sdu :: MuxSDU
+</span><a href="#local-6989586621679117513"><span class="hs-identifier hs-var hs-var">sdu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxSDU"><span class="hs-identifier hs-type">MuxSDU</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-179"></span><span>                </span><span class="annot"><span class="annottext">msHeader :: MuxSDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxSDUHeader"><span class="hs-identifier hs-type">MuxSDUHeader</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-180"></span><span>                    </span><span class="annot"><span class="annottext">mhTimestamp :: RemoteClockModel
+</span><a href="Network.Mux.Types.html#mhTimestamp"><span class="hs-identifier hs-var">mhTimestamp</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-var">RemoteClockModel</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-181"></span><span>                    </span><span class="annot"><span class="annottext">mhNum :: MiniProtocolNum
+</span><a href="Network.Mux.Types.html#mhNum"><span class="hs-identifier hs-var">mhNum</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolNum
+</span><a href="#local-6989586621679117499"><span class="hs-identifier hs-var">mpc</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-182"></span><span>                    </span><span class="annot"><span class="annottext">mhDir :: MiniProtocolDir
+</span><a href="Network.Mux.Types.html#mhDir"><span class="hs-identifier hs-var">mhDir</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="#local-6989586621679117500"><span class="hs-identifier hs-var">md</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-183"></span><span>                    </span><span class="annot"><span class="annottext">mhLength :: Word16
+</span><a href="Network.Mux.Types.html#mhLength"><span class="hs-identifier hs-var">mhLength</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int64 -&gt; Word16) -&gt; Int64 -&gt; Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#length"><span class="hs-identifier hs-var">BL.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117502"><span class="hs-identifier hs-var">blob</span></a></span><span>
+</span><span id="line-184"></span><span>                  </span><span class="hs-special">}</span><span class="hs-special">,</span><span>
+</span><span id="line-185"></span><span>                </span><span class="annot"><span class="annottext">msBlob :: ByteString
+</span><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var">msBlob</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679117502"><span class="hs-identifier hs-var">blob</span></a></span><span>
+</span><span id="line-186"></span><span>              </span><span class="hs-special">}</span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><span class="annottext">m Time -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m Time -&gt; m ()) -&gt; m Time -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutFn m -&gt; MuxSDU -&gt; m Time
+</span><a href="#local-6989586621679117494"><span class="hs-identifier hs-var">write</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m a -&gt; m (Maybe a)
+TimeoutFn m
+</span><a href="#local-6989586621679117498"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679117513"><span class="hs-identifier hs-var">sdu</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-comment">--paceTransmission tNow</span><span>
+</span><span id="line-189"></span></pre></body></html>

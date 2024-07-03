@@ -1,0 +1,652 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns        #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP                 #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings   #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Snap.Internal.Http.Server.Socket</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bindSocket"><span class="hs-identifier">bindSocket</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bindSocketImpl"><span class="hs-identifier">bindSocketImpl</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bindUnixSocket"><span class="hs-identifier">bindUnixSocket</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#httpAcceptFunc"><span class="hs-identifier">httpAcceptFunc</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#haProxyAcceptFunc"><span class="hs-identifier">haProxyAcceptFunc</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#sendFileFunc"><span class="hs-identifier">sendFileFunc</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#acceptAndInitialize"><span class="hs-identifier">acceptAndInitialize</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>                 </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracketOnError"><span class="hs-identifier">bracketOnError</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#finally"><span class="hs-identifier">finally</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#throwIO"><span class="hs-identifier">throwIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>                     </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Bits.html"><span class="hs-identifier">Data.Bits</span></a></span><span>                         </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Bits.html#complement"><span class="hs-identifier">complement</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Bits.html#.%26."><span class="hs-operator">(.&amp;.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span>             </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.Socket</span></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Socket</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SocketOption</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NoDelay</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ReuseAddr</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">accept</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">close</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getSocketName</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">setSocketOption</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">socket</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.Socket</span></span><span>                    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">N</span></span><span class="hs-cpp">
+#ifdef HAS_SENDFILE
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.Socket</span></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fdSocket</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.html"><span class="hs-identifier">System.Posix.IO</span></a></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.Common.html#OpenMode"><span class="hs-identifier">OpenMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.Common.html#closeFd"><span class="hs-identifier">closeFd</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.Common.html#defaultFileFlags"><span class="hs-identifier">defaultFileFlags</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.html#openFd"><span class="hs-identifier">openFd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.Posix.Types.html"><span class="hs-identifier">System.Posix.Types</span></a></span><span>                </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.Posix.Types.html#Fd"><span class="hs-identifier">Fd</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="System.SendFile.html"><span class="hs-identifier">System.SendFile</span></a></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="System.SendFile.html#sendFile"><span class="hs-identifier">sendFile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.SendFile.html#sendHeaders"><span class="hs-identifier">sendHeaders</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.ByteString.Builder</span><span>           </span><span class="hs-special">(</span><span class="hs-identifier">byteString</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.ByteString.Builder.Extra</span><span>     </span><span class="hs-special">(</span><span class="hs-identifier">flush</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Network.Socket.ByteString</span><span>         </span><span class="hs-special">(</span><span class="hs-identifier">sendAll</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#ifdef HAS_UNIX_SOCKETS
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>                 </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracket"><span class="hs-identifier">bracket</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>                 </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#catch"><span class="hs-identifier">catch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/filepath-1.4.200.1/src/System.FilePath.Posix.html#isRelative"><span class="hs-identifier">isRelative</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.Error.html"><span class="hs-identifier">System.IO.Error</span></a></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.Error.html#isDoesNotExistError"><span class="hs-identifier">isDoesNotExistError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.html"><span class="hs-identifier">System.Posix.Files</span></a></span><span>                </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.Common.html#accessModes"><span class="hs-identifier">accessModes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.html#removeLink"><span class="hs-identifier">removeLink</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.Common.html#setFileCreationMask"><span class="hs-identifier">setFileCreationMask</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-41"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.IO.Streams</span></span><span>                 </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Streams</span></span><span>
+</span><span id="line-43"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Snap.Internal.Http.Server.Address.html"><span class="hs-identifier">Snap.Internal.Http.Server.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Http.Server.Address.html#AddressNotSupportedException"><span class="hs-identifier">AddressNotSupportedException</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Address.html#getAddress"><span class="hs-identifier">getAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Address.html#getSockAddr"><span class="hs-identifier">getSockAddr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Snap.Internal.Http.Server.Types.html"><span class="hs-identifier">Snap.Internal.Http.Server.Types</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><a href="Snap.Internal.Http.Server.Types.html#AcceptFunc"><span class="hs-identifier">AcceptFunc</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Types.html#SendFileHandler"><span class="hs-identifier">SendFileHandler</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.IO.Streams.Network.HAProxy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HA</span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bindSocket"><span class="hs-identifier hs-type">bindSocket</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span>
+</span><span id="line-51"></span><span id="bindSocket"><span class="annot"><span class="annottext">bindSocket :: ByteString -&gt; Int -&gt; IO Socket
+</span><a href="Snap.Internal.Http.Server.Socket.html#bindSocket"><span class="hs-identifier hs-var hs-var">bindSocket</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Socket -&gt; SocketOption -&gt; Int -&gt; IO ())
+-&gt; (Socket -&gt; SockAddr -&gt; IO ())
+-&gt; (Socket -&gt; Int -&gt; IO ())
+-&gt; ByteString
+-&gt; Int
+-&gt; IO Socket
+</span><a href="Snap.Internal.Http.Server.Socket.html#bindSocketImpl"><span class="hs-identifier hs-var">bindSocketImpl</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SocketOption -&gt; Int -&gt; IO ()
+</span><span class="hs-identifier hs-var">setSocketOption</span></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ()
+</span><a href="#local-6989586621679101656"><span class="hs-identifier hs-var">bind</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ()
+</span><span class="hs-identifier hs-var">N.listen</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">where</span><span class="hs-cpp">
+#if MIN_VERSION_network(2,7,0)
+</span><span>    </span><span id="local-6989586621679101656"><span class="annot"><span class="annottext">bind :: Socket -&gt; SockAddr -&gt; IO ()
+</span><a href="#local-6989586621679101656"><span class="hs-identifier hs-var hs-var">bind</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ()
+</span><span class="hs-identifier hs-var">N.bind</span></span><span class="hs-cpp">
+#else
+</span><span>    </span><span class="hs-identifier">bind</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">N.bindSocket</span><span class="hs-cpp">
+#endif
+</span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bindSocket"><span class="hs-pragma hs-type">bindSocket</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bindSocketImpl"><span class="hs-identifier hs-type">bindSocketImpl</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SocketOption</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ mock setSocketOption</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">N.SockAddr</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>          </span><span class="annot"><span class="hs-comment">-- ^ bindSocket</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>                 </span><span class="annot"><span class="hs-comment">-- ^ listen</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span>
+</span><span id="line-69"></span><span id="bindSocketImpl"><span class="annot"><span class="annottext">bindSocketImpl :: (Socket -&gt; SocketOption -&gt; Int -&gt; IO ())
+-&gt; (Socket -&gt; SockAddr -&gt; IO ())
+-&gt; (Socket -&gt; Int -&gt; IO ())
+-&gt; ByteString
+-&gt; Int
+-&gt; IO Socket
+</span><a href="Snap.Internal.Http.Server.Socket.html#bindSocketImpl"><span class="hs-identifier hs-var hs-var">bindSocketImpl</span></a></span></span><span> </span><span id="local-6989586621679101659"><span class="annot"><span class="annottext">Socket -&gt; SocketOption -&gt; Int -&gt; IO ()
+</span><a href="#local-6989586621679101659"><span class="hs-identifier hs-var">_setSocketOption</span></a></span></span><span> </span><span id="local-6989586621679101660"><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ()
+</span><a href="#local-6989586621679101660"><span class="hs-identifier hs-var">_bindSocket</span></a></span></span><span> </span><span id="local-6989586621679101661"><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ()
+</span><a href="#local-6989586621679101661"><span class="hs-identifier hs-var">_listen</span></a></span></span><span> </span><span id="local-6989586621679101662"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101662"><span class="hs-identifier hs-var">bindAddr</span></a></span></span><span> </span><span id="local-6989586621679101663"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101663"><span class="hs-identifier hs-var">bindPort</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679101664"><span class="annot"><span class="annottext">Family
+</span><a href="#local-6989586621679101664"><span class="hs-keyword hs-var">family</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101665"><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101665"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ByteString -&gt; IO (Family, SockAddr)
+</span><a href="Snap.Internal.Http.Server.Address.html#getSockAddr"><span class="hs-identifier hs-var">getSockAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101663"><span class="hs-identifier hs-var">bindPort</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101662"><span class="hs-identifier hs-var">bindAddr</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">IO Socket
+-&gt; (Socket -&gt; IO ()) -&gt; (Socket -&gt; IO Socket) -&gt; IO Socket
+forall a b c. IO a -&gt; (a -&gt; IO b) -&gt; (a -&gt; IO c) -&gt; IO c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracketOnError"><span class="hs-identifier hs-var">bracketOnError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Family -&gt; SocketType -&gt; ProtocolNumber -&gt; IO Socket
+</span><span class="hs-identifier hs-var">socket</span></span><span> </span><span class="annot"><span class="annottext">Family
+</span><a href="#local-6989586621679101664"><span class="hs-keyword hs-var">family</span></a></span><span> </span><span class="annot"><span class="annottext">SocketType
+</span><span class="hs-identifier hs-var">N.Stream</span></span><span> </span><span class="annot"><span class="annottext">ProtocolNumber
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO ()
+</span><span class="hs-identifier hs-var">N.close</span></span><span> </span><span class="annot"><span class="annottext">((Socket -&gt; IO Socket) -&gt; IO Socket)
+-&gt; (Socket -&gt; IO Socket) -&gt; IO Socket
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679101667"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101667"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">Socket -&gt; SocketOption -&gt; Int -&gt; IO ()
+</span><a href="#local-6989586621679101659"><span class="hs-identifier hs-var">_setSocketOption</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101667"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">SocketOption
+</span><span class="hs-identifier hs-var">ReuseAddr</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-73"></span><span>        </span><span class="annot"><span class="annottext">Socket -&gt; SocketOption -&gt; Int -&gt; IO ()
+</span><a href="#local-6989586621679101659"><span class="hs-identifier hs-var">_setSocketOption</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101667"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">SocketOption
+</span><span class="hs-identifier hs-var">NoDelay</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ()
+</span><a href="#local-6989586621679101660"><span class="hs-identifier hs-var">_bindSocket</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101667"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101665"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ()
+</span><a href="#local-6989586621679101661"><span class="hs-identifier hs-var">_listen</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101667"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">150</span></span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">Socket -&gt; IO Socket
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Socket -&gt; IO Socket) -&gt; Socket -&gt; IO Socket
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101667"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bindUnixSocket"><span class="hs-identifier hs-type">bindUnixSocket</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span class="hs-cpp">
+#if HAS_UNIX_SOCKETS
+</span><span id="bindUnixSocket"><span class="annot"><span class="annottext">bindUnixSocket :: Maybe Int -&gt; [Char] -&gt; IO Socket
+</span><a href="Snap.Internal.Http.Server.Socket.html#bindUnixSocket"><span class="hs-identifier hs-var hs-var">bindUnixSocket</span></a></span></span><span> </span><span id="local-6989586621679101669"><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679101669"><span class="hs-identifier hs-var">mode</span></a></span></span><span> </span><span id="local-6989586621679101670"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101670"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>   </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/filepath-1.4.200.1/src/System.FilePath.Posix.html#isRelative"><span class="hs-identifier hs-var">isRelative</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101670"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">AddressNotSupportedException -&gt; IO ()
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">(AddressNotSupportedException -&gt; IO ())
+-&gt; AddressNotSupportedException -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; AddressNotSupportedException
+</span><a href="Snap.Internal.Http.Server.Address.html#AddressNotSupportedException"><span class="hs-identifier hs-var">AddressNotSupportedException</span></a></span><span>
+</span><span id="line-83"></span><span>                </span><span class="annot"><span class="annottext">([Char] -&gt; AddressNotSupportedException)
+-&gt; [Char] -&gt; AddressNotSupportedException
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Refusing to bind unix socket to non-absolute path: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101670"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span>   </span><span class="annot"><span class="annottext">IO Socket
+-&gt; (Socket -&gt; IO ()) -&gt; (Socket -&gt; IO Socket) -&gt; IO Socket
+forall a b c. IO a -&gt; (a -&gt; IO b) -&gt; (a -&gt; IO c) -&gt; IO c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracketOnError"><span class="hs-identifier hs-var">bracketOnError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Family -&gt; SocketType -&gt; ProtocolNumber -&gt; IO Socket
+</span><span class="hs-identifier hs-var">socket</span></span><span> </span><span class="annot"><span class="annottext">Family
+</span><span class="hs-identifier hs-var">N.AF_UNIX</span></span><span> </span><span class="annot"><span class="annottext">SocketType
+</span><span class="hs-identifier hs-var">N.Stream</span></span><span> </span><span class="annot"><span class="annottext">ProtocolNumber
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO ()
+</span><span class="hs-identifier hs-var">N.close</span></span><span> </span><span class="annot"><span class="annottext">((Socket -&gt; IO Socket) -&gt; IO Socket)
+-&gt; (Socket -&gt; IO Socket) -&gt; IO Socket
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679101673"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101673"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; (IOError -&gt; IO ()) -&gt; IO ()
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#catch"><span class="hs-identifier hs-var">E.catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.html#removeLink"><span class="hs-identifier hs-var">removeLink</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101670"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((IOError -&gt; IO ()) -&gt; IO ()) -&gt; (IOError -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679101674"><span class="annot"><span class="annottext">IOError
+</span><a href="#local-6989586621679101674"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; Bool -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IOError -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.Error.html#isDoesNotExistError"><span class="hs-identifier hs-var">isDoesNotExistError</span></a></span><span> </span><span class="annot"><span class="annottext">IOError
+</span><a href="#local-6989586621679101674"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IOError -&gt; IO ()
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">IOError
+</span><a href="#local-6989586621679101674"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679101669"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-88"></span><span>         </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ()
+</span><a href="#local-6989586621679101676"><span class="hs-identifier hs-var">bind</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101673"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; SockAddr
+</span><span class="hs-identifier hs-var">N.SockAddrUnix</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101670"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>         </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679101678"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101678"><span class="hs-identifier hs-var">mode'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO FileMode
+-&gt; (FileMode -&gt; IO FileMode) -&gt; (FileMode -&gt; IO ()) -&gt; IO ()
+forall a b c. IO a -&gt; (a -&gt; IO b) -&gt; (a -&gt; IO c) -&gt; IO c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracket"><span class="hs-identifier hs-var">bracket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FileMode -&gt; IO FileMode
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.Common.html#setFileCreationMask"><span class="hs-identifier hs-var">setFileCreationMask</span></a></span><span> </span><span class="annot"><span class="annottext">(FileMode -&gt; IO FileMode) -&gt; FileMode -&gt; IO FileMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; FileMode
+forall {a}. Integral a =&gt; a -&gt; FileMode
+</span><a href="#local-6989586621679101679"><span class="hs-identifier hs-var">modeToMask</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101678"><span class="hs-identifier hs-var">mode'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>                              </span><span class="annot"><span class="annottext">FileMode -&gt; IO FileMode
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.Common.html#setFileCreationMask"><span class="hs-identifier hs-var">setFileCreationMask</span></a></span><span>
+</span><span id="line-91"></span><span>                              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO () -&gt; FileMode -&gt; IO ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; FileMode -&gt; IO ()) -&gt; IO () -&gt; FileMode -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ()
+</span><a href="#local-6989586621679101676"><span class="hs-identifier hs-var">bind</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101673"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; SockAddr
+</span><span class="hs-identifier hs-var">N.SockAddrUnix</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101670"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ()
+</span><span class="hs-identifier hs-var">N.listen</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101673"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">150</span></span><span>
+</span><span id="line-93"></span><span>      </span><span class="annot"><span class="annottext">Socket -&gt; IO Socket
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Socket -&gt; IO Socket) -&gt; Socket -&gt; IO Socket
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101673"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-94"></span><span>   </span><span class="hs-keyword">where</span><span class="hs-cpp">
+#if MIN_VERSION_network(2,7,0)
+</span><span>     </span><span id="local-6989586621679101676"><span class="annot"><span class="annottext">bind :: Socket -&gt; SockAddr -&gt; IO ()
+</span><a href="#local-6989586621679101676"><span class="hs-identifier hs-var hs-var">bind</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ()
+</span><span class="hs-identifier hs-var">N.bind</span></span><span class="hs-cpp">
+#else
+</span><span>     </span><span class="hs-identifier">bind</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">N.bindSocket</span><span class="hs-cpp">
+#endif
+</span><span>     </span><span id="local-6989586621679101679"><span class="annot"><span class="annottext">modeToMask :: a -&gt; FileMode
+</span><a href="#local-6989586621679101679"><span class="hs-identifier hs-var hs-var">modeToMask</span></a></span></span><span> </span><span id="local-6989586621679101703"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101703"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FileMode
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.Files.Common.html#accessModes"><span class="hs-identifier hs-var">accessModes</span></a></span><span> </span><span class="annot"><span class="annottext">FileMode -&gt; FileMode -&gt; FileMode
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Bits.html#.%26."><span class="hs-operator hs-var">.&amp;.</span></a></span><span> </span><span class="annot"><span class="annottext">FileMode -&gt; FileMode
+forall a. Bits a =&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Bits.html#complement"><span class="hs-identifier hs-var">complement</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; FileMode
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679101703"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#else
+</span><span class="hs-identifier">bindUnixSocket</span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-identifier">path</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">throwIO</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">AddressNotSupportedException</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-string">&quot;unix:&quot;</span><span> </span><span class="hs-operator">++</span><span> </span><span class="hs-identifier">path</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-105"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- TODO(greg): move buffer size configuration into config</span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#bUFSIZ"><span class="hs-identifier hs-type">bUFSIZ</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-108"></span><span id="bUFSIZ"><span class="annot"><span class="annottext">bUFSIZ :: Int
+</span><a href="Snap.Internal.Http.Server.Socket.html#bUFSIZ"><span class="hs-identifier hs-var hs-var">bUFSIZ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4064</span></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-112"></span><span id="local-6989586621679101557"><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#acceptAndInitialize"><span class="hs-identifier hs-type">acceptAndInitialize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ bound socket</span></span><span>
+</span><span id="line-113"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679101556"><span class="annot"><a href="#local-6989586621679101556"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101556"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101556"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">N.SockAddr</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101557"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101557"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-116"></span><span id="acceptAndInitialize"><span class="annot"><span class="annottext">acceptAndInitialize :: forall a.
+Socket
+-&gt; (forall b. IO b -&gt; IO b) -&gt; ((Socket, SockAddr) -&gt; IO a) -&gt; IO a
+</span><a href="Snap.Internal.Http.Server.Socket.html#acceptAndInitialize"><span class="hs-identifier hs-var hs-var">acceptAndInitialize</span></a></span></span><span> </span><span id="local-6989586621679101705"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101705"><span class="hs-identifier hs-var">boundSocket</span></a></span></span><span> </span><span id="local-6989586621679101706"><span class="annot"><span class="annottext">forall b. IO b -&gt; IO b
+</span><a href="#local-6989586621679101706"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span id="local-6989586621679101707"><span class="annot"><span class="annottext">(Socket, SockAddr) -&gt; IO a
+</span><a href="#local-6989586621679101707"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">IO (Socket, SockAddr)
+-&gt; ((Socket, SockAddr) -&gt; IO ())
+-&gt; ((Socket, SockAddr) -&gt; IO a)
+-&gt; IO a
+forall a b c. IO a -&gt; (a -&gt; IO b) -&gt; (a -&gt; IO c) -&gt; IO c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracketOnError"><span class="hs-identifier hs-var">bracketOnError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO (Socket, SockAddr) -&gt; IO (Socket, SockAddr)
+forall b. IO b -&gt; IO b
+</span><a href="#local-6989586621679101706"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Socket, SockAddr) -&gt; IO (Socket, SockAddr))
+-&gt; IO (Socket, SockAddr) -&gt; IO (Socket, SockAddr)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO (Socket, SockAddr)
+</span><span class="hs-identifier hs-var">accept</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101705"><span class="hs-identifier hs-var">boundSocket</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Socket -&gt; IO ()
+</span><span class="hs-identifier hs-var">close</span></span><span> </span><span class="annot"><span class="annottext">(Socket -&gt; IO ())
+-&gt; ((Socket, SockAddr) -&gt; Socket) -&gt; (Socket, SockAddr) -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Socket, SockAddr) -&gt; Socket
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>                   </span><span class="annot"><span class="annottext">(Socket, SockAddr) -&gt; IO a
+</span><a href="#local-6989586621679101707"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#haProxyAcceptFunc"><span class="hs-identifier hs-type">haProxyAcceptFunc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ bound socket</span></span><span>
+</span><span id="line-124"></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Types.html#AcceptFunc"><span class="hs-identifier hs-type">AcceptFunc</span></a></span><span>
+</span><span id="line-125"></span><span id="haProxyAcceptFunc"><span class="annot"><span class="annottext">haProxyAcceptFunc :: Socket -&gt; AcceptFunc
+</span><a href="Snap.Internal.Http.Server.Socket.html#haProxyAcceptFunc"><span class="hs-identifier hs-var hs-var">haProxyAcceptFunc</span></a></span></span><span> </span><span id="local-6989586621679101710"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101710"><span class="hs-identifier hs-var">boundSocket</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">((forall b. IO b -&gt; IO b)
+ -&gt; IO
+      (SendFileHandler, ByteString, Int, ByteString, Int,
+       InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; AcceptFunc
+</span><a href="Snap.Internal.Http.Server.Types.html#AcceptFunc"><span class="hs-identifier hs-var">AcceptFunc</span></a></span><span> </span><span class="annot"><span class="annottext">(((forall b. IO b -&gt; IO b)
+  -&gt; IO
+       (SendFileHandler, ByteString, Int, ByteString, Int,
+        InputStream ByteString, OutputStream ByteString, IO ()))
+ -&gt; AcceptFunc)
+-&gt; ((forall b. IO b -&gt; IO b)
+    -&gt; IO
+         (SendFileHandler, ByteString, Int, ByteString, Int,
+          InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; AcceptFunc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679101712"><span class="annot"><span class="annottext">forall b. IO b -&gt; IO b
+</span><a href="#local-6989586621679101712"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="annottext">Socket
+-&gt; (forall b. IO b -&gt; IO b)
+-&gt; ((Socket, SockAddr)
+    -&gt; IO
+         (SendFileHandler, ByteString, Int, ByteString, Int,
+          InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a.
+Socket
+-&gt; (forall b. IO b -&gt; IO b) -&gt; ((Socket, SockAddr) -&gt; IO a) -&gt; IO a
+</span><a href="Snap.Internal.Http.Server.Socket.html#acceptAndInitialize"><span class="hs-identifier hs-var">acceptAndInitialize</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101710"><span class="hs-identifier hs-var">boundSocket</span></a></span><span> </span><span class="annot"><span class="annottext">IO b -&gt; IO b
+forall b. IO b -&gt; IO b
+</span><a href="#local-6989586621679101712"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="annot"><span class="annottext">(((Socket, SockAddr)
+  -&gt; IO
+       (SendFileHandler, ByteString, Int, ByteString, Int,
+        InputStream ByteString, OutputStream ByteString, IO ()))
+ -&gt; IO
+      (SendFileHandler, ByteString, Int, ByteString, Int,
+       InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; ((Socket, SockAddr)
+    -&gt; IO
+         (SendFileHandler, ByteString, Int, ByteString, Int,
+          InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679101713"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101713"><span class="hs-identifier hs-var">sock</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101714"><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101714"><span class="hs-identifier hs-var">saddr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-128"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101715"><span class="annot"><span class="annottext">InputStream ByteString
+</span><a href="#local-6989586621679101715"><span class="hs-identifier hs-var">readEnd</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101716"><span class="annot"><span class="annottext">OutputStream ByteString
+</span><a href="#local-6989586621679101716"><span class="hs-identifier hs-var">writeEnd</span></a></span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; Socket -&gt; IO (InputStream ByteString, OutputStream ByteString)
+</span><span class="hs-identifier hs-var">Streams.socketToStreamsWithBufferSize</span></span><span>
+</span><span id="line-129"></span><span>                                        </span><span class="annot"><span class="annottext">Int
+</span><a href="Snap.Internal.Http.Server.Socket.html#bUFSIZ"><span class="hs-identifier hs-var">bUFSIZ</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101713"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-130"></span><span>        </span><span id="local-6989586621679101718"><span class="annot"><span class="annottext">ProxyInfo
+</span><a href="#local-6989586621679101718"><span class="hs-identifier hs-var">localPInfo</span></a></span></span><span>               </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SockAddr -&gt; IO ProxyInfo
+</span><span class="hs-identifier hs-var">HA.socketToProxyInfo</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101713"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101714"><span class="hs-identifier hs-var">saddr</span></a></span><span>
+</span><span id="line-131"></span><span>        </span><span id="local-6989586621679101720"><span class="annot"><span class="annottext">ProxyInfo
+</span><a href="#local-6989586621679101720"><span class="hs-identifier hs-var">pinfo</span></a></span></span><span>                    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ProxyInfo -&gt; InputStream ByteString -&gt; IO ProxyInfo
+</span><span class="hs-identifier hs-var">HA.decodeHAProxyHeaders</span></span><span> </span><span class="annot"><span class="annottext">ProxyInfo
+</span><a href="#local-6989586621679101718"><span class="hs-identifier hs-var">localPInfo</span></a></span><span> </span><span class="annot"><span class="annottext">InputStream ByteString
+</span><a href="#local-6989586621679101715"><span class="hs-identifier hs-var">readEnd</span></a></span><span>
+</span><span id="line-132"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101722"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101722"><span class="hs-identifier hs-var">localPort</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101723"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101723"><span class="hs-identifier hs-var">localHost</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SockAddr -&gt; IO (Int, ByteString)
+</span><a href="Snap.Internal.Http.Server.Address.html#getAddress"><span class="hs-identifier hs-var">getAddress</span></a></span><span> </span><span class="annot"><span class="annottext">(SockAddr -&gt; IO (Int, ByteString))
+-&gt; SockAddr -&gt; IO (Int, ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ProxyInfo -&gt; SockAddr
+</span><span class="hs-identifier hs-var">HA.getDestAddr</span></span><span> </span><span class="annot"><span class="annottext">ProxyInfo
+</span><a href="#local-6989586621679101720"><span class="hs-identifier hs-var">pinfo</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101725"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101725"><span class="hs-identifier hs-var">remotePort</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101726"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101726"><span class="hs-identifier hs-var">remoteHost</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SockAddr -&gt; IO (Int, ByteString)
+</span><a href="Snap.Internal.Http.Server.Address.html#getAddress"><span class="hs-identifier hs-var">getAddress</span></a></span><span> </span><span class="annot"><span class="annottext">(SockAddr -&gt; IO (Int, ByteString))
+-&gt; SockAddr -&gt; IO (Int, ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ProxyInfo -&gt; SockAddr
+</span><span class="hs-identifier hs-var">HA.getSourceAddr</span></span><span> </span><span class="annot"><span class="annottext">ProxyInfo
+</span><a href="#local-6989586621679101720"><span class="hs-identifier hs-var">pinfo</span></a></span><span>
+</span><span id="line-134"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101728"><span class="annot"><span class="annottext">cleanup :: IO ()
+</span><a href="#local-6989586621679101728"><span class="hs-identifier hs-var hs-var">cleanup</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; OutputStream ByteString -&gt; IO ()
+forall a. Maybe a -&gt; OutputStream a -&gt; IO ()
+</span><span class="hs-identifier hs-var">Streams.write</span></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">OutputStream ByteString
+</span><a href="#local-6989586621679101716"><span class="hs-identifier hs-var">writeEnd</span></a></span><span>
+</span><span id="line-135"></span><span>                                        </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#finally"><span class="hs-operator hs-var">`finally`</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO ()
+</span><span class="hs-identifier hs-var">close</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101713"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><span class="annottext">(SendFileHandler, ByteString, Int, ByteString, Int,
+ InputStream ByteString, OutputStream ByteString, IO ())
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((SendFileHandler, ByteString, Int, ByteString, Int,
+  InputStream ByteString, OutputStream ByteString, IO ())
+ -&gt; IO
+      (SendFileHandler, ByteString, Int, ByteString, Int,
+       InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; (SendFileHandler, ByteString, Int, ByteString, Int,
+    InputStream ByteString, OutputStream ByteString, IO ())
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SendFileHandler
+</span><a href="Snap.Internal.Http.Server.Socket.html#sendFileFunc"><span class="hs-identifier hs-var">sendFileFunc</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101713"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-137"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101723"><span class="hs-identifier hs-var">localHost</span></a></span><span>
+</span><span id="line-138"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101722"><span class="hs-identifier hs-var">localPort</span></a></span><span>
+</span><span id="line-139"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101726"><span class="hs-identifier hs-var">remoteHost</span></a></span><span>
+</span><span id="line-140"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101725"><span class="hs-identifier hs-var">remotePort</span></a></span><span>
+</span><span id="line-141"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">InputStream ByteString
+</span><a href="#local-6989586621679101715"><span class="hs-identifier hs-var">readEnd</span></a></span><span>
+</span><span id="line-142"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OutputStream ByteString
+</span><a href="#local-6989586621679101716"><span class="hs-identifier hs-var">writeEnd</span></a></span><span>
+</span><span id="line-143"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679101728"><span class="hs-identifier hs-var">cleanup</span></a></span><span>
+</span><span id="line-144"></span><span>                  </span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#httpAcceptFunc"><span class="hs-identifier hs-type">httpAcceptFunc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span>                     </span><span class="annot"><span class="hs-comment">-- ^ bound socket</span></span><span>
+</span><span id="line-149"></span><span>               </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Types.html#AcceptFunc"><span class="hs-identifier hs-type">AcceptFunc</span></a></span><span>
+</span><span id="line-150"></span><span id="httpAcceptFunc"><span class="annot"><span class="annottext">httpAcceptFunc :: Socket -&gt; AcceptFunc
+</span><a href="Snap.Internal.Http.Server.Socket.html#httpAcceptFunc"><span class="hs-identifier hs-var hs-var">httpAcceptFunc</span></a></span></span><span> </span><span id="local-6989586621679101730"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101730"><span class="hs-identifier hs-var">boundSocket</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">((forall b. IO b -&gt; IO b)
+ -&gt; IO
+      (SendFileHandler, ByteString, Int, ByteString, Int,
+       InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; AcceptFunc
+</span><a href="Snap.Internal.Http.Server.Types.html#AcceptFunc"><span class="hs-identifier hs-var">AcceptFunc</span></a></span><span> </span><span class="annot"><span class="annottext">(((forall b. IO b -&gt; IO b)
+  -&gt; IO
+       (SendFileHandler, ByteString, Int, ByteString, Int,
+        InputStream ByteString, OutputStream ByteString, IO ()))
+ -&gt; AcceptFunc)
+-&gt; ((forall b. IO b -&gt; IO b)
+    -&gt; IO
+         (SendFileHandler, ByteString, Int, ByteString, Int,
+          InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; AcceptFunc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679101731"><span class="annot"><span class="annottext">forall b. IO b -&gt; IO b
+</span><a href="#local-6989586621679101731"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><span class="annottext">Socket
+-&gt; (forall b. IO b -&gt; IO b)
+-&gt; ((Socket, SockAddr)
+    -&gt; IO
+         (SendFileHandler, ByteString, Int, ByteString, Int,
+          InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a.
+Socket
+-&gt; (forall b. IO b -&gt; IO b) -&gt; ((Socket, SockAddr) -&gt; IO a) -&gt; IO a
+</span><a href="Snap.Internal.Http.Server.Socket.html#acceptAndInitialize"><span class="hs-identifier hs-var">acceptAndInitialize</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101730"><span class="hs-identifier hs-var">boundSocket</span></a></span><span> </span><span class="annot"><span class="annottext">IO b -&gt; IO b
+forall b. IO b -&gt; IO b
+</span><a href="#local-6989586621679101731"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="annot"><span class="annottext">(((Socket, SockAddr)
+  -&gt; IO
+       (SendFileHandler, ByteString, Int, ByteString, Int,
+        InputStream ByteString, OutputStream ByteString, IO ()))
+ -&gt; IO
+      (SendFileHandler, ByteString, Int, ByteString, Int,
+       InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; ((Socket, SockAddr)
+    -&gt; IO
+         (SendFileHandler, ByteString, Int, ByteString, Int,
+          InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679101732"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101732"><span class="hs-identifier hs-var">sock</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101733"><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101733"><span class="hs-identifier hs-var">remoteAddr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-153"></span><span>        </span><span id="local-6989586621679101734"><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101734"><span class="hs-identifier hs-var">localAddr</span></a></span></span><span>                </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO SockAddr
+</span><span class="hs-identifier hs-var">getSocketName</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101732"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101735"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101735"><span class="hs-identifier hs-var">localPort</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101736"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101736"><span class="hs-identifier hs-var">localHost</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SockAddr -&gt; IO (Int, ByteString)
+</span><a href="Snap.Internal.Http.Server.Address.html#getAddress"><span class="hs-identifier hs-var">getAddress</span></a></span><span> </span><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101734"><span class="hs-identifier hs-var">localAddr</span></a></span><span>
+</span><span id="line-155"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101737"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101737"><span class="hs-identifier hs-var">remotePort</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101738"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101738"><span class="hs-identifier hs-var">remoteHost</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SockAddr -&gt; IO (Int, ByteString)
+</span><a href="Snap.Internal.Http.Server.Address.html#getAddress"><span class="hs-identifier hs-var">getAddress</span></a></span><span> </span><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679101733"><span class="hs-identifier hs-var">remoteAddr</span></a></span><span>
+</span><span id="line-156"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101739"><span class="annot"><span class="annottext">InputStream ByteString
+</span><a href="#local-6989586621679101739"><span class="hs-identifier hs-var">readEnd</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101740"><span class="annot"><span class="annottext">OutputStream ByteString
+</span><a href="#local-6989586621679101740"><span class="hs-identifier hs-var">writeEnd</span></a></span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; Socket -&gt; IO (InputStream ByteString, OutputStream ByteString)
+</span><span class="hs-identifier hs-var">Streams.socketToStreamsWithBufferSize</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Snap.Internal.Http.Server.Socket.html#bUFSIZ"><span class="hs-identifier hs-var">bUFSIZ</span></a></span><span>
+</span><span id="line-157"></span><span>                                                                          </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101732"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-158"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101741"><span class="annot"><span class="annottext">cleanup :: IO ()
+</span><a href="#local-6989586621679101741"><span class="hs-identifier hs-var hs-var">cleanup</span></a></span></span><span>              </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; OutputStream ByteString -&gt; IO ()
+forall a. Maybe a -&gt; OutputStream a -&gt; IO ()
+</span><span class="hs-identifier hs-var">Streams.write</span></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">OutputStream ByteString
+</span><a href="#local-6989586621679101740"><span class="hs-identifier hs-var">writeEnd</span></a></span><span>
+</span><span id="line-159"></span><span>                                      </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#finally"><span class="hs-operator hs-var">`finally`</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO ()
+</span><span class="hs-identifier hs-var">close</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101732"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-160"></span><span>        </span><span class="annot"><span class="annottext">(SendFileHandler, ByteString, Int, ByteString, Int,
+ InputStream ByteString, OutputStream ByteString, IO ())
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((SendFileHandler, ByteString, Int, ByteString, Int,
+  InputStream ByteString, OutputStream ByteString, IO ())
+ -&gt; IO
+      (SendFileHandler, ByteString, Int, ByteString, Int,
+       InputStream ByteString, OutputStream ByteString, IO ()))
+-&gt; (SendFileHandler, ByteString, Int, ByteString, Int,
+    InputStream ByteString, OutputStream ByteString, IO ())
+-&gt; IO
+     (SendFileHandler, ByteString, Int, ByteString, Int,
+      InputStream ByteString, OutputStream ByteString, IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; SendFileHandler
+</span><a href="Snap.Internal.Http.Server.Socket.html#sendFileFunc"><span class="hs-identifier hs-var">sendFileFunc</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101732"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-161"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101736"><span class="hs-identifier hs-var">localHost</span></a></span><span>
+</span><span id="line-162"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101735"><span class="hs-identifier hs-var">localPort</span></a></span><span>
+</span><span id="line-163"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679101738"><span class="hs-identifier hs-var">remoteHost</span></a></span><span>
+</span><span id="line-164"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679101737"><span class="hs-identifier hs-var">remotePort</span></a></span><span>
+</span><span id="line-165"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">InputStream ByteString
+</span><a href="#local-6989586621679101739"><span class="hs-identifier hs-var">readEnd</span></a></span><span>
+</span><span id="line-166"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OutputStream ByteString
+</span><a href="#local-6989586621679101740"><span class="hs-identifier hs-var">writeEnd</span></a></span><span>
+</span><span id="line-167"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679101741"><span class="hs-identifier hs-var">cleanup</span></a></span><span>
+</span><span id="line-168"></span><span>                  </span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-172"></span><span class="annot"><a href="Snap.Internal.Http.Server.Socket.html#sendFileFunc"><span class="hs-identifier hs-type">sendFileFunc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Types.html#SendFileHandler"><span class="hs-identifier hs-type">SendFileHandler</span></a></span><span class="hs-cpp">
+#ifdef HAS_SENDFILE
+</span><span id="sendFileFunc"><span class="annot"><span class="annottext">sendFileFunc :: Socket -&gt; SendFileHandler
+</span><a href="Snap.Internal.Http.Server.Socket.html#sendFileFunc"><span class="hs-identifier hs-var hs-var">sendFileFunc</span></a></span></span><span> </span><span id="local-6989586621679101742"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101742"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="annottext">Buffer
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679101743"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679101743"><span class="hs-identifier hs-var">builder</span></a></span></span><span> </span><span id="local-6989586621679101744"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101744"><span class="hs-identifier hs-var">fPath</span></a></span></span><span> </span><span id="local-6989586621679101745"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679101745"><span class="hs-identifier hs-var">offset</span></a></span></span><span> </span><span id="local-6989586621679101746"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679101746"><span class="hs-identifier hs-var">nbytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Fd -&gt; (Fd -&gt; IO ()) -&gt; (Fd -&gt; IO ()) -&gt; IO ()
+forall a b c. IO a -&gt; (a -&gt; IO b) -&gt; (a -&gt; IO c) -&gt; IO c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracket"><span class="hs-identifier hs-var">bracket</span></a></span><span> </span><span class="annot"><span class="annottext">IO Fd
+</span><a href="#local-6989586621679101747"><span class="hs-identifier hs-var">acquire</span></a></span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.Common.html#closeFd"><span class="hs-identifier hs-var">closeFd</span></a></span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO ()
+</span><a href="#local-6989586621679101748"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-keyword">where</span><span class="hs-cpp">
+#if MIN_VERSION_unix(2,8,0)
+</span><span>    </span><span id="local-6989586621679101747"><span class="annot"><span class="annottext">acquire :: IO Fd
+</span><a href="#local-6989586621679101747"><span class="hs-identifier hs-var hs-var">acquire</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; OpenMode -&gt; OpenFileFlags -&gt; IO Fd
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.html#openFd"><span class="hs-identifier hs-var">openFd</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679101744"><span class="hs-identifier hs-var">fPath</span></a></span><span> </span><span class="annot"><span class="annottext">OpenMode
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.Common.html#ReadOnly"><span class="hs-identifier hs-var">ReadOnly</span></a></span><span> </span><span class="annot"><span class="annottext">OpenFileFlags
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/unix-2.8.4.0/src/System.Posix.IO.Common.html#defaultFileFlags"><span class="hs-identifier hs-var">defaultFileFlags</span></a></span><span class="hs-cpp">
+#else
+</span><span>    </span><span class="hs-identifier">acquire</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">openFd</span><span> </span><span class="hs-identifier">fPath</span><span> </span><span class="hs-identifier">ReadOnly</span><span> </span><span class="hs-identifier">Nothing</span><span> </span><span class="hs-identifier">defaultFileFlags</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if MIN_VERSION_network(3,0,0)
+</span><span>    </span><span id="local-6989586621679101748"><span class="annot"><span class="annottext">go :: Fd -&gt; IO ()
+</span><a href="#local-6989586621679101748"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679101754"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621679101754"><span class="hs-identifier hs-var">fileFd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679101755"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621679101755"><span class="hs-identifier hs-var">sockFd</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ProtocolNumber -&gt; Fd
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.Posix.Types.html#Fd"><span class="hs-identifier hs-var">Fd</span></a></span><span> </span><span class="annot"><span class="annottext">(ProtocolNumber -&gt; Fd) -&gt; IO ProtocolNumber -&gt; IO Fd
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO ProtocolNumber
+</span><span class="hs-identifier hs-var">fdSocket</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679101742"><span class="hs-identifier hs-var">sock</span></a></span><span>
+</span><span id="line-184"></span><span>                   </span><span class="annot"><span class="annottext">Builder -&gt; Fd -&gt; IO ()
+</span><a href="System.SendFile.html#sendHeaders"><span class="hs-identifier hs-var">sendHeaders</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679101743"><span class="hs-identifier hs-var">builder</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621679101755"><span class="hs-identifier hs-var">sockFd</span></a></span><span>
+</span><span id="line-185"></span><span>                   </span><span class="annot"><span class="annottext">Fd -&gt; Fd -&gt; Word64 -&gt; Word64 -&gt; IO ()
+</span><a href="System.SendFile.html#sendFile"><span class="hs-identifier hs-var">sendFile</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621679101755"><span class="hs-identifier hs-var">sockFd</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621679101754"><span class="hs-identifier hs-var">fileFd</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679101745"><span class="hs-identifier hs-var">offset</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679101746"><span class="hs-identifier hs-var">nbytes</span></a></span><span class="hs-cpp">
+#else
+</span><span>    </span><span class="hs-identifier">go</span><span> </span><span class="hs-identifier">fileFd</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-identifier">sockFd</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">Fd</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">fdSocket</span><span> </span><span class="hs-identifier">sock</span><span>
+</span><span id="line-188"></span><span>                   </span><span class="hs-identifier">sendHeaders</span><span> </span><span class="hs-identifier">builder</span><span> </span><span class="hs-identifier">sockFd</span><span>
+</span><span id="line-189"></span><span>                   </span><span class="hs-identifier">sendFile</span><span> </span><span class="hs-identifier">sockFd</span><span> </span><span class="hs-identifier">fileFd</span><span> </span><span class="hs-identifier">offset</span><span> </span><span class="hs-identifier">nbytes</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#else
+</span><span class="hs-identifier">sendFileFunc</span><span> </span><span class="hs-identifier">sock</span><span> </span><span class="hs-identifier">buffer</span><span> </span><span class="hs-identifier">builder</span><span> </span><span class="hs-identifier">fPath</span><span> </span><span class="hs-identifier">offset</span><span> </span><span class="hs-identifier">nbytes</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-identifier">Streams.unsafeWithFileAsInputStartingAt</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">fromIntegral</span><span> </span><span class="hs-identifier">offset</span><span class="hs-special">)</span><span> </span><span class="hs-identifier">fPath</span><span> </span><span class="hs-operator">$</span><span>
+</span><span id="line-195"></span><span>            </span><span class="hs-glyph">\</span><span class="hs-identifier">fileInput0</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-196"></span><span>        </span><span class="hs-identifier">fileInput</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">Streams.takeBytes</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">fromIntegral</span><span> </span><span class="hs-identifier">nbytes</span><span class="hs-special">)</span><span> </span><span class="hs-identifier">fileInput0</span><span> </span><span class="hs-operator">&gt;&gt;=</span><span>
+</span><span id="line-197"></span><span>                     </span><span class="hs-identifier">Streams.map</span><span> </span><span class="hs-identifier">byteString</span><span>
+</span><span id="line-198"></span><span>        </span><span class="hs-identifier">input</span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">Streams.fromList</span><span> </span><span class="hs-special">[</span><span class="hs-identifier">builder</span><span class="hs-special">]</span><span> </span><span class="hs-operator">&gt;&gt;=</span><span>
+</span><span id="line-199"></span><span>                     </span><span class="hs-identifier">flip</span><span> </span><span class="hs-identifier">Streams.appendInputStream</span><span> </span><span class="hs-identifier">fileInput</span><span>
+</span><span id="line-200"></span><span>        </span><span class="hs-identifier">output</span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">Streams.makeOutputStream</span><span> </span><span class="hs-identifier">sendChunk</span><span> </span><span class="hs-operator">&gt;&gt;=</span><span>
+</span><span id="line-201"></span><span>                     </span><span class="hs-identifier">Streams.unsafeBuilderStream</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">return</span><span> </span><span class="hs-identifier">buffer</span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>        </span><span class="hs-identifier">Streams.supply</span><span> </span><span class="hs-identifier">input</span><span> </span><span class="hs-identifier">output</span><span>
+</span><span id="line-203"></span><span>        </span><span class="hs-identifier">Streams.write</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Just</span><span> </span><span class="hs-identifier">flush</span><span class="hs-special">)</span><span> </span><span class="hs-identifier">output</span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-identifier">sendChunk</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Just</span><span> </span><span class="hs-identifier">s</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">sendAll</span><span> </span><span class="hs-identifier">sock</span><span> </span><span class="hs-identifier">s</span><span>
+</span><span id="line-207"></span><span>    </span><span class="hs-identifier">sendChunk</span><span> </span><span class="hs-identifier">Nothing</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-operator">$!</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span></pre></body></html>

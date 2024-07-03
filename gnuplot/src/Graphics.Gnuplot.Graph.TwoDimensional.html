@@ -1,0 +1,60 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.Gnuplot.Graph.TwoDimensional</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2D.html#T"><span class="hs-identifier">T</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2D.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">--   deflt,</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2D.html#lineSpec"><span class="hs-identifier">lineSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#listLines"><span class="hs-identifier">listLines</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#listPoints"><span class="hs-identifier">listPoints</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#listLinesPoints"><span class="hs-identifier">listLinesPoints</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#listImpulses"><span class="hs-identifier">listImpulses</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#listDots"><span class="hs-identifier">listDots</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#histograms"><span class="hs-identifier">histograms</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xErrorBarsRelative"><span class="hs-identifier">xErrorBarsRelative</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#yErrorBarsRelative"><span class="hs-identifier">yErrorBarsRelative</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xyErrorBarsRelative"><span class="hs-identifier">xyErrorBarsRelative</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xErrorBarsAbsolute"><span class="hs-identifier">xErrorBarsAbsolute</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#yErrorBarsAbsolute"><span class="hs-identifier">yErrorBarsAbsolute</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xyErrorBarsAbsolute"><span class="hs-identifier">xyErrorBarsAbsolute</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xErrorLinesRelative"><span class="hs-identifier">xErrorLinesRelative</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#yErrorLinesRelative"><span class="hs-identifier">yErrorLinesRelative</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xyErrorLinesRelative"><span class="hs-identifier">xyErrorLinesRelative</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xErrorLinesAbsolute"><span class="hs-identifier">xErrorLinesAbsolute</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#yErrorLinesAbsolute"><span class="hs-identifier">yErrorLinesAbsolute</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#xyErrorLinesAbsolute"><span class="hs-identifier">xyErrorLinesAbsolute</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#lines"><span class="hs-identifier">Graph2DType.lines</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#points"><span class="hs-identifier">points</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#linesPoints"><span class="hs-identifier">linesPoints</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#impulses"><span class="hs-identifier">impulses</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#dots"><span class="hs-identifier">dots</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#steps"><span class="hs-identifier">steps</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#fSteps"><span class="hs-identifier">fSteps</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#hiSteps"><span class="hs-identifier">hiSteps</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#errorBars"><span class="hs-identifier">errorBars</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#errorLines"><span class="hs-identifier">errorLines</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#boxes"><span class="hs-identifier">boxes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#filledCurves"><span class="hs-identifier">filledCurves</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span class="hs-comment">{-
+   boxErrorBars,
+   boxXYErrorBars,
+-}</span><span>
+</span><span id="line-46"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#financeBars"><span class="hs-identifier">financeBars</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#candleSticks"><span class="hs-identifier">candleSticks</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#vectors"><span class="hs-identifier">vectors</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#image"><span class="hs-identifier">image</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#filledStripe"><span class="hs-identifier">filledStripe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#filledStripeAbove"><span class="hs-identifier">filledStripeAbove</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#filledStripeBelow"><span class="hs-identifier">filledStripeBelow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#labels"><span class="hs-identifier">labels</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2D.html"><span class="hs-identifier">Graphics.Gnuplot.Private.Graph2D</span></a></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html"><span class="hs-identifier">Graphics.Gnuplot.Private.Graph2DType</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Graph2DType</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph2DType.html#T"><span class="hs-identifier">T</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span></pre></body></html>

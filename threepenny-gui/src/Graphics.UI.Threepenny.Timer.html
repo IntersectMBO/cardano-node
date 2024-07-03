@@ -1,0 +1,233 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards, DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.UI.Threepenny.Timer</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Synopsis</span></span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-comment">-- | Implementation of a simple timer which runs on the server-side.</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- NOTE: The timer may be rather wobbly unless you compile</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-comment">-- with the @-threaded@ option.</span><span>
+</span><span id="line-9"></span><span>    </span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Documentation</span></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier">Timer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#timer"><span class="hs-identifier">timer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#interval"><span class="hs-identifier">interval</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#running"><span class="hs-identifier">running</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#tick"><span class="hs-identifier">tick</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#start"><span class="hs-identifier">start</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#stop"><span class="hs-identifier">stop</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier">forever</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html"><span class="hs-identifier">Reactive.Threepenny</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="Timer"><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-var">Timer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Timer"><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-var">Timer</span></a></span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="tRunning"><span class="annot"><span class="annottext">Timer -&gt; GetSet Bool Bool
+</span><a href="Graphics.UI.Threepenny.Timer.html#tRunning"><span class="hs-identifier hs-var hs-var">tRunning</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#GetSet"><span class="hs-identifier hs-type">GetSet</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tInterval"><span class="annot"><span class="annottext">Timer -&gt; GetSet Int Int
+</span><a href="Graphics.UI.Threepenny.Timer.html#tInterval"><span class="hs-identifier hs-var hs-var">tInterval</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#GetSet"><span class="hs-identifier hs-type">GetSet</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>   </span><span class="hs-comment">-- in ms</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tTick"><span class="annot"><span class="annottext">Timer -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Timer.html#tTick"><span class="hs-identifier hs-var hs-var">tTick</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | Create a new timer</span></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#timer"><span class="hs-identifier hs-type">timer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span>
+</span><span id="line-32"></span><span id="timer"><span class="annot"><span class="annottext">timer :: UI Timer
+</span><a href="Graphics.UI.Threepenny.Timer.html#timer"><span class="hs-identifier hs-var hs-var">timer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Timer -&gt; UI Timer
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Timer -&gt; UI Timer) -&gt; IO Timer -&gt; UI Timer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-33"></span><span>    </span><span id="local-6989586621679117222"><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679117222"><span class="hs-identifier hs-var">tvRunning</span></a></span></span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO (TVar Bool)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621679117224"><span class="annot"><span class="annottext">TVar Int
+</span><a href="#local-6989586621679117224"><span class="hs-identifier hs-var">tvInterval</span></a></span></span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO (TVar Int)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679117225"><span class="annot"><span class="annottext">Event ()
+</span><a href="#local-6989586621679117225"><span class="hs-identifier hs-var">tTick</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117226"><span class="annot"><span class="annottext">Handler ()
+</span><a href="#local-6989586621679117226"><span class="hs-identifier hs-var">fire</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Event (), Handler ())
+forall a. IO (Event a, Handler a)
+</span><a href="Reactive.Threepenny.html#newEvent"><span class="hs-identifier hs-var">newEvent</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">ThreadId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ThreadId
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#forkIO"><span class="hs-identifier hs-var">forkIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ThreadId) -&gt; IO () -&gt; IO ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>        </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-39"></span><span>            </span><span id="local-6989586621679117230"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679117230"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Bool -&gt; STM Bool
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679117222"><span class="hs-identifier hs-var">tvRunning</span></a></span><span>
+</span><span id="line-40"></span><span>            </span><span class="annot"><span class="annottext">Bool -&gt; STM () -&gt; STM ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679117230"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">STM ()
+forall a. STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#retry"><span class="hs-identifier hs-var">retry</span></a></span><span>
+</span><span id="line-41"></span><span>        </span><span id="local-6989586621679117234"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117234"><span class="hs-identifier hs-var">wait</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM Int -&gt; IO Int
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM Int -&gt; IO Int) -&gt; STM Int -&gt; IO Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Int -&gt; STM Int
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Int
+</span><a href="#local-6989586621679117224"><span class="hs-identifier hs-var">tvInterval</span></a></span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><span class="annottext">Handler ()
+</span><a href="#local-6989586621679117226"><span class="hs-identifier hs-var">fire</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117234"><span class="hs-identifier hs-var">wait</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679117237"><span class="annot"><span class="annottext">tRunning :: GetSet Bool Bool
+</span><a href="#local-6989586621679117237"><span class="hs-identifier hs-var hs-var">tRunning</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TVar Bool -&gt; GetSet Bool Bool
+forall a. TVar a -&gt; GetSet a a
+</span><a href="Graphics.UI.Threepenny.Timer.html#fromTVar"><span class="hs-identifier hs-var">fromTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679117222"><span class="hs-identifier hs-var">tvRunning</span></a></span><span>
+</span><span id="line-46"></span><span>        </span><span id="local-6989586621679117239"><span class="annot"><span class="annottext">tInterval :: GetSet Int Int
+</span><a href="#local-6989586621679117239"><span class="hs-identifier hs-var hs-var">tInterval</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TVar Int -&gt; GetSet Int Int
+forall a. TVar a -&gt; GetSet a a
+</span><a href="Graphics.UI.Threepenny.Timer.html#fromTVar"><span class="hs-identifier hs-var">fromTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Int
+</span><a href="#local-6989586621679117224"><span class="hs-identifier hs-var">tvInterval</span></a></span><span> </span><span>
+</span><span id="line-47"></span><span>    </span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Timer -&gt; IO Timer
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Timer -&gt; IO Timer) -&gt; Timer -&gt; IO Timer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">GetSet Bool Bool
+GetSet Int Int
+Event ()
+tRunning :: GetSet Bool Bool
+tInterval :: GetSet Int Int
+tTick :: Event ()
+tTick :: Event ()
+tRunning :: GetSet Bool Bool
+tInterval :: GetSet Int Int
+</span><a href="Graphics.UI.Threepenny.Timer.html#tRunning"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><span class="hs-comment">-- | Timer event.</span></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#tick"><span class="hs-identifier hs-type">tick</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span id="tick"><span class="annot"><span class="annottext">tick :: Timer -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Timer.html#tick"><span class="hs-identifier hs-var hs-var">tick</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timer -&gt; Event ()
+</span><a href="Graphics.UI.Threepenny.Timer.html#tTick"><span class="hs-identifier hs-var">tTick</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><span class="hs-comment">-- | Timer interval in milliseconds.</span></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#interval"><span class="hs-identifier hs-type">interval</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#Attr"><span class="hs-identifier hs-type">Attr</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-56"></span><span id="interval"><span class="annot"><span class="annottext">interval :: Attr Timer Int
+</span><a href="Graphics.UI.Threepenny.Timer.html#interval"><span class="hs-identifier hs-var hs-var">interval</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Timer -&gt; GetSet Int Int) -&gt; Attr Timer Int
+forall x i o. (x -&gt; GetSet i o) -&gt; ReadWriteAttr x i o
+</span><a href="Graphics.UI.Threepenny.Timer.html#fromGetSet"><span class="hs-identifier hs-var">fromGetSet</span></a></span><span> </span><span class="annot"><span class="annottext">Timer -&gt; GetSet Int Int
+</span><a href="Graphics.UI.Threepenny.Timer.html#tInterval"><span class="hs-identifier hs-var">tInterval</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><span class="hs-comment">-- | Whether the timer is running or not.</span></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#running"><span class="hs-identifier hs-type">running</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#Attr"><span class="hs-identifier hs-type">Attr</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-60"></span><span id="running"><span class="annot"><span class="annottext">running :: Attr Timer Bool
+</span><a href="Graphics.UI.Threepenny.Timer.html#running"><span class="hs-identifier hs-var hs-var">running</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Timer -&gt; GetSet Bool Bool) -&gt; Attr Timer Bool
+forall x i o. (x -&gt; GetSet i o) -&gt; ReadWriteAttr x i o
+</span><a href="Graphics.UI.Threepenny.Timer.html#fromGetSet"><span class="hs-identifier hs-var">fromGetSet</span></a></span><span> </span><span class="annot"><span class="annottext">Timer -&gt; GetSet Bool Bool
+</span><a href="Graphics.UI.Threepenny.Timer.html#tRunning"><span class="hs-identifier hs-var">tRunning</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><span class="hs-comment">-- | Start the timer.</span></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#start"><span class="hs-identifier hs-type">start</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span id="start"><span class="annot"><span class="annottext">start :: Timer -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Timer.html#start"><span class="hs-identifier hs-var hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attr Timer Bool -&gt; Bool -&gt; Timer -&gt; UI ()
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; x -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Core.html#set%27"><span class="hs-identifier hs-var">set'</span></a></span><span> </span><span class="annot"><span class="annottext">Attr Timer Bool
+</span><a href="Graphics.UI.Threepenny.Timer.html#running"><span class="hs-identifier hs-var">running</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><span class="hs-comment">-- | Stop the timer.</span></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#stop"><span class="hs-identifier hs-type">stop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span id="stop"><span class="annot"><span class="annottext">stop :: Timer -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Timer.html#stop"><span class="hs-identifier hs-var hs-var">stop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attr Timer Bool -&gt; Bool -&gt; Timer -&gt; UI ()
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; x -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Core.html#set%27"><span class="hs-identifier hs-var">set'</span></a></span><span> </span><span class="annot"><span class="annottext">Attr Timer Bool
+</span><a href="Graphics.UI.Threepenny.Timer.html#running"><span class="hs-identifier hs-var">running</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span id="local-6989586621679117162"><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#fromTVar"><span class="hs-identifier hs-type">fromTVar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117162"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#GetSet"><span class="hs-identifier hs-type">GetSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117162"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117162"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-71"></span><span id="fromTVar"><span class="annot"><span class="annottext">fromTVar :: forall a. TVar a -&gt; GetSet a a
+</span><a href="Graphics.UI.Threepenny.Timer.html#fromTVar"><span class="hs-identifier hs-var hs-var">fromTVar</span></a></span></span><span> </span><span id="local-6989586621679117242"><span class="annot"><span class="annottext">TVar a
+</span><a href="#local-6989586621679117242"><span class="hs-identifier hs-var">var</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">STM a -&gt; IO a
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM a -&gt; IO a) -&gt; STM a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar a -&gt; STM a
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar a
+</span><a href="#local-6989586621679117242"><span class="hs-identifier hs-var">var</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; (a -&gt; STM ()) -&gt; a -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TVar a -&gt; a -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar a
+</span><a href="#local-6989586621679117242"><span class="hs-identifier hs-var">var</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">type</span><span> </span><span id="GetSet"><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#GetSet"><span class="hs-identifier hs-var">GetSet</span></a></span></span><span> </span><span id="local-6989586621679117245"><span class="annot"><a href="#local-6989586621679117245"><span class="hs-identifier hs-type">i</span></a></span></span><span> </span><span id="local-6989586621679117246"><span class="annot"><a href="#local-6989586621679117246"><span class="hs-identifier hs-type">o</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117246"><span class="hs-identifier hs-type">o</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679117245"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span id="local-6989586621679117166"><span id="local-6989586621679117167"><span id="local-6989586621679117168"><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#fromGetSet"><span class="hs-identifier hs-type">fromGetSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679117166"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Timer.html#GetSet"><span class="hs-identifier hs-type">GetSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117167"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117168"><span class="hs-identifier hs-type">o</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#ReadWriteAttr"><span class="hs-identifier hs-type">ReadWriteAttr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117166"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117167"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117168"><span class="hs-identifier hs-type">o</span></a></span></span></span></span><span>
+</span><span id="line-76"></span><span id="fromGetSet"><span class="annot"><span class="annottext">fromGetSet :: forall x i o. (x -&gt; GetSet i o) -&gt; ReadWriteAttr x i o
+</span><a href="Graphics.UI.Threepenny.Timer.html#fromGetSet"><span class="hs-identifier hs-var hs-var">fromGetSet</span></a></span></span><span> </span><span id="local-6989586621679117249"><span class="annot"><span class="annottext">x -&gt; GetSet i o
+</span><a href="#local-6989586621679117249"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(x -&gt; UI o) -&gt; (i -&gt; x -&gt; UI ()) -&gt; ReadWriteAttr x i o
+forall x o i.
+(x -&gt; UI o) -&gt; (i -&gt; x -&gt; UI ()) -&gt; ReadWriteAttr x i o
+</span><a href="Graphics.UI.Threepenny.Core.html#mkReadWriteAttr"><span class="hs-identifier hs-var">mkReadWriteAttr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO o -&gt; UI o
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO o -&gt; UI o) -&gt; (x -&gt; IO o) -&gt; x -&gt; UI o
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GetSet i o -&gt; IO o
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">(GetSet i o -&gt; IO o) -&gt; (x -&gt; GetSet i o) -&gt; x -&gt; IO o
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">x -&gt; GetSet i o
+</span><a href="#local-6989586621679117249"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679117252"><span class="annot"><span class="annottext">i
+</span><a href="#local-6989586621679117252"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679117253"><span class="annot"><span class="annottext">x
+</span><a href="#local-6989586621679117253"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ()) -&gt; IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GetSet i o -&gt; i -&gt; IO ()
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">x -&gt; GetSet i o
+</span><a href="#local-6989586621679117249"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">x
+</span><a href="#local-6989586621679117253"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">i
+</span><a href="#local-6989586621679117252"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Small test
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-82"></span><span class="hs-comment">{-
+
+testTimer = do
+    t &lt;- timer
+    void $ register (tick t) $ const $ putStr &quot;Hello&quot;
+    return t
+        # set interval 1000
+        # set running True
+-}</span><span>
+</span><span id="line-91"></span></pre></body></html>

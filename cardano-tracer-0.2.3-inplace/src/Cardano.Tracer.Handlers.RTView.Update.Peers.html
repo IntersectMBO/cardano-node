@@ -1,0 +1,512 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span class="hs-cpp">
+
+#if __GLASGOW_HASKELL__ &gt;= 908
+</span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-x-partial #-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Peers</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Peers.html#updateNodesPeers"><span class="hs-identifier">updateNodesPeers</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier">showT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-9.0.0/doc/html/cardano-node/src/Cardano.Node.Tracing.Peers.html"><span class="hs-identifier">Cardano.Node.Tracing.Peers</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Peers.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Peers</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Utils</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Utils</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Utils</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#forM_"><span class="hs-identifier">forM_</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html"><span class="hs-identifier">Control.Monad.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJustM"><span class="hs-identifier">whenJustM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#find"><span class="hs-identifier">find</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Data.List.Extra.html"><span class="hs-identifier">Data.List.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Data.List.Extra.html#notNull"><span class="hs-identifier">notNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier">mapMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#%5C%5C"><span class="hs-operator">(\\)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier">unpack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.html"><span class="hs-identifier">Graphics.UI.Threepenny</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Peers.html#updateNodesPeers"><span class="hs-identifier hs-type">updateNodesPeers</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Peers.html#Peers"><span class="hs-identifier hs-type">Peers</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span id="updateNodesPeers"><span class="annot"><span class="annottext">updateNodesPeers :: TracerEnv -&gt; Peers -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Peers.html#updateNodesPeers"><span class="hs-identifier hs-var hs-var">updateNodesPeers</span></a></span></span><span> </span><span id="local-6989586621679613228"><span class="annot"><span class="annottext">tracerEnv :: TracerEnv
+</span><a href="#local-6989586621679613228"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679613230"><span class="annot"><span class="annottext">DataPointRequestors
+teDPRequestors :: DataPointRequestors
+teDPRequestors :: TracerEnv -&gt; DataPointRequestors
+</span><a href="#local-6989586621679613230"><span class="hs-identifier hs-var hs-var">teDPRequestors</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613232"><span class="annot"><span class="annottext">Lock
+teCurrentDPLock :: Lock
+teCurrentDPLock :: TracerEnv -&gt; Lock
+</span><a href="#local-6989586621679613232"><span class="hs-identifier hs-var hs-var">teCurrentDPLock</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679613234"><span class="annot"><span class="annottext">Peers
+</span><a href="#local-6989586621679613234"><span class="hs-identifier hs-var">displayedPeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679613235"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613235"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">TracerEnv -&gt; (NodeId -&gt; UI ()) -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Utils.html#forConnectedUI_"><span class="hs-identifier hs-var">forConnectedUI_</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679613228"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">((NodeId -&gt; UI ()) -&gt; UI ()) -&gt; (NodeId -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679613238"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679613238"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">UI (Maybe NodePeers) -&gt; (NodePeers -&gt; UI ()) -&gt; UI ()
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m (Maybe a) -&gt; (a -&gt; m ()) -&gt; m ()
+</span><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJustM"><span class="hs-identifier hs-var">whenJustM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO (Maybe NodePeers) -&gt; UI (Maybe NodePeers)
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe NodePeers) -&gt; UI (Maybe NodePeers))
+-&gt; IO (Maybe NodePeers) -&gt; UI (Maybe NodePeers)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+-&gt; Lock -&gt; NodeId -&gt; Text -&gt; IO (Maybe NodePeers)
+forall a.
+FromJSON a =&gt;
+DataPointRequestors -&gt; Lock -&gt; NodeId -&gt; Text -&gt; IO (Maybe a)
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html#askDataPoint"><span class="hs-identifier hs-var">askDataPoint</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679613230"><span class="hs-identifier hs-var">teDPRequestors</span></a></span><span> </span><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679613232"><span class="hs-identifier hs-var">teCurrentDPLock</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679613238"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;NodePeers&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((NodePeers -&gt; UI ()) -&gt; UI ()) -&gt; (NodePeers -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="annottext">Window -&gt; NodeId -&gt; Peers -&gt; NodePeers -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Peers.html#doUpdatePeers"><span class="hs-identifier hs-var">doUpdatePeers</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613235"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679613238"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Peers
+</span><a href="#local-6989586621679613234"><span class="hs-identifier hs-var">displayedPeers</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Peers.html#doUpdatePeers"><span class="hs-identifier hs-type">doUpdatePeers</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#Window"><span class="hs-identifier hs-type">UI.Window</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Peers.html#Peers"><span class="hs-identifier hs-type">Peers</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-9.0.0/doc/html/cardano-node/src/Cardano.Node.Tracing.Peers.html#NodePeers"><span class="hs-identifier hs-type">NodePeers</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span id="doUpdatePeers"><span class="annot"><span class="annottext">doUpdatePeers :: Window -&gt; NodeId -&gt; Peers -&gt; NodePeers -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Peers.html#doUpdatePeers"><span class="hs-identifier hs-var hs-var">doUpdatePeers</span></a></span></span><span> </span><span id="local-6989586621679613242"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613242"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span id="local-6989586621679613243"><span class="annot"><span class="annottext">nodeId :: NodeId
+</span><a href="#local-6989586621679613243"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span id="local-6989586621679613245"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613245"><span class="hs-identifier hs-var">anId</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679613246"><span class="annot"><span class="annottext">Peers
+</span><a href="#local-6989586621679613246"><span class="hs-identifier hs-var">displayedPeers</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-9.0.0/doc/html/cardano-node/src/Cardano.Node.Tracing.Peers.html#NodePeers"><span class="hs-identifier hs-type">NodePeers</span></a></span><span> </span><span id="local-6989586621679613248"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613248"><span class="hs-identifier hs-var">peersParts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-comment">-- Update peers number.</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setTextValue"><span class="hs-identifier hs-var">setTextValue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613245"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;__node-peers-num&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613248"><span class="hs-identifier hs-var">peersParts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-comment">-- If there is at least one connected peer, we enable 'Details' button.</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool -&gt; Bool -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Attributes.html#enabled"><span class="hs-identifier hs-var">UI.enabled</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; UI Element -&gt; UI Element)
+-&gt; Bool -&gt; UI Element -&gt; UI Element
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Bool
+forall a. [a] -&gt; Bool
+</span><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Data.List.Extra.html#notNull"><span class="hs-identifier hs-var">notNull</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613248"><span class="hs-identifier hs-var">peersParts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>             </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613242"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; UI ()) -&gt; Text -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613245"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;__node-peers-details-button&quot;</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-comment">-- Update particular info about peers.</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613254"><span class="annot"><span class="annottext">connectedPeers :: Set [Text]
+</span><a href="#local-6989586621679613254"><span class="hs-identifier hs-var hs-var">connectedPeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set [Text]
+</span><a href="#local-6989586621679613255"><span class="hs-identifier hs-var">getConnectedPeers</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span id="local-6989586621679613256"><span class="annot"><span class="annottext">connectedPeersAddresses :: Set Text
+</span><a href="#local-6989586621679613256"><span class="hs-identifier hs-var hs-var">connectedPeersAddresses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613257"><span class="hs-identifier hs-var">getConnectedPeersAddresses</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679613258"><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613258"><span class="hs-identifier hs-var">displayedPeersAddresses</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Set Text) -&gt; UI (Set Text)
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Set Text) -&gt; UI (Set Text)) -&gt; IO (Set Text) -&gt; UI (Set Text)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Peers -&gt; NodeId -&gt; IO (Set Text)
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Peers.html#getPeersAddresses"><span class="hs-identifier hs-var">getPeersAddresses</span></a></span><span> </span><span class="annot"><span class="annottext">Peers
+</span><a href="#local-6989586621679613246"><span class="hs-identifier hs-var">displayedPeers</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679613243"><span class="hs-identifier hs-var">nodeId</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613258"><span class="hs-identifier hs-var">displayedPeersAddresses</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text -&gt; Set Text -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613256"><span class="hs-identifier hs-var">connectedPeersAddresses</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-comment">-- There are some changes with number of peers: some new were connected</span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-comment">-- and/or some displayed ones were disconnected.</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613263"><span class="annot"><span class="annottext">disconnectedPeers :: Set Text
+</span><a href="#local-6989586621679613263"><span class="hs-identifier hs-var hs-var">disconnectedPeers</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613258"><span class="hs-identifier hs-var">displayedPeersAddresses</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text -&gt; Set Text -&gt; Set Text
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#%5C%5C"><span class="hs-operator hs-var">\\</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613256"><span class="hs-identifier hs-var">connectedPeersAddresses</span></a></span><span> </span><span class="hs-comment">-- Not in connected</span><span>
+</span><span id="line-68"></span><span>          </span><span id="local-6989586621679613265"><span class="annot"><span class="annottext">newlyConnectedPeers :: Set Text
+</span><a href="#local-6989586621679613265"><span class="hs-identifier hs-var hs-var">newlyConnectedPeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613256"><span class="hs-identifier hs-var">connectedPeersAddresses</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text -&gt; Set Text -&gt; Set Text
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#%5C%5C"><span class="hs-operator hs-var">\\</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613258"><span class="hs-identifier hs-var">displayedPeersAddresses</span></a></span><span> </span><span class="hs-comment">-- Not in displayed</span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><span class="annottext">Set Text -&gt; UI ()
+forall {t :: * -&gt; *}. Foldable t =&gt; t Text -&gt; UI ()
+</span><a href="#local-6989586621679613266"><span class="hs-identifier hs-var">deleteRowsForDisconnected</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613263"><span class="hs-identifier hs-var">disconnectedPeers</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">Set Text -&gt; Set [Text] -&gt; UI ()
+forall {t :: * -&gt; *} {t :: * -&gt; *}.
+(Foldable t, Foldable t) =&gt;
+t Text -&gt; t [Text] -&gt; UI ()
+</span><a href="#local-6989586621679613267"><span class="hs-identifier hs-var">addRowsForNewlyConnected</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679613265"><span class="hs-identifier hs-var">newlyConnectedPeers</span></a></span><span> </span><span class="annot"><span class="annottext">Set [Text]
+</span><a href="#local-6989586621679613254"><span class="hs-identifier hs-var">connectedPeers</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-keyword">else</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-comment">-- No changes with number of peers, only their data was changed.</span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">Set [Text] -&gt; UI ()
+</span><a href="#local-6989586621679613268"><span class="hs-identifier hs-var">updateConnectedPeersData</span></a></span><span> </span><span class="annot"><span class="annottext">Set [Text]
+</span><a href="#local-6989586621679613254"><span class="hs-identifier hs-var">connectedPeers</span></a></span><span>
+</span><span id="line-74"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679613255"><span class="annot"><span class="annottext">getConnectedPeers :: Set [Text]
+</span><a href="#local-6989586621679613255"><span class="hs-identifier hs-var hs-var">getConnectedPeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[[Text]] -&gt; Set [Text]
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromList"><span class="hs-identifier hs-var">S.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([[Text]] -&gt; Set [Text]) -&gt; [[Text]] -&gt; Set [Text]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">(Text -&gt; Maybe [Text]) -&gt; [Text] -&gt; [[Text]]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679613278"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613278"><span class="hs-identifier hs-var">peerPart</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613279"><span class="annot"><span class="annottext">peerData :: [Text]
+</span><a href="#local-6989586621679613279"><span class="hs-identifier hs-var hs-var">peerData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html#words"><span class="hs-identifier hs-var">T.words</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613278"><span class="hs-identifier hs-var">peerPart</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-78"></span><span>                    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613279"><span class="hs-identifier hs-var">peerData</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Maybe [Text]
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613279"><span class="hs-identifier hs-var">peerData</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe [Text]
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613248"><span class="hs-identifier hs-var">peersParts</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679613257"><span class="annot"><span class="annottext">getConnectedPeersAddresses :: Set Text
+</span><a href="#local-6989586621679613257"><span class="hs-identifier hs-var hs-var">getConnectedPeersAddresses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text) -&gt; Set [Text] -&gt; Set Text
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; Set a -&gt; Set b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#map"><span class="hs-identifier hs-var">S.map</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#head"><span class="hs-identifier hs-var">head</span></a></span><span> </span><span class="annot"><span class="annottext">Set [Text]
+</span><a href="#local-6989586621679613255"><span class="hs-identifier hs-var">getConnectedPeers</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679613266"><span class="annot"><span class="annottext">deleteRowsForDisconnected :: t Text -&gt; UI ()
+</span><a href="#local-6989586621679613266"><span class="hs-identifier hs-var hs-var">deleteRowsForDisconnected</span></a></span></span><span> </span><span id="local-6989586621679613291"><span class="annot"><span class="annottext">t Text
+</span><a href="#local-6989586621679613291"><span class="hs-identifier hs-var">disconnected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">t Text -&gt; (Text -&gt; UI ()) -&gt; UI ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="annot"><span class="annottext">t Text
+</span><a href="#local-6989586621679613291"><span class="hs-identifier hs-var">disconnected</span></a></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; UI ()) -&gt; UI ()) -&gt; (Text -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679613292"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613292"><span class="hs-identifier hs-var">peerAddr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">Window -&gt; NodeId -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers.html#deletePeerRow"><span class="hs-identifier hs-var">deletePeerRow</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613242"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679613243"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613292"><span class="hs-identifier hs-var">peerAddr</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ()) -&gt; IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Peers -&gt; NodeId -&gt; Text -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Peers.html#removePeer"><span class="hs-identifier hs-var">removePeer</span></a></span><span> </span><span class="annot"><span class="annottext">Peers
+</span><a href="#local-6989586621679613246"><span class="hs-identifier hs-var">displayedPeers</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679613243"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613292"><span class="hs-identifier hs-var">peerAddr</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679613267"><span class="annot"><span class="annottext">addRowsForNewlyConnected :: t Text -&gt; t [Text] -&gt; UI ()
+</span><a href="#local-6989586621679613267"><span class="hs-identifier hs-var hs-var">addRowsForNewlyConnected</span></a></span></span><span> </span><span id="local-6989586621679613306"><span class="annot"><span class="annottext">t Text
+</span><a href="#local-6989586621679613306"><span class="hs-identifier hs-var">newlyConnectedPeers</span></a></span></span><span> </span><span id="local-6989586621679613307"><span class="annot"><span class="annottext">t [Text]
+</span><a href="#local-6989586621679613307"><span class="hs-identifier hs-var">connectedPeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">t Text -&gt; (Text -&gt; UI ()) -&gt; UI ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="annot"><span class="annottext">t Text
+</span><a href="#local-6989586621679613306"><span class="hs-identifier hs-var">newlyConnectedPeers</span></a></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; UI ()) -&gt; UI ()) -&gt; (Text -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679613308"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613308"><span class="hs-identifier hs-var">peerAddr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Bool) -&gt; t [Text] -&gt; Maybe [Text]
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#find"><span class="hs-identifier hs-var">find</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679613309"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613309"><span class="hs-identifier hs-var">peerDataList</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#head"><span class="hs-identifier hs-var">head</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679613309"><span class="hs-identifier hs-var">peerDataList</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613308"><span class="hs-identifier hs-var">peerAddr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">t [Text]
+</span><a href="#local-6989586621679613307"><span class="hs-identifier hs-var">connectedPeers</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613310"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613310"><span class="hs-identifier hs-var">status</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613311"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613311"><span class="hs-identifier hs-var">slotNo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613312"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613312"><span class="hs-identifier hs-var">reqsInF</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613313"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613313"><span class="hs-identifier hs-var">blocksInF</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613314"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613314"><span class="hs-identifier hs-var">bytesInF</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613316"><span class="annot"><span class="annottext">idPrefix :: Text
+</span><a href="#local-6989586621679613316"><span class="hs-identifier hs-var hs-var">idPrefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613245"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613308"><span class="hs-identifier hs-var">peerAddr</span></a></span><span>
+</span><span id="line-93"></span><span>          </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text -&gt; Text -&gt; Text -&gt; Text -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679613317"><span class="hs-identifier hs-var">addPeerRow</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613316"><span class="hs-identifier hs-var">idPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613308"><span class="hs-identifier hs-var">peerAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613310"><span class="hs-identifier hs-var">status</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613311"><span class="hs-identifier hs-var">slotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613312"><span class="hs-identifier hs-var">reqsInF</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613313"><span class="hs-identifier hs-var">blocksInF</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613314"><span class="hs-identifier hs-var">bytesInF</span></a></span><span>
+</span><span id="line-94"></span><span>          </span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ()) -&gt; IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Peers -&gt; NodeId -&gt; Text -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Peers.html#addPeer"><span class="hs-identifier hs-var">addPeer</span></a></span><span> </span><span class="annot"><span class="annottext">Peers
+</span><a href="#local-6989586621679613246"><span class="hs-identifier hs-var">displayedPeers</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679613243"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613308"><span class="hs-identifier hs-var">peerAddr</span></a></span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="annottext">Maybe [Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; UI ()
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679613317"><span class="annot"><span class="annottext">addPeerRow :: Text -&gt; Text -&gt; Text -&gt; Text -&gt; Text -&gt; Text -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679613317"><span class="hs-identifier hs-var hs-var">addPeerRow</span></a></span></span><span> </span><span id="local-6989586621679613346"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613346"><span class="hs-identifier hs-var">idPrefix</span></a></span></span><span> </span><span id="local-6989586621679613347"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613347"><span class="hs-identifier hs-var">peerAddr</span></a></span></span><span> </span><span id="local-6989586621679613348"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613348"><span class="hs-identifier hs-var">status</span></a></span></span><span> </span><span id="local-6989586621679613349"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613349"><span class="hs-identifier hs-var">slotNo</span></a></span></span><span> </span><span id="local-6989586621679613350"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613350"><span class="hs-identifier hs-var">reqsInF</span></a></span></span><span> </span><span id="local-6989586621679613351"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613351"><span class="hs-identifier hs-var">blocksInF</span></a></span></span><span> </span><span id="local-6989586621679613352"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613352"><span class="hs-identifier hs-var">bytesInF</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613353"><span class="annot"><span class="annottext">idPrefix' :: String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var hs-var">idPrefix'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613346"><span class="hs-identifier hs-var">idPrefix</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">UI (Maybe Element) -&gt; (Element -&gt; UI ()) -&gt; UI ()
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m (Maybe a) -&gt; (a -&gt; m ()) -&gt; m ()
+</span><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJustM"><span class="hs-identifier hs-var">whenJustM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; String -&gt; UI (Maybe Element)
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#getElementById"><span class="hs-identifier hs-var">UI.getElementById</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679613242"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613245"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__node-peers-tbody&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Element -&gt; UI ()) -&gt; UI ()) -&gt; (Element -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679613355"><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679613355"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">UI Element -&gt; UI ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(UI Element -&gt; UI ()) -&gt; UI Element -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Element -&gt; UI Element
+forall (m :: * -&gt; *) w. (MonadIO m, Widget w) =&gt; w -&gt; m Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#element"><span class="hs-identifier hs-var">element</span></a></span><span> </span><span class="annot"><span class="annottext">Element
+</span><a href="#local-6989586621679613355"><span class="hs-identifier hs-var">el</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#tr"><span class="hs-identifier hs-var">UI.tr</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var">idPrefix'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__node-peer-row&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-102"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#td"><span class="hs-identifier hs-var">UI.td</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-103"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var">idPrefix'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__address&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+                          #. &quot;is-family-monospace&quot;
+</span><span class="hs-cpp">                          # set text (unpack peerAddr)
+</span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-107"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#td"><span class="hs-identifier hs-var">UI.td</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-108"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var">idPrefix'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__status&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+                          # set text (unpack status)
+</span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#td"><span class="hs-identifier hs-var">UI.td</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-112"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var">idPrefix'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__slotNo&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+                          # set text (unpack $ checkSlot slotNo)
+</span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#td"><span class="hs-identifier hs-var">UI.td</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-116"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var">idPrefix'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__reqsInF&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+                          # set text (unpack reqsInF)
+</span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-119"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#td"><span class="hs-identifier hs-var">UI.td</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-120"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var">idPrefix'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__blocksInF&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+                          # set text (unpack blocksInF)
+</span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#td"><span class="hs-identifier hs-var">UI.td</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; [UI Element] -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#%23%2B"><span class="hs-operator hs-var">#+</span></a></span><span>
+</span><span id="line-124"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Elements.html#span"><span class="hs-identifier hs-var">UI.span</span></a></span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; String -&gt; UI Element
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#%23%23"><span class="hs-operator hs-var">##</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679613353"><span class="hs-identifier hs-var">idPrefix'</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;__bytesInF&quot;</span></span><span class="hs-special">)</span><span class="hs-cpp">
+                          # set text (unpack bytesInF)
+</span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-127"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-128"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621679613268"><span class="annot"><span class="annottext">updateConnectedPeersData :: Set [Text] -&gt; UI ()
+</span><a href="#local-6989586621679613268"><span class="hs-identifier hs-var hs-var">updateConnectedPeersData</span></a></span></span><span> </span><span id="local-6989586621679613366"><span class="annot"><span class="annottext">Set [Text]
+</span><a href="#local-6989586621679613366"><span class="hs-identifier hs-var">connectedPeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-131"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613368"><span class="annot"><span class="annottext">allPeersData :: [(Text, Text)]
+</span><a href="#local-6989586621679613368"><span class="hs-identifier hs-var hs-var">allPeersData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; [(Text, Text)]) -&gt; [[Text]] -&gt; [(Text, Text)]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [(Text, Text)]
+</span><a href="#local-6989586621679613370"><span class="hs-identifier hs-var">collectDataToUpdate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set [Text] -&gt; [[Text]]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">S.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Set [Text]
+</span><a href="#local-6989586621679613366"><span class="hs-identifier hs-var">connectedPeers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-comment">-- Update values for all peers by one single FFI-call.</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setTextValues"><span class="hs-identifier hs-var">setTextValues</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679613368"><span class="hs-identifier hs-var">allPeersData</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621679613370"><span class="annot"><span class="annottext">collectDataToUpdate :: [Text] -&gt; [(Text, Text)]
+</span><a href="#local-6989586621679613370"><span class="hs-identifier hs-var hs-var">collectDataToUpdate</span></a></span></span><span> </span><span class="hs-special">[</span><span id="local-6989586621679613385"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613385"><span class="hs-identifier hs-var">peerAddr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613386"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613386"><span class="hs-identifier hs-var">status</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613387"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613387"><span class="hs-identifier hs-var">slotNo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613388"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613388"><span class="hs-identifier hs-var">reqsInF</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613389"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613389"><span class="hs-identifier hs-var">blocksInF</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679613390"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613390"><span class="hs-identifier hs-var">bytesInF</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679613392"><span class="annot"><span class="annottext">idPrefix :: Text
+</span><a href="#local-6989586621679613392"><span class="hs-identifier hs-var hs-var">idPrefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613245"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613385"><span class="hs-identifier hs-var">peerAddr</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613392"><span class="hs-identifier hs-var">idPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;__status&quot;</span></span><span class="hs-special">,</span><span>    </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613386"><span class="hs-identifier hs-var">status</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613392"><span class="hs-identifier hs-var">idPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;__slotNo&quot;</span></span><span class="hs-special">,</span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall {a}. (Eq a, IsString a) =&gt; a -&gt; a
+</span><a href="#local-6989586621679613365"><span class="hs-identifier hs-var">checkSlot</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613387"><span class="hs-identifier hs-var">slotNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613392"><span class="hs-identifier hs-var">idPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;__reqsInF&quot;</span></span><span class="hs-special">,</span><span>   </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613388"><span class="hs-identifier hs-var">reqsInF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613392"><span class="hs-identifier hs-var">idPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;__blocksInF&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613389"><span class="hs-identifier hs-var">blocksInF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613392"><span class="hs-identifier hs-var">idPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;__bytesInF&quot;</span></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679613390"><span class="hs-identifier hs-var">bytesInF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>       </span><span class="hs-special">]</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="#local-6989586621679613370"><span class="hs-identifier hs-var">collectDataToUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span>  </span><span id="local-6989586621679613365"><span class="annot"><span class="annottext">checkSlot :: a -&gt; a
+</span><a href="#local-6989586621679613365"><span class="hs-identifier hs-var hs-var">checkSlot</span></a></span></span><span> </span><span id="local-6989586621679613398"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679613398"><span class="hs-identifier hs-var">slotNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679613398"><span class="hs-identifier hs-var">slotNo</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;???&quot;</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#8212;&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679613398"><span class="hs-identifier hs-var">slotNo</span></a></span><span>
+</span><span id="line-146"></span></pre></body></html>

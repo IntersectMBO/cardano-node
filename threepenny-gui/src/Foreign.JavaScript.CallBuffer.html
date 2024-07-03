@@ -1,0 +1,280 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Foreign.JavaScript.CallBuffer</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html"><span class="hs-identifier">Foreign.JavaScript.Types</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Call Buffer
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-12"></span><span class="annot"><span class="hs-comment">-- | Set the call buffering mode for the given browser window.</span></span><span>
+</span><span id="line-13"></span><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html#setCallBufferMode"><span class="hs-identifier hs-type">setCallBufferMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#CallBufferMode"><span class="hs-identifier hs-type">CallBufferMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span id="setCallBufferMode"><span class="annot"><span class="annottext">setCallBufferMode :: Window -&gt; CallBufferMode -&gt; IO ()
+</span><a href="Foreign.JavaScript.CallBuffer.html#setCallBufferMode"><span class="hs-identifier hs-var hs-var">setCallBufferMode</span></a></span></span><span> </span><span id="local-6989586621679113572"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113572"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span id="local-6989586621679113573"><span class="annot"><span class="annottext">CallBufferMode
+</span><a href="#local-6989586621679113573"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; STM () -&gt; IO ()
+forall a. Window -&gt; STM a -&gt; IO a
+</span><a href="Foreign.JavaScript.CallBuffer.html#flushCallBufferWithAtomic"><span class="hs-identifier hs-var">flushCallBufferWithAtomic</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113572"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar CallBufferMode -&gt; CallBufferMode -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">writeTVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Window -&gt; TVar CallBufferMode
+</span><a href="Foreign.JavaScript.Types.html#wCallBufferMode"><span class="hs-identifier hs-var">wCallBufferMode</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113572"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CallBufferMode
+</span><a href="#local-6989586621679113573"><span class="hs-identifier hs-var">new</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="annot"><span class="hs-comment">-- | Get the call buffering mode for the given browser window.</span></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html#getCallBufferMode"><span class="hs-identifier hs-type">getCallBufferMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#CallBufferMode"><span class="hs-identifier hs-type">CallBufferMode</span></a></span><span>
+</span><span id="line-19"></span><span id="getCallBufferMode"><span class="annot"><span class="annottext">getCallBufferMode :: Window -&gt; IO CallBufferMode
+</span><a href="Foreign.JavaScript.CallBuffer.html#getCallBufferMode"><span class="hs-identifier hs-var hs-var">getCallBufferMode</span></a></span></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113579"><span id="local-6989586621679113580"><span id="local-6989586621679113581"><span id="local-6989586621679113582"><span id="local-6989586621679113583"><span id="local-6989586621679113584"><span id="local-6989586621679113585"><span id="local-6989586621679113586"><span id="local-6989586621679113587"><span id="local-6989586621679113588"><span id="local-6989586621679113589"><span id="local-6989586621679113590"><span class="annot"><span class="annottext">[Cookie]
+IO ()
+TVar CallBufferMode
+RemotePtr ()
+TMVar (String -&gt; String)
+Vendor JSPtr
+Vendor (Value -&gt; IO ())
+Server
+String -&gt; IO ()
+String -&gt; IO Value
+IO () -&gt; IO ()
+wCallBufferMode :: Window -&gt; TVar CallBufferMode
+getServer :: Server
+getCookies :: [Cookie]
+runEval :: String -&gt; IO ()
+callEval :: String -&gt; IO Value
+wCallBuffer :: TMVar (String -&gt; String)
+wCallBufferMode :: TVar CallBufferMode
+timestamp :: IO ()
+debug :: String -&gt; IO ()
+onDisconnect :: IO () -&gt; IO ()
+wRoot :: RemotePtr ()
+wEventHandlers :: Vendor (Value -&gt; IO ())
+wJSObjects :: Vendor JSPtr
+getServer :: Window -&gt; Server
+getCookies :: Window -&gt; [Cookie]
+runEval :: Window -&gt; String -&gt; IO ()
+callEval :: Window -&gt; String -&gt; IO Value
+wCallBuffer :: Window -&gt; TMVar (String -&gt; String)
+timestamp :: Window -&gt; IO ()
+debug :: Window -&gt; String -&gt; IO ()
+onDisconnect :: Window -&gt; IO () -&gt; IO ()
+wRoot :: Window -&gt; RemotePtr ()
+wEventHandlers :: Window -&gt; Vendor (Value -&gt; IO ())
+wJSObjects :: Window -&gt; Vendor JSPtr
+</span><a href="Foreign.JavaScript.Types.html#wCallBufferMode"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM CallBufferMode -&gt; IO CallBufferMode
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM CallBufferMode -&gt; IO CallBufferMode)
+-&gt; STM CallBufferMode -&gt; IO CallBufferMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar CallBufferMode -&gt; STM CallBufferMode
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar CallBufferMode
+</span><a href="#local-6989586621679113584"><span class="hs-identifier hs-var">wCallBufferMode</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- | Flush the call buffer,</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- i.e. send all outstanding JavaScript to the client in one single message.</span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html#flushCallBuffer"><span class="hs-identifier hs-type">flushCallBuffer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span id="flushCallBuffer"><span class="annot"><span class="annottext">flushCallBuffer :: Window -&gt; IO ()
+</span><a href="Foreign.JavaScript.CallBuffer.html#flushCallBuffer"><span class="hs-identifier hs-var hs-var">flushCallBuffer</span></a></span></span><span> </span><span id="local-6989586621679113605"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113605"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Window -&gt; STM () -&gt; IO ()
+forall a. Window -&gt; STM a -&gt; IO a
+</span><a href="Foreign.JavaScript.CallBuffer.html#flushCallBufferWithAtomic"><span class="hs-identifier hs-var">flushCallBufferWithAtomic</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679113605"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="annot"><span class="hs-comment">-- | Flush the call buffer, and atomically perform an additional action</span></span><span>
+</span><span id="line-27"></span><span id="local-6989586621679113532"><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html#flushCallBufferWithAtomic"><span class="hs-identifier hs-type">flushCallBufferWithAtomic</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#STM"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113532"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679113532"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-28"></span><span id="flushCallBufferWithAtomic"><span class="annot"><span class="annottext">flushCallBufferWithAtomic :: forall a. Window -&gt; STM a -&gt; IO a
+</span><a href="Foreign.JavaScript.CallBuffer.html#flushCallBufferWithAtomic"><span class="hs-identifier hs-var hs-var">flushCallBufferWithAtomic</span></a></span></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113613"><span id="local-6989586621679113614"><span id="local-6989586621679113615"><span id="local-6989586621679113616"><span id="local-6989586621679113617"><span id="local-6989586621679113618"><span id="local-6989586621679113619"><span id="local-6989586621679113620"><span id="local-6989586621679113621"><span id="local-6989586621679113622"><span id="local-6989586621679113623"><span id="local-6989586621679113624"><span class="annot"><span class="annottext">[Cookie]
+IO ()
+TVar CallBufferMode
+RemotePtr ()
+TMVar (String -&gt; String)
+Vendor JSPtr
+Vendor (Value -&gt; IO ())
+Server
+String -&gt; IO ()
+String -&gt; IO Value
+IO () -&gt; IO ()
+wCallBufferMode :: Window -&gt; TVar CallBufferMode
+getServer :: Window -&gt; Server
+getCookies :: Window -&gt; [Cookie]
+runEval :: Window -&gt; String -&gt; IO ()
+callEval :: Window -&gt; String -&gt; IO Value
+wCallBuffer :: Window -&gt; TMVar (String -&gt; String)
+timestamp :: Window -&gt; IO ()
+debug :: Window -&gt; String -&gt; IO ()
+onDisconnect :: Window -&gt; IO () -&gt; IO ()
+wRoot :: Window -&gt; RemotePtr ()
+wEventHandlers :: Window -&gt; Vendor (Value -&gt; IO ())
+wJSObjects :: Window -&gt; Vendor JSPtr
+getServer :: Server
+getCookies :: [Cookie]
+runEval :: String -&gt; IO ()
+callEval :: String -&gt; IO Value
+wCallBuffer :: TMVar (String -&gt; String)
+wCallBufferMode :: TVar CallBufferMode
+timestamp :: IO ()
+debug :: String -&gt; IO ()
+onDisconnect :: IO () -&gt; IO ()
+wRoot :: RemotePtr ()
+wEventHandlers :: Vendor (Value -&gt; IO ())
+wJSObjects :: Vendor JSPtr
+</span><a href="Foreign.JavaScript.Types.html#wCallBufferMode"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679113625"><span class="annot"><span class="annottext">STM a
+</span><a href="#local-6989586621679113625"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-comment">-- by taking the call buffer, we ensure that no further code</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-comment">-- is added to the buffer while we execute the current buffer's code.</span><span>
+</span><span id="line-31"></span><span>    </span><span id="local-6989586621679113626"><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679113626"><span class="hs-identifier hs-var">code'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (String -&gt; String) -&gt; IO (String -&gt; String)
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (String -&gt; String) -&gt; IO (String -&gt; String))
+-&gt; STM (String -&gt; String) -&gt; IO (String -&gt; String)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (String -&gt; String) -&gt; STM (String -&gt; String)
+forall a. TMVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#takeTMVar"><span class="hs-identifier hs-var">takeTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (String -&gt; String)
+</span><a href="#local-6989586621679113617"><span class="hs-identifier hs-var">wCallBuffer</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113628"><span class="annot"><span class="annottext">code :: String
+</span><a href="#local-6989586621679113628"><span class="hs-identifier hs-var hs-var">code</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679113626"><span class="hs-identifier hs-var">code'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113628"><span class="hs-identifier hs-var">code</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="#local-6989586621679113615"><span class="hs-identifier hs-var">runEval</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113628"><span class="hs-identifier hs-var">code</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="annottext">STM a -&gt; IO a
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM a -&gt; IO a) -&gt; STM a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><span class="annottext">TMVar (String -&gt; String) -&gt; (String -&gt; String) -&gt; STM ()
+forall a. TMVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#putTMVar"><span class="hs-identifier hs-var">putTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (String -&gt; String)
+</span><a href="#local-6989586621679113617"><span class="hs-identifier hs-var">wCallBuffer</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+forall a. a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-36"></span><span>        </span><span class="annot"><span class="annottext">STM a
+</span><a href="#local-6989586621679113625"><span class="hs-identifier hs-var">action</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | Schedule a piece of JavaScript code to be run with `runEval`,</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- depending on the buffering mode</span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Foreign.JavaScript.CallBuffer.html#bufferRunEval"><span class="hs-identifier hs-type">bufferRunEval</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span id="bufferRunEval"><span class="annot"><span class="annottext">bufferRunEval :: Window -&gt; String -&gt; IO ()
+</span><a href="Foreign.JavaScript.CallBuffer.html#bufferRunEval"><span class="hs-identifier hs-var hs-var">bufferRunEval</span></a></span></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Window"><span class="hs-identifier hs-type">Window</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113634"><span id="local-6989586621679113635"><span id="local-6989586621679113636"><span id="local-6989586621679113637"><span id="local-6989586621679113638"><span id="local-6989586621679113639"><span id="local-6989586621679113640"><span id="local-6989586621679113641"><span id="local-6989586621679113642"><span id="local-6989586621679113643"><span id="local-6989586621679113644"><span id="local-6989586621679113645"><span class="annot"><span class="annottext">[Cookie]
+IO ()
+TVar CallBufferMode
+RemotePtr ()
+TMVar (String -&gt; String)
+Vendor JSPtr
+Vendor (Value -&gt; IO ())
+Server
+String -&gt; IO ()
+String -&gt; IO Value
+IO () -&gt; IO ()
+wCallBufferMode :: Window -&gt; TVar CallBufferMode
+getServer :: Window -&gt; Server
+getCookies :: Window -&gt; [Cookie]
+runEval :: Window -&gt; String -&gt; IO ()
+callEval :: Window -&gt; String -&gt; IO Value
+wCallBuffer :: Window -&gt; TMVar (String -&gt; String)
+timestamp :: Window -&gt; IO ()
+debug :: Window -&gt; String -&gt; IO ()
+onDisconnect :: Window -&gt; IO () -&gt; IO ()
+wRoot :: Window -&gt; RemotePtr ()
+wEventHandlers :: Window -&gt; Vendor (Value -&gt; IO ())
+wJSObjects :: Window -&gt; Vendor JSPtr
+getServer :: Server
+getCookies :: [Cookie]
+runEval :: String -&gt; IO ()
+callEval :: String -&gt; IO Value
+wCallBuffer :: TMVar (String -&gt; String)
+wCallBufferMode :: TVar CallBufferMode
+timestamp :: IO ()
+debug :: String -&gt; IO ()
+onDisconnect :: IO () -&gt; IO ()
+wRoot :: RemotePtr ()
+wEventHandlers :: Vendor (Value -&gt; IO ())
+wJSObjects :: Vendor JSPtr
+</span><a href="Foreign.JavaScript.Types.html#wCallBufferMode"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679113646"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113646"><span class="hs-identifier hs-var">code</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679113647"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679113647"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Maybe String) -&gt; IO (Maybe String)
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (Maybe String) -&gt; IO (Maybe String))
+-&gt; STM (Maybe String) -&gt; IO (Maybe String)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>        </span><span id="local-6989586621679113648"><span class="annot"><span class="annottext">CallBufferMode
+</span><a href="#local-6989586621679113648"><span class="hs-identifier hs-var">mode</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar CallBufferMode -&gt; STM CallBufferMode
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar CallBufferMode
+</span><a href="#local-6989586621679113639"><span class="hs-identifier hs-var">wCallBufferMode</span></a></span><span>
+</span><span id="line-44"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">CallBufferMode
+</span><a href="#local-6989586621679113648"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-45"></span><span>            </span><span class="annot"><span class="annottext">CallBufferMode
+</span><a href="Foreign.JavaScript.Types.html#NoBuffering"><span class="hs-identifier hs-var">NoBuffering</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>                </span><span class="annot"><span class="annottext">Maybe String -&gt; STM (Maybe String)
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe String -&gt; STM (Maybe String))
+-&gt; Maybe String -&gt; STM (Maybe String)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113646"><span class="hs-identifier hs-var">code</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="annot"><span class="annottext">CallBufferMode
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>                </span><span id="local-6989586621679113650"><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679113650"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TMVar (String -&gt; String) -&gt; STM (String -&gt; String)
+forall a. TMVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#takeTMVar"><span class="hs-identifier hs-var">takeTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (String -&gt; String)
+</span><a href="#local-6989586621679113638"><span class="hs-identifier hs-var">wCallBuffer</span></a></span><span>
+</span><span id="line-49"></span><span>                </span><span class="annot"><span class="annottext">TMVar (String -&gt; String) -&gt; (String -&gt; String) -&gt; STM ()
+forall a. TMVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#putTMVar"><span class="hs-identifier hs-var">putTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (String -&gt; String)
+</span><a href="#local-6989586621679113638"><span class="hs-identifier hs-var">wCallBuffer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="#local-6989586621679113650"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (String -&gt; String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679113652"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113652"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113646"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113652"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>                </span><span class="annot"><span class="annottext">Maybe String -&gt; STM (Maybe String)
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679113647"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113653"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113653"><span class="hs-identifier hs-var">code1</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="#local-6989586621679113636"><span class="hs-identifier hs-var">runEval</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113653"><span class="hs-identifier hs-var">code1</span></a></span><span>
+</span><span id="line-54"></span></pre></body></html>

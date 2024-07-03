@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Network.Mux.Ingress</title><link href="linuwial.css" rel="stylesheet" type="text/css" title="Linuwial" /><link rel="stylesheet" type="text/css" href="quick-jump.css" /><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400i,700" /><script src="haddock-bundle.min.js" async="async" type="text/javascript"></script><script type="text/x-mathjax-config">MathJax.Hub.Config({ tex2jax: { processClass: "mathjax", ignoreClass: ".*" } });</script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script></head><body><div id="package-header"><span class="caption">network-mux-0.4.5.2: Multiplexing library</span><ul class="links" id="page-menu"><li><a href="src/Network.Mux.Ingress.html">Source</a></li><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>Safe-Inferred</td></tr><tr><th>Language</th><td>Haskell2010</td></tr></table><p class="caption">Network.Mux.Ingress</p></div><div id="synopsis"><details id="syn"><summary>Synopsis</summary><ul class="details-toggle" data-details-id="syn"><li class="src short"><a href="#v:demuxer">demuxer</a> :: (MonadAsync m, MonadFork m, MonadMask m, MonadThrow (STM m), MonadTimer m) =&gt; [<a href="Network-Mux-Types.html#t:MiniProtocolState" title="Network.Mux.Types">MiniProtocolState</a> mode m] -&gt; <a href="Network-Mux-Types.html#t:MuxBearer" title="Network.Mux.Types">MuxBearer</a> m -&gt; m void</li></ul></details></div><div id="interface"><h1>Documentation</h1><div class="doc"><h1>Ingress Path</h1><pre>                 &#9679;
+                 &#9474;
+                 &#9474; ByteStrings
+                 &#9474;
+        &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9660;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;
+        &#9617;&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;&#9617;
+        &#9617;&#9474; Bearer.read() &#9474;&#9617; Mux Bearer implementation (Socket, Pipes, etc.)
+        &#9617;&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;&#9617;
+        &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9474;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;
+                &#9617;&#9474;&#9617;         MuxSDUs
+        &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9660;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;
+        &#9617;&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;&#9617;
+        &#9617;&#9474;     demux     &#9474;&#9617; For a given Mux Bearer there is a single demux
+        &#9617;&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;&#9617; thread reading from the underlying bearer.
+        &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9474;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;
+                &#9617;&#9474;&#9617;
+       &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9660;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;
+       &#9617; &#9581;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9582; &#9617; There is a limited queue (in bytes) for each mode
+       &#9617; &#9474;    &#9474;    &#9474;     &#9474; &#9617; (responder/initiator) per miniprotocol. Overflowing
+       &#9617; &#9660;    &#9660;    &#9660;     &#9660; &#9617; a queue is a protocol violation and a
+       &#9617;&#9474;  &#9474; &#9474;  &#9474; &#9474;  &#9474; &#9474;  &#9474;&#9617; MuxIngressQueueOverRun exception is thrown
+       &#9617;&#9474;ci&#9474; &#9474;  &#9474; &#9474;bi&#9474; &#9474;br&#9474;&#9617; and the bearer torn down.
+       &#9617;&#9474;ci&#9474; &#9474;cr&#9474; &#9474;bi&#9474; &#9474;br&#9474;&#9617;
+       &#9617;&#9492;&#9472;&#9472;&#9496; &#9492;&#9472;&#9472;&#9496; &#9492;&#9472;&#9472;&#9496; &#9492;&#9472;&#9472;&#9496;&#9617; Every ingress queue has a dedicated thread which will
+       &#9617;&#9617;&#9474;&#9617;&#9617;&#9617;&#9617;&#9474;&#9617;&#9617;&#9617;&#9617;&#9474;&#9617;&#9617;&#9617;&#9617;&#9474;&#9617;&#9617;&#9617; read application encoded data from its queue.
+         &#9474;    &#9474;    &#9474;    &#9474;
+          application data
+         &#9474;    &#9474;    &#9474;    &#9474;
+         &#9660;    &#9474;    &#9474;    &#9660;
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488; &#9474;    &#9474;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474; muxDuplex &#9474; &#9474;    &#9474;  &#9474; muxDuplex &#9474;
+&#9474; Initiator &#9474; &#9474;    &#9474;  &#9474; Responder &#9474;
+&#9474; ChainSync &#9474; &#9474;    &#9474;  &#9474; BlockFetch&#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496; &#9474;    &#9474;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+              &#9660;    &#9660;
+   &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+   &#9474; muxDuplex &#9474;  &#9474; muxDuplex &#9474;
+   &#9474; Responder &#9474;  &#9474; Initiator &#9474;
+   &#9474; ChainSync &#9474;  &#9474; BlockFetch&#9474;
+   &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;</pre></div><div class="top"><p class="src"><a id="v:demuxer" class="def">demuxer</a> :: (MonadAsync m, MonadFork m, MonadMask m, MonadThrow (STM m), MonadTimer m) =&gt; [<a href="Network-Mux-Types.html#t:MiniProtocolState" title="Network.Mux.Types">MiniProtocolState</a> mode m] -&gt; <a href="Network-Mux-Types.html#t:MuxBearer" title="Network.Mux.Types">MuxBearer</a> m -&gt; m void <a href="src/Network.Mux.Ingress.html#demuxer" class="link">Source</a> <a href="#v:demuxer" class="selflink">#</a></p><div class="doc"><p>demux runs as a single separate thread and reads complete <code><a href="Network-Mux-Types.html#t:MuxSDU" title="Network.Mux.Types">MuxSDU</a></code>s from
+ the underlying Mux Bearer and forwards it to the matching ingress queue.</p></div></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.29.2</p></div></body></html>

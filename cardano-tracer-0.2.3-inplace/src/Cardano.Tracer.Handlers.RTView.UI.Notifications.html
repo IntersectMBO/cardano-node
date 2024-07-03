@@ -1,0 +1,828 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Notifications</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEmailSettings"><span class="hs-identifier">getCurrentEmailSettings</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEventsSettings"><span class="hs-identifier">getCurrentEventsSettings</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#restoreEmailSettings"><span class="hs-identifier">restoreEmailSettings</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#restoreEventsSettings"><span class="hs-identifier">restoreEventsSettings</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#saveEmailSettings"><span class="hs-identifier">saveEmailSettings</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#saveEventsSettings"><span class="hs-identifier">saveEventsSettings</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setNotifyIconState"><span class="hs-identifier">setNotifyIconState</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setStatusTestEmailButton"><span class="hs-identifier">setStatusTestEmailButton</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Settings.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Notifications.Settings</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Timer.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Notifications.Timer</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Notifications.Types</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Img.Icons.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Img.Icons</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.JS.Utils</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Utils</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Utils</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#unless"><span class="hs-identifier">unless</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier">unpack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html"><span class="hs-identifier">Data.Text.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html#decimal"><span class="hs-identifier">decimal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.html"><span class="hs-identifier">Graphics.UI.Threepenny</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#restoreEmailSettings"><span class="hs-identifier hs-type">restoreEmailSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="restoreEmailSettings"><span class="annot"><span class="annottext">restoreEmailSettings :: TracerEnv -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#restoreEmailSettings"><span class="hs-identifier hs-var hs-var">restoreEmailSettings</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679614370"><span class="annot"><span class="annottext">Maybe FilePath
+teRTViewStateDir :: Maybe FilePath
+teRTViewStateDir :: TracerEnv -&gt; Maybe FilePath
+</span><a href="#local-6989586621679614370"><span class="hs-identifier hs-var hs-var">teRTViewStateDir</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679614372"><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614372"><span class="hs-identifier hs-var">eSettings</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO EmailSettings -&gt; UI EmailSettings
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO EmailSettings -&gt; UI EmailSettings)
+-&gt; IO EmailSettings -&gt; UI EmailSettings
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO EmailSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Settings.html#readSavedEmailSettings"><span class="hs-identifier hs-var">readSavedEmailSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679614370"><span class="hs-identifier hs-var">teRTViewStateDir</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="annottext">EmailSettings -&gt; UI ()
+</span><a href="#local-6989586621679614375"><span class="hs-identifier hs-var">setEmailSettings</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614372"><span class="hs-identifier hs-var">eSettings</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setStatusTestEmailButton"><span class="hs-identifier hs-var">setStatusTestEmailButton</span></a></span><span>
+</span><span id="line-39"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679614375"><span class="annot"><span class="annottext">setEmailSettings :: EmailSettings -&gt; UI ()
+</span><a href="#local-6989586621679614375"><span class="hs-identifier hs-var hs-var">setEmailSettings</span></a></span></span><span> </span><span id="local-6989586621679614396"><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>    </span><span id="local-6989586621679614397"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilePath) -&gt; Text -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSMTPHost"><span class="hs-identifier hs-var">esSMTPHost</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-smtp-host&quot;</span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span>   </span><span class="annot"><span class="annottext">(Int -&gt; FilePath) -&gt; Int -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Int
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSMTPPort"><span class="hs-identifier hs-var">esSMTPPort</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-smtp-port&quot;</span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilePath) -&gt; Text -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esUsername"><span class="hs-identifier hs-var">esUsername</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-username&quot;</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilePath) -&gt; Text -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esPassword"><span class="hs-identifier hs-var">esPassword</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-password&quot;</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EmailSSL -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span>   </span><span class="annot"><span class="annottext">(EmailSSL -&gt; FilePath) -&gt; EmailSSL -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; EmailSSL
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSSL"><span class="hs-identifier hs-var">esSSL</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>       </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-ssl&quot;</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilePath) -&gt; Text -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esEmailFrom"><span class="hs-identifier hs-var">esEmailFrom</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-email-from&quot;</span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilePath) -&gt; Text -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esEmailTo"><span class="hs-identifier hs-var">esEmailTo</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>   </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-email-to&quot;</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var">setValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614397"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilePath) -&gt; Text -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSubject"><span class="hs-identifier hs-var">esSubject</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679614396"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>   </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-subject&quot;</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679614399"><span class="annot"><span class="annottext">setValue :: Window -&gt; FilePath -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614399"><span class="hs-identifier hs-var hs-var">setValue</span></a></span></span><span> </span><span id="local-6989586621679614419"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614419"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span id="local-6989586621679614420"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614420"><span class="hs-identifier hs-var">elValue</span></a></span></span><span> </span><span id="local-6989586621679614421"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614421"><span class="hs-identifier hs-var">elId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; UI () -&gt; UI ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614420"><span class="hs-identifier hs-var">elValue</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614420"><span class="hs-identifier hs-var">elValue</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;-1&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(UI () -&gt; UI ()) -&gt; UI () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element FilePath FilePath
+-&gt; FilePath -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element FilePath FilePath
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614420"><span class="hs-identifier hs-var">elValue</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614419"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614421"><span class="hs-identifier hs-var">elId</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#restoreEventsSettings"><span class="hs-identifier hs-type">restoreEventsSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span id="restoreEventsSettings"><span class="annot"><span class="annottext">restoreEventsSettings :: TracerEnv -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#restoreEventsSettings"><span class="hs-identifier hs-var hs-var">restoreEventsSettings</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679614427"><span class="annot"><span class="annottext">Maybe FilePath
+teRTViewStateDir :: TracerEnv -&gt; Maybe FilePath
+teRTViewStateDir :: Maybe FilePath
+</span><a href="Cardano.Tracer.Environment.html#teRTViewStateDir"><span class="hs-identifier hs-var hs-var">teRTViewStateDir</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679614428"><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614428"><span class="hs-identifier hs-var">eSettings</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO EventsSettings -&gt; UI EventsSettings
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO EventsSettings -&gt; UI EventsSettings)
+-&gt; IO EventsSettings -&gt; UI EventsSettings
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO EventsSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Settings.html#readSavedEventsSettings"><span class="hs-identifier hs-var">readSavedEventsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679614427"><span class="hs-identifier hs-var">teRTViewStateDir</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">EventsSettings -&gt; UI ()
+</span><a href="#local-6989586621679614430"><span class="hs-identifier hs-var">setEventsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614428"><span class="hs-identifier hs-var">eSettings</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><span class="annottext">UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setNotifyIconState"><span class="hs-identifier hs-var">setNotifyIconState</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">EventsSettings -&gt; UI ()
+</span><a href="#local-6989586621679614431"><span class="hs-identifier hs-var">setSwitchAllState</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614428"><span class="hs-identifier hs-var">eSettings</span></a></span><span>
+</span><span id="line-61"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679614430"><span class="annot"><span class="annottext">setEventsSettings :: EventsSettings -&gt; UI ()
+</span><a href="#local-6989586621679614430"><span class="hs-identifier hs-var hs-var">setEventsSettings</span></a></span></span><span> </span><span id="local-6989586621679614456"><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var">setState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; Bool) -&gt; (Bool, PeriodInSec) -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsWarnings"><span class="hs-identifier hs-var">evsWarnings</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>         </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-warnings&quot;</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var">setState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; Bool) -&gt; (Bool, PeriodInSec) -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsErrors"><span class="hs-identifier hs-var">evsErrors</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>           </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-errors&quot;</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var">setState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; Bool) -&gt; (Bool, PeriodInSec) -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsCriticals"><span class="hs-identifier hs-var">evsCriticals</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-criticals&quot;</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var">setState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; Bool) -&gt; (Bool, PeriodInSec) -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsAlerts"><span class="hs-identifier hs-var">evsAlerts</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>           </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-alerts&quot;</span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var">setState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; Bool) -&gt; (Bool, PeriodInSec) -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsEmergencies"><span class="hs-identifier hs-var">evsEmergencies</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-emergencies&quot;</span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var">setState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; Bool) -&gt; (Bool, PeriodInSec) -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsNodeDisconnected"><span class="hs-identifier hs-var">evsNodeDisconnected</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-node-disconnected&quot;</span></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; UI ()
+forall {a}. Integral a =&gt; a -&gt; FilePath -&gt; UI ()
+</span><a href="#local-6989586621679614465"><span class="hs-identifier hs-var">setPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; PeriodInSec)
+-&gt; (Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsWarnings"><span class="hs-identifier hs-var">evsWarnings</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>         </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;select-period-warnings&quot;</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; UI ()
+forall {a}. Integral a =&gt; a -&gt; FilePath -&gt; UI ()
+</span><a href="#local-6989586621679614465"><span class="hs-identifier hs-var">setPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; PeriodInSec)
+-&gt; (Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsErrors"><span class="hs-identifier hs-var">evsErrors</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>           </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;select-period-errors&quot;</span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; UI ()
+forall {a}. Integral a =&gt; a -&gt; FilePath -&gt; UI ()
+</span><a href="#local-6989586621679614465"><span class="hs-identifier hs-var">setPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; PeriodInSec)
+-&gt; (Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsCriticals"><span class="hs-identifier hs-var">evsCriticals</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>        </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;select-period-criticals&quot;</span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; UI ()
+forall {a}. Integral a =&gt; a -&gt; FilePath -&gt; UI ()
+</span><a href="#local-6989586621679614465"><span class="hs-identifier hs-var">setPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; PeriodInSec)
+-&gt; (Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsAlerts"><span class="hs-identifier hs-var">evsAlerts</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>           </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;select-period-alerts&quot;</span></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; UI ()
+forall {a}. Integral a =&gt; a -&gt; FilePath -&gt; UI ()
+</span><a href="#local-6989586621679614465"><span class="hs-identifier hs-var">setPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; PeriodInSec)
+-&gt; (Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsEmergencies"><span class="hs-identifier hs-var">evsEmergencies</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>      </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;select-period-emergencies&quot;</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; UI ()
+forall {a}. Integral a =&gt; a -&gt; FilePath -&gt; UI ()
+</span><a href="#local-6989586621679614465"><span class="hs-identifier hs-var">setPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool, PeriodInSec) -&gt; PeriodInSec)
+-&gt; (Bool, PeriodInSec) -&gt; PeriodInSec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsNodeDisconnected"><span class="hs-identifier hs-var">evsNodeDisconnected</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614456"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;select-period-node-disconnected&quot;</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679614457"><span class="annot"><span class="annottext">setState :: Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var hs-var">setState</span></a></span></span><span> </span><span id="local-6989586621679614468"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614468"><span class="hs-identifier hs-var">elState</span></a></span></span><span> </span><span id="local-6989586621679614469"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614469"><span class="hs-identifier hs-var">elId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679614470"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614470"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool -&gt; Bool -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Attributes.html#checked"><span class="hs-identifier hs-var">UI.checked</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614468"><span class="hs-identifier hs-var">elState</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614470"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614469"><span class="hs-identifier hs-var">elId</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679614465"><span class="annot"><span class="annottext">setPeriod :: a -&gt; FilePath -&gt; UI ()
+</span><a href="#local-6989586621679614465"><span class="hs-identifier hs-var hs-var">setPeriod</span></a></span></span><span> </span><span id="local-6989586621679614490"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679614490"><span class="hs-identifier hs-var">elPeriod</span></a></span></span><span> </span><span id="local-6989586621679614491"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614491"><span class="hs-identifier hs-var">elId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">FilePath -&gt; Int -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#selectOption"><span class="hs-identifier hs-var">selectOption</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614491"><span class="hs-identifier hs-var">elId</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; UI ()) -&gt; Int -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679614490"><span class="hs-identifier hs-var">elPeriod</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679614431"><span class="annot"><span class="annottext">setSwitchAllState :: EventsSettings -&gt; UI ()
+</span><a href="#local-6989586621679614431"><span class="hs-identifier hs-var hs-var">setSwitchAllState</span></a></span></span><span> </span><span id="local-6989586621679614494"><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614494"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679614496"><span class="annot"><span class="annottext">allChecked :: Bool
+</span><a href="#local-6989586621679614496"><span class="hs-identifier hs-var hs-var">allChecked</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Bool] -&gt; Bool
+forall (t :: * -&gt; *). Foldable t =&gt; t Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#and"><span class="hs-identifier hs-var">and</span></a></span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsWarnings"><span class="hs-identifier hs-var">evsWarnings</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614494"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsErrors"><span class="hs-identifier hs-var">evsErrors</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614494"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsCriticals"><span class="hs-identifier hs-var">evsCriticals</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614494"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsAlerts"><span class="hs-identifier hs-var">evsAlerts</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614494"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsEmergencies"><span class="hs-identifier hs-var">evsEmergencies</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614494"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsNodeDisconnected"><span class="hs-identifier hs-var">evsNodeDisconnected</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614494"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Text -&gt; UI ()
+</span><a href="#local-6989586621679614457"><span class="hs-identifier hs-var">setState</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614496"><span class="hs-identifier hs-var">allChecked</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-all&quot;</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setNotifyIconState"><span class="hs-identifier hs-type">setNotifyIconState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span id="setNotifyIconState"><span class="annot"><span class="annottext">setNotifyIconState :: UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setNotifyIconState"><span class="hs-identifier hs-var hs-var">setNotifyIconState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679614498"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614498"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679614499"><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614499"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI EventsSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEventsSettings"><span class="hs-identifier hs-var">getCurrentEventsSettings</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679614500"><span class="annot"><span class="annottext">switches :: [Bool]
+</span><a href="#local-6989586621679614500"><span class="hs-identifier hs-var hs-var">switches</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsWarnings"><span class="hs-identifier hs-var">evsWarnings</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614499"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsErrors"><span class="hs-identifier hs-var">evsErrors</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614499"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsCriticals"><span class="hs-identifier hs-var">evsCriticals</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614499"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsAlerts"><span class="hs-identifier hs-var">evsAlerts</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614499"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec) -&gt; Bool
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsEmergencies"><span class="hs-identifier hs-var">evsEmergencies</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679614499"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>      </span><span id="local-6989586621679614502"><span class="annot"><span class="annottext">anyChecked :: Bool
+</span><a href="#local-6989586621679614502"><span class="hs-identifier hs-var hs-var">anyChecked</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Bool] -&gt; Bool
+forall (t :: * -&gt; *). Foldable t =&gt; t Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#or"><span class="hs-identifier hs-var">or</span></a></span><span> </span><span class="annot"><span class="annottext">[Bool]
+</span><a href="#local-6989586621679614500"><span class="hs-identifier hs-var">switches</span></a></span><span>
+</span><span id="line-107"></span><span>      </span><span id="local-6989586621679614504"><span class="annot"><span class="annottext">noChecked :: Bool
+</span><a href="#local-6989586621679614504"><span class="hs-identifier hs-var hs-var">noChecked</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614502"><span class="hs-identifier hs-var">anyChecked</span></a></span><span>
+</span><span id="line-108"></span><span>      </span><span id="local-6989586621679614507"><span class="annot"><span class="annottext">allChecked :: Bool
+</span><a href="#local-6989586621679614507"><span class="hs-identifier hs-var hs-var">allChecked</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Bool] -&gt; Bool
+forall (t :: * -&gt; *). Foldable t =&gt; t Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#and"><span class="hs-identifier hs-var">and</span></a></span><span> </span><span class="annot"><span class="annottext">[Bool]
+</span><a href="#local-6989586621679614500"><span class="hs-identifier hs-var">switches</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; UI () -&gt; UI ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614502"><span class="hs-identifier hs-var">anyChecked</span></a></span><span> </span><span class="annot"><span class="annottext">(UI () -&gt; UI ()) -&gt; UI () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element FilePath ()
+-&gt; FilePath -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element FilePath ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#html"><span class="hs-identifier hs-var">html</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Img.Icons.html#rtViewNotifySVG"><span class="hs-identifier hs-var">rtViewNotifySVG</span></a></span><span class="hs-special">)</span><span>   </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614498"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;notifications-icon&quot;</span></span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; UI () -&gt; UI ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614504"><span class="hs-identifier hs-var">noChecked</span></a></span><span>  </span><span class="annot"><span class="annottext">(UI () -&gt; UI ()) -&gt; UI () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element FilePath ()
+-&gt; FilePath -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element FilePath ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#html"><span class="hs-identifier hs-var">html</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Img.Icons.html#rtViewNoNotifySVG"><span class="hs-identifier hs-var">rtViewNoNotifySVG</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614498"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;notifications-icon&quot;</span></span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool -&gt; Bool -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Attributes.html#checked"><span class="hs-identifier hs-var">UI.checked</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614507"><span class="hs-identifier hs-var">allChecked</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614498"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-all&quot;</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#saveEmailSettings"><span class="hs-identifier hs-type">saveEmailSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span id="saveEmailSettings"><span class="annot"><span class="annottext">saveEmailSettings :: TracerEnv -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#saveEmailSettings"><span class="hs-identifier hs-var hs-var">saveEmailSettings</span></a></span></span><span> </span><span id="local-6989586621679614511"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679614511"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ())
+-&gt; (EmailSettings -&gt; IO ()) -&gt; EmailSettings -&gt; UI ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv -&gt; EmailSettings -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Settings.html#saveEmailSettingsOnDisk"><span class="hs-identifier hs-var">saveEmailSettingsOnDisk</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679614511"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(EmailSettings -&gt; UI ()) -&gt; UI EmailSettings -&gt; UI ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">UI EmailSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEmailSettings"><span class="hs-identifier hs-var">getCurrentEmailSettings</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#saveEventsSettings"><span class="hs-identifier hs-type">saveEventsSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span id="saveEventsSettings"><span class="annot"><span class="annottext">saveEventsSettings :: TracerEnv -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#saveEventsSettings"><span class="hs-identifier hs-var hs-var">saveEventsSettings</span></a></span></span><span> </span><span id="local-6989586621679614515"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679614515"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ())
+-&gt; (EventsSettings -&gt; IO ()) -&gt; EventsSettings -&gt; UI ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv -&gt; EventsSettings -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Settings.html#saveEventsSettingsOnDisk"><span class="hs-identifier hs-var">saveEventsSettingsOnDisk</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679614515"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(EventsSettings -&gt; UI ()) -&gt; UI EventsSettings -&gt; UI ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">UI EventsSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEventsSettings"><span class="hs-identifier hs-var">getCurrentEventsSettings</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEmailSettings"><span class="hs-identifier hs-type">getCurrentEmailSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span>
+</span><span id="line-122"></span><span id="getCurrentEmailSettings"><span class="annot"><span class="annottext">getCurrentEmailSettings :: UI EmailSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEmailSettings"><span class="hs-identifier hs-var hs-var">getCurrentEmailSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621679614517"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621679614518"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614518"><span class="hs-identifier hs-var">smtpHost</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-smtp-host&quot;</span></span><span>
+</span><span id="line-125"></span><span>  </span><span id="local-6989586621679614520"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614520"><span class="hs-identifier hs-var">smtpPort</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-smtp-port&quot;</span></span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679614521"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614521"><span class="hs-identifier hs-var">username</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-username&quot;</span></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679614522"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614522"><span class="hs-identifier hs-var">password</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-password&quot;</span></span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621679614523"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614523"><span class="hs-identifier hs-var">ssl</span></a></span></span><span>       </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-ssl&quot;</span></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679614524"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614524"><span class="hs-identifier hs-var">emailFrom</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-email-from&quot;</span></span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621679614525"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614525"><span class="hs-identifier hs-var">emailTo</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-email-to&quot;</span></span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621679614526"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614526"><span class="hs-identifier hs-var">subject</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614517"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;es-subject&quot;</span></span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><span class="annottext">EmailSettings -&gt; UI EmailSettings
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(EmailSettings -&gt; UI EmailSettings)
+-&gt; EmailSettings -&gt; UI EmailSettings
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">esSMTPHost :: Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSMTPHost"><span class="hs-identifier hs-var">esSMTPHost</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614518"><span class="hs-identifier hs-var">smtpHost</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esSMTPPort :: Int
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSMTPPort"><span class="hs-identifier hs-var">esSMTPPort</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; Int
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html#readInt"><span class="hs-identifier hs-var">readInt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614520"><span class="hs-identifier hs-var">smtpPort</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esUsername :: Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esUsername"><span class="hs-identifier hs-var">esUsername</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614521"><span class="hs-identifier hs-var">username</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esPassword :: Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esPassword"><span class="hs-identifier hs-var">esPassword</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614522"><span class="hs-identifier hs-var">password</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esSSL :: EmailSSL
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSSL"><span class="hs-identifier hs-var">esSSL</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; EmailSSL
+forall a. Read a =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Read.html#read"><span class="hs-identifier hs-var">read</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614523"><span class="hs-identifier hs-var">ssl</span></a></span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esEmailFrom :: Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esEmailFrom"><span class="hs-identifier hs-var">esEmailFrom</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614524"><span class="hs-identifier hs-var">emailFrom</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esEmailTo :: Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esEmailTo"><span class="hs-identifier hs-var">esEmailTo</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614525"><span class="hs-identifier hs-var">emailTo</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esSubject :: Text
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#esSubject"><span class="hs-identifier hs-var">esSubject</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614526"><span class="hs-identifier hs-var">subject</span></a></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEventsSettings"><span class="hs-identifier hs-type">getCurrentEventsSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#EventsSettings"><span class="hs-identifier hs-type">EventsSettings</span></a></span><span>
+</span><span id="line-144"></span><span id="getCurrentEventsSettings"><span class="annot"><span class="annottext">getCurrentEventsSettings :: UI EventsSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEventsSettings"><span class="hs-identifier hs-var hs-var">getCurrentEventsSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-145"></span><span>  </span><span id="local-6989586621679614530"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span>  </span><span id="local-6989586621679614531"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614531"><span class="hs-identifier hs-var">warningsState</span></a></span></span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool -&gt; Bool
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Bool) -&gt; UI (Maybe Bool) -&gt; UI Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI (Maybe Bool)
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetCheckboxState"><span class="hs-identifier hs-var">findAndGetCheckboxState</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-warnings&quot;</span></span><span>
+</span><span id="line-148"></span><span>  </span><span id="local-6989586621679614534"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614534"><span class="hs-identifier hs-var">errorsState</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool -&gt; Bool
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Bool) -&gt; UI (Maybe Bool) -&gt; UI Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI (Maybe Bool)
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetCheckboxState"><span class="hs-identifier hs-var">findAndGetCheckboxState</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-errors&quot;</span></span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621679614535"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614535"><span class="hs-identifier hs-var">criticalsState</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool -&gt; Bool
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Bool) -&gt; UI (Maybe Bool) -&gt; UI Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI (Maybe Bool)
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetCheckboxState"><span class="hs-identifier hs-var">findAndGetCheckboxState</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-criticals&quot;</span></span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679614536"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614536"><span class="hs-identifier hs-var">alertsState</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool -&gt; Bool
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Bool) -&gt; UI (Maybe Bool) -&gt; UI Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI (Maybe Bool)
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetCheckboxState"><span class="hs-identifier hs-var">findAndGetCheckboxState</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-alerts&quot;</span></span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621679614537"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614537"><span class="hs-identifier hs-var">emergenciesState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool -&gt; Bool
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Bool) -&gt; UI (Maybe Bool) -&gt; UI Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI (Maybe Bool)
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetCheckboxState"><span class="hs-identifier hs-var">findAndGetCheckboxState</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-emergencies&quot;</span></span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621679614538"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614538"><span class="hs-identifier hs-var">nodeDisconState</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool -&gt; Bool
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Bool) -&gt; UI (Maybe Bool) -&gt; UI Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI (Maybe Bool)
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetCheckboxState"><span class="hs-identifier hs-var">findAndGetCheckboxState</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;switch-node-disconnected&quot;</span></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span>  </span><span id="local-6989586621679614539"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614539"><span class="hs-identifier hs-var">warningsPeriod</span></a></span></span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; PeriodInSec
+</span><a href="#local-6989586621679614540"><span class="hs-identifier hs-var">readPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><span class="hs-number">1800</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; PeriodInSec) -&gt; UI FilePath -&gt; UI PeriodInSec
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;select-period-warnings&quot;</span></span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621679614541"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614541"><span class="hs-identifier hs-var">errorsPeriod</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; PeriodInSec
+</span><a href="#local-6989586621679614540"><span class="hs-identifier hs-var">readPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><span class="hs-number">1800</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; PeriodInSec) -&gt; UI FilePath -&gt; UI PeriodInSec
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;select-period-errors&quot;</span></span><span>
+</span><span id="line-156"></span><span>  </span><span id="local-6989586621679614542"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614542"><span class="hs-identifier hs-var">criticalsPeriod</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; PeriodInSec
+</span><a href="#local-6989586621679614540"><span class="hs-identifier hs-var">readPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><span class="hs-number">1800</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; PeriodInSec) -&gt; UI FilePath -&gt; UI PeriodInSec
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;select-period-criticals&quot;</span></span><span>
+</span><span id="line-157"></span><span>  </span><span id="local-6989586621679614543"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614543"><span class="hs-identifier hs-var">alertsPeriod</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; PeriodInSec
+</span><a href="#local-6989586621679614540"><span class="hs-identifier hs-var">readPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><span class="hs-number">1800</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; PeriodInSec) -&gt; UI FilePath -&gt; UI PeriodInSec
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;select-period-alerts&quot;</span></span><span>
+</span><span id="line-158"></span><span>  </span><span id="local-6989586621679614544"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614544"><span class="hs-identifier hs-var">emergenciesPeriod</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; PeriodInSec
+</span><a href="#local-6989586621679614540"><span class="hs-identifier hs-var">readPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><span class="hs-number">1800</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; PeriodInSec) -&gt; UI FilePath -&gt; UI PeriodInSec
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;select-period-emergencies&quot;</span></span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679614545"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614545"><span class="hs-identifier hs-var">nodeDisconPeriod</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PeriodInSec -&gt; FilePath -&gt; PeriodInSec
+</span><a href="#local-6989586621679614540"><span class="hs-identifier hs-var">readPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><span class="hs-number">1800</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; PeriodInSec) -&gt; UI FilePath -&gt; UI PeriodInSec
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Window -&gt; Text -&gt; UI FilePath
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndGetValue"><span class="hs-identifier hs-var">findAndGetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614530"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;select-period-node-disconnected&quot;</span></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="annottext">EventsSettings -&gt; UI EventsSettings
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(EventsSettings -&gt; UI EventsSettings)
+-&gt; EventsSettings -&gt; UI EventsSettings
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#EventsSettings"><span class="hs-identifier hs-type">EventsSettings</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">evsWarnings :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsWarnings"><span class="hs-identifier hs-var">evsWarnings</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614531"><span class="hs-identifier hs-var">warningsState</span></a></span><span class="hs-special">,</span><span>    </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614539"><span class="hs-identifier hs-var">warningsPeriod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsErrors :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsErrors"><span class="hs-identifier hs-var">evsErrors</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614534"><span class="hs-identifier hs-var">errorsState</span></a></span><span class="hs-special">,</span><span>      </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614541"><span class="hs-identifier hs-var">errorsPeriod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsCriticals :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsCriticals"><span class="hs-identifier hs-var">evsCriticals</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614535"><span class="hs-identifier hs-var">criticalsState</span></a></span><span class="hs-special">,</span><span>   </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614542"><span class="hs-identifier hs-var">criticalsPeriod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsAlerts :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsAlerts"><span class="hs-identifier hs-var">evsAlerts</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614536"><span class="hs-identifier hs-var">alertsState</span></a></span><span class="hs-special">,</span><span>      </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614543"><span class="hs-identifier hs-var">alertsPeriod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsEmergencies :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsEmergencies"><span class="hs-identifier hs-var">evsEmergencies</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614537"><span class="hs-identifier hs-var">emergenciesState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614544"><span class="hs-identifier hs-var">emergenciesPeriod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsNodeDisconnected :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#evsNodeDisconnected"><span class="hs-identifier hs-var">evsNodeDisconnected</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614538"><span class="hs-identifier hs-var">nodeDisconState</span></a></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614545"><span class="hs-identifier hs-var">nodeDisconPeriod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-169"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><a href="#local-6989586621679614540"><span class="hs-identifier hs-type">readPeriod</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Timer.html#PeriodInSec"><span class="hs-identifier hs-type">PeriodInSec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Timer.html#PeriodInSec"><span class="hs-identifier hs-type">PeriodInSec</span></a></span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679614540"><span class="annot"><span class="annottext">readPeriod :: PeriodInSec -&gt; FilePath -&gt; PeriodInSec
+</span><a href="#local-6989586621679614540"><span class="hs-identifier hs-var hs-var">readPeriod</span></a></span></span><span> </span><span id="local-6989586621679614547"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614547"><span class="hs-identifier hs-var">defP</span></a></span></span><span> </span><span id="local-6989586621679614548"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614548"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Reader Int
+forall a. Integral a =&gt; Reader a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html#decimal"><span class="hs-identifier hs-var">decimal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679614548"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-173"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679614547"><span class="hs-identifier hs-var">defP</span></a></span><span>
+</span><span id="line-174"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679614549"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679614549"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; PeriodInSec
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679614549"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setStatusTestEmailButton"><span class="hs-identifier hs-type">setStatusTestEmailButton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span id="setStatusTestEmailButton"><span class="annot"><span class="annottext">setStatusTestEmailButton :: UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#setStatusTestEmailButton"><span class="hs-identifier hs-var hs-var">setStatusTestEmailButton</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-178"></span><span>  </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span> </span><span id="local-6989586621679614550"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614550"><span class="hs-identifier hs-var">host</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679614551"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614551"><span class="hs-identifier hs-var">user</span></a></span></span><span> </span><span id="local-6989586621679614552"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614552"><span class="hs-identifier hs-var">pass</span></a></span></span><span> </span><span class="annot"><span class="annottext">EmailSSL
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679614553"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614553"><span class="hs-identifier hs-var">eFrom</span></a></span></span><span> </span><span id="local-6989586621679614554"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614554"><span class="hs-identifier hs-var">eTo</span></a></span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI EmailSettings
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Notifications.html#getCurrentEmailSettings"><span class="hs-identifier hs-var">getCurrentEmailSettings</span></a></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679614555"><span class="annot"><span class="annottext">allRequiredIsHere :: Bool
+</span><a href="#local-6989586621679614555"><span class="hs-identifier hs-var hs-var">allRequiredIsHere</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>           </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="#local-6989586621679614556"><span class="hs-identifier hs-var">isHere</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614550"><span class="hs-identifier hs-var">host</span></a></span><span>
+</span><span id="line-181"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="#local-6989586621679614556"><span class="hs-identifier hs-var">isHere</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614551"><span class="hs-identifier hs-var">user</span></a></span><span>
+</span><span id="line-182"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="#local-6989586621679614556"><span class="hs-identifier hs-var">isHere</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614552"><span class="hs-identifier hs-var">pass</span></a></span><span>
+</span><span id="line-183"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="#local-6989586621679614556"><span class="hs-identifier hs-var">isHere</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614553"><span class="hs-identifier hs-var">eFrom</span></a></span><span>
+</span><span id="line-184"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="#local-6989586621679614556"><span class="hs-identifier hs-var">isHere</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679614554"><span class="hs-identifier hs-var">eTo</span></a></span><span>
+</span><span id="line-185"></span><span>  </span><span id="local-6989586621679614558"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614558"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><span class="annottext">(UI Element -&gt; UI Element) -&gt; Window -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndSet"><span class="hs-identifier hs-var">findAndSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool -&gt; Bool -&gt; UI Element -&gt; UI Element
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; UI x -&gt; UI x
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#set"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element Bool Bool
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Attributes.html#enabled"><span class="hs-identifier hs-var">UI.enabled</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679614555"><span class="hs-identifier hs-var">allRequiredIsHere</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679614558"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;send-test-email&quot;</span></span><span>
+</span><span id="line-187"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-188"></span><span>  </span><span id="local-6989586621679614556"><span class="annot"><span class="annottext">isHere :: Text -&gt; Bool
+</span><a href="#local-6989586621679614556"><span class="hs-identifier hs-var hs-var">isHere</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (Text -&gt; Bool) -&gt; Text -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html#null"><span class="hs-identifier hs-var">T.null</span></a></span><span>
+</span><span id="line-189"></span></pre></body></html>

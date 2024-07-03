@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679114896"><span id="local-6989586621679114897"></span></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Reactive.Threepenny.Types</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html"><span class="hs-identifier">Control.Monad.Trans.RWS.Lazy</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Hashable</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vault.Strict</span></span><span>   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vault.Strict</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Unique.Really</span></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Pulse and Latch
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">type</span><span> </span><span id="Values"><span class="annot"><a href="Reactive.Threepenny.Types.html#Values"><span class="hs-identifier hs-var">Values</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Vault.Strict.Vault</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">type</span><span> </span><span id="Handler"><span class="annot"><a href="Reactive.Threepenny.Types.html#Handler"><span class="hs-identifier hs-var">Handler</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#EvalP"><span class="hs-identifier hs-type">EvalP</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">data</span><span> </span><span id="Priority"><span class="annot"><a href="Reactive.Threepenny.Types.html#Priority"><span class="hs-identifier hs-var">Priority</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DoLatch"><span class="annot"><a href="Reactive.Threepenny.Types.html#DoLatch"><span class="hs-identifier hs-var">DoLatch</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="DoIO"><span class="annot"><a href="Reactive.Threepenny.Types.html#DoIO"><span class="hs-identifier hs-var">DoIO</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679114903"><span id="local-6989586621679114905"><span class="annot"><span class="annottext">Priority -&gt; Priority -&gt; Bool
+(Priority -&gt; Priority -&gt; Bool)
+-&gt; (Priority -&gt; Priority -&gt; Bool) -&gt; Eq Priority
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Priority -&gt; Priority -&gt; Bool
+== :: Priority -&gt; Priority -&gt; Bool
+$c/= :: Priority -&gt; Priority -&gt; Bool
+/= :: Priority -&gt; Priority -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span id="local-6989586621679114910"><span id="local-6989586621679114912"><span id="local-6989586621679114916"><span class="annot"><span class="annottext">Int -&gt; Priority -&gt; ShowS
+[Priority] -&gt; ShowS
+Priority -&gt; String
+(Int -&gt; Priority -&gt; ShowS)
+-&gt; (Priority -&gt; String) -&gt; ([Priority] -&gt; ShowS) -&gt; Show Priority
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Priority -&gt; ShowS
+showsPrec :: Int -&gt; Priority -&gt; ShowS
+$cshow :: Priority -&gt; String
+show :: Priority -&gt; String
+$cshowList :: [Priority] -&gt; ShowS
+showList :: [Priority] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span id="local-6989586621679114922"><span id="local-6989586621679114924"><span id="local-6989586621679114926"><span id="local-6989586621679114930"><span id="local-6989586621679114933"><span id="local-6989586621679114936"><span id="local-6989586621679114939"><span class="annot"><span class="annottext">Eq Priority
+Eq Priority =&gt;
+(Priority -&gt; Priority -&gt; Ordering)
+-&gt; (Priority -&gt; Priority -&gt; Bool)
+-&gt; (Priority -&gt; Priority -&gt; Bool)
+-&gt; (Priority -&gt; Priority -&gt; Bool)
+-&gt; (Priority -&gt; Priority -&gt; Bool)
+-&gt; (Priority -&gt; Priority -&gt; Priority)
+-&gt; (Priority -&gt; Priority -&gt; Priority)
+-&gt; Ord Priority
+Priority -&gt; Priority -&gt; Bool
+Priority -&gt; Priority -&gt; Ordering
+Priority -&gt; Priority -&gt; Priority
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Priority -&gt; Priority -&gt; Ordering
+compare :: Priority -&gt; Priority -&gt; Ordering
+$c&lt; :: Priority -&gt; Priority -&gt; Bool
+&lt; :: Priority -&gt; Priority -&gt; Bool
+$c&lt;= :: Priority -&gt; Priority -&gt; Bool
+&lt;= :: Priority -&gt; Priority -&gt; Bool
+$c&gt; :: Priority -&gt; Priority -&gt; Bool
+&gt; :: Priority -&gt; Priority -&gt; Bool
+$c&gt;= :: Priority -&gt; Priority -&gt; Bool
+&gt;= :: Priority -&gt; Priority -&gt; Bool
+$cmax :: Priority -&gt; Priority -&gt; Priority
+max :: Priority -&gt; Priority -&gt; Priority
+$cmin :: Priority -&gt; Priority -&gt; Priority
+min :: Priority -&gt; Priority -&gt; Priority
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span id="local-6989586621679114943"><span id="local-6989586621679114951"><span id="local-6989586621679114957"><span id="local-6989586621679114967"><span id="local-6989586621679114969"><span id="local-6989586621679114973"><span id="local-6989586621679114977"><span id="local-6989586621679114981"><span class="annot"><span class="annottext">Int -&gt; Priority
+Priority -&gt; Int
+Priority -&gt; [Priority]
+Priority -&gt; Priority
+Priority -&gt; Priority -&gt; [Priority]
+Priority -&gt; Priority -&gt; Priority -&gt; [Priority]
+(Priority -&gt; Priority)
+-&gt; (Priority -&gt; Priority)
+-&gt; (Int -&gt; Priority)
+-&gt; (Priority -&gt; Int)
+-&gt; (Priority -&gt; [Priority])
+-&gt; (Priority -&gt; Priority -&gt; [Priority])
+-&gt; (Priority -&gt; Priority -&gt; [Priority])
+-&gt; (Priority -&gt; Priority -&gt; Priority -&gt; [Priority])
+-&gt; Enum Priority
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Priority -&gt; Priority
+succ :: Priority -&gt; Priority
+$cpred :: Priority -&gt; Priority
+pred :: Priority -&gt; Priority
+$ctoEnum :: Int -&gt; Priority
+toEnum :: Int -&gt; Priority
+$cfromEnum :: Priority -&gt; Int
+fromEnum :: Priority -&gt; Int
+$cenumFrom :: Priority -&gt; [Priority]
+enumFrom :: Priority -&gt; [Priority]
+$cenumFromThen :: Priority -&gt; Priority -&gt; [Priority]
+enumFromThen :: Priority -&gt; Priority -&gt; [Priority]
+$cenumFromTo :: Priority -&gt; Priority -&gt; [Priority]
+enumFromTo :: Priority -&gt; Priority -&gt; [Priority]
+$cenumFromThenTo :: Priority -&gt; Priority -&gt; Priority -&gt; [Priority]
+enumFromThenTo :: Priority -&gt; Priority -&gt; Priority -&gt; [Priority]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">data</span><span> </span><span id="Pulse"><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-var">Pulse</span></a></span></span><span> </span><span id="local-6989586621679114880"><span class="annot"><a href="#local-6989586621679114880"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Pulse"><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-var">Pulse</span></a></span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="addHandlerP"><span class="annot"><span class="annottext">forall a. Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var hs-var">addHandlerP</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Unique</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Handler"><span class="hs-identifier hs-type">Handler</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="evalP"><span class="annot"><span class="annottext">forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var hs-var">evalP</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#EvalP"><span class="hs-identifier hs-type">EvalP</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114880"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>    </span><span id="local-6989586621679114996"><span class="annot"><span class="annottext">hashWithSalt :: Int -&gt; Priority -&gt; Int
+</span><a href="#local-6989586621679114996"><span class="hs-identifier hs-var hs-var hs-var hs-var">hashWithSalt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Priority -&gt; Int) -&gt; Int -&gt; Priority -&gt; Int
+forall b a. Hashable b =&gt; (a -&gt; b) -&gt; Int -&gt; a -&gt; Int
+</span><span class="hs-identifier hs-var">hashUsing</span></span><span> </span><span class="annot"><span class="annottext">Priority -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#fromEnum"><span class="hs-identifier hs-var">fromEnum</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span id="local-6989586621679115001"><span class="annot"><span class="annottext">hash :: Priority -&gt; Int
+</span><a href="#local-6989586621679115001"><span class="hs-identifier hs-var hs-var hs-var hs-var">hash</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Priority -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#fromEnum"><span class="hs-identifier hs-var">fromEnum</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="Latch"><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-var">Latch</span></a></span></span><span> </span><span id="local-6989586621679114892"><span class="annot"><a href="#local-6989586621679114892"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Latch"><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-var">Latch</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="readL"><span class="annot"><span class="annottext">forall a. Latch a -&gt; EvalL a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var hs-var">readL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#EvalL"><span class="hs-identifier hs-type">EvalL</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679114892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Monads
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | The 'EvalP' monad is used to evaluate pulses.</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">type</span><span> </span><span id="EvalP"><span class="annot"><a href="Reactive.Threepenny.Types.html#EvalP"><span class="hs-identifier hs-var">EvalP</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#RWST"><span class="hs-identifier hs-type">RWST</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Values"><span class="hs-identifier hs-type">Values</span></a></span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#BuildIO"><span class="hs-identifier hs-type">BuildIO</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- state: current pulse values</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><span class="hs-comment">-- | The 'EvalL' monad is used to evaluate latches.</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">type</span><span> </span><span id="EvalL"><span class="annot"><a href="Reactive.Threepenny.Types.html#EvalL"><span class="hs-identifier hs-var">EvalL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | The 'Build' monad is used to add pulses and latches to the graph.</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">type</span><span> </span><span id="Build"><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-var">Build</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">type</span><span> </span><span id="BuildIO"><span class="annot"><a href="Reactive.Threepenny.Types.html#BuildIO"><span class="hs-identifier hs-var">BuildIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span>
+</span><span id="line-42"></span></pre></body></html>
