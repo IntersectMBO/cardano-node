@@ -38,12 +38,15 @@ import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.BlockFetch.ConsensusInterface (ChainSelStarvation (..))
 
-import           Data.Aeson (Value (String), object, toJSON, (.=))
+import           Control.Monad.Class.MonadTime.SI (Time (..))
+import           Data.Aeson (Value (Array, String), object, toJSON, (.=))
 import           Data.Int (Int64)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Vector as Vector
 import           Data.Word (Word64)
 import           Numeric (showFFloat)
 
@@ -79,7 +82,6 @@ instance (  LogFormatting (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
-  forHuman (ChainDB.TraceChainSelStarvation{})     = "TraceChainSelStarvation"
   forHuman (ChainDB.TraceAddBlockEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceFollowerEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceCopyToImmutableDBEvent v) = forHumanOrMachine v
@@ -91,8 +93,16 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHumanOrMachine v
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
+  forHuman (ChainDB.TraceChainSelStarvation s)     = case s of
+      ChainSelStarvationOngoing -> mconcat ["Chain selection is now starving"]
+      ChainSelStarvationEndedAt t -> mconcat ["Chain selection starvation ended at " <> Text.pack (show t)]
 
-  forMachine details ChainDB.TraceChainSelStarvation{} = mconcat [ "kind" .= String "TraceChainSelStarvation" ]
+  forMachine _details (ChainDB.TraceChainSelStarvation s) =
+    mconcat [ "kind" .= String "TraceChainSelStarvation"
+            , "starvation" .= case s of
+                ChainSelStarvationOngoing -> String "ongoing"
+                ChainSelStarvationEndedAt (Time t) -> Array $ Vector.fromList [String "endedAt", toJSON t]
+            ]
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceFollowerEvent v) =
@@ -127,7 +137,7 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceLedgerReplayEvent v)      = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
-  asMetrics ChainDB.TraceChainSelStarvation{}       = mempty
+  asMetrics ChainDB.TraceChainSelStarvation{}       = []
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
@@ -154,7 +164,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
   namespaceFor ChainDB.TraceChainSelStarvation{} =
-     nsPrependInner "TraceChainSelStarvation" (Namespace [] [])
+    Namespace [] ["TraceChainSelStarvation"]
 
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     severityFor (Namespace out tl) (Just ev')

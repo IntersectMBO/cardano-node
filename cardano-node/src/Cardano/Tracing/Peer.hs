@@ -20,7 +20,6 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (ChainSyncClientHandle,
                    ChainSyncClientHandleCollection(..),
                    csCandidate, viewChainSyncState)
-import           Ouroboros.Consensus.Util.NormalForm.StrictTVar (StrictTVar)
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import           Ouroboros.Network.Block (unSlotNo)
@@ -38,7 +37,6 @@ import           Data.Functor ((<&>))
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Generics (Generic)
