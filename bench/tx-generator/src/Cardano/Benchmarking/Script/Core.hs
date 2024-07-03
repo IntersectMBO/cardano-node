@@ -165,11 +165,10 @@ getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketP
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
-  chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
-  case ret of
-    Right era -> return era
-    Left err -> liftTxGenError $ TxGenError $ show err
+  chainTip  <- getLocalChainTip localNodeConnectInfo
+  mapExceptT liftIO .
+    modifyError (Env.TxGenError . TxGenError . show) $
+      queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
 
 queryRemoteProtocolParameters :: ActionM ProtocolParameters
 queryRemoteProtocolParameters = do
@@ -181,16 +180,13 @@ queryRemoteProtocolParameters = do
                  QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
               -> ActionM ProtocolParameters
     callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
-        res <- liftIO $ queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query)
-        case res of
-          Right (Right pp) -> do
-            let pp' = fromLedgerPParams shelleyEra pp
-                pparamsFile = "protocol-parameters-queried.json"
-            liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
-            traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
-            return pp'
-          Right (Left err) -> liftTxGenError $ TxGenError $ show err
-          Left err -> liftTxGenError $ TxGenError $ show err
+      pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
+          queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
+      let pp' = fromLedgerPParams shelleyEra pp
+          pparamsFile = "protocol-parameters-queried.json"
+      liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
+      traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
+      return pp'
   case era of
     AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
     AnyCardanoEra ShelleyEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
