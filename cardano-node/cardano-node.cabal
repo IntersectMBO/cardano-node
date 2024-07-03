@@ -209,6 +209,7 @@ library
                       , transformers
                       , transformers-except
                       , typed-protocols >= 0.1
+                      , vector
                       , yaml
 
 executable cardano-node
