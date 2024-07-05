@@ -440,7 +440,7 @@ def all_profile_variants:
           }
       }
     }
-    | .generator.tx_fee        = 1360000
+    | .generator.tx_fee        = 2540000
     ) as $plutus_loop_counter
   |
    ($plutus_loop_counter *
