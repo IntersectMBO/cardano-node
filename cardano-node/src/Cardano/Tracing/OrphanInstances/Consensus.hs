@@ -491,8 +491,8 @@ instance ( ConvertRawHash blk
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
       ChainDB.TraceChainSelStarvationEvent ev -> case ev of
-        ChainDB.ChainSelStarvationStarted ->
-          "ChainSel starvation started"
+        ChainDB.ChainSelStarvationStarted time ->
+          "ChainSel starvation started at " <> showT time
         ChainDB.ChainSelStarvationEnded time pt ->
           "ChainSel starvation ended at " <> showT time <> " because of " <> renderRealPointAsPhrase pt
       ChainDB.TraceAddBlockEvent ev -> case ev of
@@ -1153,8 +1153,10 @@ instance ( ConvertRawHash blk
                    , "targetBlock" .= renderRealPoint goal
                    ]
   toObject _verb (ChainDB.TraceChainSelStarvationEvent ev) = case ev of
-    ChainDB.ChainSelStarvationStarted ->
-      mconcat [ "kind" .= String "TraceChainSelStarvationEvent.ChainSelStarvationStarted" ]
+    ChainDB.ChainSelStarvationStarted time ->
+      mconcat [ "kind" .= String "TraceChainSelStarvationEvent.ChainSelStarvationStarted"
+              , "time" .= String (showT time)
+              ]
     ChainDB.ChainSelStarvationEnded time pt ->
       mconcat [ "kind" .= String "TraceChainSelStarvationEvent.ChainSelStarvationEndedAt"
               , "time" .= String (showT time)
