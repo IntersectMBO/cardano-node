@@ -17,7 +17,9 @@ import           Cardano.BM.Tracing
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Util.NormalForm.StrictTVar (StrictTVar, readTVar)
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (ChainSyncClientHandle,
+                   csCandidate, viewChainSyncState)
+import           Ouroboros.Consensus.Util.NormalForm.StrictTVar (StrictTVar)
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import           Ouroboros.Network.Block (unSlotNo)
@@ -95,9 +97,9 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
   tuple3pop (a, b, _) = (a, b)
 
   getCandidates
-    :: StrictTVar IO (Map peer (StrictTVar IO (Net.AnchoredFragment (Header blk))))
+    :: StrictTVar IO (Map peer (ChainSyncClientHandle IO blk))
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
-  getCandidates var = readTVar var >>= traverse readTVar
+  getCandidates handle = viewChainSyncState handle csCandidate
 
   extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [Peer blk]
@@ -107,7 +109,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
                                        . Net.readFetchClientsStateVars
                                        . getFetchClientRegistry $ kernel
                                      )
-    candidates <- STM.atomically . getCandidates . getNodeCandidates $ kernel
+    candidates <- STM.atomically . getCandidates . getChainSyncHandles $ kernel
 
     let peers = flip Map.mapMaybeWithKey candidates $ \cid af ->
                   maybe Nothing

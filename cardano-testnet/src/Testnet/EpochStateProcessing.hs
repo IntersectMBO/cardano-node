@@ -1,77 +1,88 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Testnet.EpochStateProcessing
   ( maybeExtractGovernanceActionIndex
-  , findCondition
+  , waitForGovActionVotes
   ) where
 
-import           Cardano.Api (AnyNewEpochState (..), ConwayEra, EpochNo, File (File),
-                   FoldBlocksError, LedgerStateCondition (..), MonadIO, ShelleyBasedEra,
-                   ValidationMode (FullValidation), foldEpochState, runExceptT,
-                   shelleyBasedEraConstraints)
-import qualified Cardano.Api as Api
-import           Cardano.Api.Ledger (GovActionId (..))
+import           Cardano.Api
+import           Cardano.Api.Ledger (EpochInterval (..), GovActionId (..))
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Conway.Governance as L
-import           Cardano.Ledger.Shelley.API (TxId (..))
+import qualified Cardano.Ledger.Shelley.API as L
+import           Cardano.Ledger.Shelley.LedgerState (newEpochStateGovStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 
 import           Prelude
 
-import           Control.Monad.State.Strict (MonadState (put), StateT)
-import           Data.Data ((:~:) (..))
+import           Control.Monad
 import qualified Data.Map as Map
-import           Data.Type.Equality (TestEquality (..))
-import           Data.Word (Word32)
+import           Data.Maybe
+import           Data.Word (Word16)
+import           GHC.Exts (IsList (toList), toList)
 import           GHC.Stack
-import           Lens.Micro ((^.))
+import           Lens.Micro (to, (^.))
+
+import           Testnet.Components.Query (EpochStateView, watchEpochStateUpdate)
 
 import           Hedgehog
+import           Hedgehog.Extras (MonadAssertion)
+import qualified Hedgehog.Extras as H
 
-findCondition
+maybeExtractGovernanceActionIndex
   :: HasCallStack
-  => MonadTest m
-  => MonadIO m
-  => (AnyNewEpochState -> Maybe a)
-  -> FilePath
-  -> FilePath
-  -> EpochNo -- ^ The termination epoch: the condition must be found *before* this epoch
-  -> m (Either FoldBlocksError (Maybe a))
-findCondition epochStateFoldFunc configurationFile socketPath maxEpochNo = withFrozenCallStack $ evalIO . runExceptT $ do
-  result <-
-    foldEpochState
-      (File configurationFile)
-      (File socketPath)
-      FullValidation
-      maxEpochNo
-      Nothing
-      (\epochState _ _ -> go epochStateFoldFunc epochState)
-  pure $ case result of
-    (ConditionMet, Just x) -> Just x
-    _                      -> Nothing
-
-  where
-    go :: (AnyNewEpochState -> Maybe a) -> AnyNewEpochState -> StateT (Maybe a) IO LedgerStateCondition
-    go f epochState = do
-      case f epochState of
-        Just x -> put (Just x) >> pure ConditionMet
-        Nothing -> pure ConditionNotMet
-
-maybeExtractGovernanceActionIndex :: ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
-  -> Api.TxId
+  => TxId -- ^ transaction id searched for
   -> AnyNewEpochState
-  -> Maybe Word32
-maybeExtractGovernanceActionIndex sbe txid (AnyNewEpochState actualEra newEpochState) =
-  case testEquality sbe actualEra of
-          Just Refl -> do
-            let proposals = shelleyBasedEraConstraints sbe newEpochState
-                          ^. L.newEpochStateGovStateL
-                           . L.proposalsGovStateL
-            Map.foldlWithKey' (compareWithTxId txid) Nothing (L.proposalsActionsMap proposals)
-          Nothing -> do
-            error $ "Eras mismatch! expected: " <> show sbe <> ", actual: " <> show actualEra
+  -> Maybe Word16
+maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState) =
+  caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "Governance actions only available in Conway era onwards")
+    (\ceo -> conwayEraOnwardsConstraints ceo $ do
+        let proposals = newEpochState ^. L.newEpochStateGovStateL . L.proposalsGovStateL
+        Map.foldlWithKey' (compareWithTxId txid) Nothing (L.proposalsActionsMap proposals)
+    )
+    sbe
   where
-    compareWithTxId (Api.TxId ti1) Nothing (GovActionId (TxId ti2) (L.GovActionIx gai)) _
+    compareWithTxId (TxId ti1) Nothing (GovActionId (L.TxId ti2) (L.GovActionIx gai)) _
       | ti1 == L.extractHash ti2 = Just gai
     compareWithTxId _ x _ _ = x
+
+-- | Wait for the last gov action proposal in the list to have DRep or SPO votes.
+waitForGovActionVotes
+  :: forall m. HasCallStack
+  => MonadAssertion m
+  => MonadTest m
+  => MonadIO m
+  => EpochStateView -- ^ Current epoch state view. It can be obtained using the 'getEpochStateView' function.
+  -> EpochInterval -- ^ The maximum wait time in epochs.
+  -> m ()
+waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $ do
+  mResult <- watchEpochStateUpdate epochStateView maxWait checkForVotes
+  when (isNothing mResult) $
+    H.failMessage callStack "waitForGovActionVotes: No votes appeared before timeout."
+  where
+    checkForVotes
+      :: HasCallStack
+      => (AnyNewEpochState, SlotNo, BlockNo)
+      -> m (Maybe ())
+    checkForVotes (AnyNewEpochState actualEra newEpochState, _, _) = withFrozenCallStack $ do
+      caseShelleyToBabbageOrConwayEraOnwards
+        (const $ H.note_ "Only Conway era onwards is supported" >> failure)
+        (\ceo -> do
+          let govState = conwayEraOnwardsConstraints ceo $ newEpochState ^. newEpochStateGovStateL
+              proposals = govState ^. L.cgsProposalsL . L.pPropsL . to toList
+          if null proposals
+            then pure Nothing
+            else do
+              let lastProposal = last proposals
+                  gaDRepVotes = lastProposal ^. L.gasDRepVotesL . to toList
+                  gaSpoVotes = lastProposal ^. L.gasStakePoolVotesL . to toList
+              if null gaDRepVotes && null gaSpoVotes
+              then pure Nothing
+              else pure $ Just ()
+        )
+        actualEra
+

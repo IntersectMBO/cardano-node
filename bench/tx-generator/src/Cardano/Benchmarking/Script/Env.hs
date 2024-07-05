@@ -1,9 +1,11 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -26,12 +28,16 @@ ran into circular dependency issues during the above transition.
  -}
 module Cardano.Benchmarking.Script.Env (
         ActionM
-        , Error(..)
-        , runActionM
+        , Env (..)
+        , Error (..)
+        , emptyEnv
+        , newEnvConsts
         , runActionMEnv
         , liftTxGenError
         , liftIOSafe
         , askIOManager
+        , askNixSvcOpts
+        , askEnvThreads
         , traceDebug
         , traceError
         , traceBenchTxSubmit
@@ -57,19 +63,7 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvSummary
 ) where
 
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.RWS.Strict (RWST)
-import qualified Control.Monad.Trans.RWS.Strict as RWS
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
-import           Prelude
-
 import           Cardano.Api (File (..), SocketPath)
-
-import           Cardano.Logging
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
@@ -78,11 +72,26 @@ import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, S
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Logging
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
+import           Cardano.TxGenerator.Setup.NixService as Nix (NixServiceOptions)
+import           Cardano.TxGenerator.Types (TxGenError (..))
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
-import           Cardano.TxGenerator.Types (TxGenError (..))
+import           Prelude
+
+import           Control.Concurrent.STM (STM)
+import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.RWS.Strict (RWST)
+import qualified Control.Monad.Trans.RWS.Strict as RWS
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
+import qualified System.IO as IO (hPutStrLn, stderr)
 
 
 -- | The 'Env' type represents the state maintained while executing
@@ -92,44 +101,41 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- wrapped by 'ProtocolParameterMode' which itself is
                  -- a sort of custom 'Maybe'.
                  protoParams :: Maybe ProtocolParameterMode
-               , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
                , envKeys :: Map String (SigningKey PaymentKey)
-               , envThreads :: Map String AsyncBenchmarkControl
                , envWallets :: Map String WalletRef
                , envSummary :: Maybe PlutusBudgetSummary
                }
-
 -- | `Env` uses `Maybe` to represent values that might be uninitialized.
 -- This being empty means `Nothing` is used across the board, along with
 -- all of the `Map.Map` structures being `Map.empty`.
 emptyEnv :: Env
 emptyEnv = Env { protoParams = Nothing
-               , benchTracers = Nothing
                , envGenesis = Nothing
                , envKeys = Map.empty
                , envProtocol = Nothing
                , envNetworkId = Nothing
                , envSocketPath = Nothing
-               , envThreads = Map.empty
                , envWallets = Map.empty
                , envSummary = Nothing
                }
 
+newEnvConsts :: IOManager -> Maybe Nix.NixServiceOptions -> STM Tracer.EnvConsts
+newEnvConsts envIOManager envNixSvcOpts = do
+  envThreads <- STM.newTVar Nothing
+  benchTracers <- STM.newTVar Nothing
+  pure Tracer.EnvConsts { .. }
+
 -- | This abbreviates an `ExceptT` and `RWST` with particular types
 -- used as parameters.
-type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
-
--- | This runs an `ActionM` starting with an empty `Env`.
-runActionM :: ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
-runActionM = runActionMEnv emptyEnv
+type ActionM a = ExceptT Error (RWST Tracer.EnvConsts () Env IO) a
 
 -- | This runs an `ActionM` starting with the `Env` being passed.
-runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
-runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
+runActionMEnv :: Env -> ActionM ret -> Tracer.EnvConsts -> IO (Either Error ret, Env, ())
+runActionMEnv env action envConsts = RWS.runRWST (runExceptT action) envConsts env
 
 -- | 'Error' adds two cases to 'Cardano.TxGenerator.Types.TxGenError'
 -- which in turn wraps 'Cardano.Api.Error' implicit contexts to a
@@ -160,7 +166,14 @@ liftIOSafe a = liftIO a >>= either liftTxGenError pure
 
 -- | Accessor for the `IOManager` reader monad aspect of the `RWST`.
 askIOManager :: ActionM IOManager
-askIOManager = lift RWS.ask
+askIOManager = lift $ RWS.asks Tracer.envIOManager
+
+-- | Accessor for the `NixServiceOptions` reader monad aspect of the `RWST`.
+askNixSvcOpts :: ActionM (Maybe Nix.NixServiceOptions)
+askNixSvcOpts = lift $ RWS.asks Tracer.envNixSvcOpts
+
+askEnvThreads :: ActionM (STM.TVar (Maybe AsyncBenchmarkControl))
+askEnvThreads = lift $ RWS.asks Tracer.envThreads
 
 -- | Helper to modify `Env` record fields.
 modifyEnv :: (Env -> Env) -> ActionM ()
@@ -172,7 +185,9 @@ setProtoParamMode val = modifyEnv (\e -> e { protoParams = Just val })
 
 -- | Write accessor for `benchTracers`.
 setBenchTracers :: Tracer.BenchTracers -> ActionM ()
-setBenchTracers val = modifyEnv (\e -> e { benchTracers = Just val })
+setBenchTracers val = do
+  btTVar <- lift $ RWS.asks Tracer.benchTracers
+  liftIO $ STM.atomically do STM.writeTVar btTVar $ Just val
 
 -- | Write accessor for `envGenesis`.
 setEnvGenesis :: ShelleyGenesis StandardCrypto -> ActionM ()
@@ -195,8 +210,10 @@ setEnvSocketPath :: FilePath -> ActionM ()
 setEnvSocketPath val = modifyEnv (\e -> e { envSocketPath = Just val })
 
 -- | Write accessor for `envThreads`.
-setEnvThreads :: String -> AsyncBenchmarkControl -> ActionM ()
-setEnvThreads key val = modifyEnv (\e -> e { envThreads = Map.insert key val (envThreads e) })
+setEnvThreads :: AsyncBenchmarkControl -> ActionM ()
+setEnvThreads abc = do
+  abcTVar <- lift $ RWS.asks Tracer.envThreads
+  liftIO do STM.atomically $ abcTVar `STM.writeTVar` Just abc
 
 -- | Write accessor for `envWallets`.
 setEnvWallets :: String -> WalletRef -> ActionM ()
@@ -226,8 +243,27 @@ getProtoParamMode :: ActionM ProtocolParameterMode
 getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 
 -- | Read accessor for `benchTracers`.
+-- It would be burdensome on callers to have to have to case analyze
+-- this result. EnvConsts :: (Type -> Type) -> Type would make sense,
+-- using the pattern of data HKT f = HKT { f1 :: f t1, f2 :: f t2, ..}
+-- Then EnvConsts Maybe can be converted to EnvConsts Identity once
+-- initialization is complete so the main phase doesn't need to do this.
 getBenchTracers :: ActionM Tracer.BenchTracers
-getBenchTracers = getEnvVal benchTracers "BenchTracers"
+getBenchTracers = do
+  btTVar <- lift $ RWS.asks Tracer.benchTracers
+  mTracer <- liftIO $ STM.atomically do STM.readTVar btTVar
+  case mTracer of
+    Just tracer -> pure tracer
+    Nothing -> do
+      -- If this occurs, it may be worthwhile to output it in more ways
+      -- because the tracer isn't actually initialized.
+      let errMsg = "Env.getBenchTracers: attempted to set tracer before\
+                   \  STM.TVar init"
+      traceError errMsg
+      liftIO $ do
+        putStrLn errMsg
+        IO.hPutStrLn IO.stderr errMsg
+      pure $ error errMsg
 
 -- | Read accessor for `envGenesis`.
 getEnvGenesis :: ActionM (ShelleyGenesis StandardCrypto)
@@ -250,8 +286,10 @@ getEnvSocketPath :: ActionM SocketPath
 getEnvSocketPath = File <$> getEnvVal envSocketPath "SocketPath"
 
 -- | Read accessor for `envThreads`.
-getEnvThreads :: String -> ActionM AsyncBenchmarkControl
-getEnvThreads = getEnvMap envThreads
+getEnvThreads :: ActionM (Maybe AsyncBenchmarkControl)
+getEnvThreads = do
+  abcTVar <- lift $ RWS.asks Tracer.envThreads
+  liftIO do STM.atomically $ STM.readTVar abcTVar
 
 -- | Read accessor for `envWallets`.
 getEnvWallets :: String -> ActionM WalletRef

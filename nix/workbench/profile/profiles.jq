@@ -111,6 +111,7 @@ def generate_all_era_profiles($era; $mcompo; $topo):
          | .genesis.shelley.protocolParams = $pparams.shelley
          | .genesis.alonzo                 = $pparams.alonzo
          | .genesis.alonzo.costModels      = $pparams.costModels
+         | .genesis.conway                 = $pparams.conway
 
          ## Profiles define their own cluster composition:
          | . * { composition: (.composition // $default_compo) }

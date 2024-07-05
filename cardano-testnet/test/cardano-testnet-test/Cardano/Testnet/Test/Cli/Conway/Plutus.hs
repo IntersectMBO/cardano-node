@@ -5,11 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Redundant return" -}
-{- HLINT ignore "Use head" -}
 
 module Cardano.Testnet.Test.Cli.Conway.Plutus
   ( hprop_plutus_v3
@@ -22,19 +17,17 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
-import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.SPO
-import           Testnet.Components.TestWatchdog
+import           Testnet.Components.Query
 import           Testnet.Defaults
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
-import           Testnet.Runtime
+import           Testnet.Process.Cli.SPO
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
@@ -49,7 +42,7 @@ import qualified Hedgehog.Extras as H
 -- Voting NO
 -- Proposing NO
 hprop_plutus_v3 :: Property
-hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -61,62 +54,50 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
     options = cardanoDefaultTestnetOptions
-                        { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                        , cardanoSlotLength = 0.1
-                        , cardanoNodeEra = anyEra -- TODO: We should only support the latest era and the upcoming era
-                        }
+                { cardanoNodeEra = anyEra -- TODO: We should only support the latest era and the upcoming era
+                }
+
   TestnetRuntime
-    { testnetMagic
+    { configurationFile
+    , testnetMagic
     , poolNodes
-    , wallets
+    , wallets=wallet0:wallet1:_
     } <- cardanoTestnetDefault options conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
-      utxoAddr2 = Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
-      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ wallets !! 0
-      utxoSKeyFile2 = paymentSKey . paymentKeyInfoPair $ wallets !! 1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  H.noteShow_ wallet0
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
+      utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
+      utxoSKeyFile2 = signingKeyFp $ paymentKeyInfoPair wallet1
+      socketPath = nodeSocketPath poolRuntime
 
-  void $ H.execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
-    , "--address", utxoAddr
-    , "--cardano-mode"
-    , "--out-file", work </> "utxo-1.json"
-    ]
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
+  epochStateView <- getEpochStateView configurationFile socketPath
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
-  let keys1 = Map.keys utxo1
-  H.note_ $ "keys1: " <> show (length keys1)
-  txin1 <- H.noteShow $ keys1 !! 0
-
-  plutusMintingScript <- H.note $ work </> "always-succeeds-non-spending-script.plutusV3"
-  H.writeFile plutusMintingScript $ Text.unpack plutusV3NonSpendingScript
-
-  plutusSpendingScript <- H.note $ work </> "always-succeeds-spending-script.plutusV3"
-  H.writeFile plutusSpendingScript $ Text.unpack plutusV3SpendingScript
+  plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
+  H.writeFile plutusScript $ Text.unpack plutusV3Script
 
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
   plutusSpendingScriptAddr <-
-    H.execCli' execConfig
+    execCli' execConfig
       [ "address", "build"
-      , "--payment-script-file", plutusSpendingScript
+      , "--payment-script-file", plutusScript
       ]
 
   mintingPolicyId <- filter (/= '\n') <$>
-    H.execCli' execConfig
+    execCli' execConfig
       [ anyEraToString anyEra, "transaction"
       , "policyid"
-      , "--script-file", plutusMintingScript
+      , "--script-file", plutusScript
       ]
   let assetName = "4D696C6C6172436F696E"
   H.note_ $ "plutusSpendingScriptAddr: " <> plutusSpendingScriptAddr
 
   scriptdatumhash <- filter (/= '\n') <$>
-    H.execCli' execConfig
+    execCli' execConfig
       [ "transaction", "hash-script-data"
       , "--script-data-value", "0"
       ]
@@ -128,7 +109,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   createScriptStakeRegistrationCertificate
     tempAbsPath
     anyEra
-    plutusSpendingScript
+    plutusScript
     0
     scriptStakeRegistrationCertificate
 
@@ -136,7 +117,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   --    Register script stake address
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
     , "--tx-out-datum-hash", scriptdatumhash
@@ -156,34 +137,11 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
-  H.threadDelay 10_000_000
   -- 2. Successfully spend conway spending script
-  void $ H.execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
-    , "--address", utxoAddr2
-    , "--cardano-mode"
-    , "--out-file", work </> "utxo-2.json"
-    ]
-  utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-  UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
+  txinCollateral <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+  plutusScriptTxIn <- fmap fst . retryUntilJustM epochStateView (WaitForBlocks 3) $
+    findLargestUtxoWithAddress epochStateView sbe $ Text.pack plutusSpendingScriptAddr
 
-  let keys2 = Map.keys utxo2
-  H.note_ $ "keys2: " <> show (length keys2)
-  txinCollateral <- H.noteShow $ keys2 !! 0
-
-  void $ H.execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
-    , "--address", plutusSpendingScriptAddr
-    , "--cardano-mode"
-    , "--out-file", work </> "plutus-script-utxo.json"
-    ]
-  utxoPlutusJson <- H.leftFailM . H.readJsonFile $ work </> "plutus-script-utxo.json"
-  UTxO utxoPlutus <- H.noteShowM $ decodeEraUTxO sbe utxoPlutusJson
-
-  let keys3 = Map.keys utxoPlutus
-  H.note_ $ "keys3: " <> show (length keys3)
-
-  plutusScriptTxIn <- H.noteShow $ keys3 !! 0
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
       spendScriptUTxOTx = work </> "spend-script-utxo-tx"
       mintValue = mconcat ["5 ", mintingPolicyId, ".", assetName]
@@ -193,17 +151,17 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
 
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in-collateral", Text.unpack $ renderTxIn txinCollateral
     , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn
-    , "--tx-in-script-file", plutusSpendingScript
+    , "--tx-in-script-file", plutusScript
     , "--tx-in-datum-value", "0"
     , "--tx-in-redeemer-value", "0"
     , "--mint", mintValue
-    , "--mint-script-file", plutusMintingScript
+    , "--mint-script-file", plutusScript
     , "--mint-redeemer-value", "0"
     , "--certificate-file", scriptStakeRegistrationCertificate
-    , "--certificate-script-file", plutusSpendingScript
+    , "--certificate-script-file", plutusScript
     , "--certificate-redeemer-value", "0"
     , "--tx-out", txout
     , "--out-file", spendScriptUTxOTxBody
@@ -221,5 +179,4 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--tx-file", spendScriptUTxOTx
     ]
   H.success
-
 

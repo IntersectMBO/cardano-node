@@ -12,7 +12,6 @@ module Testnet.Start.Cardano
   , cardanoDefaultTestnetNodeOptions
 
   , TestnetRuntime (..)
-  , PaymentKeyPair(..)
 
   , cardanoTestnet
   , cardanoTestnetDefault
@@ -57,12 +56,12 @@ import           Text.Printf (printf)
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Assert as H
-import           Testnet.Runtime as TR hiding (shelleyGenesis)
+import           Testnet.Process.Run (execCli', execCli_, mkExecConfig)
+import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
+import           Testnet.Runtime as TR
 import qualified Testnet.Start.Byron as Byron
 import           Testnet.Start.Types
+import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -223,8 +222,8 @@ cardanoTestnet
       optionsMagic :: Word32 = fromIntegral $ cardanoTestnetMagic testnetOptions
       testnetMagic = cardanoTestnetMagic testnetOptions
       numPoolNodes = length $ cardanoNodes testnetOptions
-      nbPools = numPools testnetOptions
-      nbDReps = numDReps testnetOptions
+      nPools = numPools testnetOptions
+      nDReps = numDReps testnetOptions
       era = cardanoNodeEra testnetOptions
 
   portNumbers <- requestAvailablePortNumbers numPoolNodes
@@ -269,19 +268,36 @@ cardanoTestnet
     writeGenesisSpecFile "alonzo" alonzoGenesis
     writeGenesisSpecFile "conway" conwayGenesis
 
-    configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
+    configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
 
-    _ <- createSPOGenesisAndFiles nbPools nbDReps era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+    _ <- createSPOGenesisAndFiles nPools nDReps era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+
+    -- TODO: This should come from the configuration!
+    let poolKeyDir :: Int -> FilePath
+        poolKeyDir i = "pools-keys" </> mkNodeName i
+        mkNodeName :: Int -> String
+        mkNodeName i = "pool" <> show i
 
     poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
+      -- TODO: use Testnet.Defaults.defaultSpoKeys here
       PoolNodeKeys
-        { poolNodeKeysColdVkey = tmpAbsPath </> "pools" </> "cold" <> show n <> ".vkey"
-        , poolNodeKeysColdSkey = tmpAbsPath </> "pools" </> "cold" <> show n <> ".skey"
-        , poolNodeKeysVrfVkey = tmpAbsPath </> "pools" </> "vrf" <> show n <> ".vkey"
-        , poolNodeKeysVrfSkey = tmpAbsPath </> "pools" </> "vrf" <> show n <> ".skey"
-        , poolNodeKeysStakingVkey = tmpAbsPath </> "pools" </> "staking-reward" <> show n <> ".vkey"
-        , poolNodeKeysStakingSkey = tmpAbsPath </> "pools" </> "staking-reward" <> show n <> ".skey"
+        { poolNodeKeysCold =
+          KeyPair
+            { verificationKey = File $ tmpAbsPath </> poolKeyDir n </> "cold.vkey"
+            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "cold.skey"
+            }
+        , poolNodeKeysVrf =
+          KeyPair
+            { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.vkey"
+            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.skey"
+            }
+        , poolNodeKeysStaking =
+          KeyPair
+            { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.vkey"
+            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.skey"
+            }
         }
+
     let makeUTxOVKeyFp :: Int -> FilePath
         makeUTxOVKeyFp n = tmpAbsPath </> "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
 
@@ -303,35 +319,30 @@ cardanoTestnet
       paymentAddr <- H.readFile paymentAddrFile
 
       pure $ PaymentKeyInfo
-        { paymentKeyInfoPair = PaymentKeyPair
-          { paymentSKey = paymentSKeyFile
-          , paymentVKey = paymentVKeyFile
+        { paymentKeyInfoPair = KeyPair
+          { signingKey = File paymentSKeyFile
+          , verificationKey = File paymentVKeyFile
           }
         , paymentKeyInfoAddr = Text.pack paymentAddr
         }
 
     _delegators <- forM [1..3] $ \(idx :: Int) -> do
       pure $ Delegator
-        { paymentKeyPair = PaymentKeyPair
-          { paymentSKey = tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".skey"
-          , paymentVKey = tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".vkey"
+        { paymentKeyPair = KeyPair
+          { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".skey"
+          , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".vkey"
           }
-        , stakingKeyPair = StakingKeyPair
-          { stakingSKey = tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".skey"
-          , stakingVKey = tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
+        , stakingKeyPair = KeyPair
+          { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".skey"
+          , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
           }
         }
 
-    -- TODO: This should come from the configuration!
-    let poolKeyDir :: Int -> FilePath
-        poolKeyDir i = "pools-keys" </> mkNodeName i
-        mkNodeName :: Int -> String
-        mkNodeName i = "pool" <> show i
 
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
     config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
 
-    H.evalIO $ LBS.writeFile configurationFile config
+    H.evalIO $ LBS.writeFile (unFile configurationFile) config
 
     -- Byron related
     forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
@@ -360,7 +371,7 @@ cardanoTestnet
       eRuntime <- runExceptT $
         startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetIpv4Address port testnetMagic
           [ "run"
-          , "--config", configurationFile
+          , "--config", unFile configurationFile
           , "--topology", keyDir </> "topology.json"
           , "--database-path", keyDir </> "db"
           , "--shelley-kes-key", keyDir </> "kes.skey"
@@ -380,13 +391,13 @@ cardanoTestnet
     now <- H.noteShowIO DTC.getCurrentTime
     deadline <- H.noteShow $ DTC.addUTCTime 45 now
     forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
-      H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+      assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
 
     H.noteShowIO_ DTC.getCurrentTime
 
     forM_ wallets $ \wallet -> do
-      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+      H.cat . signingKeyFp $ paymentKeyInfoPair wallet
+      H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
     let runtime = TestnetRuntime
           { configurationFile
@@ -400,11 +411,11 @@ cardanoTestnet
     let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
     node1sprocket <- H.headM $ poolSprockets runtime
-    execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+    execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
     forM_ wallets $ \wallet -> do
-      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+      H.cat . signingKeyFp $ paymentKeyInfoPair wallet
+      H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
       utxos <- execCli' execConfig
         [ "query", "utxo"
@@ -416,7 +427,10 @@ cardanoTestnet
 
     stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
-    H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
+    assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
+
+    when (cardanoEnableNewEpochStateLogging testnetOptions) $
+      TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
 
     pure runtime
   where

@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-testnet
-version:                8.8.0
+version:                9.0.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.44
-                      , cardano-cli ^>= 8.22
+                      , cardano-api ^>= 9.0
+                      , cardano-cli ^>= 9.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -57,18 +57,19 @@ library
                       , containers
                       , contra-tracer
                       , data-default-class
+                      , Diff
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras < 0.6.2
+                      , hedgehog-extras ^>= 0.6.4
                       , lens-aeson
                       , microlens
                       , mtl
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.14
+                      , ouroboros-network ^>= 0.16.1
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -90,24 +91,25 @@ library
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
-                        Testnet.Start.Byron
-                        Testnet.Start.Types
                         Testnet.Components.Configuration
-                        Testnet.Components.DReps
-                        Testnet.Components.SPO
                         Testnet.Components.Query
-                        Testnet.Components.TestWatchdog
                         Testnet.Defaults
-                        Testnet.Filepath
                         Testnet.EpochStateProcessing
+                        Testnet.Filepath
+                        Testnet.Ping
+                        Testnet.Process.Cli.DRep
+                        Testnet.Process.Cli.Keys
+                        Testnet.Process.Cli.SPO
+                        Testnet.Process.Cli.Transaction
+                        Testnet.Process.Run
                         Testnet.Property.Assert
                         Testnet.Property.Run
-                        Testnet.Property.Utils
-                        Testnet.Process.Cli
-                        Testnet.Process.Run
+                        Testnet.Property.Util
                         Testnet.Runtime
+                        Testnet.Start.Byron
+                        Testnet.Start.Types
                         Testnet.SubmitApi
-                        Testnet.Ping
+                        Testnet.Types
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
@@ -179,25 +181,29 @@ test-suite cardano-testnet-test
   other-modules:        Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
                         Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
                         Cardano.Testnet.Test.Cli.Babbage.Transaction
-                        Cardano.Testnet.Test.Cli.Conway.DRepRetirement
                         Cardano.Testnet.Test.Cli.Conway.Plutus
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
-                        Cardano.Testnet.Test.Cli.Queries
+                        Cardano.Testnet.Test.Cli.Query
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
-                        Cardano.Testnet.Test.FoldBlocks
+                        Cardano.Testnet.Test.FoldEpochState
+                        Cardano.Testnet.Test.Gov.CommitteeAddNew
+                        Cardano.Testnet.Test.Gov.DRepActivity
+                        Cardano.Testnet.Test.Gov.DRepDeposit
+                        Cardano.Testnet.Test.Gov.DRepRetirement
+                        Cardano.Testnet.Test.Gov.InfoAction
+                        Cardano.Testnet.Test.Gov.NoConfidence
+                        Cardano.Testnet.Test.Gov.PParamChangeFailsSPO
+                        Cardano.Testnet.Test.Gov.ProposeNewConstitution
+                        Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.Gov.GovActionTimeout
+                        Cardano.Testnet.Test.Gov.TreasuryGrowth
+                        Cardano.Testnet.Test.Gov.TreasuryWithdrawal
                         Cardano.Testnet.Test.Misc
-
-                        Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
-                        Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
-                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
-                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
-                        Cardano.Testnet.Test.LedgerEvents.Gov.TreasuryWithdrawal
-                        Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity
-                        Cardano.Testnet.Test.LedgerEvents.SanityCheck
-                        Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
-
+                        Cardano.Testnet.Test.Gov.DRepActivity
+                        Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
                         Cardano.Testnet.Test.Node.Shutdown
+                        Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
   type:                 exitcode-stdio-1.0

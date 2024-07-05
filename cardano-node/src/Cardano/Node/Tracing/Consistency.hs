@@ -27,6 +27,8 @@ import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
+import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
+
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
@@ -61,8 +63,8 @@ import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters (..), TracePeerSelection (..))
+import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters, DebugPeerSelection (..),
+                   PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -130,6 +132,9 @@ getAllNamespaces =
                         (allNamespaces :: [Namespace (StartupTrace blk)])
         shutdownNS = map (nsGetTuple . nsReplacePrefix ["Shutdown"])
                         (allNamespaces :: [Namespace ShutdownTrace])
+        nodeVersionNS = map (nsGetTuple . nsReplacePrefix ["Version"])
+                        (allNamespaces :: [Namespace NodeVersionTrace])
+
         chainDBNS = map (nsGetTuple . nsReplacePrefix ["ChainDB"])
                         (allNamespaces :: [Namespace (ChainDB.TraceEvent blk)])
         replayBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainDB", "ReplayBlock"])
@@ -286,7 +291,9 @@ getAllNamespaces =
                                         ["Net", "PeerSelection", "Counters"])
                                       (allNamespaces :: [Namespace
                                         PeerSelectionCounters])
-
+        churnCountersNS = map (nsGetTuple . nsReplacePrefix
+                                  ["Net", "Churn"])
+                                (allNamespaces :: [Namespace ChurnCounters])
         peerSelectionActionsNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Actions"])
                                (allNamespaces :: [Namespace
@@ -366,6 +373,7 @@ getAllNamespaces =
             <> resourcesNS
             <> startupNS
             <> shutdownNS
+            <> nodeVersionNS
             <> chainDBNS
             <> replayBlockNS
 -- Consensus
@@ -409,6 +417,7 @@ getAllNamespaces =
             <> debugPeerSelectionNS
             <> debugPeerSelectionResponderNS
             <> peerSelectionCountersNS
+            <> churnCountersNS
             <> peerSelectionActionsNS
             <> connectionManagerNS
             <> connectionManagerTransitionsNS

@@ -48,6 +48,8 @@ let
           ghcid
           haskell-language-server
           cabal
+          actionlint
+          shellcheck
         ];
 
         withHoogle = true;
@@ -117,9 +119,12 @@ let
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;
             packages.cardano-ledger-api.components.library.doHaddock = false;
             packages.cardano-ledger-babbage.components.library.doHaddock = false;
+            packages.cardano-ledger-core.components.library.doHaddock = false;
             packages.cardano-ledger-conway.components.library.doHaddock = false;
             packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
+            packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
+            packages.ouroboros-consensus.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
             # Remvoe this once mingwx is mapped to null in haskell.nix (haskell.nix#2032), and we bumped _past_ that.
@@ -188,7 +193,8 @@ let
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
-                "configuration/cardano/mainnet-conway-genesis.json"
+                # uncomment after mainnet conway genesis is finalized
+                #"configuration/cardano/mainnet-conway-genesis.json"
               ];
               cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"

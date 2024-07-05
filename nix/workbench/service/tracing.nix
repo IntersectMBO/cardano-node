@@ -62,6 +62,7 @@ let
       "Net.Mux.Local".severity = "Notice";
       "Net.Mux.Remote".severity = "Notice";
       "Net.PeerSelection.Actions".severity = "Debug";
+      "Net.PeerSelection.Counters".detail = "DMinimal";
       "Net.PeerSelection.Counters".severity = "Debug";
       "Net.PeerSelection.Initiator".severity = "Notice";
       "Net.PeerSelection.Responder".severity = "Notice";
@@ -86,6 +87,22 @@ let
       "TxSubmission.Remote".severity = "Notice";
       "TxSubmission.TxInbound".severity = "Debug";
       "TxSubmission.TxOutbound".severity = "Notice";
+      "Version.NodeVersion".severity = "Info";
+
+      ## These messages are UTxO-HD specific. On a regular node, the tracing system might warn at startup about config incosistencies (as those tracers do not exist).
+      ## This warning is expected, and can be safely ignored.
+      ## Silencing the tracers below aims at having a comparable log line rates (msgs per second) on UTxO-HD and regular nodes.
+      "ChainDB.LedgerEvent.Forker".severity = "Silence";
+      "Mempool.MempoolAttemptAdd".severity = "Silence";
+      "Mempool.MempoolAttemptingSync".severity = "Silence";
+      "Mempool.MempoolLedgerFound".severity = "Silence";
+      "Mempool.MempoolLedgerNotFound".severity = "Silence";
+      "Mempool.MempoolSyncDone".severity = "Silence";
+      "Mempool.MempoolSyncNotNeeded".severity = "Silence";
+
+      ## enable this to investigate tx validation errors, e.g. fee to small for Plutus script txns
+      ## comes with too much overhead to be the default for benchmarks
+      # "Mempool.RejectedTx".detail = "DDetailed";
       };
   };
 

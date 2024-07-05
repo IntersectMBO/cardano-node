@@ -427,7 +427,7 @@ instance FromJSON PartialNodeConfiguration where
              }
 
       parseConwayProtocol v = do
-        npcConwayGenesisFile     <- v .:  "ConwayGenesisFile"
+        npcConwayGenesisFile     <- v .:?  "ConwayGenesisFile"
         npcConwayGenesisFileHash <- v .:? "ConwayGenesisHash"
         pure NodeConwayProtocolConfiguration {
                npcConwayGenesisFile

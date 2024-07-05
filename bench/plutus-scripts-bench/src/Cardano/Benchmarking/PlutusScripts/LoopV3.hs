@@ -18,7 +18,9 @@ import qualified Data.ByteString.Short as SBS
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import           PlutusTx
 import           PlutusTx.Builtins (unsafeDataAsI)
-import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
+import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
+                   unsafeDataAsConstr)
+import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), unless, (.), (<$>))
 
 
 scriptName :: String
@@ -30,14 +32,25 @@ script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusS
 
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidator _datum redeemer _txContext
-  = if n < 1000000
-       then traceError "redeemer is < 1000000"
-       else loop n
+mkValidator :: BuiltinData -> BuiltinUnit
+mkValidator arg =
+  if red_n < 1000000
+    then traceError "redeemer is < 1000000" -- large number ensures same bitsize for all counter values
+    else loop red_n
   where
-    n = unsafeDataAsI redeemer
-    loop i = if i == 1000000 then () else loop $ pred i
+    -- lazily decode script context up to redeemer, which is less expensive and results in much smaller tx size
+    constrArgs :: BuiltinData -> BI.BuiltinList BuiltinData
+    constrArgs = BI.snd . BI.unsafeDataAsConstr
+
+    redeemerFollowedByScriptInfo :: BI.BuiltinList BuiltinData
+    redeemerFollowedByScriptInfo = BI.tail (constrArgs arg)
+
+    redeemer :: BuiltinData
+    redeemer = BI.head redeemerFollowedByScriptInfo
+
+    red_n = unsafeDataAsI redeemer
+
+    loop i = if i == 1000000 then BI.unitval else loop (pred i)
 
 loopScriptShortBs :: SBS.ShortByteString
 loopScriptShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])

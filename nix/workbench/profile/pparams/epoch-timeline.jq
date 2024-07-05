@@ -596,6 +596,24 @@ def epochs:
         "verifySchnorrSecp256k1Signature-memory-arguments": 10
       }
     }
+  },
+  "492": {
+    "epoch": 492,
+    "description": "V2 Cost Model - new mandatory parameters - speculative/not yet deployed",
+    "costModels": {
+      "PlutusV2": {
+        "byteStringToInteger-cpu-arguments-c0": 1006041,
+        "byteStringToInteger-cpu-arguments-c1": 43623,
+        "byteStringToInteger-cpu-arguments-c2": 251,
+        "byteStringToInteger-memory-arguments-intercept": 0,
+        "byteStringToInteger-memory-arguments-slope": 1,
+        "integerToByteString-cpu-arguments-c0": 1293828,
+        "integerToByteString-cpu-arguments-c1": 28716,
+        "integerToByteString-cpu-arguments-c2": 63,
+        "integerToByteString-memory-arguments-intercept": 0,
+        "integerToByteString-memory-arguments-slope": 1
+      }
+    }
   }
 };
 

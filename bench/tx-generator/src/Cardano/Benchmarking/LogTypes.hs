@@ -12,47 +12,72 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.LogTypes
-  ( BenchTracers(..)
-  , NodeToNodeSubmissionTrace(..)
+  ( AsyncBenchmarkControl (..)
+  , BenchTracers (..)
+  , EnvConsts (..)
+  , NodeToNodeSubmissionTrace (..)
   , SendRecvConnect
   , SendRecvTxSubmission2
-  , SubmissionSummary(..)
-  , TraceBenchTxSubmit(..)
+  , SubmissionSummary (..)
+  , TraceBenchTxSubmit (..)
   ) where
 
-import           Prelude
-
-import           Data.Text
-import           Data.Time.Clock (DiffTime, NominalDiffTime)
-
-import           GHC.Generics
-
-
 import           Cardano.Api
-import qualified Codec.CBOR.Term as CBOR
 
-import           Network.Mux (WithMuxBearer (..))
-
+import           Cardano.Benchmarking.OuroborosImports
+import           Cardano.Benchmarking.Types
+import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
-
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-
-
-import           Cardano.Benchmarking.OuroborosImports
+import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
+import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
+import           Cardano.TxGenerator.Types (TPSRate)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
 import           Ouroboros.Network.Driver (TraceSendRecv (..))
+import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
-import           Cardano.Benchmarking.Types
-import           Cardano.Benchmarking.Version as Version
-import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
-import           Cardano.TxGenerator.Types (TPSRate)
+import           Prelude
+
+import qualified Codec.CBOR.Term as CBOR
+import qualified Control.Concurrent.Async as Async (Async)
+import qualified Control.Concurrent.STM as STM (TVar)
+import           Data.Text
+import           Data.Time.Clock (DiffTime, NominalDiffTime)
+import           GHC.Generics
+import           Network.Mux (WithMuxBearer (..))
+
+data AsyncBenchmarkControl =
+  AsyncBenchmarkControl
+  { abcFeeder   :: Async.Async ()
+  -- ^ The thread to feed transactions, also called a throttler.
+  , abcWorkers  :: [Async.Async ()]
+  -- ^ The per-node transaction submission threads.
+  , abcSummary  :: IO SubmissionSummary
+  -- ^ IO action to emit a summary.
+  , abcShutdown :: IO ()
+  -- ^ IO action to shut down the feeder thread.
+  }
+
+data EnvConsts =
+  EnvConsts
+  { envIOManager  :: IOManager
+  , envThreads    :: STM.TVar (Maybe AsyncBenchmarkControl)
+  -- ^ The reference needs to be a constant, but the referred-to data
+  --   (`AsyncBenchmarkControl`) needs to be able to be initialized.
+  --   This could in principle be an `IORef` instead of a `STM.TVar`.
+  , envNixSvcOpts :: Maybe NixServiceOptions
+  -- ^ There are situations `NixServiceOptions` won't be available and
+  --   defaults will have to be used.
+  , benchTracers  :: STM.TVar (Maybe BenchTracers)
+  -- ^ This also needs to be accessible to the signal handlers.
+  }
 
 data BenchTracers =
   BenchTracers
@@ -102,8 +127,7 @@ data TraceBenchTxSubmit txid
 
 data SubmissionSummary
   = SubmissionSummary
-      { ssThreadName    :: !String
-      , ssTxSent        :: !Sent
+      { ssTxSent        :: !Sent
       , ssTxUnavailable :: !Unav
       , ssElapsed       :: !NominalDiffTime
       , ssEffectiveTps  :: !TPSRate

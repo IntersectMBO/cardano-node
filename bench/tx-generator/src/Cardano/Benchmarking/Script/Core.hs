@@ -18,7 +18,6 @@
 module Cardano.Benchmarking.Script.Core
 where
 
-import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
                    ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
@@ -29,8 +28,8 @@ import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark,
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
-                   btSubmission2_, btTxSubmit_)
+import           Cardano.Benchmarking.LogTypes as Core (AsyncBenchmarkControl (..),
+                   TraceBenchTxSubmit (..), btConnect_, btN2N_, btSubmission2_, btTxSubmit_)
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
@@ -59,6 +58,8 @@ import           Prelude
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import           Control.Monad.Trans.RWS.Strict (ask)
+import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
@@ -136,21 +137,27 @@ getConnectClient = do
   (Testnet networkMagic) <- getEnvNetworkId
   protocol <- getEnvProtocol
   void $ return $ btSubmission2_ tracers
-  ioManager <- askIOManager
+  envConsts <- lift ask
   return $ benchmarkConnectTxSubmit
-                       ioManager
+                       envConsts
                        (Tracer $ traceWith (btConnect_ tracers))
                        mempty -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
                        networkMagic
-waitBenchmark :: String -> ActionM ()
-waitBenchmark n = getEnvThreads n >>= waitBenchmarkCore
+waitBenchmark :: ActionM ()
+waitBenchmark = do
+  abcMaybe <- getEnvThreads
+  case abcMaybe of
+    Just abc -> waitBenchmarkCore abc
+    Nothing  -> do
+      throwE . Env.TxGenError . TxGenError $
+        ("waitBenchmark: missing AsyncBenchmarkControl" :: String)
 
-cancelBenchmark :: String -> ActionM ()
-cancelBenchmark n = do
-  ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
-  liftIO shutdownAction
-  waitBenchmarkCore ctl
+cancelBenchmark :: ActionM ()
+cancelBenchmark = do
+  Just abc@AsyncBenchmarkControl { .. } <- getEnvThreads
+  liftIO abcShutdown
+  waitBenchmarkCore abc
 
 getLocalConnectInfo :: ActionM LocalNodeConnectInfo
 getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
@@ -158,11 +165,10 @@ getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketP
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
-  chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
-  case ret of
-    Right era -> return era
-    Left err -> liftTxGenError $ TxGenError $ show err
+  chainTip  <- getLocalChainTip localNodeConnectInfo
+  mapExceptT liftIO .
+    modifyError (Env.TxGenError . TxGenError . show) $
+      queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
 
 queryRemoteProtocolParameters :: ActionM ProtocolParameters
 queryRemoteProtocolParameters = do
@@ -174,16 +180,13 @@ queryRemoteProtocolParameters = do
                  QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
               -> ActionM ProtocolParameters
     callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
-        res <- liftIO $ queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query)
-        case res of
-          Right (Right pp) -> do
-            let pp' = fromLedgerPParams shelleyEra pp
-                pparamsFile = "protocol-parameters-queried.json"
-            liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
-            traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
-            return pp'
-          Right (Left err) -> liftTxGenError $ TxGenError $ show err
-          Left err -> liftTxGenError $ TxGenError $ show err
+      pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
+          queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
+      let pp' = fromLedgerPParams shelleyEra pp
+          pparamsFile = "protocol-parameters-queried.json"
+      liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
+      traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
+      return pp'
   case era of
     AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
     AnyCardanoEra ShelleyEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
@@ -240,7 +243,7 @@ submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
-    Benchmark nodes threadName tpsRate txCount -> benchmarkTxStream txStream nodes threadName tpsRate txCount era
+    Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
@@ -263,22 +266,21 @@ submitInEra submitMode generator txParams era = do
 benchmarkTxStream :: forall era. IsShelleyBasedEra era
   => TxStream IO era
   -> TargetNodes
-  -> String
   -> TPSRate
   -> NumberOfTxs
   -> AsType era
   -> ActionM ()
-benchmarkTxStream txStream targetNodes threadName tps txCount era = do
+benchmarkTxStream txStream targetNodes tps txCount era = do
   tracers  <- getBenchTracers
   connectClient <- getConnectClient
   let
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
     coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targetNodes tps LogErrors eraProxy txCount txStream
+                                               targetNodes tps LogErrors eraProxy txCount txStream
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
-    Right ctl -> setEnvThreads threadName ctl
+    Right ctl -> setEnvThreads ctl
 
 evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
@@ -350,11 +352,18 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
             Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
             Right tx -> do
-              let txSize = txSizeInBytes tx
+              let
+                txSize = txSizeInBytes tx
+                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
+                  Left{}              -> Nothing
+                  Right ledgerPParams -> Just $
+                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
               traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+              -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
               summary_ <- getEnvSummary
               forM_ summary_ $ \summary -> do
-                let summary' = summary {projectedTxSize = Just txSize}
+                let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
                 setEnvSummary summary'
                 traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
               dumpBudgetSummaryIfExisting

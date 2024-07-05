@@ -8,20 +8,23 @@ import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
-import qualified Cardano.Testnet.Test.Cli.Conway.DRepRetirement as DRepRetirement
 import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
-import qualified Cardano.Testnet.Test.Cli.Queries
+import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
-import qualified Cardano.Testnet.Test.FoldBlocks
-import qualified Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity
-import qualified Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
-import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
-import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO as LedgerEvents
-import qualified Cardano.Testnet.Test.LedgerEvents.Gov.TreasuryWithdrawal as LedgerEvents
-import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
-import qualified Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth as LedgerEvents
+import qualified Cardano.Testnet.Test.FoldEpochState
+import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
+import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
+import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
+import qualified Cardano.Testnet.Test.Gov.GovActionTimeout as Gov
+import qualified Cardano.Testnet.Test.Gov.NoConfidence as Gov
+import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
+import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
+import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO as Gov
+import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
+import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
+import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
 import           Prelude
@@ -31,7 +34,7 @@ import qualified System.Exit as IO
 import qualified System.IO as IO
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
-import qualified Testnet.Property.Run as H
+import           Testnet.Property.Run (ignoreOnMacAndWindows, ignoreOnWindows)
 
 import qualified Test.Tasty as T
 import           Test.Tasty (TestTree)
@@ -44,49 +47,55 @@ tests = do
   pure $ T.testGroup "test/Spec.hs"
     [ T.testGroup "Spec"
         [ T.testGroup "Ledger Events"
-            [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
-            , H.ignoreOnWindows "Treasury Growth" LedgerEvents.prop_check_if_treasury_is_growing
-            -- TODO: Replace foldBlocks with checkLedgerStateCondition
+            [ ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+            , ignoreOnWindows "Treasury Growth" Gov.prop_check_if_treasury_is_growing
+            -- TODO: Replace foldBlocks with checkConditionResult
             , T.testGroup "Governance"
-                [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution.hprop_ledger_events_propose_new_constitution
-                , H.ignoreOnWindows "DRep Activity" Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity.hprop_check_drep_activity
-                , H.ignoreOnWindows "DRep Deposits" Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits.hprop_ledger_events_drep_deposits
-                  -- FIXME Those tests are flaky
-                  -- , H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
-                , H.ignoreOnWindows "ProposeNewConstitutionSPO" LedgerEvents.hprop_ledger_events_propose_new_constitution_spo
-                , H.ignoreOnWindows "TreasuryWithdrawal" LedgerEvents.hprop_ledger_events_treasury_withdrawal
-                , H.ignoreOnWindows "DRepRetirement" DRepRetirement.hprop_drep_retirement
+                [ ignoreOnMacAndWindows "Committee Add New" Gov.hprop_constitutional_committee_add_new
+                , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
+                -- TODO: Disabled because proposals for parameter changes are not working
+                -- , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
+                -- , ignoreOnWindows "Predefined Abstain DRep" Gov.hprop_check_predefined_abstain_drep
+                , ignoreOnWindows "DRep Deposits" Gov.hprop_ledger_events_drep_deposits
+                , ignoreOnWindows "DRep Retirement" Gov.hprop_drep_retirement
+                , ignoreOnMacAndWindows "Propose And Ratify New Constitution" Gov.hprop_ledger_events_propose_new_constitution
+                , ignoreOnWindows "Propose New Constitution SPO" Gov.hprop_ledger_events_propose_new_constitution_spo
+                , ignoreOnWindows "Gov Action Timeout" Gov.hprop_check_gov_action_timeout
+                , ignoreOnWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
+                , ignoreOnWindows "PParam change fails for SPO" Gov.hprop_check_pparam_fails_spo
+                -- FIXME Those tests are flaky
+                -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                 ]
             , T.testGroup "Plutus"
-                [ H.ignoreOnWindows "PlutusV3" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3]
+                [ ignoreOnWindows "PlutusV3" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3]
             ]
         , T.testGroup "CLI"
-          [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+          [ ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
           -- ShutdownOnSigint fails on Mac with
           -- "Log file: /private/tmp/tmp.JqcjW7sLKS/kes-period-info-2-test-30c2d0d8eb042a37/logs/test-spo.stdout.log had no logs indicating the relevant node has minted blocks."
-          , H.ignoreOnMacAndWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
+          , ignoreOnMacAndWindows "Shutdown On Sigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
           -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
-          -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
+          -- , ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
           , T.testGroup "Babbage"
-              [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
-              , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
-              , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
+              [ ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
+              , ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
+              , ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
               ]
           -- TODO: Conway -  Re-enable when create-staked is working in conway again
           --, T.testGroup "Conway"
-          --  [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
+          --  [ ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
           --  ]
             -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
             -- as a result of the kes-period-info output to stdout.
-          , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
-          , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
-          , H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
-          , H.ignoreOnWindows "CliQueries" Cardano.Testnet.Test.Cli.Queries.hprop_cli_queries
+          , ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
+          , ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
+          , ignoreOnWindows "foldEpochState receives ledger state" Cardano.Testnet.Test.FoldEpochState.prop_foldEpochState
+          , ignoreOnWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
           ]
         ]
     , T.testGroup "SubmitApi"
         [ T.testGroup "Babbage"
-            [ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
+            [ ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
             ]
         ]
     ]

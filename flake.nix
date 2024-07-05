@@ -175,7 +175,7 @@
         });
 
         exes = (collectExes project) // {
-          inherit (pkgs) cabalProjectRegenerate checkCabalProject;
+          inherit (pkgs) checkCabalProject;
         } // flattenTree (pkgs.scripts // {
           # `tests` are the test suites which have been built.
           inherit (project) tests;
@@ -341,6 +341,7 @@
             lib.optionals (system == "x86_64-darwin") [
               #FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
               "native\\.variants\\..*"
+              "native\\.checks/cardano-testnet/cardano-testnet-test"
             ];
           in
           pkgs.callPackages iohkNix.utils.ciJobsAggregates

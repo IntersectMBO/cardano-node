@@ -126,4 +126,5 @@ restartEKGServer TracerEnv{teAcceptedMetrics} newNodeId
     ekgServer <- forkServerWith store
                    (encodeUtf8 . T.pack $ monitorHost)
                    (fromIntegral monitorPort)
-    atomically $ putTMVar currentServer (newNodeId, serverThreadId ekgServer)
+    atomically do
+      putTMVar currentServer (newNodeId, serverThreadId ekgServer)

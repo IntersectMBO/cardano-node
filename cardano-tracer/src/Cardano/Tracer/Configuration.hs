@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Configuration
@@ -19,8 +21,10 @@ module Cardano.Tracer.Configuration
 
 import qualified Cardano.Logging.Types as Log
 
-import           Data.Aeson (FromJSON, ToJSON)
+import           Control.Applicative ((<|>))
+import           Data.Aeson (FromJSON (..), ToJSON, withObject, (.:))
 import           Data.Fixed (Pico)
+import           Data.Functor ((<&>))
 import           Data.List (intercalate)
 import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
@@ -35,53 +39,73 @@ import           System.Exit (die)
 
 -- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
   { epHost :: !String
   , epPort :: !Word16
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Parameters of rotation mechanism for logs.
 data RotationParams = RotationParams
   { rpFrequencySecs :: !Word32  -- ^ Rotation period, in seconds.
   , rpLogLimitBytes :: !Word64  -- ^ Max size of log file in bytes.
-  , rpMaxAgeHours   :: !Word16  -- ^ Max age of log file in hours.
+  , rpMaxAgeMinutes :: !Word64  -- ^ Max age of log file in minutes.
   , rpKeepFilesNum  :: !Word32  -- ^ Number of log files to keep in any case.
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass ToJSON
+
+instance FromJSON RotationParams where
+  parseJSON = withObject "RotationParams" \o -> do
+    rpFrequencySecs <- o .: "rpFrequencySecs"
+    rpLogLimitBytes <- o .: "rpLogLimitBytes"
+    rpMaxAgeMinutes <- o .: "rpMaxAgeMinutes"
+                   <|> o .: "rpMaxAgeHours" <&> (* 60)
+    rpKeepFilesNum  <- o .: "rpKeepFilesNum"
+    pure RotationParams{..}
 
 -- | Logging mode.
 data LogMode
   = FileMode    -- ^ Store items in log file.
   | JournalMode -- ^ Store items in Linux journal service.
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Ord, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Format of log files.
 data LogFormat
   = ForHuman   -- ^ For human (text)
   | ForMachine -- ^ For machine (JSON)
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Ord, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Logging parameters.
 data LoggingParams = LoggingParams
   { logRoot   :: !FilePath  -- ^ Root directory where all subdirs with logs are created.
   , logMode   :: !LogMode   -- ^ Log mode.
   , logFormat :: !LogFormat -- ^ Log format.
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  }
+  deriving stock (Eq, Ord, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Connection mode.
 data Network
   = AcceptAt  !Address            -- ^ Server mode: accepts connections.
   | ConnectTo !(NonEmpty Address) -- ^ Client mode: initiates connections.
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Tracer's verbosity.
 data Verbosity
   = Minimum    -- ^ Display minimum of messages.
   | ErrorsOnly -- ^ Display errors only.
   | Maximum    -- ^ Display all the messages (protocols tracing, errors).
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Tracer configuration.
 data TracerConfig = TracerConfig
@@ -103,7 +127,9 @@ data TracerConfig = TracerConfig
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
   , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
   , resourceFreq   :: !(Maybe Int)                  -- ^ Frequency (1/millisecond) for gathering resource data.
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Read the tracer's configuration file.
 readTracerConfig :: FilePath -> IO TracerConfig
@@ -113,7 +139,14 @@ readTracerConfig pathToConfig =
     Right (config :: TracerConfig) ->
       case checkMeaninglessValues config of
         Left problems -> die $ "Tracer's configuration is meaningless: " <> problems
-        Right _ -> return config
+        Right{} -> return (nubLogging config)
+
+  where
+  -- Remove duplicate logging parameters.
+  nubLogging :: TracerConfig -> TracerConfig
+  nubLogging tracerConfig@TracerConfig{logging} = tracerConfig
+    { logging = NE.nub logging
+    }
 
 checkMeaninglessValues :: TracerConfig -> Either String ()
 checkMeaninglessValues TracerConfig{network, hasEKG, hasPrometheus, hasRTView, logging} =

@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.11
+version:                2.14.1
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
@@ -14,11 +14,7 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 extra-source-files:     README.md
-data-files:             data/protocol-parameters.json
-                        data/protocol-parameters-v8.json
-                        data/loop.redeemer.json
-                        data/ecdsa-secp256k1-loop.redeemer.json
-                        data/schnorr-secp256k1-loop.redeemer.json
+data-files:             data/*.json
                         scripts-fallback/*.plutus
 
 common project-config
@@ -30,11 +26,15 @@ common with-library
   -- It makes sure, we only depend on that package if it is buildable.
   -- The tx-generator will fall back to pre-serialized Plutus scripts if this package is not present.
   if !(impl(ghc <9.6) || impl(ghc >=9.7))
-    build-depends:      plutus-scripts-bench ^>= 1.0.2
+    build-depends:      plutus-scripts-bench ^>= 1.0.4
     cpp-options:        -DWITH_LIBRARY
 
+common maybe-unix
+  if !os(windows)
+    build-depends:      unix
+
 library
-  import:               project-config, with-library
+  import:               project-config, with-library, maybe-unix
 
   hs-source-dirs:       src
   ghc-options:          -Wall
@@ -45,7 +45,13 @@ library
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
                         -Wredundant-constraints
-                        -Wwarn=deprecations
+                        -fno-warn-safe
+                        -fno-warn-unsafe
+                        -fno-warn-missing-import-lists
+                        -fobject-code -fno-ignore-interface-pragmas
+                        -fno-omit-interface-pragmas
+                        -- TODO: switch back to -Wwarn=deprecations having dropped Cardano.Api.ProtocolParameters.ProtocolParameters in favour of Cardano.Api.Ledger.PParams
+                        -Wno-deprecations
 
   exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
@@ -100,9 +106,9 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.44
+                      , cardano-api ^>= 9.0
                       , cardano-binary
-                      , cardano-cli ^>= 8.22
+                      , cardano-cli ^>= 9.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
@@ -155,19 +161,6 @@ library
   default-language:     Haskell2010
   default-extensions:   OverloadedStrings
 
-  ghc-options:          -Wall
-                        -fno-warn-safe
-                        -fno-warn-unsafe
-                        -fno-warn-missing-import-lists
-                        -Wno-unticked-promoted-constructors
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -fobject-code -fno-ignore-interface-pragmas
-                        -fno-omit-interface-pragmas
-
 executable tx-generator
   import:               project-config
   hs-source-dirs:       app
@@ -192,10 +185,13 @@ test-suite tx-generator-apitest
                         -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
+                        -Wno-deprecations
 
   build-depends:        base
                       , aeson
+                      , aeson-pretty
                       , bytestring
+                      , directory
                       , filepath
                       , optparse-applicative-fork
                       , cardano-api
@@ -208,18 +204,6 @@ test-suite tx-generator-apitest
 
   other-modules:        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
-
-  build-depends:       base
-                     , aeson
-                     , bytestring
-                     , filepath
-                     , optparse-applicative-fork
-                     , cardano-api
-                     , cardano-cli
-                     , cardano-node
-                     , transformers
-                     , transformers-except
-                     , tx-generator
 
 test-suite tx-generator-test
   import:               project-config
@@ -248,6 +232,7 @@ benchmark tx-generator-bench
 
   build-depends:        base
                       , criterion
+                      , stm
                       , tx-generator
 
   default-language:     Haskell2010

@@ -33,6 +33,8 @@ import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (forgeThreadSta
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
+import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
+
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer ()
@@ -125,6 +127,10 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     !chainDBTr <- mkCardanoTracer' trBase trForward mbTrEKG ["ChainDB"]
                                     withAddedToCurrentChainEmptyLimited
     configureTracers configReflection trConfig [chainDBTr]
+
+    !nodeVersionTr <- mkCardanoTracer trBase trForward mbTrEKG ["Version"]
+    configureTracers configReflection trConfig  [nodeVersionTr]
+
     -- Filter out replayed blocks for this tracer
     let chainDBTr' = filterTrace
                       (\case (_, ChainDB.TraceLedgerReplayEvent
@@ -170,6 +176,8 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
 
     traceEffectiveConfiguration trBase trForward trConfig
 
+    traceWith nodeVersionTr getNodeVersion
+
     pure Tracers
       {
         chainDBTracer = Tracer (traceWith chainDBTr')
@@ -188,6 +196,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
       , nodeStartupInfoTracer = Tracer (traceWith nodeStartupInfoDP)
       , nodeStateTracer = Tracer (traceWith stateTr)
                           <> Tracer (traceWith nodeStateDP)
+      , nodeVersionTracer = Tracer (traceWith nodeVersionTr)
       , resourcesTracer = Tracer (traceWith resourcesTr)
       , peersTracer     = Tracer (traceWith peersTr)
                           <> Tracer (traceNodePeers nodePeersDP)
@@ -539,6 +548,11 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
       ["Net", "PeerSelection"]
     configureTracers configReflection trConfig [peerSelectionCountersTr]
 
+    !churnCountersTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      ["Net", "Churn"]
+    configureTracers configReflection trConfig [churnCountersTr]
+
     !peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Actions"]
@@ -602,6 +616,8 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
                  traceWith debugPeerSelectionResponderTr
              , P2P.dtTracePeerSelectionCounters = Tracer $
                  traceWith peerSelectionCountersTr
+             , P2P.dtTraceChurnCounters = Tracer $
+                 traceWith churnCountersTr
              , P2P.dtPeerSelectionActionsTracer = Tracer $
                  traceWith peerSelectionActionsTr
              , P2P.dtConnectionManagerTracer = Tracer $

@@ -44,6 +44,8 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as ChainSync.Client
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State as ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (BlockingType (..),
                    TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -167,7 +169,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.OpenedDB {} -> Info
     ChainDB.ClosedDB {} -> Info
     ChainDB.OpenedImmutableDB {} -> Info
-    ChainDB.OpenedVolatileDB -> Info
+    ChainDB.OpenedVolatileDB {} -> Info
     ChainDB.OpenedLgrDB -> Info
     ChainDB.StartedOpeningDB -> Info
     ChainDB.StartedOpeningImmutableDB -> Info
@@ -217,6 +219,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.BlockAlreadyHere{}    -> Debug
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
+    VolDb.DBClosed{}            -> Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -244,6 +247,10 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceWaitingBeyondForecastHorizon _) = Debug
   getSeverityAnnotation (TraceAccessingForecastHorizon _) = Debug
   getSeverityAnnotation (TraceGaveLoPToken _ _ _) = Debug
+  getSeverityAnnotation (TraceOfferJump _) = Debug
+  getSeverityAnnotation (TraceJumpResult _) = Debug
+  getSeverityAnnotation TraceJumpingWaitingForNextInstruction = Debug
+  getSeverityAnnotation (TraceJumpingInstructionIs _) = Debug
 
 
 instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
@@ -610,7 +617,8 @@ instance ( ConvertRawHash blk
         ChainDB.OpenedImmutableDB immTip chunk ->
           "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
           " and chunk " <> showT chunk
-        ChainDB.OpenedVolatileDB ->  "Opened vol db"
+        ChainDB.OpenedVolatileDB maxSlotN ->
+          "Opened vol db with max slot number " <> showT maxSlotN
         ChainDB.OpenedLgrDB ->  "Opened lgr db"
       ChainDB.TraceFollowerEvent ev -> case ev of
         ChainDB.NewFollower ->  "New follower was created"
@@ -723,6 +731,7 @@ instance ( ConvertRawHash blk
         VolDb.BlockAlreadyHere bh   -> "Block " <> showT bh <> " was already in the Volatile DB."
         VolDb.Truncate e pth offs   -> "Truncating the file at " <> showT pth <> " at offset " <> showT offs <> ": " <> showT e
         VolDb.InvalidFileNames fs   -> "Invalid Volatile DB files: " <> showT fs
+        VolDb.DBClosed              -> "Closed Volatile DB."
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -1000,10 +1009,17 @@ instance ( ConvertRawHash blk
     ChainDB.PoppedReprocessLoEBlocksFromQueue ->
        mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
     ChainDB.ChainSelectionLoEDebug curChain loeFrag ->
-        mconcat [ "kind" .= String "ChainSelectionLoEDebug"
-                , "curChain" .= headAndAnchor curChain
-                , "loeFrag" .= headAndAnchor loeFrag
-                ]
+      case loeFrag of
+        ChainDB.LoEEnabled loeF ->
+          mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+                  , "curChain" .= headAndAnchor curChain
+                  , "loeFrag" .= headAndAnchor loeF
+                  ]
+        ChainDB.LoEDisabled ->
+          mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+                  , "curChain" .= headAndAnchor curChain
+                  , "loeFrag" .= String "LoE is disabled"
+                  ]
       where
         headAndAnchor frag = Aeson.object
           [ "anchor" .= renderPointForVerbosity verb (AF.anchorPoint frag)
@@ -1087,8 +1103,9 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceOpenEvent.OpenedImmutableDB"
                , "immtip" .= toObject verb immTip
                , "epoch" .= String ((pack . show) epoch) ]
-    ChainDB.OpenedVolatileDB ->
-      mconcat [ "kind" .= String "TraceOpenEvent.OpenedVolatileDB" ]
+    ChainDB.OpenedVolatileDB maxSlotN ->
+      mconcat [ "kind" .= String "TraceOpenEvent.OpenedVolatileDB"
+               , "maxSlotNo" .= String (showT maxSlotN) ]
     ChainDB.OpenedLgrDB ->
       mconcat [ "kind" .= String "TraceOpenEvent.OpenedLgrDB" ]
 
@@ -1236,6 +1253,7 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceVolatileDBEvent.InvalidFileNames"
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
+    VolDb.DBClosed -> mconcat [ "kind" .= String "TraceVolatileDbEvent.DBClosed"]
 
 instance ConvertRawHash blk => ToObject (ImmDB.TraceChunkValidation blk ChunkNo) where
   toObject verb ev = case ev of
@@ -1346,6 +1364,60 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                , "given" .= tokenGiven
                , tipToObject (tipFromHeader h)
                , "blockNo" .=  bestBlockNumberPriorToH ]
+    TraceOfferJump jumpTo ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceOfferJump"
+               , "jumpTo" .= toObject verb jumpTo
+               ]
+    TraceJumpResult res ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpResult"
+               , "res" .= case res of
+                   ChainSync.Client.AcceptedJump info -> Aeson.object
+                     [ "kind" .= String "AcceptedJump"
+                      , "payload" .= toObject verb info ]
+                   ChainSync.Client.RejectedJump info -> Aeson.object
+                     [ "kind" .= String "RejectedJump"
+                      , "payload" .= toObject verb info ]
+               ]
+    TraceJumpingWaitingForNextInstruction ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpingWaitingForNextInstruction"
+               ]
+    TraceJumpingInstructionIs instr ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpingInstructionIs"
+               , "instr" .= toObject verb instr
+               ]
+
+instance ( LedgerSupportsProtocol blk,
+           ConvertRawHash blk
+         ) => ToObject (ChainSync.Client.Instruction blk) where
+  toObject verb = \case
+    ChainSync.Client.RunNormally ->
+      mconcat ["kind" .= String "RunNormally"]
+    ChainSync.Client.Restart ->
+      mconcat ["kind" .= String "Restart"]
+    ChainSync.Client.JumpInstruction info ->
+      mconcat [ "kind" .= String "JumpInstruction"
+              , "payload" .= toObject verb info
+              ]
+
+instance ( LedgerSupportsProtocol blk,
+           ConvertRawHash blk
+         ) => ToObject (ChainSync.Client.JumpInstruction blk) where
+  toObject verb = \case
+    ChainSync.Client.JumpTo info ->
+      mconcat [ "kind" .= String "JumpTo"
+                , "info" .= toObject verb info ]
+    ChainSync.Client.JumpToGoodPoint info ->
+      mconcat [ "kind" .= String "JumpToGoodPoint"
+                , "info" .= toObject verb info ]
+
+instance ( LedgerSupportsProtocol blk,
+           ConvertRawHash blk
+         ) => ToObject (ChainSync.Client.JumpInfo blk) where
+  toObject verb info =
+    mconcat [ "kind" .= String "JumpInfo"
+              , "mostRecentIntersection" .= toObject verb (ChainSync.Client.jMostRecentIntersection info)
+              , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
+              , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info)) ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where

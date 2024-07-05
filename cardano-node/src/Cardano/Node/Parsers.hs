@@ -51,8 +51,10 @@ nodeRunParser = do
   -- Filepaths
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseDbPath
+  validate <- lastOption parseValidateDB
   socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
   traceForwardSocket <- lastOption parseTracerSocketMode
+  nodeConfigFp <- lastOption parseConfigFile
 
   -- Protocol files
   byronCertFile   <- optional parseByronDelegationCert
@@ -68,15 +70,13 @@ nodeRunParser = do
   nIPv6Address <- lastOption parseHostIPv6Addr
   nPortNumber  <- lastOption parsePort
 
-  -- NodeConfiguration filepath
-  nodeConfigFp <- lastOption parseConfigFile
-  numOfDiskSnapshots <- lastOption parseNumOfDiskSnapshots
-  snapshotInterval   <- lastOption parseSnapshotInterval
-
-  validate <- lastOption parseValidateDB
+  -- Shutdown
   shutdownIPC <- lastOption parseShutdownIPC
   shutdownOnLimit <- lastOption parseShutdownOn
 
+  -- Hidden options (to be removed eventually)
+  numOfDiskSnapshots <- lastOption parseNumOfDiskSnapshots
+  snapshotInterval   <- lastOption parseSnapshotInterval
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
   pure $ PartialNodeConfiguration
@@ -215,13 +215,13 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
       Opt.option (auto @Word32)
         (  long "mempool-capacity-override"
         <> metavar "BYTES"
-        <> help "The number of bytes"
+        <> help "[DEPRECATED: Set it in config file with key MempoolCapacityBytesOverride] The number of bytes"
         )
     parseNoOverride :: Parser MempoolCapacityBytesOverride
     parseNoOverride =
       flag' NoMempoolCapacityBytesOverride
         (  long "no-mempool-capacity-override"
-        <> help "The port number"
+        <> help "[DEPRECATED: Set it in config file] Don't override mempool capacity"
         )
 
 parseDbPath :: Parser FilePath
@@ -336,7 +336,7 @@ parseNumOfDiskSnapshots = fmap RequestedNumOfDiskSnapshots parseNum
   parseNum = Opt.option auto
     ( long "num-of-disk-snapshots"
         <> metavar "NUMOFDISKSNAPSHOTS"
-        <> help "Number of ledger snapshots stored on disk."
+        <> help "[DEPRECATED: Set it in config file with key NumOfDiskSnapshots] Number of ledger snapshots stored on disk."
     )
 
 -- TODO revisit because it sucks
@@ -346,7 +346,7 @@ parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) par
   parseDifftime = Opt.option auto
     ( long "snapshot-interval"
         <> metavar "SNAPSHOTINTERVAL"
-        <> help "Snapshot Interval (in seconds)"
+        <> help "[DEPRECATED: Set it in config file with key SnapshotInterval] Snapshot Interval (in seconds)"
     )
 
 -- | Produce just the brief help header for a given CLI option parser,

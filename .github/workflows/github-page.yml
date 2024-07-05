@@ -18,8 +18,7 @@ jobs:
       uses: cachix/install-nix-action@v18
       with:
         # Use last stable nixos channel and the same nix as in channel:
-        install_url: https://releases.nixos.org/nix/nix-2.11.1/install
-        nix_path: nixpkgs=channel:nixos-22.11
+        nix_path: nixpkgs=channel:nixos-24.05
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
@@ -50,7 +49,7 @@ jobs:
         tar -czf haddocks.tgz -C haddocks .
 
     - name: Upload haddocks artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       if: ${{ always() }}
       continue-on-error: true
       with:

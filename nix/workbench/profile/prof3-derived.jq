@@ -129,6 +129,8 @@ def add_derived_params:
 
 | ($gsis.delegators // $n_pools)             as $effective_delegators
 
+| ($gsis.dreps // 0)                         as $dreps
+
 | ($generator_tx_count * $gtor.inputs_per_tx)
                                              as $utxo_generated
 | (($pparams.maxBlockBodySize / default_value_tx_size_estimate) | floor)
@@ -183,6 +185,7 @@ def add_derived_params:
          }
      , genesis:
          { delegators:            $effective_delegators
+         , dreps:                 $gsis.dreps
          , pool_coin:             (if $n_pools == 0 then 0
                                    else $gsis.per_pool_balance end)
          , shelley:

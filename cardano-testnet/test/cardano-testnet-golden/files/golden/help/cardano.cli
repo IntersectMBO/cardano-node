@@ -14,6 +14,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
+  [--enable-new-epoch-state-logging]
 
   Start a testnet in any era
 
@@ -41,4 +42,7 @@ Available options:
                            (default: NodeLoggingFormatAsJson)
   --num-dreps NUMBER       Number of delegate representatives (DReps) to
                            generate (default: 3)
+  --enable-new-epoch-state-logging
+                           Enable new epoch state logging to
+                           logs/ledger-epoch-state.log
   -h,--help                Show this help text

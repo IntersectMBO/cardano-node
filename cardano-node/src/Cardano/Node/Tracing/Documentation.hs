@@ -35,6 +35,8 @@ import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgeThreadSta
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
+import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
+
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
@@ -70,8 +72,8 @@ import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters (..), TracePeerSelection (..))
+import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters, DebugPeerSelection (..),
+                   PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -191,6 +193,12 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [nodeStartupInfoDp]
     nodeStartupInfoDpDoc <- documentTracer
                       (nodeStartupInfoDp :: Trace IO NodeStartupInfo)
+
+    nodeVersionTr <- mkCardanoTracer
+                      trBase trForward mbTrEKG
+                      ["Version"]
+    configureTracers configReflection trConfig  [nodeVersionTr]
+    nodeVersionDoc <- documentTracer (nodeVersionTr :: Trace IO NodeVersionTrace)
 
     -- State tracer
     stateTr   <- mkCardanoTracer
@@ -547,6 +555,12 @@ docTracersFirstPhase condConfigFileName = do
     peerSelectionCountersTrDoc <- documentTracer (peerSelectionCountersTr ::
       Trace IO PeerSelectionCounters)
 
+    churnCountersTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      ["Net", "Churn"]
+    configureTracers configReflection trConfig [churnCountersTr]
+    churnCountersTrDoc <- documentTracer (churnCountersTr :: Trace IO ChurnCounters)
+
     peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Actions"]
@@ -677,6 +691,7 @@ docTracersFirstPhase condConfigFileName = do
             <> resourcesTrDoc
             <> startupTrDoc
             <> shutdownTrDoc
+            <> nodeVersionDoc
             <> peersTrDoc
             <> chainDBTrDoc
             <> replayBlockTrDoc
@@ -722,6 +737,7 @@ docTracersFirstPhase condConfigFileName = do
             <> debugPeerSelectionTrDoc
             <> debugPeerSelectionResponderTrDoc
             <> peerSelectionCountersTrDoc
+            <> churnCountersTrDoc
             <> peerSelectionActionsTrDoc
             <> connectionManagerTrDoc
             <> connectionManagerTransitionsTrDoc

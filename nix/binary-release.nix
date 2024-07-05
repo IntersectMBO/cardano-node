@@ -14,32 +14,46 @@
 
 let
   inherit (pkgs) lib;
+
   name = "cardano-node-${version}-${platform}";
+
   environments = lib.getAttrs
     [ "mainnet" "preprod" "preview" "sanchonet" ]
     pkgs.cardanoLib.environments;
+
+
   writeConfig = name: env:
     let
+      genesisAttrs = {
+        # File references point to the nix store, so we need to rewrite them
+        # as relative paths
+        ByronGenesisFile =  "byron-genesis.json";
+        ShelleyGenesisFile = "shelley-genesis.json";
+        AlonzoGenesisFile = "alonzo-genesis.json";
+      } // lib.optionalAttrs (env.nodeConfig ? ConwayGenesisFile) {
+        ConwayGenesisFile = "conway-genesis.json";
+      };
       nodeConfig = pkgs.writeText
         "config.json"
         (builtins.toJSON
-          (env.nodeConfig // {
-            # File references point to the nix store, so we need to rewrite them
-            # as relative paths
-            ByronGenesisFile =  "byron-genesis.json";
-            ShelleyGenesisFile = "shelley-genesis.json";
-            AlonzoGenesisFile = "alonzo-genesis.json";
-            ConwayGenesisFile = "conway-genesis.json";
-          }));
+          (env.nodeConfig // genesisAttrs));
+
+      nodeConfigBp = pkgs.writeText
+        "config-bp.json"
+        (builtins.toJSON
+          (env.nodeConfigBp // genesisAttrs));
+
       topologyConfig = pkgs.cardanoLib.mkTopology env;
 
+      # Genesis files are the same for env.nodeConfig and env.nodeConfigBp
       inherit (env.nodeConfig)
-        ByronGenesisFile ShelleyGenesisFile AlonzoGenesisFile ConwayGenesisFile;
+        ByronGenesisFile ShelleyGenesisFile AlonzoGenesisFile;
     in
       # Format the node config file and copy the genesis files
       ''
         mkdir -p "share/${name}"
         jq . < "${nodeConfig}" > share/${name}/config.json
+        jq . < "${nodeConfigBp}" > share/${name}/config-bp.json
         jq . < "${topologyConfig}" > share/${name}/topology.json
         cp -n --remove-destination -v \
           "${ByronGenesisFile}" \
@@ -50,9 +64,11 @@ let
         cp -n --remove-destination -v \
           "${AlonzoGenesisFile}" \
            share/${name}/alonzo-genesis.json
+        ${lib.optionalString (env.nodeConfig ? ConwayGenesisFile) ''
         cp -n --remove-destination -v \
-          "${ConwayGenesisFile}" \
+          "${env.nodeConfig.ConwayGenesisFile}" \
            share/${name}/conway-genesis.json
+        ''}
       '';
 
 in pkgs.runCommand name {

@@ -28,20 +28,19 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Testnet.Components.SPO
-import           Testnet.Components.TestWatchdog
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
-import           Testnet.Runtime
+import           Testnet.Components.Configuration
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
+import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 hprop_transaction :: Property
-hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -50,9 +49,10 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
   let
     sbe = ShelleyBasedEraBabbage
     era = toCardanoEra sbe
+    cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     options = cardanoDefaultTestnetOptions
-      { cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+      { cardanoNodeEra = cEra -- TODO: We should only support the latest era and the upcoming era
       }
 
   TestnetRuntime
@@ -63,14 +63,14 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
 
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
   void $ execCli' execConfig
-    [ "babbage", "query", "utxo"
+    [ anyEraToString cEra, "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -81,14 +81,14 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "build"
+    [ anyEraToString cEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_001
     , "--out-file", txbodyFp
     ]
   cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
-  apiTx <- H.evalEither $ deserialiseTxLedgerCddl sbe cddlUnwitnessedTx
+  apiTx <- H.evalEither $ deserialiseFromTextEnvelope (AsTx AsBabbageEra) cddlUnwitnessedTx
   let txFee = L.unCoin $ extractTxFee apiTx
 
   -- This is the current calculated fee.
@@ -98,21 +98,21 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
   330 H.=== txFee
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "sign"
+    [ anyEraToString cEra, "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "submit"
+    [ anyEraToString cEra, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
 
 
   H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
-      [ "babbage", "query", "utxo"
+      [ anyEraToString cEra, "query", "utxo"
       , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
       , "--cardano-mode"
       , "--out-file", work </> "utxo-2.json"

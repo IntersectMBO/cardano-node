@@ -47,6 +47,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
+  , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   } deriving (Eq, Show)
 
 cardanoDefaultTestnetOptions :: CardanoTestnetOptions
@@ -61,6 +62,7 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
   , cardanoNumDReps = 3
+  , cardanoEnableNewEpochStateLogging = True
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)

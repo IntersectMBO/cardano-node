@@ -131,10 +131,15 @@ instance LogFormatting (Conway.ConwayGovCertPredFailure era) where
       , "expectedCoin" .= expectedCoin
       , "error" .= String "DRep delegation has incorrect deposit"
       ]
-    Conway.ConwayCommitteeHasPreviouslyResigned kHash ->
+    Conway.ConwayCommitteeHasPreviouslyResigned coldCred ->
       [ "kind" .= String "ConwayCommitteeHasPreviouslyResigned"
-      , "credential" .= String (textShow kHash)
+      , "credential" .= String (textShow coldCred)
       , "error" .= String "Committee has resigned"
+      ]
+    Conway.ConwayCommitteeIsUnknown coldCred ->
+      [ "kind" .= String "ConwayCommitteeIsUnknown"
+      , "credential" .= String (textShow coldCred)
+      , "error" .= String "Committee is Unknown"
       ]
     Conway.ConwayDRepIncorrectRefund givenRefund expectedRefund  ->
       [ "kind" .= String "ConwayDRepIncorrectRefund"
@@ -147,6 +152,10 @@ instance LogFormatting (Conway.ConwayGovCertPredFailure era) where
 
 instance LogFormatting (Conway.ConwayDelegPredFailure era) where
   forMachine _dtal = mconcat . \case
+    Conway.DelegateeNotRegisteredDELEG poolID ->
+      [ "kind" .= String "DelegateeNotRegisteredDELEG"
+      , "poolID" .= String (textShow poolID)
+      ]
     Conway.IncorrectDepositDELEG coin ->
       [ "kind" .= String "IncorrectDepositDELEG"
       , "amount" .= coin
@@ -225,35 +234,10 @@ instance
   ( Consensus.ShelleyBasedEra era
   , ToJSON (Ledger.PParamsUpdate era)
   ) => LogFormatting (ShelleyLedgerUpdate era) where
-  forMachine dtal (ShelleyUpdatedProtocolUpdates updates) =
+  forMachine _dtal (ShelleyUpdatedPParams updates epochNo) =
     mconcat [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
-             , "updates" .= map (forMachine dtal) updates
-             ]
-
-instance
-  ( Ledger.Era era
-  , ToJSON (Ledger.PParamsUpdate era)
-  ) => LogFormatting (ProtocolUpdate era) where
-  forMachine dtal ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
-    mconcat [ "proposal" .= forMachine dtal protocolUpdateProposal
-             , "state"    .= forMachine dtal protocolUpdateState
-             ]
-
-instance
-  ( ToJSON (Ledger.PParamsUpdate era)
-  ) => LogFormatting (UpdateProposal era) where
-  forMachine _dtal UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
-    mconcat [ "params"  .= proposalParams
-             , "version" .= proposalVersion
-             , "epoch"   .= proposalEpoch
-             ]
-
-instance
-  ( Ledger.Crypto crypto
-  ) => LogFormatting (UpdateState crypto) where
-  forMachine _dtal UpdateState{proposalVotes, proposalReachedQuorum} =
-    mconcat [ "proposal"      .= proposalVotes
-             , "reachedQuorum" .= proposalReachedQuorum
+             , "updates" .= show updates
+             , "epochNo" .= show epochNo
              ]
 
 instance
@@ -1102,6 +1086,14 @@ instance
 --------------------------------------------------------------------------------
 
 instance
+  ( Ledger.Era era
+  , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
+  ) => LogFormatting (Conway.ConwayBbodyPredFailure era) where
+  forMachine _ err = mconcat [ "kind" .= String "ConwayBbodyPredFail"
+                            , "error" .= String (textShow err)
+                            ]
+
+instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" era))
@@ -1109,6 +1101,11 @@ instance
   , LogFormatting (Set (Credential 'Staking (Ledger.EraCrypto era)))
   ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
+  forMachine _ (Conway.ConwayTxRefScriptsSizeTooBig  actual limit) =
+    mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
+            , "actual" .= actual
+            , "limit" .= limit
+            ]
   forMachine v (Conway.ConwayCertsFailure f) = forMachine v f
   forMachine v (Conway.ConwayGovFailure f) = forMachine v f
   forMachine v (Conway.ConwayWdrlNotDelegatedToDRep f) = forMachine v f
@@ -1148,6 +1145,10 @@ instance
     mconcat [ "kind" .= String "DisallowedVoters"
             , "govActionIdToVoter" .= NonEmpty.toList govActionIdToVoter
             ]
+  forMachine _ (Conway.VotersDoNotExist creds) =
+    mconcat [ "kind" .= String "VotersDoNotExist"
+            , "credentials" .= creds
+            ]
   forMachine _ (Conway.ConflictingCommitteeUpdate creds) =
     mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
             , "credentials" .= creds
@@ -1175,15 +1176,20 @@ instance
             , "actualPolicyHash" .= actualPolicyHash
             , "expectedPolicyHash" .= expectedPolicyHash
             ]
+  forMachine _ (Conway.DisallowedProposalDuringBootstrap proposal) =
+    mconcat [ "kind" .= String "DisallowedProposalDuringBootstrap"
+            , "proposal" .= proposal
+            ]
+  forMachine _ (Conway.DisallowedVotesDuringBootstrap votes) =
+    mconcat [ "kind" .= String "DisallowedVotesDuringBootstrap"
+            , "votes" .= votes
+            ]
+
 
 instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
-  forMachine _ (Conway.DelegateeNotRegisteredDELEG poolID) =
-    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
-            , "poolID" .= String (textShow poolID)
-            ]
   forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
     mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "rewardAccounts" .= rs
@@ -1320,6 +1326,210 @@ instance
 instance LogFormatting (Ledger.VoidEraRule rule era) where
   -- NOTE: There are no values of type 'Ledger.VoidEraRule rule era'
   forMachine _ = \case
+
+instance
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Consensus.ShelleyBasedEra ledgerera
+  , Ledger.EraCrypto ledgerera ~ StandardCrypto
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" ledgerera))
+  ) => LogFormatting (Conway.ConwayUtxoPredFailure ledgerera) where
+  forMachine dtal = \case
+    Conway.UtxosFailure utxosPredFailure -> forMachine dtal utxosPredFailure
+    Conway.BadInputsUTxO badInputs ->
+      mconcat [ "kind" .= String "BadInputsUTxO"
+              , "badInputs" .= badInputs
+              , "error" .= renderBadInputsUTxOErr badInputs
+              ]
+    Conway.OutsideValidityIntervalUTxO validityInterval slot ->
+      mconcat [ "kind" .= String "ExpiredUTxO"
+              , "validityInterval" .= validityInterval
+              , "slot" .= slot
+              ]
+    Conway.MaxTxSizeUTxO txsize maxtxsize ->
+      mconcat [ "kind" .= String "MaxTxSizeUTxO"
+              , "size" .= txsize
+              , "maxSize" .= maxtxsize
+              ]
+    Conway.InputSetEmptyUTxO ->
+      mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
+    Conway.FeeTooSmallUTxO minfee txfee ->
+      mconcat [ "kind" .= String "FeeTooSmallUTxO"
+              , "minimum" .= minfee
+              , "fee" .= txfee
+              ]
+    Conway.ValueNotConservedUTxO consumed produced ->
+      mconcat [ "kind" .= String "ValueNotConservedUTxO"
+              , "consumed" .= consumed
+              , "produced" .= produced
+              , "error" .= renderValueNotConservedErr consumed produced
+              ]
+    Conway.WrongNetwork network addrs ->
+      mconcat [ "kind" .= String "WrongNetwork"
+              , "network" .= network
+              , "addrs"   .= addrs
+              ]
+    Conway.WrongNetworkWithdrawal network addrs ->
+      mconcat [ "kind" .= String "WrongNetworkWithdrawal"
+              , "network" .= network
+              , "addrs"   .= addrs
+              ]
+    Conway.OutputTooSmallUTxO badOutputs ->
+      mconcat [ "kind" .= String "OutputTooSmallUTxO"
+              , "outputs" .= badOutputs
+              , "error" .= String
+                ( mconcat
+                  [ "The output is smaller than the allow minimum "
+                  , "UTxO value defined in the protocol parameters"
+                  ]
+                )
+              ]
+    Conway.OutputBootAddrAttrsTooBig badOutputs ->
+      mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
+              , "outputs" .= badOutputs
+              , "error" .= String "The Byron address attributes are too big"
+              ]
+    Conway.OutputTooBigUTxO badOutputs ->
+      mconcat [ "kind" .= String "OutputTooBigUTxO"
+              , "outputs" .= badOutputs
+              , "error" .= String "Too many asset ids in the tx output"
+              ]
+    Conway.InsufficientCollateral computedBalance suppliedFee ->
+      mconcat [ "kind" .= String "InsufficientCollateral"
+              , "balance" .= computedBalance
+              , "txfee" .= suppliedFee
+              ]
+    Conway.ScriptsNotPaidUTxO utxos ->
+      mconcat [ "kind" .= String "ScriptsNotPaidUTxO"
+              , "utxos" .= utxos
+              ]
+    Conway.ExUnitsTooBigUTxO pParamsMaxExUnits suppliedExUnits ->
+      mconcat [ "kind" .= String "ExUnitsTooBigUTxO"
+              , "maxexunits" .= pParamsMaxExUnits
+              , "exunits" .= suppliedExUnits
+              ]
+    Conway.CollateralContainsNonADA inputs ->
+      mconcat [ "kind" .= String "CollateralContainsNonADA"
+              , "inputs" .= inputs
+              ]
+    Conway.WrongNetworkInTxBody actualNetworkId netIdInTxBody ->
+      mconcat [ "kind" .= String "WrongNetworkInTxBody"
+              , "networkid" .= actualNetworkId
+              , "txbodyNetworkId" .= netIdInTxBody
+              ]
+    Conway.OutsideForecast slotNum ->
+      mconcat [ "kind" .= String "OutsideForecast"
+              , "slot" .= slotNum
+              ]
+    Conway.TooManyCollateralInputs maxCollateralInputs numberCollateralInputs ->
+      mconcat [ "kind" .= String "TooManyCollateralInputs"
+              , "max" .= maxCollateralInputs
+              , "inputs" .= numberCollateralInputs
+              ]
+    Conway.NoCollateralInputs ->
+      mconcat [ "kind" .= String "NoCollateralInputs" ]
+    Conway.IncorrectTotalCollateralField provided declared ->
+      mconcat [ "kind" .= String "UnequalCollateralReturn"
+              , "collateralProvided" .= provided
+              , "collateralDeclared" .= declared
+              ]
+    Conway.BabbageOutputTooSmallUTxO outputs ->
+      mconcat [ "kind" .= String "BabbageOutputTooSmall"
+              , "outputs" .= outputs
+              ]
+    Conway.BabbageNonDisjointRefInputs nonDisjointInputs ->
+      mconcat [ "kind" .= String "BabbageNonDisjointRefInputs"
+              , "outputs" .= nonDisjointInputs
+              ]
+
+instance
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Consensus.ShelleyBasedEra ledgerera
+  , Ledger.EraCrypto ledgerera ~ StandardCrypto
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
+  ) => LogFormatting (Conway.ConwayUtxowPredFailure ledgerera) where
+   forMachine dtal = \case
+    Conway.UtxoFailure utxoPredFail -> forMachine dtal utxoPredFail
+    Conway.InvalidWitnessesUTXOW ws ->
+      mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
+              , "invalidWitnesses" .= map textShow ws
+              ]
+    Conway.MissingVKeyWitnessesUTXOW ws ->
+      mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
+              , "missingWitnesses" .= ws
+              ]
+    Conway.MissingScriptWitnessesUTXOW scripts ->
+      mconcat [ "kind" .= String "MissingScriptWitnessesUTXOW"
+              , "missingScripts" .= scripts
+              ]
+    Conway.ScriptWitnessNotValidatingUTXOW failedScripts ->
+      mconcat [ "kind" .= String "ScriptWitnessNotValidatingUTXOW"
+              , "failedScripts" .= failedScripts
+              ]
+    Conway.MissingTxBodyMetadataHash hash ->
+      mconcat [ "kind" .= String "MissingTxMetadata"
+              , "txBodyMetadataHash" .= hash
+              ]
+    Conway.MissingTxMetadata hash ->
+      mconcat [ "kind" .= String "MissingTxMetadata"
+              , "txBodyMetadataHash" .= hash
+              ]
+    Conway.ConflictingMetadataHash txBodyMetadataHash fullMetadataHash ->
+      mconcat [ "kind" .= String "ConflictingMetadataHash"
+              , "txBodyMetadataHash" .= txBodyMetadataHash
+              , "fullMetadataHash" .= fullMetadataHash
+              ]
+    Conway.InvalidMetadata ->
+      mconcat [ "kind" .= String "InvalidMetadata"
+              ]
+    Conway.ExtraneousScriptWitnessesUTXOW scripts ->
+      mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
+              , "extraneousScripts" .= Set.map renderScriptHash scripts
+              ]
+    Conway.MissingRedeemers scripts ->
+      mconcat [ "kind" .= String "MissingRedeemers"
+              , "scripts" .= renderMissingRedeemers Api.shelleyBasedEra scripts
+              ]
+    Conway.MissingRequiredDatums required received ->
+      mconcat [ "kind" .= String "MissingRequiredDatums"
+              , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+                                      (Set.toList required)
+              , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+                                      (Set.toList received)
+              ]
+    Conway.NotAllowedSupplementalDatums disallowed acceptable ->
+      mconcat [ "kind" .= String "NotAllowedSupplementalDatums"
+              , "disallowed" .= Set.toList disallowed
+              , "acceptable" .= Set.toList acceptable
+              ]
+    Conway.PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams ->
+      mconcat [ "kind" .= String "PPViewHashesDontMatch"
+              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
+              ]
+    Conway.UnspendableUTxONoDatumHash ins ->
+      mconcat [ "kind" .= String "MissingRequiredSigners"
+              , "txins" .= Set.toList ins
+              ]
+    Conway.ExtraRedeemers rs ->
+      Api.caseShelleyToMaryOrAlonzoEraOnwards
+        (const mempty)
+        (\alonzoOnwards ->
+           mconcat
+             [ "kind" .= String "ExtraRedeemers"
+             , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) rs
+             ]
+        )
+        (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
+    Conway.MalformedScriptWitnesses scripts ->
+      mconcat [ "kind" .= String "MalformedScriptWitnesses"
+              , "scripts" .= scripts
+              ]
+    Conway.MalformedReferenceScripts scripts ->
+      mconcat [ "kind" .= String "MalformedReferenceScripts"
+              , "scripts" .= scripts
+              ]
 
 --------------------------------------------------------------------------------
 -- Helper functions

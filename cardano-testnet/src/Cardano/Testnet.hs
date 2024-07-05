@@ -27,7 +27,6 @@ module Cardano.Testnet (
 
   -- * EpochState processsing helper functions
   maybeExtractGovernanceActionIndex,
-  findCondition,
 
   -- * Processes
   procChairman,
@@ -47,7 +46,7 @@ import           Testnet.Components.Query
 import           Testnet.EpochStateProcessing
 import           Testnet.Filepath
 import           Testnet.Process.Run (procChairman)
-import           Testnet.Property.Utils
-import           Testnet.Runtime
+import           Testnet.Property.Util
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
+import           Testnet.Types

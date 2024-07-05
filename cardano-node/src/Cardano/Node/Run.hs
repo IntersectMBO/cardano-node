@@ -8,8 +8,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TupleSections #-}
+
+{-# LANGUAGE TypeApplications #-}
+
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -74,6 +76,8 @@ import           Paths_cardano_node (version)
 
 import qualified Cardano.Crypto.Init as Crypto
 
+import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
+
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
                    nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
@@ -90,23 +94,24 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
-                   RunNodeArgs (..), StdRunNodeArgs (..), stdChainSyncTimeout)
+                   RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
                    PeerSelectionTargets (..), RemoteAddress)
+import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
-import           Ouroboros.Network.PeerSelection.Bootstrap
-                     (UseBootstrapPeers (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -123,11 +128,14 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers)
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
+
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
+
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -239,8 +247,8 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
           blockForging <- snd (Api.protocolInfo runP)
           traceWith (startupTracer tracers)
                     (BlockForgingUpdate (if null blockForging
-                                          then EnabledBlockForging
-                                          else DisabledBlockForging))
+                                          then DisabledBlockForging
+                                          else EnabledBlockForging))
 
           handleSimpleNode blockType runP p2pMode tracers nc
             (\nk -> do
@@ -279,12 +287,13 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
           getStartupInfo nc p fp
             >>= mapM_ (traceWith $ startupTracer tracers)
 
+          traceWith (nodeVersionTracer tracers) getNodeVersion
+
           blockForging <- snd (Api.protocolInfo runP)
           traceWith (startupTracer tracers)
                     (BlockForgingUpdate (if null blockForging
-                                          then EnabledBlockForging
-                                          else DisabledBlockForging))
-
+                                          then DisabledBlockForging
+                                          else EnabledBlockForging))
 
           -- We ignore peer logging thread if it dies, but it will be killed
           -- when 'handleSimpleNode' terminates.
@@ -592,7 +601,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
   customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
     NoTimeoutOverride -> Nothing
     TimeoutOverride t -> Just $ do
-      cst <- stdChainSyncTimeout
+      cst <- Configuration.defaultChainSyncTimeout
       pure $ case t of
         0 ->
           cst { idleTimeout = Nothing }
@@ -865,7 +874,7 @@ mkP2PArguments NodeConfiguration {
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300
-      , P2P.daBulkChurnInterval     = 300
+      , P2P.daBulkChurnInterval     = 900
       , P2P.daOwnPeerSharing        = ncPeerSharing
       }
   where

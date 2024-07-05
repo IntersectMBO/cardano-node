@@ -150,7 +150,10 @@ data NodeAlonzoProtocolConfiguration =
 
 data NodeConwayProtocolConfiguration =
      NodeConwayProtocolConfiguration {
-       npcConwayGenesisFile     :: !GenesisFile
+       npcConwayGenesisFile     :: !(Maybe GenesisFile)
+       -- ^ If no conway genesis file is provided, we want
+       -- to enforce a maximum protocol version of 8 to avoid
+       -- a permanent hard fork.
      , npcConwayGenesisFileHash :: !(Maybe GenesisHash)
      }
   deriving (Eq, Show)

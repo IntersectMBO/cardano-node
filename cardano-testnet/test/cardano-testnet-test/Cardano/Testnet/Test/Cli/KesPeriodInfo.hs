@@ -31,13 +31,12 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.SPO
-import           Testnet.Components.TestWatchdog
-import           Testnet.Process.Cli
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.SPO
+import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
+import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
@@ -46,9 +45,10 @@ import           Hedgehog.Extras.Stock (sprocketSystemName)
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options
@@ -71,12 +71,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     , poolNodes
     } <- cardanoTestnetDefault cTestnetOptions conf
   node1sprocket <- H.headM $ poolSprockets runTime
-  execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
-      utxoSKeyFile = paymentSKey $ paymentKeyInfoPair wallet0
-  void $ H.execCli' execConfig
+      utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
+  void $ execCli' execConfig
     [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -88,11 +88,10 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
-      nodeConfigFile = Api.File configurationFile
       termEpoch = EpochNo 3
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
     <- registerSingleSpo 1 tempAbsPath
-         nodeConfigFile
+         configurationFile
          node1SocketPath
          termEpoch
          cTestnetOptions
@@ -113,10 +112,10 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       testDelegatorRegCertFp = testStakeDelegator </> "test-delegator.regcert"
       testDelegatorDelegCert = testStakeDelegator </> "test-delegator.delegcert"
 
-  _ <- cliStakeAddressKeyGen work
-    $ KeyNames testDelegatorVkeyFp testDelegatorSKeyFp
-  _ <- cliAddressKeyGen work
-    $ KeyNames testDelegatorPaymentVKeyFp testDelegatorPaymentSKeyFp
+  cliStakeAddressKeyGen
+    $ KeyPair (File testDelegatorVkeyFp) (File testDelegatorSKeyFp)
+  cliAddressKeyGen
+    $ KeyPair (File testDelegatorPaymentVKeyFp) (File testDelegatorPaymentSKeyFp)
 
   -- NB: We must include the stake credential
   testDelegatorPaymentAddr <- execCli
@@ -152,7 +151,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   -- TODO: Refactor getting valid UTxOs into a function
   H.note_  "Get updated UTxO"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -200,7 +199,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   let testDelegatorStakeAddressInfoOutFp = work </> "test-delegator-stake-address-info.json"
   void $ checkStakeKeyRegistered
            tempAbsPath
-           nodeConfigFile
+           configurationFile
            node1SocketPath
            termEpoch
            execConfig
@@ -223,10 +222,10 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       testSpoKesVKey = work </> "kes.vkey"
       testSpoKesSKey = work </> "kes.skey"
 
-  _ <- cliNodeKeyGenVrf work
-         $ KeyNames testSpoVrfVKey testSpoVrfSKey
-  _ <- cliNodeKeyGenKes work
-         $ KeyNames testSpoKesVKey testSpoKesSKey
+  cliNodeKeyGenVrf
+    $ KeyPair (File testSpoVrfVKey) (File testSpoVrfSKey)
+  cliNodeKeyGenKes
+    $ KeyPair (File testSpoKesVKey) (File testSpoKesSKey)
   let testSpoOperationalCertFp = testSpoDir </> "node-operational.cert"
 
   void $ execCli' execConfig
@@ -247,11 +246,11 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       ]
 
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
-  H.lbsWriteFile configurationFile jsonBS
+  H.lbsWriteFile (unFile configurationFile) jsonBS
   [newNodePortNumber] <- requestAvailablePortNumbers 1
   eRuntime <- runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
         [ "run"
-        , "--config", configurationFile
+        , "--config", unFile configurationFile
         , "--topology", topologyFile
         , "--database-path", testSpoDir </> "db"
         , "--shelley-kes-key", testSpoKesSKey
@@ -306,7 +305,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   let nodeHasMintedEpoch = currEpoch & succ & succ & succ
   currentEpoch <- waitUntilEpoch
-                   (Api.File configurationFile)
+                   configurationFile
                    (Api.File $ sprocketSystemName node1sprocket)
                    nodeHasMintedEpoch
 

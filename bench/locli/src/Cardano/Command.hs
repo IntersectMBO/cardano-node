@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -fmax-pmcheck-models=25000 #-}
 module Cardano.Command (module Cardano.Command) where
 
-import Cardano.Prelude          hiding (State)
+import Cardano.Prelude          hiding (State, toText)
 
 import Data.Aeson                       qualified as Aeson
 import Data.Aeson.Text                  qualified as Aeson
