@@ -12,6 +12,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -62,6 +63,7 @@ import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
+import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (unpack)
 
 import           Streaming
@@ -379,8 +381,16 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         Take count g -> Streaming.take count <$> evalGenerator g txParams era
 
         RoundRobin l -> do
-          _gList <- forM l $ \g -> evalGenerator g txParams era
-          error "return $ foldr1 Streaming.interleaves gList"
+          l' <- forM l $ uncurry3 evalGenerator . (, txParams, era)
+          pure . Streaming.effect . rrHelper $ Seq.fromList l' where
+            rrHelper q = case Seq.viewl q of
+              EmptyL -> pure mempty
+              h :< t -> do
+                consMaybe <- Streaming.uncons h
+                case consMaybe of
+                  Nothing -> rrHelper t
+                  Just (x, h') -> (Streaming.yield x >>) <$>
+                                           rrHelper (t |> h')
 
         OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
 
