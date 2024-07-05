@@ -1196,14 +1196,15 @@ instance MetaTrace (ChainDB.TraceValidationEvent blk) where
 
 instance ConvertRawHash blk
           => LogFormatting (ChainDB.TraceChainSelStarvationEvent blk) where
-  forHuman ChainDB.ChainSelStarvationStarted =
-      "Chain selection starvation started"
+  forHuman (ChainDB.ChainSelStarvationStarted time) =
+      "Chain selection starvation started at " <> showT time
   forHuman (ChainDB.ChainSelStarvationEnded time pt) =
       "Chain selection starvation ended at " <> showT time <>
       " because of " <> renderRealPointAsPhrase pt
 
-  forMachine _dtal ChainDB.ChainSelStarvationStarted =
-    mconcat [ "kind" .= String "ChainSelStarvationStarted" ]
+  forMachine _dtal (ChainDB.ChainSelStarvationStarted time) =
+    mconcat [ "kind" .= String "ChainSelStarvationStarted"
+            , "time" .= String (showT time) ]
   forMachine dtal (ChainDB.ChainSelStarvationEnded time pt) =
     mconcat [ "kind" .= String "ChainSelStarvationEnded"
              , "time" .= String (showT time)
