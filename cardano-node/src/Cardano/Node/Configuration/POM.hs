@@ -162,6 +162,9 @@ data NodeConfiguration
 
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
+
+       -- Enable Genesis syncing protocol
+       , ncEnableGenesis :: Bool
        } deriving (Eq, Show)
 
 
@@ -225,6 +228,9 @@ data PartialNodeConfiguration
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
+
+         -- Genesis syncing protocol
+       , pncEnableGenesis :: !(Last Bool)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -321,6 +327,10 @@ instance FromJSON PartialNodeConfiguration where
       -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just PeerSharingDisabled
 
+      -- Genesis syncing protocol
+      -- DISABLED BY DEFAULT
+      pncEnableGenesis <- Last <$> v .:? "EnableGenesis" .!= Just False
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -355,6 +365,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfActiveBigLedgerPeers
            , pncEnableP2P
            , pncPeerSharing
+           , pncEnableGenesis
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -531,6 +542,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
     , pncEnableP2P                      = Last (Just EnabledP2PMode)
     , pncPeerSharing                    = Last (Just PeerSharingDisabled)
+    , pncEnableGenesis                  = Last (Just False)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -596,6 +608,10 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing PeerSharing"
     $ pncPeerSharing pnc
 
+  ncEnableGenesis <-
+    lastToEither "Missing EnableGenesis"
+    $ pncEnableGenesis pnc
+
   -- TODO: This is not mandatory
   experimentalProtocols <-
     lastToEither "Missing ExperimentalProtocolsEnabled" $
@@ -643,6 +659,7 @@ makeNodeConfiguration pnc = do
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
+             , ncEnableGenesis
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
