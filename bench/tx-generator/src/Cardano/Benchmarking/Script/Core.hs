@@ -56,9 +56,13 @@ import           Cardano.TxGenerator.UTxO
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import qualified Control.Monad.Random as Random (getRandom)
 import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
+import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
+import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (unpack)
@@ -368,7 +372,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         Take count g -> Streaming.take count <$> evalGenerator g txParams era
 
         RoundRobin l -> do
-          l' <- forM l $ uncurry3 evalGenerator . (, txParams, era)
+          l' <- forM l evalGenerator'
           pure . Streaming.effect . rrHelper $ Seq.fromList l' where
             rrHelper q = case Seq.viewl q of
               EmptyL -> pure mempty
@@ -379,12 +383,38 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
                   Just (x, h') -> (Streaming.yield x >>) <$>
                                            rrHelper (t |> h')
 
-        OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+        OneOf []         -> pure mempty
+        OneOf [(g, _)]   -> evalGenerator g txParams era
+        OneOf ss@(_:_:_) -> do
+          ss' <- forM ss $ evalGenerator' `bimapM` (pure . (/ sum ps))
+          randHelper . buildTree $ buildList ss'
+          where
+            randHelper t = do
+              r <- liftIO Random.getRandom
+              case IM.toList $ t `IM.containing` r of
+                [] | IM.null t -> pure mempty
+                   | otherwise -> liftTxGenError $
+                                    TxGenError "unexpected empty IntervalMap"
+                (i, g) : _ -> do
+                  gMaybe <- liftIO $ Streaming.uncons g
+                  case gMaybe of
+                    Nothing -> randHelper $ IM.delete i t
+                    Just (x, g') ->
+                      (Streaming.yield x >>) <$>
+                        randHelper (IM.adjust (const g') i t)
+            (_gs, ps) = unzip ss
+            buildTree = foldr (uncurry $ flip IM.insert) mempty
+            buildList [] = []
+            buildList ((o, x) : xs) = scanl scanStep (o, ClosedInterval 0 x) xs
+            scanStep (_o, i) (o', x) = (o', IntervalOC a b)
+              where
+                a = IM.upperBound i
+                b = a + x
 
         EmptyStream -> return mempty
-
   where
     feeInEra = Utils.mkTxFee fee
+    evalGenerator' = uncurry3 evalGenerator . (, txParams, era)
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe String
