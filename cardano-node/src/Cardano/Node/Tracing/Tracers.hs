@@ -28,6 +28,7 @@ import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
+import           Cardano.Node.Tracing.Tracers.ConsensusSanityCheckWarning (ConsensusSanityCheckWarning(..))
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
@@ -314,6 +315,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Net"]
     configureTracers configReflection trConfig [keepAliveClientTr]
 
+    !consensusSanityCheckTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "SanityCheck"]
+
     !consensusStartupErrorTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "Startup"]
@@ -357,6 +362,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $
           traceWith keepAliveClientTr
+      , Consensus.consensusSanityCheckTracer = Tracer $
+          traceWith consensusSanityCheckTr . ConsensusSanityCheckWarning
       , Consensus.consensusErrorTracer = Tracer $
           traceWith consensusStartupErrorTr . ConsensusStartupException
       , Consensus.gsmTracer = Tracer $

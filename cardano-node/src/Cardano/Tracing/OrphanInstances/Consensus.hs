@@ -20,6 +20,8 @@ module Cardano.Tracing.OrphanInstances.Consensus () where
 
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
+import           Cardano.Node.Tracing.Tracers.ConsensusSanityCheckWarning
+                   (ConsensusSanityCheckWarning (..))
 import           Cardano.Prelude (maximumDef)
 import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Tracing.OrphanInstances.Common
@@ -31,7 +33,7 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
                    blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
-                   realPointSlot)
+                   realPointSlot, SanityCheckIssue(..))
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -110,6 +112,24 @@ instance ConvertRawHash blk => ConvertRawHash (Header blk) where
   fromShortRawHash _ = fromShortRawHash (Proxy @blk)
   hashSize :: proxy (Header blk) -> Word32
   hashSize _ = hashSize (Proxy @blk)
+
+
+instance ToObject ConsensusSanityCheckWarning where
+  toObject _ (ConsensusSanityCheckWarning s) =
+    case s of
+      InconsistentSecurityParam ps ->
+        mconcat [ "kind" .= String "InconsistentSecurityParam"
+                , "securityParams" .= fmap maxRollbacks ps
+                ]
+
+instance HasPrivacyAnnotation ConsensusSanityCheckWarning where
+instance HasSeverityAnnotation ConsensusSanityCheckWarning where
+  getSeverityAnnotation _ = Warning
+
+instance Transformable Text IO ConsensusSanityCheckWarning where
+  trTransformer = trStructured
+
+instance HasTextFormatter ConsensusSanityCheckWarning where
 
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@

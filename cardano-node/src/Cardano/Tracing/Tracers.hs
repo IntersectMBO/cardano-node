@@ -51,6 +51,7 @@ import           Cardano.Node.Startup
 import qualified Cardano.Node.STM as STM
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
+import           Cardano.Node.Tracing.Tracers.ConsensusSanityCheckWarning
 import           Cardano.Node.Tracing.Tracers.NodeVersion
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
@@ -507,6 +508,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.mempoolTracer = nullTracer
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
+      , Consensus.consensusSanityCheckTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
       , Consensus.gsmTracer = nullTracer
       }
@@ -805,6 +807,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.blockchainTimeTracer = tracerOnOff' (traceBlockchainTime trSel) $
         Tracer $ \ev ->
           traceWith (toLogObject tr) (readableTraceBlockchainTimeEvent ev)
+    , Consensus.consensusSanityCheckTracer =
+        Tracer $ \w -> traceWith (toLogObject tr) (ConsensusSanityCheckWarning w)
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
