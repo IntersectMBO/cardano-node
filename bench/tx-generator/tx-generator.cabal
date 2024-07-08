@@ -130,7 +130,9 @@ library
                       , formatting
                       , generic-monoid
                       , ghc-prim
+                      , IntervalMap
                       , io-classes
+                      , MonadRandom
                       , mtl
                       , network
                       , network-mux
