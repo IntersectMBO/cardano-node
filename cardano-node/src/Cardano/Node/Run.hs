@@ -481,7 +481,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
-              , rnGenesisConfig = adhocGenesisConfig
+              , rnGenesisConfig = if ncEnableGenesis nc
+                  then Genesis.enableGenesisConfigDefault
+                  else Genesis.disableGenesisConfig
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -565,7 +567,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
-                , rnGenesisConfig = adhocGenesisConfig
+                , rnGenesisConfig = if ncEnableGenesis nc
+                    then Genesis.enableGenesisConfigDefault
+                    else Genesis.disableGenesisConfig
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
@@ -942,34 +946,3 @@ producerAddresses RealNodeTopology { ntLocalRootPeersGroups
         (groups ntLocalRootPeersGroups)
   , foldMap (Map.fromList . rootConfigToRelayAccessPoint . publicRoots) ntPublicRootPeers
   )
-
-{-------------------------------------------------------------------------------
-  Temporary ad-hoc Genesis configuration
--------------------------------------------------------------------------------}
-
-adhocGenesisConfig :: Genesis.GenesisConfig
-adhocGenesisConfig = unsafePerformIO $ do
-  enableGenesis   <- isJust <$> lookupEnv "ENABLE_GENESIS"
-  enableLoP       <- (enableGenesis ||) . isJust <$> lookupEnv "ENABLE_LoP"
-  enableCSJ       <- (enableGenesis ||) . isJust <$> lookupEnv "ENABLE_CSJ"
-  enableLoEAndGDD <- (enableGenesis ||) . isJust <$> lookupEnv "ENABLE_LoEGDD"
-  let defaultCSJJumpSize = 3 * 2160 * 20 -- mainnet forecast window
-  csjJumpSize <- maybe defaultCSJJumpSize (Api.SlotNo . read) <$> lookupEnv "CSJ_JUMP_SIZE"
-  pure Genesis.GenesisConfig {
-      Genesis.gcChainSyncLoPBucketConfig =
-        if enableLoP then
-          ChainSync.Client.ChainSyncLoPBucketEnabled ChainSync.Client.ChainSyncLoPBucketEnabledConfig {
-            ChainSync.Client.csbcCapacity = 100_000 -- number of tokens
-          , ChainSync.Client.csbcRate     = 500 -- tokens per second leaking (1/2ms)
-          }
-        else ChainSync.Client.ChainSyncLoPBucketDisabled
-    , Genesis.gcCSJConfig =
-        if enableCSJ then
-          ChainSync.Client.CSJEnabled ChainSync.Client.CSJEnabledConfig {
-            ChainSync.Client.csjcJumpSize = csjJumpSize
-          }
-        else ChainSync.Client.CSJDisabled
-    , Genesis.gcLoEAndGDDConfig =
-        if enableLoEAndGDD then Genesis.LoEAndGDDEnabled () else Genesis.LoEAndGDDDisabled
-    }
-{-# NOINLINE adhocGenesisConfig #-}
