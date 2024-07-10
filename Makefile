@@ -94,6 +94,10 @@ PROFILES_FORGE_STRESS_RTS := forge-stress-pre-rtsA4m forge-stress-pre-rtsA64m fo
 PROFILES_CHAINSYNC        := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC        += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
 PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
+
+# These profiles are under active development and subject to change. Do not rely on their content in production.
+PROFILES_DEVELOPMENT      := development-voting # NOTE: Conway only - make development-voting ERA=coay
+
 # The dedicated P&T Nomad cluster on AWS
 # Cloud version of "default", "ci-test" and "ci-bench" plus value (52+explorer)
 # Not all local profiles are compatible or tested (yet) with a cloud runs
@@ -124,6 +128,7 @@ LOCAL_PROFILES += $(PROFILES_FORGE_STRESS_PRE)
 LOCAL_PROFILES += $(PROFILES_FORGE_STRESS_RTS)
 LOCAL_PROFILES += $(PROFILES_CHAINSYNC)
 LOCAL_PROFILES += $(PROFILES_VENDOR)
+LOCAL_PROFILES += $(PROFILES_DEVELOPMENT)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERF_DREP)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERF_NOP2P)
