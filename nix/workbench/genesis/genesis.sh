@@ -693,8 +693,14 @@ genesis-create-testnet-data() {
     info genesis "removing delegator keys."
     rm "$dir/stake-delegators" -rf
 
-    info genesis "removing dreps keys."
-    rm "$dir"/drep-keys -rf
+    local is_voting
+    is_voting=$(jq --raw-output '.generator.drep_voting' "$profile_json")
+    if [[ "$is_voting" == "true" ]];
+    then info genesis "voting workload specified - skipping deletion of DRep keys"
+    else
+      info genesis "removing dreps keys."
+      rm "$dir"/drep-keys -rf
+    fi
 
     info genesis "moving keys"
     Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
