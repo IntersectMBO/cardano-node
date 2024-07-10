@@ -99,6 +99,8 @@ in pkgs.commonLib.defServiceModule
           redeemer            = mayOpt attrs "Plutus script redeemer.";
         };
 
+        drep_voting           = mayOpt bool "Activate DRep voting workload (mutually excl. with plutus)";
+
         # Overrides the usage of Nix Store paths by default.
         plutusRedeemerFile = mayOpt str "Plutus redeemer file path.";
         plutusDatumFile    = mayOpt str "Plutus datum file path.";
