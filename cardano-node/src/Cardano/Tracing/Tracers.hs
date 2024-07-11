@@ -813,8 +813,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
-    , Consensus.gddTracer = nullTracer -- TODO
     , Consensus.csjTracer = tracerOnOff (traceChainSyncJumping trSel) verb "ChainSync Jumping" tr
+    , Consensus.gddTracer = tracerOnOff (traceGdd trSel) verb "GDD" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers

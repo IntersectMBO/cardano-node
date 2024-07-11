@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -29,9 +30,10 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipHash, renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
-                   ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
-                   blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
-                   realPointSlot)
+                   ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader,
+                   Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, headerPoint,
+                   pointHash, realPointHash, realPointSlot)
+import           Ouroboros.Consensus.Genesis.Governor
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -1684,6 +1686,70 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
     mconcat
       [ "kind" .= String "GsmEventSyncingToPreSyncing"
       ]
+
+instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
+instance HasSeverityAnnotation (TraceGDDEvent peer blk) where
+  getSeverityAnnotation _ = Debug
+instance (Show peer, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
+  trTransformer = trStructured
+
+instance (Show peer, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
+  toObject verb TraceGDDEvent {..} = mconcat
+    [ "kind" .= String "TraceGDDEvent"
+    , "bounds" .= toJSON (
+        map
+        ( \(peer, density) -> Object $ mconcat
+          [ "kind" .= String "PeerDensityBound"
+          , "peer" .= (String $ showT peer)
+          , "densityBounds" .= toObject verb density
+          ]
+        )
+        bounds
+      )
+    , "curChain" .= toObject verb curChain
+    , "candidates" .= toJSON (
+        map
+        ( \(peer, frag) -> Object $ mconcat
+          [ "kind" .= String "PeerCandidateFragment"
+          , "peer" .= (String $ showT peer)
+          , "candidateFragment" .= toObject verb frag
+          ]
+        )
+        candidates
+      )
+    , "candidateSuffixes" .= toJSON (
+        map
+        ( \(peer, frag) -> Object $ mconcat
+          [ "kind" .= String "PeerCandidateSuffix"
+          , "peer" .= (String $ showT peer)
+          , "candidateSuffix" .= toObject verb frag
+          ]
+        )
+        candidateSuffixes
+      )
+    , "losingPeers".= (toJSON $ map (String . showT) losingPeers)
+    , "loeHead" .= (String $ showT loeHead)
+    , "sgen" .= (String $ showT $ unGenesisWindow sgen)
+    ]
+
+instance (GetHeader blk) => ToObject (DensityBounds blk) where
+  toObject verb DensityBounds {..} = mconcat
+    [ "kind" .= String "DensityBounds"
+    , "clippedFragment" .= toObject verb clippedFragment
+    , "offersMoreThanK" .= toJSON offersMoreThanK
+    , "lowerBound" .= toJSON lowerBound
+    , "upperBound" .= toJSON upperBound
+    , "hasBlockAfter" .= toJSON hasBlockAfter
+    , "latestSlot" .= String (showT latestSlot)
+    , "idling" .= toJSON idling
+    ]
+
+instance (GetHeader blk) => ToObject (AF.AnchoredFragment (Header blk)) where
+  toObject _ frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchorPoint" .= (String $ showT $ AF.anchorPoint frag)
+    , "headPoint" .= (String $ showT $ AF.headPoint frag)
+    ]
 
 instance ConvertRawHash blk => ToObject (Tip blk) where
   toObject _verb TipGenesis =
