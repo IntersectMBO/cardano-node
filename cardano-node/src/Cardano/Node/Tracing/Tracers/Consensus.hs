@@ -49,6 +49,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Genesis.Governor
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
@@ -69,7 +70,7 @@ import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Control.Monad.Class.MonadTime.SI (Time (..))
-import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (Number, Object, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))
 import           Data.Int (Int64)
@@ -2044,6 +2045,87 @@ instance MetaTrace (CSJumping.TraceEvent peer) where
   allNamespaces =
     [ Namespace [] ["RotatedDynamo"]
     ]
+
+--------------------------------------------------------------------------------
+-- GDD Tracer
+--------------------------------------------------------------------------------
+
+instance (Show peer, GetHeader blk) => LogFormatting (TraceGDDEvent peer blk) where
+  forMachine dtal TraceGDDEvent {..} = mconcat
+    [ "kind" .= String "TraceGDDEvent"
+    , "bounds" .= toJSON (
+        map
+        ( \(peer, density) -> Object $ mconcat
+          [ "kind" .= String "PeerDensityBound"
+          , "peer" .= (String $ showT peer)
+          , "densityBounds" .= forMachine dtal density
+          ]
+        )
+        bounds
+      )
+    , "curChain" .= forMachine dtal curChain
+    , "candidates" .= toJSON (
+        map
+        ( \(peer, frag) -> Object $ mconcat
+          [ "kind" .= String "PeerCandidateFragment"
+          , "peer" .= (String $ showT peer)
+          , "candidateFragment" .= forMachine dtal frag
+          ]
+        )
+        candidates
+      )
+    , "candidateSuffixes" .= toJSON (
+        map
+        ( \(peer, frag) -> Object $ mconcat
+          [ "kind" .= String "PeerCandidateSuffix"
+          , "peer" .= (String $ showT peer)
+          , "candidateSuffix" .= forMachine dtal frag
+          ]
+        )
+        candidateSuffixes
+      )
+    , "losingPeers".= (toJSON $ map (String . showT) losingPeers)
+    , "loeHead" .= (String $ showT loeHead)
+    , "sgen" .= (String $ showT $ unGenesisWindow sgen)
+    ]
+
+  forHuman = forHumanOrMachine
+
+instance MetaTrace (TraceGDDEvent peer blk) where
+  namespaceFor _ = Namespace [] ["TraceGDDEvent"]
+
+  severityFor _ _ = Just Debug
+
+  documentFor _ = Just "The Genesis Density Disconnection governor has updated its state"
+
+  allNamespaces = [Namespace [] ["TraceGDDEvent"]]
+
+instance (GetHeader blk) => LogFormatting (DensityBounds blk) where
+  forMachine dtal DensityBounds {..} = mconcat
+    [ "kind" .= String "DensityBounds"
+    , "clippedFragment" .= forMachine dtal clippedFragment
+    , "offersMoreThanK" .= toJSON offersMoreThanK
+    , "lowerBound" .= toJSON lowerBound
+    , "upperBound" .= toJSON upperBound
+    , "hasBlockAfter" .= toJSON hasBlockAfter
+    , "latestSlot" .= String (showT latestSlot)
+    , "idling" .= toJSON idling
+    ]
+
+  forHuman = forHumanOrMachine
+
+instance (GetHeader blk) => LogFormatting (AF.AnchoredFragment (Header blk)) where
+  forMachine _ frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchorPoint" .= (String $ showT $ AF.anchorPoint frag)
+    , "headPoint" .= (String $ showT $ AF.headPoint frag)
+    ]
+
+  forHuman = forHumanOrMachine
+
+--------------------------------------------------------------------------------
+-- Chain tip tracer
+--------------------------------------------------------------------------------
 
 instance ( StandardHash blk
          , ConvertRawHash blk
