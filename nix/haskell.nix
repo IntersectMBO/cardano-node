@@ -50,6 +50,7 @@ let
           cabal
           actionlint
           shellcheck
+          stylish-haskell
         ];
 
         withHoogle = true;
