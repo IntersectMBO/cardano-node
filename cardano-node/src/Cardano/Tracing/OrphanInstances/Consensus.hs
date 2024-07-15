@@ -44,7 +44,7 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
-import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as ChainSync.Client
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as ChainSync.Client.Jumping
 import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State as ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (BlockingType (..),
                    TraceChainSyncServerEvent (..))
@@ -742,6 +742,14 @@ instance ( ConvertRawHash blk
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
 
+instance HasPrivacyAnnotation (ChainSync.Client.Jumping.TraceEvent peer) where
+instance HasSeverityAnnotation (ChainSync.Client.Jumping.TraceEvent peer) where
+  getSeverityAnnotation _ = Debug
+instance ToObject peer
+      => Transformable Text IO (ChainSync.Client.Jumping.TraceEvent peer) where
+  trTransformer = trStructuredText
+instance HasTextFormatter (ChainSync.Client.Jumping.TraceEvent peer) where
+
 --
 -- | instances of @ToObject@
 --
@@ -1387,10 +1395,10 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     TraceJumpResult res ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpResult"
                , "res" .= case res of
-                   ChainSync.Client.AcceptedJump info -> Aeson.object
+                   ChainSync.Client.Jumping.AcceptedJump info -> Aeson.object
                      [ "kind" .= String "AcceptedJump"
                       , "payload" .= toObject verb info ]
-                   ChainSync.Client.RejectedJump info -> Aeson.object
+                   ChainSync.Client.Jumping.RejectedJump info -> Aeson.object
                      [ "kind" .= String "RejectedJump"
                       , "payload" .= toObject verb info ]
                ]
@@ -1404,25 +1412,25 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
 
 instance ( LedgerSupportsProtocol blk,
            ConvertRawHash blk
-         ) => ToObject (ChainSync.Client.Instruction blk) where
+         ) => ToObject (ChainSync.Client.Jumping.Instruction blk) where
   toObject verb = \case
-    ChainSync.Client.RunNormally ->
+    ChainSync.Client.Jumping.RunNormally ->
       mconcat ["kind" .= String "RunNormally"]
-    ChainSync.Client.Restart ->
+    ChainSync.Client.Jumping.Restart ->
       mconcat ["kind" .= String "Restart"]
-    ChainSync.Client.JumpInstruction info ->
+    ChainSync.Client.Jumping.JumpInstruction info ->
       mconcat [ "kind" .= String "JumpInstruction"
               , "payload" .= toObject verb info
               ]
 
 instance ( LedgerSupportsProtocol blk,
            ConvertRawHash blk
-         ) => ToObject (ChainSync.Client.JumpInstruction blk) where
+         ) => ToObject (ChainSync.Client.Jumping.JumpInstruction blk) where
   toObject verb = \case
-    ChainSync.Client.JumpTo info ->
+    ChainSync.Client.Jumping.JumpTo info ->
       mconcat [ "kind" .= String "JumpTo"
                 , "info" .= toObject verb info ]
-    ChainSync.Client.JumpToGoodPoint info ->
+    ChainSync.Client.Jumping.JumpToGoodPoint info ->
       mconcat [ "kind" .= String "JumpToGoodPoint"
                 , "info" .= toObject verb info ]
 
@@ -1686,3 +1694,11 @@ instance ConvertRawHash blk => ToObject (Tip blk) where
             , "tipHash" .= renderHeaderHash (Proxy @blk) hash
             , "tipBlockNo" .= toJSON bNo
             ]
+
+instance ToObject peer => ToObject (ChainSync.Client.Jumping.TraceEvent peer) where
+  toObject verb (ChainSync.Client.Jumping.RotatedDynamo oldPeer newPeer) =
+    mconcat
+      [ "kind" .= String "RotatedDynamo"
+      , "oldPeer" .= toObject verb oldPeer
+      , "newPeer" .= toObject verb newPeer
+      ]

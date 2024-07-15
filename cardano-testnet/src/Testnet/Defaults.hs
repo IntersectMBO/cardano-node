@@ -277,6 +277,7 @@ defaultYamlHardforkViaConfig era =
     , (proxyName (Proxy @TraceBlockFetchProtocolSerialised), Aeson.Bool False)
     , (proxyName (Proxy @TraceBlockFetchServer), Aeson.Bool False)
     , (proxyName (Proxy @TraceBlockchainTime), Aeson.Bool True)
+    , (proxyName (Proxy @TraceChainSyncJumping), Aeson.Bool False)
     , (proxyName (Proxy @TraceChainDB), Aeson.Bool True)
     , (proxyName (Proxy @TraceChainSyncClient), Aeson.Bool False)
     , (proxyName (Proxy @TraceChainSyncBlockServer), Aeson.Bool False)

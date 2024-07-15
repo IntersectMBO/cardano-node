@@ -44,7 +44,7 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as CSJumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -197,35 +197,35 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         [ "ChainSync Jumping -- we are offering a jump to the server, to point: "
         , showT point
         ]
-    TraceJumpResult (AcceptedJump instruction) ->
+    TraceJumpResult (CSJumping.AcceptedJump instruction) ->
       mconcat
         [ "ChainSync Jumping -- the client accepted the jump to "
         , showT (jumpInstructionToPoint instruction)
         ]
-    TraceJumpResult (RejectedJump instruction) ->
+    TraceJumpResult (CSJumping.RejectedJump instruction) ->
       mconcat
         [ "ChainSync Jumping -- the client rejected the jump to "
         , showT (jumpInstructionToPoint instruction)
         ]
     TraceJumpingWaitingForNextInstruction ->
       "ChainSync Jumping -- the client is blocked, waiting for its next instruction."
-    TraceJumpingInstructionIs RunNormally ->
+    TraceJumpingInstructionIs CSJumping.RunNormally ->
       "ChainSyncJumping -- the client is asked to run normally"
-    TraceJumpingInstructionIs Restart ->
+    TraceJumpingInstructionIs CSJumping.Restart ->
       mconcat
         [ "ChainSyncJumping -- the client is asked to restart. This is necessary"
         , "when disengaging a peer of which we know no point that we could set"
         , "the intersection of the ChainSync server to."
         ]
-    TraceJumpingInstructionIs (JumpInstruction instruction) ->
+    TraceJumpingInstructionIs (CSJumping.JumpInstruction instruction) ->
       mconcat
         [ "ChainSync Jumping -- the client is asked to jump to "
         , showT (jumpInstructionToPoint instruction)
         ]
     where
       jumpInstructionToPoint = AF.headPoint . jTheirFragment . \case
-              JumpTo ji          -> ji
-              JumpToGoodPoint ji -> ji
+              CSJumping.JumpTo ji          -> ji
+              CSJumping.JumpToGoodPoint ji -> ji
 
   forMachine dtal = \case
     TraceDownloadedHeader h ->
@@ -283,8 +283,8 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       mconcat
         [ "kind" .= String "TraceJumpResult"
         , "result" .= case jumpResult of
-            AcceptedJump _ -> String "AcceptedJump"
-            RejectedJump _ -> String "RejectedJump"
+            CSJumping.AcceptedJump _ -> String "AcceptedJump"
+            CSJumping.RejectedJump _ -> String "RejectedJump"
         ]
     TraceJumpingWaitingForNextInstruction ->
       mconcat [ "kind" .= String "TraceJumpingWaitingForNextInstruction" ]
@@ -294,22 +294,22 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         , "instr" .= instructionToObject instruction
         ]
     where
-      instructionToObject :: Instruction blk -> Aeson.Object
+      instructionToObject :: CSJumping.Instruction blk -> Aeson.Object
       instructionToObject = \case
-        RunNormally ->
+        CSJumping.RunNormally ->
           mconcat ["kind" .= String "RunNormally"]
-        Restart ->
+        CSJumping.Restart ->
           mconcat ["kind" .= String "Restart"]
-        JumpInstruction info ->
+        CSJumping.JumpInstruction info ->
           mconcat [ "kind" .= String "JumpInstruction"
                   , "payload" .= jumpInstructionToObject info
                   ]
-      jumpInstructionToObject :: JumpInstruction blk -> Aeson.Object
+      jumpInstructionToObject :: CSJumping.JumpInstruction blk -> Aeson.Object
       jumpInstructionToObject = \case
-        JumpTo info ->
+        CSJumping.JumpTo info ->
           mconcat [ "kind" .= String "JumpTo"
                   , "point" .= showT (jumpInfoToPoint info) ]
-        JumpToGoodPoint info ->
+        CSJumping.JumpToGoodPoint info ->
           mconcat [ "kind" .= String "JumpToGoodPoint"
                   , "point" .= showT (jumpInfoToPoint info) ]
       jumpInfoToPoint = AF.headPoint . jTheirFragment
@@ -1996,6 +1996,39 @@ instance MetaTrace (TraceGsmEvent selection) where
     , Namespace [] ["LeaveCaughtUp"]
     , Namespace [] ["GsmEventPreSyncingToSyncing"]
     , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    ]
+
+instance ( LogFormatting peer, Show peer
+         ) => LogFormatting (CSJumping.TraceEvent peer) where
+  forMachine dtal =
+    \case
+      CSJumping.RotatedDynamo oldPeer newPeer ->
+        mconcat
+          [ "kind" .= String "RotatedDynamo"
+          , "oldPeer" .= forMachine dtal oldPeer
+          , "newPeer" .= forMachine dtal newPeer
+          ]
+  forHuman = showT
+
+
+instance MetaTrace (CSJumping.TraceEvent peer) where
+  namespaceFor =
+    \case
+      CSJumping.RotatedDynamo {}        -> Namespace [] ["RotatedDynamo"]
+
+  severityFor ns _ =
+    case ns of
+      Namespace _ ["RotatedDynamo"]               -> Just Info
+      Namespace _ _                               -> Nothing
+
+  documentFor = \case
+    Namespace _ ["RotatedDynamo"] ->
+      Just "The ChainSync Jumping module has been asked to rotate its dynamo"
+    Namespace _ _ ->
+      Nothing
+
+  allNamespaces =
+    [ Namespace [] ["RotatedDynamo"]
     ]
 
 instance ( StandardHash blk
