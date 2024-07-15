@@ -2649,3 +2649,8 @@ instance ToObject peer => ToObject (TraceDecisionEvent peer header) where
       [ "kind" .= String "PeersFetch"
       , "decisions" .= toObject verb decisions
       ]
+  toObject verb (PeerStarvedUs peer) =
+    mconcat
+      [ "kind" .= String "PeerStarvedUs"
+      , "peer" .= toObject verb peer
+      ]
