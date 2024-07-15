@@ -26,6 +26,7 @@ module Cardano.Tracing.Config
   , TraceBlockFetchServer
   , TraceChainDB
   , TraceChainSyncClient
+  , TraceChainSyncJumping
   , TraceChainSyncBlockServer
   , TraceChainSyncHeaderServer
   , TraceChainSyncProtocol
@@ -122,6 +123,7 @@ instance Semigroup PartialTraceOptions where
 
 type TraceAcceptPolicy = ("TraceAcceptPolicy" :: Symbol)
 type TraceBlockchainTime = ("TraceBlockchainTime" :: Symbol)
+type TraceChainSyncJumping = ("TraceChainSyncJumping" :: Symbol)
 type TraceBlockFetchClient = ("TraceBlockFetchClient" :: Symbol)
 type TraceBlockFetchDecisions = ("TraceBlockFetchDecisions" :: Symbol)
 type TraceBlockFetchProtocol = ("TraceBlockFetchProtocol" :: Symbol)
@@ -196,6 +198,7 @@ data TraceSelection
   , traceBlockFetchProtocolSerialised :: OnOff TraceBlockFetchProtocolSerialised
   , traceBlockFetchServer :: OnOff TraceBlockFetchServer
   , traceBlockchainTime :: OnOff TraceBlockchainTime
+  , traceChainSyncJumping :: OnOff TraceChainSyncJumping
   , traceChainDB :: OnOff TraceChainDB
   , traceChainSyncBlockServer :: OnOff TraceChainSyncBlockServer
   , traceChainSyncClient :: OnOff TraceChainSyncClient
@@ -254,6 +257,7 @@ data PartialTraceSelection
       -- Per-trace toggles, alpha-sorted.
       , pTraceAcceptPolicy :: Last (OnOff TraceAcceptPolicy)
       , pTraceBlockchainTime :: Last (OnOff TraceBlockchainTime)
+      , pTraceChainSyncJumping :: Last (OnOff TraceChainSyncJumping)
       , pTraceBlockFetchClient :: Last (OnOff TraceBlockFetchClient)
       , pTraceBlockFetchDecisions :: Last (OnOff TraceBlockFetchDecisions)
       , pTraceBlockFetchProtocol :: Last (OnOff TraceBlockFetchProtocol)
@@ -318,6 +322,7 @@ instance FromJSON PartialTraceSelection where
       <$> Last <$> v .:? "TracingVerbosity"
       <*> parseTracer (Proxy @TraceAcceptPolicy) v
       <*> parseTracer (Proxy @TraceBlockchainTime) v
+      <*> parseTracer (Proxy @TraceChainSyncJumping) v
       <*> parseTracer (Proxy @TraceBlockFetchClient) v
       <*> parseTracer (Proxy @TraceBlockFetchDecisions) v
       <*> parseTracer (Proxy @TraceBlockFetchProtocol) v
@@ -379,6 +384,7 @@ defaultPartialTraceConfiguration =
     -- Per-trace toggles, alpha-sorted.
     , pTraceAcceptPolicy = pure $ OnOff False
     , pTraceBlockchainTime = pure $ OnOff False
+    , pTraceChainSyncJumping = pure $ OnOff False
     , pTraceBlockFetchClient = pure $ OnOff False
     , pTraceBlockFetchDecisions = pure $ OnOff True
     , pTraceBlockFetchProtocol = pure $ OnOff False
@@ -442,6 +448,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceVerbosity <- first Text.pack $ lastToEither "Default value not specified for TracingVerbosity" pTraceVerbosity
    traceAcceptPolicy <- proxyLastToEither (Proxy @TraceAcceptPolicy) pTraceAcceptPolicy
    traceBlockchainTime <- proxyLastToEither (Proxy @TraceBlockchainTime) pTraceBlockchainTime
+   traceChainSyncJumping <- proxyLastToEither (Proxy @TraceChainSyncJumping) pTraceChainSyncJumping
    traceBlockFetchClient <- proxyLastToEither (Proxy @TraceBlockFetchClient) pTraceBlockFetchClient
    traceBlockFetchDecisions <- proxyLastToEither (Proxy @TraceBlockFetchDecisions) pTraceBlockFetchDecisions
    traceBlockFetchProtocol <- proxyLastToEither (Proxy @TraceBlockFetchProtocol) pTraceBlockFetchProtocol
@@ -503,6 +510,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceBlockFetchProtocolSerialised = traceBlockFetchProtocolSerialised
              , traceBlockFetchServer = traceBlockFetchServer
              , traceBlockchainTime = traceBlockchainTime
+             , traceChainSyncJumping = traceChainSyncJumping
              , traceChainDB = traceChainDB
              , traceChainSyncBlockServer = traceChainSyncBlockServer
              , traceChainSyncClient = traceChainSyncClient
@@ -558,6 +566,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceVerbosity <- first Text.pack $ lastToEither "Default value not specified for TracingVerbosity" pTraceVerbosity
   traceAcceptPolicy <- proxyLastToEither (Proxy @TraceAcceptPolicy) pTraceAcceptPolicy
   traceBlockchainTime <- proxyLastToEither (Proxy @TraceBlockchainTime) pTraceBlockchainTime
+  traceChainSyncJumping <- proxyLastToEither (Proxy @TraceChainSyncJumping) pTraceChainSyncJumping
   traceBlockFetchClient <- proxyLastToEither (Proxy @TraceBlockFetchClient) pTraceBlockFetchClient
   traceBlockFetchDecisions <- proxyLastToEither (Proxy @TraceBlockFetchDecisions) pTraceBlockFetchDecisions
   traceBlockFetchProtocol <- proxyLastToEither (Proxy @TraceBlockFetchProtocol) pTraceBlockFetchProtocol
@@ -619,6 +628,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceBlockFetchProtocolSerialised = traceBlockFetchProtocolSerialised
             , traceBlockFetchServer = traceBlockFetchServer
             , traceBlockchainTime = traceBlockchainTime
+            , traceChainSyncJumping = traceChainSyncJumping
             , traceChainDB = traceChainDB
             , traceChainSyncBlockServer = traceChainSyncBlockServer
             , traceChainSyncClient = traceChainSyncClient

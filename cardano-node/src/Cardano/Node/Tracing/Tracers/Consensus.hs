@@ -45,7 +45,7 @@ import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
-                   JumpInstruction (..), JumpResult (..))
+                   JumpInstruction (..), JumpResult (..), TraceEvent(..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -2008,6 +2008,39 @@ instance MetaTrace (TraceGsmEvent selection) where
     , Namespace [] ["LeaveCaughtUp"]
     , Namespace [] ["GsmEventPreSyncingToSyncing"]
     , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    ]
+
+instance ( LogFormatting peer, Show peer
+         ) => LogFormatting (TraceEvent peer) where
+  forMachine dtal =
+    \case
+      RotatedDynamo oldPeer newPeer ->
+        mconcat
+          [ "kind" .= String "RotatedDynamo"
+          , "oldPeer" .= forMachine dtal oldPeer
+          , "newPeer" .= forMachine dtal newPeer
+          ]
+  forHuman = showT
+
+
+instance MetaTrace (TraceEvent peer) where
+  namespaceFor =
+    \case
+      RotatedDynamo {}        -> Namespace [] ["RotatedDynamo"]
+
+  severityFor ns _ =
+    case ns of
+      Namespace _ ["RotatedDynamo"]               -> Just Info
+      Namespace _ _                               -> Nothing
+
+  documentFor = \case
+    Namespace _ ["RotatedDynamo"] ->
+      Just "The ChainSync Jumping module has been asked to rotate its dynamo"
+    Namespace _ _ ->
+      Nothing
+
+  allNamespaces =
+    [ Namespace [] ["RotatedDynamo"]
     ]
 
 instance ( StandardHash blk
