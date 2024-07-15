@@ -60,6 +60,7 @@ import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -624,43 +625,43 @@ calculateBlockFetchClientMetrics cm _lc _ = pure cm
 --------------------------------------------------------------------------------
 
 instance (LogFormatting peer, Show peer) =>
-    LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
-  forMachine DMinimal _ = mempty
-  forMachine _ []       = mconcat
+    LogFormatting (TraceDecisionEvent peer header) where
+  forMachine DMinimal (PeersFetch _) = mempty
+  forMachine _ (PeersFetch [])       = mconcat
     [ "kind"  .= String "EmptyPeersFetch"]
-  forMachine _ xs       = mconcat
+  forMachine _ (PeersFetch xs)       = mconcat
     [ "kind"  .= String "PeersFetch"
     , "peers" .= toJSON
       (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
-  asMetrics peers = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
+  asMetrics (PeersFetch peers) = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
 
-instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
-  namespaceFor (a : _tl) = (nsCast . namespaceFor) a
-  namespaceFor [] = Namespace [] ["EmptyPeersFetch"]
+instance MetaTrace (TraceDecisionEvent peer header) where
+  namespaceFor (PeersFetch (a : _tl)) = (nsCast . namespaceFor) a
+  namespaceFor (PeersFetch []) = Namespace [] ["EmptyPeersFetch"]
 
   severityFor (Namespace [] ["EmptyPeersFetch"]) _ = Just Debug
   severityFor ns Nothing =
     severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  severityFor ns (Just []) =
+  severityFor ns (Just (PeersFetch [])) =
     severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  severityFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+  severityFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     severityFor (nsCast ns) (Just a)
 
   privacyFor (Namespace _ ["EmptyPeersFetch"]) _ = Just Public
   privacyFor ns Nothing =
     privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  privacyFor ns (Just []) =
+  privacyFor ns (Just (PeersFetch [])) =
     privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  privacyFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+  privacyFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     privacyFor (nsCast ns) (Just a)
 
   detailsFor (Namespace _ ["EmptyPeersFetch"]) _ = Just DNormal
   detailsFor ns Nothing =
     detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  detailsFor ns (Just []) =
+  detailsFor ns (Just (PeersFetch [])) =
     detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  detailsFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+  detailsFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     detailsFor (nsCast ns) (Just a)
   documentFor ns = documentFor (nsCast ns :: Namespace (FetchDecision [Point header]))
   metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace (FetchDecision [Point header]))

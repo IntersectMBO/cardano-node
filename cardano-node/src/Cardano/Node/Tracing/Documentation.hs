@@ -57,7 +57,7 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision
+import qualified Ouroboros.Network.BlockFetch.Decision.Trace as BlockFetch
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerTrace (..))
@@ -270,9 +270,7 @@ docTracersFirstPhase condConfigFileName = do
                 ["BlockFetch", "Decision"]
     configureTracers configReflection trConfig [blockFetchDecisionTr]
     blockFetchDecisionTrDoc <- documentTracer (blockFetchDecisionTr ::
-       Trace IO [BlockFetch.TraceLabelPeer
-                                      remotePeer
-                                      (FetchDecision [Point (Header blk)])])
+       Trace IO (BlockFetch.TraceDecisionEvent remotePeer (Header blk)))
 
     blockFetchClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
