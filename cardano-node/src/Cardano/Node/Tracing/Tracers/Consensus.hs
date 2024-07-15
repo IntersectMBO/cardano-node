@@ -633,12 +633,17 @@ instance (LogFormatting peer, Show peer) =>
     [ "kind"  .= String "PeersFetch"
     , "peers" .= toJSON
       (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
+  forMachine dtal (PeerStarvedUs peer) = mconcat
+    [ "kind" .= String "PeerStarvedUs"
+    , "peer" .= forMachine dtal peer ]
 
   asMetrics (PeersFetch peers) = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
+  asMetrics _ = []
 
 instance MetaTrace (TraceDecisionEvent peer header) where
   namespaceFor (PeersFetch (a : _tl)) = (nsCast . namespaceFor) a
   namespaceFor (PeersFetch []) = Namespace [] ["EmptyPeersFetch"]
+  namespaceFor (PeerStarvedUs _) = Namespace [] ["PeerStarvedUs"]
 
   severityFor (Namespace [] ["EmptyPeersFetch"]) _ = Just Debug
   severityFor ns Nothing =
@@ -647,6 +652,8 @@ instance MetaTrace (TraceDecisionEvent peer header) where
     severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
   severityFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     severityFor (nsCast ns) (Just a)
+  severityFor (Namespace [] ["PeerStarvedUs"]) _ = Just Debug
+  severityFor _ _ = Nothing
 
   privacyFor (Namespace _ ["EmptyPeersFetch"]) _ = Just Public
   privacyFor ns Nothing =
@@ -655,6 +662,8 @@ instance MetaTrace (TraceDecisionEvent peer header) where
     privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
   privacyFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     privacyFor (nsCast ns) (Just a)
+  privacyFor (Namespace _ ["PeerStarvedUs"]) _ = Just Public
+  privacyFor _ _ = Nothing
 
   detailsFor (Namespace _ ["EmptyPeersFetch"]) _ = Just DNormal
   detailsFor ns Nothing =
@@ -663,10 +672,14 @@ instance MetaTrace (TraceDecisionEvent peer header) where
     detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
   detailsFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     detailsFor (nsCast ns) (Just a)
+  detailsFor _ _ = Just DNormal
+
   documentFor ns = documentFor (nsCast ns :: Namespace (FetchDecision [Point header]))
   metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace (FetchDecision [Point header]))
-  allNamespaces = Namespace [] ["EmptyPeersFetch"]
-    : map nsCast (allNamespaces :: [Namespace (FetchDecision [Point header])])
+  allNamespaces =
+    [ Namespace [] ["EmptyPeersFetch"]
+    , Namespace [] ["PeerStarvedUs"]
+    ] ++ map nsCast (allNamespaces :: [Namespace (FetchDecision [Point header])])
 
 instance LogFormatting (FetchDecision [Point header]) where
   forMachine _dtal (Left decline) =

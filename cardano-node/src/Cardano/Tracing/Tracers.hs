@@ -303,6 +303,8 @@ instance (StandardHash header, Eq peer) => ElidingTracer
         checkDecision (TraceLabelPeer _peer (Left (FetchDeclinePeerBusy _ _ _))) = True
         checkDecision _ = False
     in any checkDecision peers
+  doelide _ = False
+
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding tverb tr ev (_old, count) = do
       when (count > 0 && count `mod` 1000 == 0) $  -- report every 1000th message
@@ -1430,6 +1432,7 @@ teeTraceBlockFetchDecision' tr =
         meta <- mkLOMeta Info Confidential
         let tr' = appendName "peers" tr
         traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
+      WithSeverity _ _ -> pure ()
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer
