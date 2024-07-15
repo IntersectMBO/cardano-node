@@ -87,11 +87,12 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..),
                    StandardHash, blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
                    ConnectionManagerTrace (..))
@@ -294,12 +295,12 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   reportelided t tr ev count = defaultelidedreporting  t tr ev count
 
 instance (StandardHash header, Eq peer) => ElidingTracer
-  (WithSeverity [TraceLabelPeer peer (FetchDecision [Point header])]) where
+  (WithSeverity (TraceDecisionEvent peer header)) where
   -- equivalent by type and severity
   isEquivalent (WithSeverity s1 _peers1)
                (WithSeverity s2 _peers2) = s1 == s2
   -- the types to be elided
-  doelide (WithSeverity _ peers) =
+  doelide (WithSeverity _ (PeersFetch peers)) =
     let checkDecision :: TraceLabelPeer peer (Either FetchDecline result) -> Bool
         checkDecision (TraceLabelPeer _peer (Left FetchDeclineChainNotPlausible)) = True
         checkDecision (TraceLabelPeer _peer (Left (FetchDeclineConcurrencyLimit _ _))) = True
@@ -1445,9 +1446,9 @@ teeTraceBlockFetchDecision
        , ToObject peer
        )
     => TracingVerbosity
-    -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
+    -> MVar (Maybe (WithSeverity (TraceDecisionEvent peer (Header blk))),Integer)
     -> Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecision verb eliding tr =
   Tracer $ \ev -> do
     traceWith (teeTraceBlockFetchDecision' meTr) ev
@@ -1458,12 +1459,13 @@ teeTraceBlockFetchDecision verb eliding tr =
 
 teeTraceBlockFetchDecision'
     :: Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecision' tr =
-    Tracer $ \(WithSeverity _ peers) -> do
-      meta <- mkLOMeta Info Confidential
-      let tr' = appendName "peers" tr
-      traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
+    Tracer $ \case
+      WithSeverity _ (PeersFetch peers) -> do
+        meta <- mkLOMeta Info Confidential
+        let tr' = appendName "peers" tr
+        traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer
@@ -1472,9 +1474,9 @@ teeTraceBlockFetchDecisionElide
        , ToObject peer
        )
     => TracingVerbosity
-    -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
+    -> MVar (Maybe (WithSeverity (TraceDecisionEvent peer (Header blk))),Integer)
     -> Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecisionElide = elideToLogObject
 
 --------------------------------------------------------------------------------
