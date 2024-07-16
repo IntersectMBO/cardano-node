@@ -20,6 +20,7 @@ module Testnet.Components.Query
   , getMinGovActionDeposit
   , getGovState
   , getCurrentEpochNo
+  , getTreasuryValue
 
   , TestnetWaitPeriod (..)
   , waitForEpochs
@@ -465,6 +466,18 @@ getGovState epochStateView ceo = withFrozenCallStack $ do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
   pure $ conwayEraOnwardsConstraints ceo $ newEpochState ^. L.newEpochStateGovStateL
+
+-- | Obtain the current value of the treasury from the node
+getTreasuryValue
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadIO m
+  => MonadTest m
+  => EpochStateView
+  -> m L.Coin -- ^ The current value of the treasury
+getTreasuryValue epochStateView = withFrozenCallStack $ do
+  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
+  pure $ newEpochState ^. L.nesEpochStateL . L.epochStateTreasuryL
 
 -- | Obtain minimum deposit amount for governance action from node
 getMinGovActionDeposit
