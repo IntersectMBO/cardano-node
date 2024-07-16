@@ -58,7 +58,6 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
-import           System.IO.Unsafe (unsafePerformIO)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
