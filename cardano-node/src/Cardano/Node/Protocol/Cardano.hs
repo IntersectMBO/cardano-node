@@ -40,8 +40,6 @@ import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
 
 import           Prelude
 
-import           Data.Maybe
-
 ------------------------------------------------------------------------------
 -- Real Cardano protocol
 --
@@ -137,7 +135,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     (conwayGenesis, _conwayGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationConwayGenesisReadError $
-        Conway.readGenesisMaybe npcConwayGenesisFile
+        Conway.readGenesis npcConwayGenesisFile
                                 npcConwayGenesisFileHash
 
     shelleyLeaderCredentials <-
@@ -241,15 +239,12 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         }
       , paramsConway =
         Praos.ProtocolParamsConway {
-          -- If Conway is not enabled, this is the Babbage protocol version.
-          --
-          -- If Conway is enabled, this is the Conway protocol version.
+          -- ProtVer 9 corresponds to the Conway bootstrap era.
+          -- ProtVer 10 corresponds to the Conway post bootstrap era.
           Praos.conwayProtVer =
-            if isNothing npcConwayGenesisFile
-            then ProtVer (natVersion @8) 0
-            else if npcExperimentalHardForksEnabled
-                 then ProtVer (natVersion @10) 0
-                 else ProtVer (natVersion @9) 0,
+            if npcExperimentalHardForksEnabled
+            then ProtVer (natVersion @10) 0
+            else ProtVer (natVersion @9) 0,
           Praos.conwayMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
