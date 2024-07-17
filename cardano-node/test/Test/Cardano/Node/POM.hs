@@ -75,7 +75,7 @@ testNodeAlonzoProtocolConfiguration =
 testNodeConwayProtocolConfiguration :: NodeConwayProtocolConfiguration
 testNodeConwayProtocolConfiguration =
   NodeConwayProtocolConfiguration
-    { npcConwayGenesisFile      = Just $ GenesisFile "dummmy-genesis-file"
+    { npcConwayGenesisFile      = GenesisFile "dummmy-genesis-file"
     , npcConwayGenesisFileHash  = Nothing
     }
 
