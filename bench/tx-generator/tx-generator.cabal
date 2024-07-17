@@ -79,6 +79,7 @@ library
                         Cardano.TxGenerator.FundQueue
                         Cardano.TxGenerator.Genesis
                         Cardano.TxGenerator.PureExample
+                        Cardano.TxGenerator.GovExample
                         Cardano.TxGenerator.Script.Types
                         Cardano.TxGenerator.Setup.NixService
                         Cardano.TxGenerator.Setup.NodeConfig
