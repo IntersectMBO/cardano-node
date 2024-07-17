@@ -720,28 +720,16 @@ instance MetaTrace (FetchDecision [Point header]) where
 -- BlockFetchClientState Tracer
 --------------------------------------------------------------------------------
 
-instance (HasHeader header, ConvertRawHash header) =>
+instance (HasHeader header, ConvertRawHash header, ConvertRawHash (Header header)) =>
   LogFormatting (BlockFetch.TraceFetchClientState header) where
     forMachine _dtal BlockFetch.AddedFetchRequest {} =
       mconcat [ "kind" .= String "AddedFetchRequest" ]
     forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
       mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-    forMachine _dtal (BlockFetch.SendFetchRequest af _) =
+    forMachine dtal (BlockFetch.SendFetchRequest af _) =
       mconcat [ "kind" .= String "SendFetchRequest"
-              , "head" .= String (renderChainHash
-                                  (renderHeaderHash (Proxy @header))
-                                  (AF.headHash af))
-              , "length" .= toJSON (fragmentLength af)]
-        where
-          -- NOTE: this ignores the Byron era with its EBB complication:
-          -- the length would be underestimated by 1, if the AF is anchored
-          -- at the epoch boundary.
-          fragmentLength :: AF.AnchoredFragment header -> Int
-          fragmentLength f = fromIntegral . unBlockNo $
-              case (f, f) of
-                (AS.Empty{}, AS.Empty{}) -> 0
-                (firstHdr AS.:< _, _ AS.:> lastHdr) ->
-                  blockNo lastHdr - blockNo firstHdr + 1
+              , "fragment" .= forMachine dtal af
+              ]
     forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
       mconcat [ "kind"  .= String "CompletedBlockFetch"
               , "delay" .= (realToFrac delay :: Double)
@@ -751,12 +739,18 @@ instance (HasHeader header, ConvertRawHash header) =>
                   GenesisPoint -> "Genesis"
                   BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
               ]
-    forMachine _dtal BlockFetch.CompletedFetchBatch {} =
-      mconcat [ "kind" .= String "CompletedFetchBatch" ]
-    forMachine _dtal BlockFetch.StartedFetchBatch {} =
-      mconcat [ "kind" .= String "StartedFetchBatch" ]
-    forMachine _dtal BlockFetch.RejectedFetchBatch {} =
-      mconcat [ "kind" .= String "RejectedFetchBatch" ]
+    forMachine dtal (BlockFetch.CompletedFetchBatch range _ _ _) =
+      mconcat [ "kind"  .= String "CompletedFetchBatch"
+              , "range" .= forMachine dtal range
+              ]
+    forMachine dtal (BlockFetch.StartedFetchBatch range _ _ _) =
+      mconcat [ "kind"  .= String "StartedFetchBatch"
+              , "range" .= forMachine dtal range
+              ]
+    forMachine dtal (BlockFetch.RejectedFetchBatch range _ _ _) =
+      mconcat [ "kind"  .= String "RejectedFetchBatch"
+              , "range" .= forMachine dtal range
+              ]
     forMachine _dtal (BlockFetch.ClientTerminating outstanding) =
       mconcat [ "kind" .= String "ClientTerminating"
               , "outstanding" .= outstanding
@@ -832,6 +826,15 @@ instance MetaTrace (BlockFetch.TraceFetchClientState header) where
        , Namespace [] ["RejectedFetchBatch"]
        , Namespace [] ["ClientTerminating"]
       ]
+
+instance StandardHash blk => LogFormatting (BlockFetch.ChainRange (Point blk)) where
+  forMachine _dtal (BlockFetch.ChainRange start end) =
+    mconcat [ "kind"  .= String "ChainRange"
+            , "start" .= (String $ showT start)
+            , "start" .= (String $ showT end)
+            ]
+
+  forHuman = forHumanOrMachine
 
 --------------------------------------------------------------------------------
 -- BlockFetchServerEvent
@@ -2050,7 +2053,11 @@ instance MetaTrace (CSJumping.TraceEvent peer) where
 -- GDD Tracer
 --------------------------------------------------------------------------------
 
-instance (Show peer, GetHeader blk) => LogFormatting (TraceGDDEvent peer blk) where
+instance ( Show peer
+         , HasHeader blk
+         , HasHeader (Header blk)
+         , ConvertRawHash (Header blk)
+         ) => LogFormatting (TraceGDDEvent peer blk) where
   forMachine dtal TraceGDDEvent {..} = mconcat
     [ "kind" .= String "TraceGDDEvent"
     , "bounds" .= toJSON (
@@ -2100,7 +2107,10 @@ instance MetaTrace (TraceGDDEvent peer blk) where
 
   allNamespaces = [Namespace [] ["TraceGDDEvent"]]
 
-instance (GetHeader blk) => LogFormatting (DensityBounds blk) where
+instance ( HasHeader blk
+         , HasHeader (Header blk)
+         , ConvertRawHash (Header blk)
+         ) => LogFormatting (DensityBounds blk) where
   forMachine dtal DensityBounds {..} = mconcat
     [ "kind" .= String "DensityBounds"
     , "clippedFragment" .= forMachine dtal clippedFragment
@@ -2114,11 +2124,33 @@ instance (GetHeader blk) => LogFormatting (DensityBounds blk) where
 
   forHuman = forHumanOrMachine
 
-instance (GetHeader blk) => LogFormatting (AF.AnchoredFragment (Header blk)) where
-  forMachine _ frag = mconcat
+--------------------------------------------------------------------------------
+-- AnchoredFragment tracer
+--------------------------------------------------------------------------------
+
+instance (HasHeader blk, ConvertRawHash (Header blk)) =>
+  LogFormatting (AF.AnchoredFragment blk) where
+  forMachine _dtal frag = mconcat
     [ "kind" .= String "AnchoredFragment"
-    , "anchorPoint" .= (String $ showT $ AF.anchorPoint frag)
-    , "headPoint" .= (String $ showT $ AF.headPoint frag)
+    , "anchorPoint" .= ( Object $ mconcat
+          [ "kind"    .= String "AnchoredFragmentAnchorPoint"
+          , "hash"    .= String (renderChainHash
+              (renderHeaderHash (Proxy @(Header blk)))
+              (AF.anchorToHash $ AF.anchor frag))
+          , "slotNo"  .= String (showT $ AF.anchorToSlotNo $ AF.anchor frag)
+          , "blockNo" .= String (showT $ AF.anchorToBlockNo $ AF.anchor frag)
+          ]
+      )
+    , "headPoint"   .= ( Object $ mconcat
+          [ "kind"    .= String "AnchoredFragmentHeadPoint"
+          , "hash"    .= String (renderChainHash
+              (renderHeaderHash (Proxy @(Header blk)))
+              (AF.headHash frag))
+          , "slotNo"  .= String (showT $ AF.headSlot frag)
+          , "blockNo" .= String (showT $ AF.headBlockNo frag)
+          ]
+      )
+    , "length" .= toJSON (fragmentLength frag)
     ]
 
   forHuman = forHumanOrMachine
@@ -2140,3 +2172,17 @@ instance ( StandardHash blk
             ]
 
   forHuman = showT
+
+--------------------------------------------------------------------------------
+-- Utils
+--------------------------------------------------------------------------------
+
+-- NOTE: this ignores the Byron era with its EBB complication:
+-- the length would be underestimated by 1, if the AF is anchored
+-- at the epoch boundary.
+fragmentLength :: HasHeader header => AF.AnchoredFragment header -> Int
+fragmentLength f = fromIntegral . unBlockNo $
+    case (f, f) of
+      (AS.Empty{}, AS.Empty{}) -> 0
+      (firstHdr AS.:< _, _ AS.:> lastHdr) ->
+        blockNo lastHdr - blockNo firstHdr + 1
