@@ -831,7 +831,7 @@ instance StandardHash blk => LogFormatting (BlockFetch.ChainRange (Point blk)) w
   forMachine _dtal (BlockFetch.ChainRange start end) =
     mconcat [ "kind"  .= String "ChainRange"
             , "start" .= (String $ showT start)
-            , "start" .= (String $ showT end)
+            , "end" .= (String $ showT end)
             ]
 
   forHuman = forHumanOrMachine
