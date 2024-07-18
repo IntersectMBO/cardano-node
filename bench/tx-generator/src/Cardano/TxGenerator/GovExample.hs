@@ -6,17 +6,90 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
+{-# OPTIONS_GHC -Wno-error=unused-imports #-}
 
 module  Cardano.TxGenerator.GovExample
         -- (demo)
         where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (LedgerProtocolParameters, Vote, convertToLedgerProtocolParameters, createVotingProcedure)
+import           Cardano.Api hiding (ScriptHash, StakeAddress, StakeCredential)
+import qualified Cardano.Api as Api (NetworkId (..), ScriptHash, StakeAddress, StakeCredential)
+import           Cardano.Api.Shelley (GovernanceAction (..)
+                   , GovernanceActionId (..)
+                   , GovernancePoll (..)
+                   , GovernancePollAnswer (..)
+                   , GovernancePollError (..)
+                   , Proposal (..)
+                   , Vote (..)
+                   , Voter (..)
+                   , VotingProcedure (..)
+                   , VotingProcedures (..)
+                   , LedgerProtocolParameters (..))
+import qualified Cardano.Api.Shelley as Api (
+                     convertToLedgerProtocolParameters
+                   , createProposalProcedure
+                   , createVotingProcedure
+                   , renderGovernancePollError
+                   , fromProposalProcedure
+                   , hashGovernancePoll
+                   , verifyPollAnswer)
 
-import qualified Cardano.CLI.Types.Governance as CLI (AnyVotingStakeVerificationKeyOrHashOrFile (..))
-import qualified Cardano.Ledger.BaseTypes as Ledger (Url)
-import qualified Cardano.Ledger.Coin as Ledger
+-- Unqualified imports of types need to be re-qualified before a PR.
+import           Cardano.CLI.EraBased.Commands.Governance.Vote (
+                     GovernanceVoteCmds (..)
+                   , GovernanceVoteCreateCmdArgs (..)
+                   , GovernanceVoteViewCmdArgs (..))
+-- Adjust line break to stylish-haskell/fourmolu/etc.
+import           Cardano.CLI.EraBased.Commands.Governance.Actions (
+                     GovernanceActionCmds (..)
+                   , GovernanceActionUpdateCommitteeCmdArgs (..)
+                   , GovernanceActionCreateConstitutionCmdArgs (..)
+                   , GovernanceActionCreateNoConfidenceCmdArgs (..)
+                   , GovernanceActionInfoCmdArgs (..)
+                   , GovernanceActionViewCmdArgs (..)
+                   , GovernanceActionProtocolParametersUpdateCmdArgs (..)
+                   , GovernanceActionTreasuryWithdrawalCmdArgs (..)
+                   , UpdateProtocolParametersConwayOnwards (..)
+                   , UpdateProtocolParametersPreConway (..)
+                   , GovernanceActionHardforkInitCmdArgs (..)
+                   , CostModelsFile (..))
+import           Cardano.CLI.EraBased.Commands.Governance.Actions (
+                     GovernanceActionCmds (..)
+                   , GovernanceActionUpdateCommitteeCmdArgs (..)
+                   , GovernanceActionCreateConstitutionCmdArgs (..)
+                   , GovernanceActionCreateNoConfidenceCmdArgs (..)
+                   , GovernanceActionInfoCmdArgs (..)
+                   , GovernanceActionViewCmdArgs (..)
+                   , GovernanceActionProtocolParametersUpdateCmdArgs (..)
+                   , GovernanceActionTreasuryWithdrawalCmdArgs (..)
+                   , UpdateProtocolParametersConwayOnwards (..)
+                   , UpdateProtocolParametersPreConway (..)
+                   , GovernanceActionHardforkInitCmdArgs (..)
+                   , CostModelsFile (..))
+import qualified Cardano.CLI.EraBased.Commands.Governance.Actions as CLI (renderGovernanceActionCmds)
+import           Cardano.CLI.EraBased.Run.Governance.Actions (GovernanceActionsError (..))
+import qualified Cardano.CLI.EraBased.Run.Governance.Actions as CLI (
+                     runGovernanceActionCmds
+                   , addCostModelsToEraBasedProtocolParametersUpdate)
+import qualified Cardano.CLI.EraBased.Run.Governance.Vote as CLI (
+                     runGovernanceVoteCmds {-
+                     -- These two aren't exported, barring a customised cardano-cli lib:
+                     , runGovernanceVoteCreateCmd, runGovernanceVoteViewCmd -})
+import           Cardano.CLI.Types.Governance (
+                     AnyVotingStakeVerificationKeyOrHashOrFile (..)
+                   , ConwayVote
+                   , VoteDelegationTarget (..)
+                   , VoteFile
+                   , VType (..))
+import           Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), Url)
+import           Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Coin as Ledger hiding (Coin)
+import           Cardano.Ledger.Crypto -- exports only types and classes
+import           Cardano.Ledger.Conway.Governance (GovAction (..)
+                   , GovActionId (..)
+                   , ProposalProcedure (..))
+import qualified Cardano.Ledger.Conway.Governance as Governance ()
 import           Cardano.TxGenerator.FundQueue
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types (FundSource, FundToStoreList, TxEnvironment (..), TxGenError (..), TxGenerator)
@@ -37,6 +110,48 @@ import           System.Exit (die)
 
 import           Paths_tx_generator
 
+-- Not exported, hence cutting and pasting.
+-- This might take a number of imports to be able to include:
+{-
+type ConwayEraOnwardsConstraints era =
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
+  , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
+  , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
+  , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
+  , L.BabbageEraTxBody (ShelleyLedgerEra era)
+  , L.ConwayEraGov (ShelleyLedgerEra era)
+  , L.ConwayEraPParams (ShelleyLedgerEra era)
+  , L.ConwayEraTxBody (ShelleyLedgerEra era)
+  , L.ConwayEraTxCert (ShelleyLedgerEra era)
+  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+  , L.Era (ShelleyLedgerEra era)
+  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , L.EraGov (ShelleyLedgerEra era)
+  , L.EraPParams (ShelleyLedgerEra era)
+  , L.EraTx (ShelleyLedgerEra era)
+  , L.EraTxBody (ShelleyLedgerEra era)
+  , L.EraTxOut (ShelleyLedgerEra era)
+  , L.EraUTxO (ShelleyLedgerEra era)
+  , L.GovState (ShelleyLedgerEra era) ~ L.ConwayGovState (ShelleyLedgerEra era)
+  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.MaryEraTxBody (ShelleyLedgerEra era)
+  , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
+  , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
+  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.TxCert (ShelleyLedgerEra era) ~ L.ConwayTxCert (ShelleyLedgerEra era)
+  , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
+  , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , FromCBOR (DebugLedgerState era)
+  , IsCardanoEra era
+  , IsShelleyBasedEra era
+  , ToJSON (DebugLedgerState era)
+  , Typeable era
+  )
+-}
+
 
 demo :: IO ()
 demo = getDataFileName "data/protocol-parameters.json" >>= demo'
@@ -47,7 +162,7 @@ demo' parametersFile = do
   let
       demoEnv :: TxEnvironment ConwayEra
       demoEnv = TxEnvironment {
-          txEnvNetworkId = Mainnet
+          txEnvNetworkId = Api.Mainnet
         , txEnvProtocolParams = protocolParameters
         , txEnvFee = TxFeeExplicit ShelleyBasedEraConway 100000
         , txEnvMetadata = TxMetadataNone
@@ -82,7 +197,7 @@ genesisValue :: TxOutValue ConwayEra
 
 (genesisTxIn, genesisValue) =
   ( TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0)
-  , lovelaceToTxOutValue ShelleyBasedEraConway $ Ledger.Coin 90000000000000
+  , lovelaceToTxOutValue ShelleyBasedEraConway $ Coin 90000000000000
   )
 
 genesisFund :: Fund
@@ -104,19 +219,24 @@ type Generator = State FundQueue
 -- turns out fake ones like I used earlier error out.
 -- Cardano.Api.Governance.Actions.createAnchor
 --         :: Url -> ByteString -> Anchor StandardCrypto
-localGenVote :: ConwayEraOnwards era -> Vote -> IO ()
+localGenVote :: forall era . {- ConwayEraOnwardsConstraints era => -} ConwayEraOnwards era -> Vote -> IO ()
 localGenVote era vote = do
-  _procedure <- pure $ createVotingProcedure
-                             (era {- eon :: ConwayEraOnwards era {- the type signature chokes? -} -} )
+  _procedure <- pure $ Api.createVotingProcedure
+                             (era {- eon -} :: ConwayEraOnwards era)
                              (vote {- votingChoice -} :: Vote)
-                             (Nothing :: Maybe (Ledger.Url, Text))
+                             (Nothing :: Maybe (Url, Text))
   _ <- shelleyBasedEraConstraints localShelleyBasedEra do
-    _ <- pure (undefined :: CLI.AnyVotingStakeVerificationKeyOrHashOrFile)
+    _ <- pure (undefined :: AnyVotingStakeVerificationKeyOrHashOrFile)
     pure undefined
   pure ()
   where
     localShelleyBasedEra = conwayEraOnwardsToShelleyBasedEra era
 
+-- Call into the CLI.
+localCheats :: forall era . {- ConwayEraOnwardsConstraints era => -} [GovernanceAction (ConwayEraOnwards era)]
+localCheats = [TreasuryWithdrawal [(undefined :: Network, undefined :: Api.StakeCredential, undefined :: Coin)] SNothing]
+
+-- runTxBuildRaw from CLI
 localGenTx :: forall era. ()
   => IsShelleyBasedEra era
   => ShelleyBasedEra era
@@ -147,7 +267,7 @@ localSourceToStoreTransaction ::
      Monad m
   => TxGenerator era
   -> FundSource m
-  -> ([Ledger.Coin] -> split)
+  -> ([Coin] -> split)
   -> ToUTxOList era split
   -> FundToStoreList m                --inline to ToUTxOList
   -> m (Either TxGenError (Tx era))
@@ -182,7 +302,7 @@ generateTx TxEnvironment{..}
 
     generator :: TxGenerator ConwayEra
     generator =
-        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+        case Api.convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
           Right ledgerParameters ->
             localGenTx ShelleyBasedEraConway ledgerParameters collateralFunds txEnvFee txEnvMetadata
           Left err -> \_ _ -> Left (ApiError err)
@@ -201,7 +321,7 @@ generateTx TxEnvironment{..}
     addNewOutputFunds :: [Fund] -> Generator ()
     addNewOutputFunds = put . foldl' insertFund emptyFundQueue
 
-    computeOutputValues :: [Ledger.Coin] -> [Ledger.Coin]
+    computeOutputValues :: [Coin] -> [Coin]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
@@ -233,7 +353,7 @@ generateTxPure TxEnvironment{..} inQueue
 
     generator :: TxGenerator ConwayEra
     generator =
-        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+        case Api.convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
           Right ledgerParameters ->
             localGenTx ShelleyBasedEraConway ledgerParameters collateralFunds txEnvFee txEnvMetadata
           Left err -> \_ _ -> Left (ApiError err)
@@ -245,7 +365,7 @@ generateTxPure TxEnvironment{..} inQueue
     outValues = computeOutputValues $ map getFundCoin inputs
     (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
 
-    computeOutputValues :: [Ledger.Coin] -> [Ledger.Coin]
+    computeOutputValues :: [Coin] -> [Coin]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
