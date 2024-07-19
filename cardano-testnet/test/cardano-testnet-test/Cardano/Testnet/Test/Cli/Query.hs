@@ -12,7 +12,7 @@ module Cardano.Testnet.Test.Cli.Query
 
 import           Cardano.Api
 import           Cardano.Api.Ledger (EpochInterval(EpochInterval))
-import           Cardano.Api.Shelley (StakePoolKey)
+import           Cardano.Api.Shelley (StakePoolKey, StakeCredential (StakeCredentialByKey))
 
 import           Cardano.CLI.Types.Key (readVerificationKeyOrFile, VerificationKeyOrFile (VerificationKeyFilePath))
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
@@ -156,6 +156,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         let stakePoolsOutFile = work </> "stake-pools-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-pools" , "--out-file", stakePoolsOutFile]
 
+    TestQueryPoolStateCmd -> do
+      -- pool-state
+      -- Already tested in TestQueryStakePoolsCmd and TestQueryStakeDistributionCmd
+      pure ()
+
     TestQueryStakeDistributionCmd ->
       -- stake-distribution
       do
@@ -183,9 +188,15 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-distribution"
                                        , "--out-file", stakePoolsOutFile ]
 
-    TestQueryStakeAddressInfoCmd -> do
+    TestQueryStakeAddressInfoCmd ->
       -- stake-address-info
-      pure ()
+      do
+        let delegatorKeys = Defaults.defaultDelegatorStakeKeyPair 1
+        delegatorVKey :: VerificationKey StakeKey <- readVerificationKeyFromFile AsStakeKey work $ verificationKey delegatorKeys
+        let stakeAddress :: StakeAddress = verificationStakeKeyToStakeAddress testnetMagic delegatorVKey
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-address-info"
+                                       , "--address", T.unpack $ serialiseAddress stakeAddress
+                                       ]
 
     TestQueryUTxOCmd -> do
       -- utxo
@@ -205,10 +216,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
 
     TestQueryKesPeriodInfoCmd -> do
       -- kes-period-info
-      pure ()
-
-    TestQueryPoolStateCmd -> do
-      -- pool-state
       pure ()
 
     TestQueryTxMempoolCmd -> do
@@ -282,6 +289,10 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     -> m (VerificationKey keyrole)
   readVerificationKeyFromFile asKey work =
     H.evalEitherM . liftIO . runExceptT . readVerificationKeyOrFile asKey . VerificationKeyFilePath . File . (work </>) . unFile
+
+  verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
+  verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
+    makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
 
   patchGovStateOutputFile :: (MonadTest m, MonadIO m) => FilePath -> m ()
   patchGovStateOutputFile fp = do
