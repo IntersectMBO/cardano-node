@@ -177,6 +177,7 @@ library
                       , io-classes >= 1.4
                       , iohk-monitoring
                       , iproute
+                      , lens
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg
                       , lobemo-backend-monitoring

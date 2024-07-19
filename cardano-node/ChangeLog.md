@@ -9,6 +9,7 @@
   - `--mempool-capacity-override` and `--no-mempool-capacity-override` can be set in the configuration file via the key `MempoolCapacityBytesOverride`.
   - `--snapshot-interval` can be set in the configuration file via the key `SnapshotInterval`.
   - `--num-of-disk-snapshots` can be set in the configuration file via the key `NumOfDiskSnapshots`.
+- Add warning for when the protocol version is too low and we have set `ExperimentalHardForksEnabled`.
 
 ## 8.2.1 -- August 2023
 
