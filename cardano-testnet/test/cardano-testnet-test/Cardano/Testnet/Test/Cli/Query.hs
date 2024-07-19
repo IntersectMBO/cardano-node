@@ -4,19 +4,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Ledger (EpochInterval(EpochInterval))
+import           Cardano.Api.Shelley (StakePoolKey)
 
+import           Cardano.CLI.Types.Key (readVerificationKeyOrFile, VerificationKeyOrFile (VerificationKeyFilePath))
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (forM_)
+import           Control.Monad.Catch (MonadCatch)
 import           Data.Aeson (eitherDecodeStrictText)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
@@ -31,6 +36,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query
+import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
@@ -68,6 +74,8 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
+  
+  let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
@@ -83,11 +91,22 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
 
   checkDRepsNumber epochStateView sbe 3
 
+  -- If we don't wait, the leadershi-schedule test will say SPO has no stake
+  _ <- waitForEpochs epochStateView (EpochInterval 1)
+
   forallQueryCommands (\case
 
-    TestQueryLeadershipScheduleCmd -> do
+    TestQueryLeadershipScheduleCmd ->
       -- leadership-schedule
-      pure ()
+      do
+        let spoKeys = Defaults.defaultSpoKeys 1
+        spoVerificationKey :: VerificationKey StakePoolKey <- readVerificationKeyFromFile AsStakePoolKey work $ verificationKey $ poolNodeKeysCold spoKeys
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "leadership-schedule"
+                                       , "--genesis", shelleyGeneisFile
+                                       , "--stake-pool-verification-key", T.unpack $ serialiseToBech32 spoVerificationKey
+                                       , "--vrf-signing-key-file", unFile $ signingKey $ poolNodeKeysVrf spoKeys
+                                       , "--current"
+                                       ]
 
     TestQueryProtocolParametersCmd ->
       -- protocol-parameters
@@ -255,6 +274,14 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     where
       patchGovStateJSON :: Aeson.Object -> Aeson.Object
       patchGovStateJSON o = Aeson.delete "futurePParams" o
+
+  readVerificationKeyFromFile :: (MonadIO m, MonadCatch m, MonadTest m,  HasTextEnvelope (VerificationKey keyrole), SerialiseAsBech32 (VerificationKey keyrole))
+    => AsType keyrole
+    -> FilePath
+    -> File content direction
+    -> m (VerificationKey keyrole)
+  readVerificationKeyFromFile asKey work =
+    H.evalEitherM . liftIO . runExceptT . readVerificationKeyOrFile asKey . VerificationKeyFilePath . File . (work </>) . unFile
 
   patchGovStateOutputFile :: (MonadTest m, MonadIO m) => FilePath -> m ()
   patchGovStateOutputFile fp = do
