@@ -5,14 +5,18 @@ import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
+#if RTVIEW
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
+#endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 import           Control.Concurrent.Extra (newLock)
+#if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO)
+#endif
 import           Control.DeepSeq
 import qualified Data.List.NonEmpty as NE
 import           Data.Time.Clock (UTCTime, getCurrentTime)
@@ -36,45 +40,54 @@ main = do
   connectedNodes <- initConnectedNodes
   connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
+#if RTVIEW
   savedTO         <- initSavedTraceObjects
 
   chainHistory     <- initBlockchainHistory
   resourcesHistory <- initResourcesHistory
   txHistory        <- initTransactionsHistory
+#endif
 
   protocolsBrake <- initProtocolsBrake
   dpRequestors   <- initDataPointRequestors
 
   currentLogLock <- newLock
   currentDPLock  <- newLock
+#if RTVIEW
   eventsQueues   <- initEventsQueues Nothing connectedNodesNames dpRequestors currentDPLock
 
   rtViewPageOpened <- newTVarIO False
+#endif
 
-  tr <- mkTracerTracer $ SeverityF $ Just Warning
+  tracer <- mkTracerTracer $ SeverityF $ Just Warning
 
-  let te :: TracerConfig -> HandleRegistry -> TracerEnv
-      te c r =
-        TracerEnv
-          { teConfig                = c
-          , teConnectedNodes        = connectedNodes
-          , teConnectedNodesNames   = connectedNodesNames
-          , teAcceptedMetrics       = acceptedMetrics
-          , teSavedTO               = savedTO
-          , teBlockchainHistory     = chainHistory
-          , teResourcesHistory      = resourcesHistory
-          , teTxHistory             = txHistory
-          , teCurrentLogLock        = currentLogLock
-          , teCurrentDPLock         = currentDPLock
-          , teEventsQueues          = eventsQueues
-          , teDPRequestors          = dpRequestors
-          , teProtocolsBrake        = protocolsBrake
-          , teRTViewPageOpened      = rtViewPageOpened
-          , teRTViewStateDir        = Nothing
-          , teTracer                = tr
-          , teReforwardTraceObjects = \_-> pure ()
-          , teRegistry              = r
-          }
+  let tracerEnv :: TracerConfig -> HandleRegistry -> TracerEnv
+      tracerEnv config handleRegistry = TracerEnv
+        { teConfig                = config
+        , teConnectedNodes        = connectedNodes
+        , teConnectedNodesNames   = connectedNodesNames
+        , teAcceptedMetrics       = acceptedMetrics
+        , teCurrentLogLock        = currentLogLock
+        , teCurrentDPLock         = currentDPLock
+        , teDPRequestors          = dpRequestors
+        , teProtocolsBrake        = protocolsBrake
+        , teTracer                = tracer
+        , teReforwardTraceObjects = \_-> pure ()
+        , teRegistry              = handleRegistry
+        , teStateDir              = Nothing
+        }
+
+      tracerEnvRTView :: TracerEnvRTView
+      tracerEnvRTView = TracerEnvRTView
+#if RTVIEW
+        { teSavedTO           = savedTO
+        , teBlockchainHistory = chainHistory
+        , teResourcesHistory  = resourcesHistory
+        , teTxHistory         = txHistory
+        , teEventsQueues      = eventsQueues
+        , teRTViewPageOpened  = rtViewPageOpened
+        }
+#endif
 
   removePathForcibly root
 
@@ -82,18 +95,21 @@ main = do
       myBench :: TracerConfig -> [TraceObject] -> Benchmarkable
       myBench config traceObjects = let
 
-        action :: IO TracerEnv
-        action = te config <$> newRegistry
+        initialise :: IO TracerEnv
+        initialise =
+          tracerEnv config <$> newRegistry
 
         cleanup :: TracerEnv -> IO ()
-        cleanup TracerEnv{teRegistry} = clearRegistry teRegistry
+        cleanup TracerEnv{teRegistry} =
+          clearRegistry teRegistry
 
         benchmark :: TracerEnv -> IO ()
-        benchmark traceEnv = beforeProgramStops do
-          traceObjectsHandler traceEnv nId traceObjects
+        benchmark trEnv = do
+          beforeProgramStops do
+            traceObjectsHandler trEnv tracerEnvRTView nId traceObjects
 
         in
-        perRunEnvWithCleanup @TracerEnv action cleanup benchmark
+        perRunEnvWithCleanup @TracerEnv initialise cleanup benchmark
 
   now <- getCurrentTime
 

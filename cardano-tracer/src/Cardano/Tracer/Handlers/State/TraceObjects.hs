@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Tracer.Handlers.RTView.State.TraceObjects
+module Cardano.Tracer.Handlers.State.TraceObjects
   ( LogsLiveViewCounters
   , Namespace
   , SavedTraceObjects
@@ -57,13 +57,16 @@ saveTraceObjects savedTraceObjects nodeId traceObjects =
         -- There is a queue for this node already, so fill it.
         pushItemsToQueue qForThisNode
  where
+  itemsToSave :: [(Namespace, TraceObjectInfo)]
   itemsToSave = mapMaybe getTOValue traceObjects
 
+  getTOValue :: TraceObject -> Maybe (Namespace, TraceObjectInfo)
   getTOValue TraceObject{toNamespace, toHuman, toMachine, toSeverity, toTimestamp} =
     case (toNamespace, toHuman, toMachine) of
       ([], _,        _)        -> Nothing
       (ns, _, msg)   -> Just (mkName ns, (msg, toSeverity, toTimestamp))
 
+  mkName :: [Text] -> Namespace
   mkName = intercalate "."
 
   pushItemsToQueue = forM_ itemsToSave . writeTQueue
@@ -72,7 +75,7 @@ getTraceObjects
   :: SavedTraceObjects
   -> NodeId
   -> IO [(Namespace, TraceObjectInfo)]
-getTraceObjects savedTraceObjects nodeId = atomically $ do
+getTraceObjects savedTraceObjects nodeId = atomically do
   qForThisNode <- M.lookup nodeId <$> readTVar savedTraceObjects
   maybe (return []) flushTQueue qForThisNode
 

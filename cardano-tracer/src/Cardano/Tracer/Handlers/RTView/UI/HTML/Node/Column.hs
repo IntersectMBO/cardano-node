@@ -50,13 +50,15 @@ addNodeColumn tracerEnv loggingConfig nodeId@(NodeId anId) = do
                                   #. "button is-info"
                                   # set UI.enabled False
                                   # set text "Details"
-  on UI.click peersDetailsButton . const $ fadeInModal peersTable
+  on_ UI.click peersDetailsButton do
+    fadeInModal peersTable
 
   ekgMetricsWindow <- mkEKGMetricsWindow id'
   ekgMetricsButton <- UI.button ## (id' <> "__node-ekg-metrics-button")
                                 #. "button is-info"
                                 # set text "Details"
-  on UI.click ekgMetricsButton . const $ fadeInModal ekgMetricsWindow
+  on_ UI.click ekgMetricsButton do
+    fadeInModal ekgMetricsWindow
 
   addNodeCellH "name"    [ image "rt-view-node-chart-label has-tooltip-multiline has-tooltip-left" rectangleSVG
                                  ## (id' <> "__node-chart-label")
@@ -352,7 +354,7 @@ logsSettings loggingConfig nodeName =
 
         copyPath <- UI.button #. "button is-info"
                                #+ [image "rt-view-copy-icon-on-button" copySVG]
-        on UI.click copyPath . const $
+        on_ UI.click copyPath do
           copyTextToClipboard pathToSubdir
 
         return $
@@ -374,7 +376,7 @@ logsSettings loggingConfig nodeName =
       JournalMode -> do
         copyId <- UI.button #. "button is-info"
                                #+ [image "rt-view-copy-icon" copySVG]
-        on UI.click copyId . const $
+        on_ UI.click copyId do
           copyTextToClipboard (unpack nodeName)
 
         return $

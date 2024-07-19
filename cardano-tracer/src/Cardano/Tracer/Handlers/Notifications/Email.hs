@@ -2,14 +2,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Tracer.Handlers.RTView.Notifications.Email
+module Cardano.Tracer.Handlers.Notifications.Email
   ( StatusMessage
   , createAndSendEmail
   , createAndSendTestEmail
   , statusIsOK
   ) where
 
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.Notifications.Types
 
 import           Control.Concurrent.Async (race)
 import           Control.Exception.Extra (try_)

@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,13 +18,13 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Last
-import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.Update.Chain
 import           Cardano.Tracer.Handlers.RTView.Update.Leadership
 import           Cardano.Tracer.Handlers.RTView.Update.Resources
 import           Cardano.Tracer.Handlers.RTView.Update.Transactions
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Handlers.RTView.Utils
+import           Cardano.Tracer.Handlers.System
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
@@ -64,31 +65,32 @@ import           Text.Read (readMaybe)
 --
 runHistoricalUpdater
   :: TracerEnv
+  -> TracerEnvRTView
   -> LastResources
   -> IO ()
-runHistoricalUpdater tracerEnv lastResources = forever $ do
+runHistoricalUpdater tracerEnv tracerEnvRTView lastResources = forever do
   sleep 1.0 -- TODO: should it be configured?
   now <- systemToUTCTime <$> getSystemTime
-  forAcceptedMetrics_ tracerEnv $ \(nodeId, (ekgStore, _)) ->
-    forMM_ (getListOfMetrics ekgStore) $ \(metricName, metricValue) -> do
+  forAcceptedMetrics_ tracerEnv \(nodeId, (ekgStore, _)) ->
+    forMM_ (getListOfMetrics ekgStore) \(metricName, metricValue) -> do
       updateTransactionsHistory nodeId teTxHistory metricName metricValue now
       updateResourcesHistory nodeId teResourcesHistory lastResources metricName metricValue now
       updateBlockchainHistory nodeId teBlockchainHistory metricName metricValue now
       updateLeadershipHistory nodeId teBlockchainHistory metricName metricValue now
  where
-  TracerEnv{teTxHistory, teResourcesHistory, teBlockchainHistory} = tracerEnv
+  TracerEnvRTView{teTxHistory, teResourcesHistory, teBlockchainHistory} = tracerEnvRTView
 
 -- | If RTView's web page is opened, historical backup is performing by UI-code,
 --   in this case we should skip backup.
-runHistoricalBackup :: TracerEnv -> IO ()
-runHistoricalBackup tracerEnv@TracerEnv{teRTViewPageOpened} = forever $ do
+runHistoricalBackup :: TracerEnv -> TracerEnvRTView -> IO ()
+runHistoricalBackup tracerEnv tracerEnvRTView@TracerEnvRTView{teRTViewPageOpened} = forever do
   sleep 300.0 -- TODO: 5 minutes, should it be changed?
   ifM (readTVarIO teRTViewPageOpened)
     (return ()) -- Skip, UI-code is performing backup.
-    (backupAllHistory tracerEnv)
+    (backupAllHistory tracerEnv tracerEnvRTView)
 
-backupAllHistory :: TracerEnv -> IO ()
-backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
+backupAllHistory :: TracerEnv -> TracerEnvRTView -> IO ()
+backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} tracerEnvRTView = do
   connected <- S.toList <$> readTVarIO teConnectedNodes
   nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
   backupDir <- getPathToBackupDir tracerEnv
@@ -97,7 +99,7 @@ backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
     <*> readTVar resourcesHistory
     <*> readTVar txHistory
   -- We can safely work with files for different nodes concurrently.
-  forConcurrently_ nodesIdsWithNames $ \(nodeId, nodeName) -> do
+  forConcurrently_ nodesIdsWithNames \(nodeId, nodeName) -> do
     backupHistory backupDir cHistory nodeId nodeName Nothing
     backupHistory backupDir rHistory nodeId nodeName Nothing
     backupHistory backupDir tHistory nodeId nodeName Nothing
@@ -107,13 +109,17 @@ backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
   cleanupHistoryPoints resourcesHistory
   cleanupHistoryPoints txHistory
  where
-  TracerEnv{teBlockchainHistory, teResourcesHistory, teTxHistory} = tracerEnv
-  ChainHistory chainHistory   = teBlockchainHistory
-  ResHistory resourcesHistory = teResourcesHistory
-  TXHistory txHistory         = teTxHistory
+  TracerEnvRTView{teResourcesHistory, teBlockchainHistory, teTxHistory}
+    = tracerEnvRTView
+  ChainHistory chainHistory
+    = teBlockchainHistory
+  ResHistory resourcesHistory
+    = teResourcesHistory
+  TXHistory txHistory
+    = teTxHistory
 
   -- Remove sets of historical points only, because they are already backed up.
-  cleanupHistoryPoints history = atomically $
+  cleanupHistoryPoints history = atomically do
     modifyTVar' history $ M.map (M.map (const S.empty))
 
 -- | Backup specific history after these points were pushed to corresponding JS-chart.
@@ -127,13 +133,13 @@ backupSpecificHistory
 backupSpecificHistory tracerEnv history connected dataName = do
   backupDir <- getPathToBackupDir tracerEnv
   hist <- readTVarIO history
-  forMM_ (getNodesIdsWithNames tracerEnv connected) $ \(nodeId, nodeName) -> do
+  forMM_ (getNodesIdsWithNames tracerEnv connected) \(nodeId, nodeName) -> do
     backupHistory backupDir hist nodeId nodeName $ Just dataName
     cleanupSpecificHistoryPoints nodeId
  where
-  cleanupSpecificHistoryPoints nodeId = atomically $
+  cleanupSpecificHistoryPoints nodeId = atomically do
     -- Removes only the points for 'nodeId' and 'dataName'.
-    modifyTVar' history $ \currentHistory ->
+    modifyTVar' history \currentHistory ->
       case M.lookup nodeId currentHistory of
         Nothing -> currentHistory
         Just dataForNode ->
@@ -151,7 +157,7 @@ backupHistory
   -> Maybe DataName
   -> IO ()
 backupHistory backupDir history nodeId nodeName mDataName =
-  whenJust (M.lookup nodeId history) $ \historyData -> ignore $ do
+  whenJust (M.lookup nodeId history) \historyData -> ignore do
     let nodeSubdir = backupDir </> T.unpack nodeName
     createDirectoryIfMissing True nodeSubdir
     case mDataName of
@@ -178,7 +184,7 @@ getAllHistoryFromBackup tracerEnv@TracerEnv{teConnectedNodes} dataName = do
   connected <- S.toList <$> readTVarIO teConnectedNodes
   nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
   backupDir <- getPathToBackupDir tracerEnv
-  forM nodesIdsWithNames $ \(nodeId, nodeName) -> do
+  forM nodesIdsWithNames \(nodeId, nodeName) -> do
     let nodeSubdir = backupDir </> T.unpack nodeName
     doesDirectoryExist nodeSubdir >>= \case
       False -> return (nodeId, []) -- There is no backup for this node.
@@ -218,7 +224,7 @@ getLastHistoryFromBackups'
   -> IO [(NodeId, [(DataName, [HistoricalPoint])])]
 getLastHistoryFromBackups' tracerEnv nodeIds = do
   backupDir <- getPathToBackupDir tracerEnv
-  forMM (getNodesIdsWithNames tracerEnv nodeIds) $ \(nodeId, nodeName) -> do
+  forMM (getNodesIdsWithNames tracerEnv nodeIds) \(nodeId, nodeName) -> do
     let nodeSubdir = backupDir </> T.unpack nodeName
     doesDirectoryExist nodeSubdir >>= \case
       False -> return (nodeId, []) -- There is no backup for this node.
@@ -254,6 +260,6 @@ getNodesIdsWithNames
   -> IO [(NodeId, NodeName)]
 getNodesIdsWithNames _ [] = return []
 getNodesIdsWithNames tracerEnv connected =
-  forM connected $ \nodeId -> do
+  forM connected \nodeId -> do
     nodeName <- askNodeName tracerEnv nodeId
     return (nodeId, nodeName)

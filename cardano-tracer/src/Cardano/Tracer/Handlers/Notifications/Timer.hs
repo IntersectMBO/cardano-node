@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Cardano.Tracer.Handlers.RTView.Notifications.Timer
+module Cardano.Tracer.Handlers.Notifications.Timer
   ( PeriodInSec
   , Timer
   , mkTimer

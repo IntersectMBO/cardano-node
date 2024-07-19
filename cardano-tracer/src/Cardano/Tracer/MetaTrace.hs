@@ -34,17 +34,29 @@ import           GHC.Generics
 import qualified System.IO as Sys
 
 data TracerTrace
-  = TracerParamsAre
+  -- | Static information about the build.
+  = TracerBuildInfo
+    { ttBuiltWithRTView      :: !Bool
+    }
+  | TracerParamsAre
     { ttConfigPath           :: !FilePath
     , ttStateDir             :: !(Maybe FilePath)
     , ttMinLogSeverity       :: !(Maybe SeverityS) }
   | TracerConfigIs
-    { ttConfig               :: !TracerConfig }
+    { ttConfig               :: !TracerConfig
+    , ttWarnRTViewMissing    :: !Bool
+    }
   | TracerInitStarted
   | TracerInitEventQueues
   | TracerInitDone
   | TracerStartedLogRotator
   | TracerStartedPrometheus
+    { ttPrometheusEndpoint   :: !Endpoint
+    }
+  | TracerStartedMonitoring
+    { ttMonitoringEndpoint   :: !Endpoint
+    , ttMonitoringType       :: !Text
+    }
   | TracerStartedAcceptors
     { ttAcceptorsAddr        :: !Network }
   | TracerStartedRTView
@@ -70,56 +82,93 @@ data TracerTrace
 instance ToJSON TracerTrace where
   toEncoding :: TracerTrace -> Encoding
   toEncoding = \case
-    TracerParamsAre{..} -> pairs
-        ("ConfigPath" .= ttConfigPath
-      <> "StateDir" .= ttStateDir
-      <> "MinLogSeverity" .= ttMinLogSeverity
-      <> "kind" .= ("TracerParamsAre" :: Text))
-    TracerConfigIs{..} -> pairs
-        ("Config" .= ttConfig
-      <> "kind" .= ("TracerConfigIs" :: Text))
-    TracerInitStarted -> pairs
-        ("kind" .= ("TracerInitStarted" :: Text))
-    TracerInitEventQueues -> pairs
-        ("kind" .= ("TracerInitEventQueues" :: Text))
-    TracerInitDone -> pairs
-        ("kind" .= ("TracerInitDone" :: Text))
-    TracerStartedLogRotator -> pairs
-        ("kind" .= ("TracerStartedLogRotator" :: Text))
-    TracerStartedPrometheus -> pairs
-        ("kind" .= ("TracerStartedPrometheus" :: Text))
-    TracerStartedAcceptors{..} -> pairs
-        ("kind" .= ("TracerStartedAcceptors" :: Text)
-      <> "AcceptorsAddr" .= ttAcceptorsAddr)
-    TracerStartedRTView -> pairs
-        ("kind" .= ("TracerStartedRTView" :: Text))
-    TracerStartedReforwarder -> pairs
-        ("kind" .= ("TracerStartedReforwarder" :: Text))
-    TracerSockListen{..} -> pairs
-        ("kind" .= ("TracerSockListen" :: Text)
-      <> "ListenAt" .= ttListenAt)
-    TracerSockIncoming{..} -> pairs
-        ("kind" .= ("TracerSockIncoming" :: Text)
-      <> "ConnectionIncomingAt" .= ttConnectionIncomingAt
-      <> "Addr" .= ttAddr)
-    TracerSockConnecting{..} -> pairs
-        ("kind" .= ("TracerSockConnecting" :: Text)
-      <> "ConnectionIncomingAt" .= ttConnectingTo)
-    TracerSockConnected{..} -> pairs
-        ("kind" .= ("TracerSockConnected" :: Text)
-      <> "ConnectedTo" .= ttConnectedTo)
-    TracerShutdownInitiated -> pairs
-        ("kind" .= ("TracerShutdownInitiated" :: Text))
-    TracerShutdownHistBackup -> pairs
-        ("kind" .= ("TracerShutdownHistBackup" :: Text))
-    TracerShutdownComplete -> pairs
-        ("kind" .= ("TracerShutdownComplete" :: Text))
-    TracerError{..} -> pairs
-        ("kind" .= ("TracerError" :: Text)
-      <> "Error" .= ttError)
-    TracerResource{..} -> pairs
-        ("kind" .= ("TracerResource" :: Text)
-      <> "Resource" .= ttResource)
+    TracerBuildInfo{..} -> concatPairs
+      [ "BuiltWithRTView" .= ttBuiltWithRTView
+      , "kind"            .= txt "TracerBuildInfo"
+      ]
+    TracerParamsAre{..} -> concatPairs
+      [ "ConfigPath"     .= ttConfigPath
+      , "StateDir"       .= ttStateDir
+      , "MinLogSeverity" .= ttMinLogSeverity
+      , "kind"           .= txt "TracerParamsAre"
+      ]
+    TracerConfigIs{..} -> concatPairs $
+      [ "Config"            .= ttConfig
+      , "kind"              .= txt "TracerConfigIs" ] ++
+      [ "WarnRTViewMissing" .= txt "RTView requested in config but cardano-tracer was built without it."
+      | ttWarnRTViewMissing
+      ]
+    TracerInitStarted -> concatPairs
+      [ "kind" .= txt "TracerInitStarted"
+      ]
+    TracerInitEventQueues -> concatPairs
+      [ "kind" .= txt "TracerInitEventQueues"
+      ]
+    TracerInitDone -> concatPairs
+      [ "kind" .= txt "TracerInitDone"
+      ]
+    TracerStartedLogRotator -> concatPairs
+      [ "kind" .= txt "TracerStartedLogRotator"
+      ]
+    TracerStartedPrometheus{..} -> concatPairs
+      [ "kind"     .= txt "TracerStartedPrometheus"
+      , "endpoint" .= ttPrometheusEndpoint
+      ]
+    TracerStartedMonitoring{..} -> concatPairs
+      [ "kind"     .= txt "TracerStartedMonitoring"
+      , "endpoint" .= ttMonitoringEndpoint
+      , "type"     .= ttMonitoringType
+      ]
+    TracerStartedAcceptors{..} -> concatPairs
+      [ "kind"          .= txt "TracerStartedAcceptors"
+      , "AcceptorsAddr" .= ttAcceptorsAddr
+      ]
+    TracerStartedRTView -> concatPairs
+      [ "kind" .= txt "TracerStartedRTView"
+      ]
+    TracerStartedReforwarder -> concatPairs
+      [ "kind" .= txt "TracerStartedReforwarder"
+      ]
+    TracerSockListen{..} -> concatPairs
+      [ "kind"     .= txt "TracerSockListen"
+      , "ListenAt" .= ttListenAt
+      ]
+    TracerSockIncoming{..} -> concatPairs
+      [ "kind"                 .= txt "TracerSockIncoming"
+      , "ConnectionIncomingAt" .= ttConnectionIncomingAt
+      , "Addr"                 .= ttAddr
+      ]
+    TracerSockConnecting{..} -> concatPairs
+      [ "kind"                 .= txt "TracerSockConnecting"
+      , "ConnectionIncomingAt" .= ttConnectingTo
+      ]
+    TracerSockConnected{..} -> concatPairs
+      [ "kind"        .= txt "TracerSockConnected"
+      , "ConnectedTo" .= ttConnectedTo
+      ]
+    TracerShutdownInitiated -> concatPairs
+      [ "kind" .= txt "TracerShutdownInitiated"
+      ]
+    TracerShutdownHistBackup -> concatPairs
+      [ "kind" .= txt "TracerShutdownHistBackup"
+      ]
+    TracerShutdownComplete -> concatPairs
+      [ "kind" .= txt "TracerShutdownComplete"
+      ]
+    TracerError{..} -> concatPairs
+      [ "kind"  .= txt "TracerError"
+      , "Error" .= ttError
+      ]
+    TracerResource{..} -> concatPairs
+      [ "kind"     .= txt "TracerResource"
+      , "Resource" .= ttResource
+      ]
+   where
+    txt :: Text -> Text
+    txt = id
+    concatPairs :: [Series] -> Encoding
+    concatPairs = pairs . mconcat
+
   toJSON = AE.genericToJSON jsonEncodingOptions
 
 jsonEncodingOptions :: AE.Options
@@ -134,7 +183,13 @@ jsonEncodingOptions = AE.defaultOptions
   }
 
 instance LogFormatting TracerTrace where
-  forHuman = T.pack . show
+  forHuman t@TracerConfigIs{ttWarnRTViewMissing = True} = T.pack $
+    unlines
+      [ show t ++ ": RTView requested in config but cardano-tracer was built without it."
+      , "Enable with `-f +rtview`."
+      ]
+  forHuman t = T.pack (show t)
+
   forMachine DMinimal  _ = mempty
   forMachine DNormal   _ = mempty
   forMachine DDetailed t = forMachine DMaximum t
@@ -143,13 +198,15 @@ instance LogFormatting TracerTrace where
                              _ -> error "Impossible"
 
 instance MetaTrace TracerTrace where
+    namespaceFor TracerBuildInfo {} = Namespace [] ["BuildInfo"]
     namespaceFor TracerParamsAre {} = Namespace [] ["ParamsAre"]
     namespaceFor TracerConfigIs {} = Namespace [] ["ConfigIs"]
     namespaceFor TracerInitStarted = Namespace [] ["InitStart"]
     namespaceFor TracerInitEventQueues = Namespace [] ["EventQueues"]
     namespaceFor TracerInitDone = Namespace [] ["InitDone"]
     namespaceFor TracerStartedLogRotator = Namespace [] ["StartedLogRotator"]
-    namespaceFor TracerStartedPrometheus = Namespace [] ["StartedPrometheus"]
+    namespaceFor TracerStartedPrometheus{} = Namespace [] ["StartedPrometheus"]
+    namespaceFor TracerStartedMonitoring{} = Namespace [] ["StartedMonitoring"]
     namespaceFor TracerStartedAcceptors {} = Namespace [] ["StartedAcceptors"]
     namespaceFor TracerStartedRTView = Namespace [] ["StartedRTView"]
     namespaceFor TracerStartedReforwarder = Namespace [] ["StartedReforwarder"]
@@ -170,6 +227,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["InitDone"]) _ = Just Info
     severityFor (Namespace _ ["StartedLogRotator"]) _ = Just Info
     severityFor (Namespace _ ["StartedPrometheus"]) _ = Just Info
+    severityFor (Namespace _ ["StartedMonitoring"]) _ = Just Info
     severityFor (Namespace _ ["StartedAcceptors"]) _ = Just Info
     severityFor (Namespace _ ["StartedRTView"]) _ = Just Info
     severityFor (Namespace _ ["StartedReforwarder"]) _ = Just Info
@@ -194,6 +252,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["InitDone"]
       , Namespace [] ["StartedLogRotator"]
       , Namespace [] ["StartedPrometheus"]
+      , Namespace [] ["StartedMonitoring"]
       , Namespace [] ["StartedAcceptors"]
       , Namespace [] ["StartedRTView"]
       , Namespace [] ["StartedReforwarder"]

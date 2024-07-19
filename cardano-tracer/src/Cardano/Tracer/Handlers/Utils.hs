@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 
-module Cardano.Tracer.Handlers.RTView.Update.Utils
+module Cardano.Tracer.Handlers.Utils
   ( askDataPoint
   , utc2ns
   , utc2s
@@ -41,7 +41,7 @@ askDataPoint
   -> NodeId
   -> DataPointName
   -> IO (Maybe a)
-askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock $ do
+askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock do
   requestors <- readTVarIO dpRequestors
   case M.lookup nodeId requestors of
     Nothing -> return Nothing

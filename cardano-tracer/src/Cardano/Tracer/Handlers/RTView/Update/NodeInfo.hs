@@ -9,7 +9,7 @@ import           Cardano.Node.Startup (NodeInfo (..))
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
 
 import           Control.Monad (forM_)

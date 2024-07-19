@@ -1,5 +1,5 @@
 
-module Cardano.Tracer.Handlers.RTView.Notifications.Utils
+module Cardano.Tracer.Handlers.Notifications.Utils
   ( addNewEvent
   , getNewEvents
   , initEventsQueues
@@ -7,11 +7,11 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Utils
   , updateNotificationsPeriods
   ) where
 
-import           Cardano.Tracer.Handlers.RTView.Notifications.Send
-import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
-import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Notifications.Send
+import           Cardano.Tracer.Handlers.Notifications.Settings
+import           Cardano.Tracer.Handlers.Notifications.Timer
+import           Cardano.Tracer.Handlers.Notifications.Types
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.Extra (Lock)

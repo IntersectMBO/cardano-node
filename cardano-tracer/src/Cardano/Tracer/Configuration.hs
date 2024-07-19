@@ -149,7 +149,13 @@ readTracerConfig pathToConfig =
     }
 
 checkMeaninglessValues :: TracerConfig -> Either String ()
-checkMeaninglessValues TracerConfig{network, hasEKG, hasPrometheus, hasRTView, logging} =
+checkMeaninglessValues TracerConfig
+  { network
+  , hasEKG
+  , hasPrometheus
+  , logging
+  , hasRTView
+  } =
   if null problems
     then Right ()
     else Left $ intercalate ", " problems
