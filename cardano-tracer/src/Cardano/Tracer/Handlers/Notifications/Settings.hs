@@ -21,10 +21,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 
--- import           Crypto.Cipher.AES ()
--- import           Crypto.Cipher.Types ()
--- import           Crypto.Error ()
-
 readSavedEmailSettings :: Maybe FilePath -> IO EmailSettings
 readSavedEmailSettings rtvSD = do
   (pathToEmailSettings, _) <- getPathsToNotificationsSettings rtvSD

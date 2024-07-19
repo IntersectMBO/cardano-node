@@ -101,7 +101,7 @@ runMonitoringServer tracerEnv (endpoint@(Endpoint listHost listPort), monitorEP)
     , ttMonitoringType     = "list"
     }
   simpleHttpServe config do
-    route 
+    route
       [ ("/", renderEkg)
       ]
  where
@@ -117,7 +117,6 @@ runMonitoringServer tracerEnv (endpoint@(Endpoint listHost listPort), monitorEP)
   renderEkg :: Snap ()
   renderEkg = do
     nodes <- liftIO $ S.toList <$> readTVarIO teConnectedNodes
-
     -- HACK
     case nodes of
       [] ->
@@ -129,6 +128,10 @@ runMonitoringServer tracerEnv (endpoint@(Endpoint listHost listPort), monitorEP)
         ekgHtml monitorEP nodes
 
 {-# NOINLINE currentServerHack #-}
+-- | There is supposed to be one EKG server per port. The desired EKG
+-- server for the connected node gets restarted always on the same
+-- port. We limit functionality to only run one EKG server, this will
+-- be resolved in a future PR.
 currentServerHack :: CurrentEKGServer
 currentServerHack = unsafePerformIO newEmptyTMVarIO
 
@@ -140,7 +143,6 @@ ekgHtml (Endpoint monitorHost monitorPort) = \case
   [] ->
     toHtml @T.Text "ekgHtml: There are no connected nodes yet"
   connectedNodes -> do
-    li do toHtml @T.Text "OKAY"
     for_ connectedNodes \(NodeId anId) ->
       li do
         a ! href (fromString ("http://" <> monitorHost <> ":" <> show monitorPort))

@@ -127,9 +127,6 @@ showProblemIfAny verb action =
 logTrace :: String -> IO ()
 logTrace = traceWith stdoutTracer
 
--- logTrace :: String -> IO ()
--- logTrace = traceWith $ showTracing stdoutTracer
-
 connIdToNodeId :: Show addr => ConnectionId addr -> NodeId
 connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
  where
