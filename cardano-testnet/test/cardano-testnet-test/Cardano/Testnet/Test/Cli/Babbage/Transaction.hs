@@ -69,6 +69,13 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
+  -- This fails because cardano-cli produces V2 cost model with 185 params in a list format
+  void $ execCli' execConfig
+    [ anyEraToString cEra, "query", "protocol-parameters"
+    , "--cardano-mode"
+    , "--out-file", work </> "pparams.json"
+    ]
+
   void $ execCli' execConfig
     [ anyEraToString cEra, "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
