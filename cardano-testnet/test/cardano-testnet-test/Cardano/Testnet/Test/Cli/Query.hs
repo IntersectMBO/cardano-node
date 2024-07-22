@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
@@ -59,7 +60,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
                    watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
-import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
+import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress), buildTransferTx, signTx, submitTx, retrieveTransactionId)
                    mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx,
                    submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
