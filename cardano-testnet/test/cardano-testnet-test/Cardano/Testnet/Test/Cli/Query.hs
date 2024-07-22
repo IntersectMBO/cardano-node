@@ -206,9 +206,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- ledger-state
       H.noteM_ $ execCli' execConfig [ eraName, "query", "ledger-state" ]
 
-    TestQueryProtocolStateCmd -> do
+    TestQueryProtocolStateCmd ->
       -- protocol-state
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "protocol-state" ]
 
     TestQueryStakeSnapshotCmd -> do
       -- stake-snapshot
