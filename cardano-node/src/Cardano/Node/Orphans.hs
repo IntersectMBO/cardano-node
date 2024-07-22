@@ -7,6 +7,7 @@ module Cardano.Node.Orphans () where
 
 import           Cardano.Api ()
 
+import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
@@ -38,3 +39,14 @@ instance FromJSON AcceptedConnectionsLimit where
       <$> v .: "hardLimit"
       <*> v .: "softLimit"
       <*> v .: "delay"
+
+instance FromJSON GenesisConfigFlags where
+  parseJSON = withObject "GenesisConfigFlags" $ \v ->
+    GenesisConfigFlags
+      <$> v .:? "EnableCSJ"       .!= True
+      <*> v .:? "EnableLoEAndGDD" .!= True
+      <*> v .:? "EnableLoP"       .!= True
+      <*> v .:? "BulkSyncGracePeriod"
+      <*> v .:? "BucketCapacity"
+      <*> v .:? "BucketRate"
+      <*> v .:? "CSJJumpSize"
