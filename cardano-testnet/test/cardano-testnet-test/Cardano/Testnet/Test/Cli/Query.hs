@@ -198,17 +198,17 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
                                        , "--address", T.unpack $ serialiseAddress stakeAddress
                                        ]
 
-    TestQueryUTxOCmd -> do
+    TestQueryUTxOCmd ->
       -- utxo
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "utxo", "--whole-utxo" ]
 
-    TestQueryLedgerStateCmd -> do
+    TestQueryLedgerStateCmd ->
       -- ledger-state
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "ledger-state" ]
 
-    TestQueryProtocolStateCmd -> do
+    TestQueryProtocolStateCmd ->
       -- protocol-state
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "protocol-state" ]
 
     TestQueryStakeSnapshotCmd -> do
       -- stake-snapshot
