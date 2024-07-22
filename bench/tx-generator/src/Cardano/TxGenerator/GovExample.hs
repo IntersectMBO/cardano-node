@@ -65,26 +65,7 @@ import qualified Cardano.Chain.Common as Byron (AddrAttributes (..), NetworkMagi
 
 import qualified Cardano.CLI.EraBased.Commands.Transaction as Cmd
 -- Unqualified imports of types need to be re-qualified before a PR.
-import           Cardano.CLI.EraBased.Commands.Governance.Vote (
-                     GovernanceVoteCmds (..)
-                   , GovernanceVoteCreateCmdArgs (..)
-                   , GovernanceVoteViewCmdArgs (..))
 -- Adjust line break to stylish-haskell/fourmolu/etc.
-import           Cardano.CLI.EraBased.Commands.Governance.Actions (
-                     GovernanceActionCmds (..)
-                   , GovernanceActionUpdateCommitteeCmdArgs (..)
-                   , GovernanceActionCreateConstitutionCmdArgs (..)
-                   , GovernanceActionCreateNoConfidenceCmdArgs (..)
-                   , GovernanceActionInfoCmdArgs (..)
-                   , GovernanceActionViewCmdArgs (..)
-                   , GovernanceActionProtocolParametersUpdateCmdArgs (..)
-                   , GovernanceActionTreasuryWithdrawalCmdArgs (..)
-                   , UpdateProtocolParametersConwayOnwards (..)
-                   , UpdateProtocolParametersPreConway (..)
-                   , GovernanceActionHardforkInitCmdArgs (..)
-                   , CostModelsFile (..))
-import qualified Cardano.CLI.EraBased.Commands.Governance.Actions as CLI (renderGovernanceActionCmds)
-import           Cardano.CLI.EraBased.Run.Governance.Actions (GovernanceActionsError (..))
 import           Cardano.CLI.Json.Friendly (FriendlyFormat (..)
                    , friendlyTx
                    , friendlyTxBody)
