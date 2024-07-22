@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 
 module Testnet.Process.Cli.Transaction
-  ( signTx
+  ( buildTransferTx
+  , signTx
   , submitTx
   , failToSubmitTx
   , retrieveTransactionId
@@ -21,12 +22,15 @@ import           GHC.IO.Exception (ExitCode (..))
 import           GHC.Stack
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Query (findLargestUtxoForPaymentKey, EpochStateView)
 import           Testnet.Process.Run (execCli')
 import           Testnet.Start.Types (anyEraToString)
 import           Testnet.Types
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
+import qualified Data.Text as T
+import Data.Typeable (Typeable)
 
 -- Transaction signing
 data VoteFile
@@ -34,6 +38,45 @@ data VoteFile
 data TxBody
 
 data SignedTx
+
+-- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
+-- the specified key pairs.
+-- This function takes five parameters:
+-- 
+-- Returns the generated @File TxBody In@ file path to the created unsigned
+-- transaction file.
+buildTransferTx
+  :: Typeable era
+  => H.MonadAssertion m
+  => MonadTest m
+  => MonadCatch m
+  => MonadIO m
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> ShelleyBasedEra era -- ^ Witness for the current Cardano era.
+  -> FilePath -- ^ Base directory path where the unsigned transaction file will be stored.
+  -> String -- ^ Prefix for the output unsigned transaction file name. The extension will be @.txbody@.
+  -> PaymentKeyInfo -- ^ Payment key pair used for paying the transaction.
+  -> PaymentKeyInfo -- ^ Payment key of the recipient of the transaction.
+  -> Int -- ^ Amount of ADA to transfer (in Lovelace).
+  -> m (File TxBody In)
+buildTransferTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount = do
+  let era = toCardanoEra sbe
+      cEra = AnyCardanoEra era
+      txBody = File (work </> prefix <> ".txbody")
+  txin <- findLargestUtxoForPaymentKey epochStateView sbe srcWallet
+  void $ execCli' execConfig
+    [ anyEraToString cEra, "transaction", "build"
+    , "--change-address", srcAddress
+    , "--tx-in", T.unpack $ renderTxIn txin
+    , "--tx-out", destAddress <> "+" <> show amount
+    , "--out-file", unFile txBody
+    ]
+  return txBody
+  where
+    srcAddress = T.unpack $ paymentKeyInfoAddr srcWallet
+    destAddress = T.unpack $ paymentKeyInfoAddr dstWallet
 
 -- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
 --

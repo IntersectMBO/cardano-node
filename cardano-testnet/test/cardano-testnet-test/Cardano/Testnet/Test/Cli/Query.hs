@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
@@ -37,6 +38,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query
 import qualified Testnet.Defaults as Defaults
+import           Testnet.Process.Cli.Transaction (buildTransferTx, signTx, submitTx, retrieveTransactionId)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
@@ -72,6 +74,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     { testnetMagic
     , poolNodes
     , configurationFile
+    , wallets=wallet0:wallet1:_
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
   
@@ -210,20 +213,32 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- protocol-state
       H.noteM_ $ execCli' execConfig [ eraName, "query", "protocol-state" ]
 
-    TestQueryStakeSnapshotCmd -> do
+    TestQueryStakeSnapshotCmd ->
       -- stake-snapshot
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-snapshot", "--all-stake-pools" ]
 
     TestQueryKesPeriodInfoCmd -> do
       -- kes-period-info
+      -- This is tested in hprop_kes_period_info in Cardano.Testnet.Test.Cli.KesPeriodInfo
       pure ()
 
-    TestQueryTxMempoolCmd -> do
+    TestQueryTxMempoolCmd ->
       -- tx-mempool
-      pure ()
+      do
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "info" ]
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "next-tx" ]
+        -- Now we create a transaction and check if it exists in the mempool
+        mempoolWork <- H.createDirectoryIfMissing $ work </> "mempool-test"
+        txBody <- buildTransferTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
+        signedTx <- signTx execConfig cEra mempoolWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet0]
+        submitTx execConfig cEra signedTx
+        txId <- retrieveTransactionId execConfig signedTx
+        -- And we check
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "tx-exists", txId ]
 
-    TestQuerySlotNumberCmd -> do
+    TestQuerySlotNumberCmd ->
       -- slot-number
+      -- This is tested in hprop_querySlotNumber in Cardano.Testnet.Test.Cli.QuerySlotNumber
       pure ()
 
     TestQueryRefScriptSizeCmd -> do
