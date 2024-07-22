@@ -2016,6 +2016,10 @@ instance MetaTrace (TraceGsmEvent selection) where
     , Namespace [] ["GsmEventSyncingToPreSyncing"]
     ]
 
+--------------------------------------------------------------------------------
+-- CSJ Tracer
+--------------------------------------------------------------------------------
+
 instance ( LogFormatting peer, Show peer
          ) => LogFormatting (CSJumping.TraceEvent peer) where
   forMachine dtal =
