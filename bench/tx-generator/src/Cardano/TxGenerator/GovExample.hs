@@ -1,7 +1,6 @@
 {-# LANGUAGE BlockArguments        #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE EmptyCase             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE LambdaCase            #-}
@@ -21,8 +20,10 @@
 {-# OPTIONS_GHC -Wno-error=unused-imports          #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas          #-}
 
-{- HLINT ignore "Unused LANGUAGE pragma" -}
-{- HLINT ignore "Avoid lambda using `infix`" -}
+{- There used to be:
+ - HLINT ignore "Unused LANGUAGE pragma"
+ - HLINT ignore "Avoid lambda using `infix`"
+ - but the warnings got silenced. -}
 
 module  Cardano.TxGenerator.GovExample where
 
@@ -267,7 +268,7 @@ type Generator = State FundQueue
 --         :: Url -> ByteString -> Anchor StandardCrypto
 localGenVote :: forall era . {- ConwayEraOnwardsConstraints era => -} ConwayEraOnwards era -> Vote -> IO ()
 localGenVote era vote = do
-  _procedure <- pure $ Api.createVotingProcedure
+  let _procedure = Api.createVotingProcedure
                              (era {- eon -} :: ConwayEraOnwards era)
                              (vote {- votingChoice -} :: Vote)
                              (Nothing :: Maybe (Url, Text))
@@ -1478,7 +1479,7 @@ validateTxInsCollateral
   -> Either TxCmdError (TxInsCollateral era)
 validateTxInsCollateral _ [] = return TxInsCollateralNone
 validateTxInsCollateral era txins = do
-  forShelleyBasedEraInEonMaybe era (\supported -> TxInsCollateral supported txins)
+  forShelleyBasedEraInEonMaybe era (`TxInsCollateral` txins)
     & maybe (txFeatureMismatchPure (toCardanoEra era) TxFeatureCollateral) Right
 
 validateTxInsReference
@@ -1487,7 +1488,7 @@ validateTxInsReference
   -> Either TxCmdError (TxInsReference BuildTx era)
 validateTxInsReference _ [] = return TxInsReferenceNone
 validateTxInsReference sbe allRefIns = do
-  forShelleyBasedEraInEonMaybe sbe (\supported -> TxInsReference supported allRefIns)
+  forShelleyBasedEraInEonMaybe sbe (`TxInsReference` allRefIns)
     & maybe (txFeatureMismatchPure (toCardanoEra sbe) TxFeatureReferenceInputs) Right
 
 getAllReferenceInputs
@@ -1594,13 +1595,13 @@ toTxOutInShelleyBasedEra era (TxOutShelleyBasedEra addr' val' mDatumHash refScri
   datum <-
     caseShelleyToMaryOrAlonzoEraOnwards
       (const (pure TxOutDatumNone))
-      (\wa -> toTxAlonzoDatum wa mDatumHash)
+      (`toTxAlonzoDatum` mDatumHash)
       era
 
   refScript <-
     inEonForEra
       (pure ReferenceScriptNone)
-      (\wb -> getReferenceScript wb refScriptFp)
+      (`getReferenceScript` refScriptFp)
       (toCardanoEra era)
 
   pure $ TxOut addr val datum refScript
@@ -1628,13 +1629,13 @@ toTxOutInAnyEra era (TxOutAnyEra addr' val' mDatumHash refScriptFp) = do
   datum <-
     caseShelleyToMaryOrAlonzoEraOnwards
       (const (pure TxOutDatumNone))
-      (\wa -> toTxAlonzoDatum wa mDatumHash)
+      (`toTxAlonzoDatum` mDatumHash)
       era
 
   refScript <-
     caseShelleyToAlonzoOrBabbageEraOnwards
       (const (pure ReferenceScriptNone))
-      (\wb -> getReferenceScript wb refScriptFp)
+      (`getReferenceScript` refScriptFp)
       era
   pure $ TxOut addr val datum refScript
 
