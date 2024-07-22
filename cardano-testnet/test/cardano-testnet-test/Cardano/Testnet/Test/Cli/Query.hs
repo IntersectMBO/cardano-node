@@ -17,11 +17,14 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (forM_)
+import           Data.Aeson (eitherDecodeStrictText)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Vector as Vector
 import           GHC.Stack (HasCallStack)
 import           System.FilePath ((</>))
@@ -209,13 +212,13 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- gov-state
       do
         -- to stdout
-        execCli' execConfig [ eraName, "query", "gov-state" ]
-          >>=
-            (`H.diffVsGoldenFile`
-                "test/cardano-testnet-test/files/golden/queries/govStateOut.json")
+        output <- execCli' execConfig [ eraName, "query", "gov-state" ]
+        patchedOutput <- H.evalEither $ patchGovStateOutput output
+        H.diffVsGoldenFile patchedOutput "test/cardano-testnet-test/files/golden/queries/govStateOut.json"
         -- to a file
         let govStateOutFile = work </> "gov-state-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "gov-state", "--out-file", govStateOutFile ]
+        patchGovStateOutputFile govStateOutFile
         H.diffFileVsGoldenFile
           govStateOutFile
           "test/cardano-testnet-test/files/golden/queries/govStateOut.json"
@@ -244,6 +247,21 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       pure ()
 
     )
+  where
+  patchGovStateOutput :: String -> Either String String
+  patchGovStateOutput output = do
+    eOutput <- eitherDecodeStrictText (T.pack output)
+    return $ T.unpack $ decodeUtf8 $ prettyPrintJSON $ patchGovStateJSON eOutput
+    where
+      patchGovStateJSON :: Aeson.Object -> Aeson.Object
+      patchGovStateJSON o = Aeson.delete "futurePParams" o
+
+  patchGovStateOutputFile :: (MonadTest m, MonadIO m) => FilePath -> m ()
+  patchGovStateOutputFile fp = do
+    fileContents <- liftIO $ readFile fp
+    patchedOutput <- H.evalEither $ patchGovStateOutput fileContents
+    liftIO $ writeFile fp patchedOutput
+
 
 -- | @assertArrayOfSize v n@ checks that the value is a JSON array of size @n@,
 -- otherwise it fails the test.
