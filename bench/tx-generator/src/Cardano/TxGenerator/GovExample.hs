@@ -24,17 +24,7 @@
 {- HLINT ignore "Unused LANGUAGE pragma" -}
 {- HLINT ignore "Avoid lambda using `infix`" -}
 
-module  Cardano.TxGenerator.GovExample
-        -- (demo)
-        where
-{-
-
-import           Cardano.CLI.EraBased.Run.Query
-import           Cardano.CLI.Types.Errors.BootstrapWitnessError
-import           Cardano.CLI.Types.Errors.TxCmdError
-import           Cardano.CLI.Types.TxFeature
-
--}
+module  Cardano.TxGenerator.GovExample where
 
 import           Cardano.Api hiding (StakeAddress, StakeCredential)
 import qualified Cardano.Api as Api (NetworkId (..))
@@ -93,29 +83,8 @@ import           Cardano.CLI.EraBased.Commands.Governance.Actions (
                    , UpdateProtocolParametersPreConway (..)
                    , GovernanceActionHardforkInitCmdArgs (..)
                    , CostModelsFile (..))
-{- import           Cardano.CLI.EraBased.Commands.Governance.Actions (
-                     GovernanceActionCmds (..)
-                   , GovernanceActionUpdateCommitteeCmdArgs (..)
-                   , GovernanceActionCreateConstitutionCmdArgs (..)
-                   , GovernanceActionCreateNoConfidenceCmdArgs (..)
-                   , GovernanceActionInfoCmdArgs (..)
-                   , GovernanceActionViewCmdArgs (..)
-                   , GovernanceActionProtocolParametersUpdateCmdArgs (..)
-                   , GovernanceActionTreasuryWithdrawalCmdArgs (..)
-                   , UpdateProtocolParametersConwayOnwards (..)
-                   , UpdateProtocolParametersPreConway (..)
-                   , GovernanceActionHardforkInitCmdArgs (..)
-                   , CostModelsFile (..)) -}
 import qualified Cardano.CLI.EraBased.Commands.Governance.Actions as CLI (renderGovernanceActionCmds)
-{- import qualified Cardano.CLI.EraBased.Commands.Transaction as CLI (TransactionBuildRawCmdArgs (..)) -}
 import           Cardano.CLI.EraBased.Run.Governance.Actions (GovernanceActionsError (..))
-{- import qualified Cardano.CLI.EraBased.Run.Governance.Actions as CLI (
-                     runGovernanceActionCmds
-                   , addCostModelsToEraBasedProtocolParametersUpdate) -}
-{- import qualified Cardano.CLI.EraBased.Run.Governance.Vote as CLI (
-                     runGovernanceVoteCmds
-                     -- These two aren't exported, barring a customised cardano-cli lib:
-                     , runGovernanceVoteCreateCmd, runGovernanceVoteViewCmd) -}
 import           Cardano.CLI.Json.Friendly (FriendlyFormat (..)
                    , friendlyTx
                    , friendlyTxBody)
@@ -190,9 +159,6 @@ import           Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), Url)
 import           Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Coin as Ledger ()
 import           Cardano.Ledger.Crypto -- exports only types and classes
-{- import           Cardano.Ledger.Conway.Governance (GovAction (..)
-                   , GovActionId (..)
-                   , ProposalProcedure (..)) -}
 import           Cardano.TxGenerator.FundQueue (Fund (..), FundInEra (..), FundQueue)
 import qualified Cardano.TxGenerator.FundQueue as FundQueue (emptyFundQueue, getFundCoin, getFundKey, getFundTxIn, getFundWitness, insertFund, toList)
 import           Cardano.TxGenerator.Setup.SigningKey
@@ -240,47 +206,7 @@ import           Paths_tx_generator
 import           System.Exit (die)
 import qualified System.IO as IO (print)
 
--- Not exported, hence cutting and pasting.
--- This might take a number of imports to be able to include:
-{-
-type ConwayEraOnwardsConstraints era =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
-  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
-  , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
-  , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
-  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
-  , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
-  , L.BabbageEraTxBody (ShelleyLedgerEra era)
-  , L.ConwayEraGov (ShelleyLedgerEra era)
-  , L.ConwayEraPParams (ShelleyLedgerEra era)
-  , L.ConwayEraTxBody (ShelleyLedgerEra era)
-  , L.ConwayEraTxCert (ShelleyLedgerEra era)
-  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
-  , L.Era (ShelleyLedgerEra era)
-  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-  , L.EraGov (ShelleyLedgerEra era)
-  , L.EraPParams (ShelleyLedgerEra era)
-  , L.EraTx (ShelleyLedgerEra era)
-  , L.EraTxBody (ShelleyLedgerEra era)
-  , L.EraTxOut (ShelleyLedgerEra era)
-  , L.EraUTxO (ShelleyLedgerEra era)
-  , L.GovState (ShelleyLedgerEra era) ~ L.ConwayGovState (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
-  , L.MaryEraTxBody (ShelleyLedgerEra era)
-  , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
-  , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
-  , L.TxCert (ShelleyLedgerEra era) ~ L.ConwayTxCert (ShelleyLedgerEra era)
-  , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
-  , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-  , FromCBOR (DebugLedgerState era)
-  , IsCardanoEra era
-  , IsShelleyBasedEra era
-  , ToJSON (DebugLedgerState era)
-  , Typeable era
-  )
--}
+-- It may be worth including ConwayEraOnwardsConstraints somehow.
 
 
 demo :: IO ()
@@ -322,20 +248,6 @@ signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyD
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
               , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
 
-{-
-drepSigningKey' :: _ (SigningKey _) = fromJSON "{\
-    \\"type\": \"DRepSigningKey_ed25519\",\
-    \\"description\": \"Delegate Representative Signing Key\",\
-    \\"cborHex\": \"5820ac0757312cf883baa809d8cf6c3c48e86acc70db9c6eb5511666c8b128d9020a\"\
-    \}"
--}
-{-
-parseJSON = withObject "TextEnvelope" $ \v ->
-    TextEnvelope
-      <$> (v .: "type")
-      <*> (v .: "description")
-      <*> (parseJSONBase16 =<< v .: "cborHex")
--}
 drepSigningKey :: SigningKey PaymentKey
 drepSigningKey = fromRight (error "drepSigningKey: parseError") $ parseSigningKeyTE keyData
   where
