@@ -1,25 +1,20 @@
-{-# LANGUAGE BlockArguments             #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DuplicateRecordFields      #-}
-{-# LANGUAGE EmptyCase                  #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE PartialTypeSignatures      #-}
-{-# LANGUAGE PatternSynonyms            #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE RecordWildCards            #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE BlockArguments        #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE EmptyCase             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns  #-}
 {-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
@@ -80,11 +75,24 @@ import qualified Cardano.Chain.Common as Byron (AddrAttributes (..), NetworkMagi
 
 import qualified Cardano.CLI.EraBased.Commands.Transaction as Cmd
 -- Unqualified imports of types need to be re-qualified before a PR.
-{- import           Cardano.CLI.EraBased.Commands.Governance.Vote (
+import           Cardano.CLI.EraBased.Commands.Governance.Vote (
                      GovernanceVoteCmds (..)
                    , GovernanceVoteCreateCmdArgs (..)
-                   , GovernanceVoteViewCmdArgs (..)) -}
+                   , GovernanceVoteViewCmdArgs (..))
 -- Adjust line break to stylish-haskell/fourmolu/etc.
+import           Cardano.CLI.EraBased.Commands.Governance.Actions (
+                     GovernanceActionCmds (..)
+                   , GovernanceActionUpdateCommitteeCmdArgs (..)
+                   , GovernanceActionCreateConstitutionCmdArgs (..)
+                   , GovernanceActionCreateNoConfidenceCmdArgs (..)
+                   , GovernanceActionInfoCmdArgs (..)
+                   , GovernanceActionViewCmdArgs (..)
+                   , GovernanceActionProtocolParametersUpdateCmdArgs (..)
+                   , GovernanceActionTreasuryWithdrawalCmdArgs (..)
+                   , UpdateProtocolParametersConwayOnwards (..)
+                   , UpdateProtocolParametersPreConway (..)
+                   , GovernanceActionHardforkInitCmdArgs (..)
+                   , CostModelsFile (..))
 {- import           Cardano.CLI.EraBased.Commands.Governance.Actions (
                      GovernanceActionCmds (..)
                    , GovernanceActionUpdateCommitteeCmdArgs (..)
@@ -98,22 +106,9 @@ import qualified Cardano.CLI.EraBased.Commands.Transaction as Cmd
                    , UpdateProtocolParametersPreConway (..)
                    , GovernanceActionHardforkInitCmdArgs (..)
                    , CostModelsFile (..)) -}
-{- import           Cardano.CLI.EraBased.Commands.Governance.Actions (
-                     GovernanceActionCmds (..)
-                   , GovernanceActionUpdateCommitteeCmdArgs (..)
-                   , GovernanceActionCreateConstitutionCmdArgs (..)
-                   , GovernanceActionCreateNoConfidenceCmdArgs (..)
-                   , GovernanceActionInfoCmdArgs (..)
-                   , GovernanceActionViewCmdArgs (..)
-                   , GovernanceActionProtocolParametersUpdateCmdArgs (..)
-                   , GovernanceActionTreasuryWithdrawalCmdArgs (..)
-                   , UpdateProtocolParametersConwayOnwards (..)
-                   , UpdateProtocolParametersPreConway (..)
-                   , GovernanceActionHardforkInitCmdArgs (..)
-                   , CostModelsFile (..)) -}
--- import qualified Cardano.CLI.EraBased.Commands.Governance.Actions as CLI (renderGovernanceActionCmds)
+import qualified Cardano.CLI.EraBased.Commands.Governance.Actions as CLI (renderGovernanceActionCmds)
 {- import qualified Cardano.CLI.EraBased.Commands.Transaction as CLI (TransactionBuildRawCmdArgs (..)) -}
--- import           Cardano.CLI.EraBased.Run.Governance.Actions (GovernanceActionsError (..))
+import           Cardano.CLI.EraBased.Run.Governance.Actions (GovernanceActionsError (..))
 {- import qualified Cardano.CLI.EraBased.Run.Governance.Actions as CLI (
                      runGovernanceActionCmds
                    , addCostModelsToEraBasedProtocolParametersUpdate) -}
@@ -189,10 +184,6 @@ import qualified Cardano.CLI.Types.Errors.TxValidationError as CLI (
 import           Cardano.CLI.Types.Governance (AnyVotingStakeVerificationKeyOrHashOrFile (..))
 import qualified Cardano.CLI.Types.Output as CLI (renderScriptCosts)
 import           Cardano.CLI.Types.TxFeature (TxFeature (..))
--- import qualified Cardano.Crypto.PinnedSizedBytes as Crypto (PinnedSizedBytes)
--- import qualified Cardano.Crypto.Libsodium.Constants as Crypto (CRYPTO_SIGN_ED25519_SECRETKEYBYTES)
--- import qualified Cardano.Crypto.DSIGN.Class as Crypto (SignKeyDSIGN)
--- import qualified Cardano.Crypto.DSIGN.Ed25519 as Crypto (Ed25519DSIGN)
 import qualified Cardano.Ledger.Api.PParams as Ledger (ppMinFeeAL)
 import qualified Cardano.Ledger.Api.Tx.Cert as Ledger (pattern RetirePoolTxCert)
 import           Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), Url)
@@ -214,7 +205,7 @@ import qualified Control.Monad as Monad (foldM, forM)
 import           Control.Monad.Trans.State.Strict
 
 
-import           Data.Aeson ((.=) {-, fromJSON-})
+import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson (eitherDecodeFileStrict', object)
 import qualified Data.Aeson.Encode.Pretty as Aeson (encodePretty)
 import           Data.Bifunctor (bimap, first)
@@ -229,14 +220,11 @@ import qualified Data.Map.Strict as Map (fromList, keysSet)
 import qualified Data.Maybe as Maybe (catMaybes, fromMaybe, mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set ((\\), elems, fromList, toList)
-import           Data.String (IsString (..), fromString)
+import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text (pack)
 import qualified Data.Text.IO as Text (putStrLn)
 import           Data.Type.Equality ((:~:)(..), TestEquality (..))
-
-
--- import           GHC.Generics
 
 
 import           Lens.Micro ((^.))
@@ -335,34 +323,12 @@ signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyD
               , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
 
 {-
- - src/Cardano/TxGenerator/GovExample.hs:337:1: error:
- -  • Can't make a derived instance of
- -      ‘Generic
- -         (Crypto.PinnedSizedBytes
- -            Crypto.CRYPTO_SIGN_ED25519_SECRETKEYBYTES)’:
- -      The data constructors of ‘Crypto.PinnedSizedBytes’ are not all in scope
- -        so you cannot derive an instance for it
- -  • In the stand-alone deriving instance for
- -      ‘Generic (Crypto.PinnedSizedBytes Crypto.CRYPTO_SIGN_ED25519_SECRETKEYBYTES)’
-deriving instance Generic  (Crypto.PinnedSizedBytes
-                            Crypto.CRYPTO_SIGN_ED25519_SECRETKEYBYTES)
-deriving instance FromJSON (Crypto.PinnedSizedBytes
-                            Crypto.CRYPTO_SIGN_ED25519_SECRETKEYBYTES)
-deriving instance FromJSON (Crypto.SignKeyDSIGN Crypto.Ed25519DSIGN)
-deriving instance FromJSON PaymentKey
-deriving instance Generic  PaymentKey
-deriving instance Generic  (SigningKey PaymentKey)
-deriving instance FromJSON (SigningKey PaymentKey)
-
-drepSigningKey' :: _ (SigningKey PaymentKey) = drepSigningKeyString
- -}
-
-drepSigningKeyString :: IsString s => s
-drepSigningKeyString = "{\
+drepSigningKey' :: _ (SigningKey _) = fromJSON "{\
     \\"type\": \"DRepSigningKey_ed25519\",\
     \\"description\": \"Delegate Representative Signing Key\",\
     \\"cborHex\": \"5820ac0757312cf883baa809d8cf6c3c48e86acc70db9c6eb5511666c8b128d9020a\"\
     \}"
+-}
 {-
 parseJSON = withObject "TextEnvelope" $ \v ->
     TextEnvelope
