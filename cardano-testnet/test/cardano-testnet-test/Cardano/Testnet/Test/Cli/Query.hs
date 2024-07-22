@@ -216,6 +216,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
 
     TestQueryKesPeriodInfoCmd -> do
       -- kes-period-info
+      -- This is tested in hprop_kes_period_info in Cardano.Testnet.Test.Cli.KesPeriodInfo
       pure ()
 
     TestQueryTxMempoolCmd -> do
