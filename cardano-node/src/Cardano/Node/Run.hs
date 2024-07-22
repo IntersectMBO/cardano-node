@@ -471,9 +471,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
-              , rnGenesisConfig = if ncEnableGenesis nc
-                  then Genesis.enableGenesisConfigDefault
-                  else Genesis.disableGenesisConfig
+              , rnGenesisConfig = ncGenesisConfig nc
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -556,9 +554,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
-                , rnGenesisConfig = if ncEnableGenesis nc
-                    then Genesis.enableGenesisConfigDefault
-                    else Genesis.disableGenesisConfig
+                , rnGenesisConfig = ncGenesisConfig nc
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
