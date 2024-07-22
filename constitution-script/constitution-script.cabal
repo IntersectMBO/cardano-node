@@ -1,0 +1,66 @@
+cabal-version:      3.0
+name:               cardano-constitution
+version:            1.31.0.0
+license:            Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+maintainer:         nikolaos.bezirgiannis@iohk.io
+author:             Plutus Core Team
+synopsis:           Cardano's Constitution
+description:        The Cardano's Constitution plutus script part
+category:           Language
+build-type:         Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/IntersectMBO/cardano-node
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    DerivingStrategies
+    ExplicitForAll
+    FlexibleContexts
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    ScopedTypeVariables
+    StandaloneDeriving
+
+  -- See Plutus Tx readme for why we need the following flags:
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints -Widentities
+    -Wunused-packages -Wmissing-deriving-strategies -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    -fno-strictness
+
+common ghc-version-support
+  -- See the section on GHC versions in CONTRIBUTING
+  if (impl(ghc <9.6) || impl(ghc >=9.7))
+    buildable: False
+
+common os-support
+  if (impl(ghcjs) || os(windows))
+    buildable: False
+
+executable constitution-script
+  -- This is a temporary workaround to solve the plutus-ledger-api dependency conflict
+  -- caused by the `cardano-api` dependency.
+  buildable:      False
+  import:         lang, ghc-version-support, os-support
+  hs-source-dirs: src
+  main-is:        Main.hs
+  build-depends:
+    , base
+    , cardano-api           ^>= 9.0
+    , cardano-constitution
+    , plutus-ledger-api
