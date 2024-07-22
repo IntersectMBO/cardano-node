@@ -210,9 +210,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- protocol-state
       H.noteM_ $ execCli' execConfig [ eraName, "query", "protocol-state" ]
 
-    TestQueryStakeSnapshotCmd -> do
+    TestQueryStakeSnapshotCmd ->
       -- stake-snapshot
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-snapshot", "--all-stake-pools" ]
 
     TestQueryKesPeriodInfoCmd -> do
       -- kes-period-info
