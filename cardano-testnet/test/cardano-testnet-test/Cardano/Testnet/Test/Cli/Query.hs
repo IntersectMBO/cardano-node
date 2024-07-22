@@ -202,9 +202,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- utxo
       H.noteM_ $ execCli' execConfig [ eraName, "query", "utxo", "--whole-utxo" ]
 
-    TestQueryLedgerStateCmd -> do
+    TestQueryLedgerStateCmd ->
       -- ledger-state
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "ledger-state" ]
 
     TestQueryProtocolStateCmd -> do
       -- protocol-state
