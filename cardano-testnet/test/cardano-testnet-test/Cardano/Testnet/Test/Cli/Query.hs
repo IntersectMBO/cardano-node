@@ -33,12 +33,13 @@ import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Vector as Vector
 import           GHC.Stack (HasCallStack)
+import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query
 import qualified Testnet.Defaults as Defaults
-import           Testnet.Process.Cli.Transaction (buildTransferTx, signTx, submitTx, retrieveTransactionId)
+import           Testnet.Process.Cli.Transaction (buildTransferTx, signTx, submitTx, retrieveTransactionId, buildSimpleTransferTx, TxOutAddress (ReferenceScriptAddress))
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
@@ -229,7 +230,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "next-tx" ]
         -- Now we create a transaction and check if it exists in the mempool
         mempoolWork <- H.createDirectoryIfMissing $ work </> "mempool-test"
-        txBody <- buildTransferTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
+        txBody <- buildSimpleTransferTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
         signedTx <- signTx execConfig cEra mempoolWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet0]
         submitTx execConfig cEra signedTx
         txId <- retrieveTransactionId execConfig signedTx
@@ -241,9 +242,27 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- This is tested in hprop_querySlotNumber in Cardano.Testnet.Test.Cli.QuerySlotNumber
       pure ()
 
-    TestQueryRefScriptSizeCmd -> do
+    TestQueryRefScriptSizeCmd ->
       -- ref-script-size
-      pure ()
+      do
+        refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
+        alwaysSucceedsSpendingPlutusPath <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+        let transferAmount = 10_000_000
+        txBody <- buildTransferTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
+                    [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, 10_000_000)]
+        signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
+        submitTx execConfig cEra signedTx
+        txId <- retrieveTransactionId execConfig signedTx
+        -- wait for one block before checking for the transaction
+        _ <- waitForBlocks epochStateView 1
+        let protocolParametersOutFile = refScriptSizeWork </> "ref-script-size-out.json"
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "ref-script-size"
+                                       , "--tx-in", txId ++ "#0"
+                                       , "--out-file", protocolParametersOutFile
+                                       ]
+        H.diffFileVsGoldenFile
+          protocolParametersOutFile
+          "test/cardano-testnet-test/files/golden/queries/refScriptSizeOut.json"
 
     TestQueryConstitutionCmd -> do
       -- constitution
