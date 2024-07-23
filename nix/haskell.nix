@@ -195,8 +195,7 @@ let
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
-                # uncomment after mainnet conway genesis is finalized
-                #"configuration/cardano/mainnet-conway-genesis.json"
+                "configuration/cardano/mainnet-conway-genesis.json"
               ];
               cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"
