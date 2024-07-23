@@ -35,7 +35,7 @@ import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig,
-                   GenesisConfigFlags (..), mkGenesisConfig)
+                   GenesisConfigFlags (..), defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
@@ -548,7 +548,7 @@ defaultPartialNodeConfiguration =
     , pncEnableP2P                      = Last (Just EnabledP2PMode)
     , pncPeerSharing                    = Last (Just PeerSharingDisabled)
     , pncEnableGenesis                  = Last (Just False)
-    , pncGenesisConfigFlags             = mempty
+    , pncGenesisConfigFlags             = Last (Just defaultGenesisConfigFlags)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -618,9 +618,11 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing EnableGenesis"
     $ pncEnableGenesis pnc
 
-  let mGenesisConfigFlags = if enableGenesis
-        then getLast $ pncGenesisConfigFlags pnc
-        else Nothing
+  mGenesisConfigFlags <- if enableGenesis
+    then fmap Just <$>
+      lastToEither "Missing GenesisConfigFlags"
+      $ pncGenesisConfigFlags pnc
+    else pure Nothing
 
   -- TODO: This is not mandatory
   experimentalProtocols <-
