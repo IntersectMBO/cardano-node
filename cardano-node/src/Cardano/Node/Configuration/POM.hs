@@ -618,11 +618,9 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing EnableGenesis"
     $ pncEnableGenesis pnc
 
-  mGenesisConfigFlags <- if enableGenesis
-    then fmap Just <$>
-      lastToEither "Missing GenesisConfigFlags"
-      $ pncGenesisConfigFlags pnc
-    else pure Nothing
+  let mGenesisConfigFlags = if enableGenesis
+        then getLast $ pncGenesisConfigFlags pnc
+        else Nothing
 
   -- TODO: This is not mandatory
   experimentalProtocols <-
