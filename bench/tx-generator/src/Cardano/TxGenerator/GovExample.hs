@@ -15,6 +15,9 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
+-- These are all pretty reasonable warning options.
+-- Maybe all but unused-imports should be suppressed in the cabal
+-- configuration higher up in the codebase?
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns  #-}
 {-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
 {-# OPTIONS_GHC -Wno-error=unused-imports          #-}
@@ -61,9 +64,10 @@ import qualified Cardano.Api.Shelley as Api (
                    , createVotingProcedure
                    , fromShelleyStakeCredential
                    , getTxBodyAndWitnesses)
-import qualified Cardano.Binary as CBOR (serialize')
-import qualified Cardano.Chain.Common as Byron (AddrAttributes (..), NetworkMagic (..), mkAttributes)
 
+import qualified Cardano.Binary as CBOR (serialize')
+import qualified Cardano.Chain.Common as Byron (AddrAttributes (..)
+                   , NetworkMagic (..), mkAttributes)
 import qualified Cardano.CLI.EraBased.Commands.Transaction as Cmd
 -- Unqualified imports of types need to be re-qualified before a PR.
 -- Adjust line break to stylish-haskell/fourmolu/etc.
@@ -89,7 +93,8 @@ import qualified Cardano.CLI.Read as CLI (categoriseSomeSigningWitness
                    , readTxUpdateProposal
                    , readVotingProceduresFiles
                    , readWitnessSigningData)
-import qualified Cardano.CLI.EraBased.Run.Genesis as CLI (readProtocolParameters)
+import qualified Cardano.CLI.EraBased.Run.Genesis as CLI (
+                     readProtocolParameters)
 import           Cardano.CLI.Types.Common (CertificateFile (..)
                    , InputTxBodyOrTxFile (..)
                    {-
@@ -115,8 +120,10 @@ import           Cardano.CLI.Types.Common (CertificateFile (..)
                    , TxTreasuryDonation (..)
                    , ViewOutputFormat (..)
                    , WitnessFile (..))
-import           Cardano.CLI.Types.Errors.BootstrapWitnessError (BootstrapWitnessError (..))
-import           Cardano.CLI.Types.Errors.NodeEraMismatchError (NodeEraMismatchError (..))
+import           Cardano.CLI.Types.Errors.BootstrapWitnessError (
+                     BootstrapWitnessError (..))
+import           Cardano.CLI.Types.Errors.NodeEraMismatchError (
+                     NodeEraMismatchError (..))
 import           Cardano.CLI.Types.Errors.TxCmdError (
                      AnyTxCmdTxExecUnitsErr (..)
                    , AnyTxBodyErrorAutoBalance (..)
@@ -132,7 +139,8 @@ import qualified Cardano.CLI.Types.Errors.TxValidationError as CLI (
                    , validateTxTotalCollateral
                    , validateTxTreasuryDonation
                    , validateTxValidityLowerBound)
-import           Cardano.CLI.Types.Governance (AnyVotingStakeVerificationKeyOrHashOrFile (..))
+import           Cardano.CLI.Types.Governance
+                   (AnyVotingStakeVerificationKeyOrHashOrFile (..))
 import qualified Cardano.CLI.Types.Output as CLI (renderScriptCosts)
 import           Cardano.CLI.Types.TxFeature (TxFeature (..))
 import qualified Cardano.Ledger.Api.PParams as Ledger (ppMinFeeAL)
@@ -142,24 +150,25 @@ import           Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Coin as Ledger ()
 import           Cardano.Ledger.Crypto -- exports only types and classes
 import           Cardano.TxGenerator.FundQueue (Fund (..), FundInEra (..), FundQueue)
-import qualified Cardano.TxGenerator.FundQueue as FundQueue (emptyFundQueue, getFundCoin, getFundKey, getFundTxIn, getFundWitness, insertFund, toList)
+import qualified Cardano.TxGenerator.FundQueue as FundQueue (
+                     emptyFundQueue, getFundCoin, getFundKey
+                   , getFundTxIn, getFundWitness, insertFund, toList)
 import           Cardano.TxGenerator.Setup.SigningKey
-import           Cardano.TxGenerator.Types (FundSource, FundToStoreList, TxEnvironment (..), TxGenError (..), TxGenerator)
+import           Cardano.TxGenerator.Types (FundSource
+                   , FundToStoreList, TxEnvironment (..)
+                   , TxGenError (..), TxGenerator)
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
 import           Cardano.TxGenerator.UTxO (ToUTxOList, makeToUTxOList, mkUTxOVariant)
 
-
 import qualified Control.Monad as Monad (foldM, forM)
 import           Control.Monad.Trans.State.Strict
-
-
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson (eitherDecodeFileStrict', object)
 import qualified Data.Aeson.Encode.Pretty as Aeson (encodePretty)
 import           Data.Bifunctor (bimap, first)
+import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as LBS8
-import qualified Data.ByteString as ByteString
 import           Data.Either (fromRight)
 import           Data.Function ((&))
 import qualified Data.List as List (foldl', null)
@@ -167,26 +176,21 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (fromList, keysSet)
 import qualified Data.Maybe as Maybe (catMaybes, fromMaybe, mapMaybe)
 import           Data.Set (Set)
-import qualified Data.Set as Set ((\\), elems, fromList, toList)
+import qualified Data.Set as Set (elems, fromList, toList, (\\))
 import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text (pack)
 import qualified Data.Text.IO as Text (putStrLn)
-import           Data.Type.Equality ((:~:)(..), TestEquality (..))
-
-
+import           Data.Type.Equality (TestEquality (..), (:~:) (..))
 import           Lens.Micro ((^.))
-
-
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Consensus (Target (..))
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx (SubmitResult (..))
-
-
-import           Paths_tx_generator
-
-
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as
+         Consensus (Target (..))
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as
+            Net.Tx (SubmitResult (..))
 import           System.Exit (die)
 import qualified System.IO as IO (print)
+
+import           Paths_tx_generator
 
 -- It may be worth including ConwayEraOnwardsConstraints somehow.
 
@@ -568,9 +572,15 @@ runTransactionBuildCmd
         & onLeft (left . TxCmdQueryConvenienceError)
 
     let currentTreasuryValueAndDonation =
-          case (treasuryDonation, unFeatured <$> featuredCurrentTreasuryValueM) of
-            (Nothing, _) -> Nothing -- We shouldn't specify the treasury value when no donation is being done
-            (Just _td, Nothing) -> Nothing -- TODO: Current treasury value couldn't be obtained but is required: we should fail suggesting that the node's version is too old
+          case (treasuryDonation, unFeatured <$>
+                   featuredCurrentTreasuryValueM) of
+            -- We shouldn't specify the treasury value when no donation
+            -- is being done
+            (Nothing, _) -> Nothing
+            -- TODO: Current treasury value couldn't be obtained but
+            -- is required: we should fail suggesting that the node's
+            -- version is too old
+            (Just _td, Nothing) -> Nothing
             (Just td, Just ctv) -> Just (ctv, td)
 
     -- We need to construct the txBodycontent outside of runTxBuild
@@ -1355,6 +1365,8 @@ runTxBuild
               TxCertificates _ cs _ -> cs
               _ -> []
 
+-- use readProtocolParametersOrDie from ApiTest.hs
+-- also protocolParamMaxBlockExUnits and protocolParamMaxTxExUnits
       (txEraUtxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits, drepDelegDeposits, _) <-
         lift
           ( executeLocalStateQueryExpr localNodeConnInfo Consensus.VolatileTip $
