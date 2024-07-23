@@ -236,8 +236,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         -- And we check
         H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "tx-exists", txId ]
 
-    TestQuerySlotNumberCmd -> do
+    TestQuerySlotNumberCmd ->
       -- slot-number
+      -- This is tested in hprop_querySlotNumber in Cardano.Testnet.Test.Cli.QuerySlotNumber
       pure ()
 
     TestQueryRefScriptSizeCmd -> do
