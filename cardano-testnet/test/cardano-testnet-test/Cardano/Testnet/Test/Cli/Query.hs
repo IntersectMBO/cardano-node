@@ -316,9 +316,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         _ :: Aeson.Value <- H.readJsonFileOk drepStateOutFile
         pure ()
 
-    TestQueryDRepStakeDistributionCmd -> do
+    TestQueryDRepStakeDistributionCmd ->
       -- drep-stake-distribution
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
 
     TestQueryCommitteeMembersStateCmd -> do
       -- committee-state
