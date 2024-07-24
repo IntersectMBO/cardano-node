@@ -8,7 +8,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE NumericUnderscores #-}
+
+
 
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
@@ -22,6 +23,7 @@ import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), St
 
 import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
+
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
 import           Cardano.Crypto.Hash (hashToStringAsHex)
 import qualified Cardano.Ledger.BaseTypes as L
@@ -42,9 +44,9 @@ import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Data (type (:~:) (Refl))
+import           Data.Data ( type (:~:)(Refl) )
 import qualified Data.Map as Map
-import           Data.String
+import           Data.String (IsString(fromString))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -57,16 +59,16 @@ import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
                    watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
-import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress), buildTransferTx, signTx, submitTx, retrieveTransactionId)
+import           Testnet.Property.Assert (assertErasEqual)
+import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress), signTx, submitTx, retrieveTransactionId,
                    mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx,
                    submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
-import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Start.Types (eraToString)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 
@@ -286,11 +288,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       do
         -- Set up files and vars
         refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
-        plutusV3Script <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+        alwaysSucceedsSpendingPlutusPath <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
         let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
         txBody <- mkSpendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
-                    [(ReferenceScriptAddress plutusV3Script, transferAmount)]
+                    [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, transferAmount)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
         -- Wait until transaction is on chain and obtain transaction identifier
