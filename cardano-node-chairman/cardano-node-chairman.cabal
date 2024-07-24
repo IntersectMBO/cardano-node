@@ -44,7 +44,7 @@ executable cardano-node-chairman
   build-depends:        cardano-api
                       , cardano-crypto-class
                       , cardano-git-rev ^>=0.2.2
-                      , cardano-node ^>= 9.0
+                      , cardano-node ^>= 9.1
                       , cardano-prelude
                       , containers
                       , contra-tracer
