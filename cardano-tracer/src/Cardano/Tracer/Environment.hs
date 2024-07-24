@@ -1,13 +1,18 @@
+{-# LANGUAGE CPP #-}
+
 module Cardano.Tracer.Environment
   ( TracerEnv (..)
+  , TracerEnvRTView (..)
   ) where
 
 import           Cardano.Logging.Types
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+#if RTVIEW
+import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Types
+import           Cardano.Tracer.Handlers.State.TraceObjects
+#endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 
@@ -19,18 +24,26 @@ data TracerEnv = TracerEnv
   , teConnectedNodes        :: !ConnectedNodes
   , teConnectedNodesNames   :: !ConnectedNodesNames
   , teAcceptedMetrics       :: !AcceptedMetrics
-  , teSavedTO               :: !SavedTraceObjects
-  , teBlockchainHistory     :: !BlockchainHistory
-  , teResourcesHistory      :: !ResourcesHistory
-  , teTxHistory             :: !TransactionsHistory
   , teCurrentLogLock        :: !Lock
   , teCurrentDPLock         :: !Lock
-  , teEventsQueues          :: !EventsQueues
   , teDPRequestors          :: !DataPointRequestors
   , teProtocolsBrake        :: !ProtocolsBrake
-  , teRTViewPageOpened      :: !WebPageStatus
-  , teRTViewStateDir        :: !(Maybe FilePath)
   , teTracer                :: !(Trace IO TracerTrace)
   , teReforwardTraceObjects :: !([TraceObject] -> IO ())
   , teRegistry              :: !HandleRegistry
+  , teStateDir              :: !(Maybe FilePath)
   }
+
+#if RTVIEW
+-- | Environment for all functions.
+data TracerEnvRTView = TracerEnvRTView
+  { teSavedTO               :: !SavedTraceObjects
+  , teBlockchainHistory     :: !BlockchainHistory
+  , teResourcesHistory      :: !ResourcesHistory
+  , teTxHistory             :: !TransactionsHistory
+  , teEventsQueues          :: !EventsQueues
+  , teRTViewPageOpened      :: !WebPageStatus
+  }
+#else
+data TracerEnvRTView = TracerEnvRTView
+#endif

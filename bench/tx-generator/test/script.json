@@ -78,7 +78,7 @@
         ]
     },
     {
-        "asyncBenchmark": "thread1",
+        "asyncBenchmark": [],
         "txList": "txlist",
         "tps": 10
     },
@@ -86,7 +86,7 @@
         "waitForEra": "Byron"
     },
     {
-        "cancelBenchmark": "thread1"
+        "cancelBenchmark": []
     },
     {
         "reserved": []

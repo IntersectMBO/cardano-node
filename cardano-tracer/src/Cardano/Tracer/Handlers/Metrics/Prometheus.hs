@@ -9,6 +9,7 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
@@ -18,6 +19,7 @@ import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.Bimap as BM
+import           Data.Function ((&))
 import           Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
@@ -58,27 +60,30 @@ runPrometheusServer
   :: TracerEnv
   -> Endpoint
   -> IO ()
-runPrometheusServer tracerEnv (Endpoint host port) = forever $ do
+runPrometheusServer tracerEnv endpoint@(Endpoint host port) = forever do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.1
   -- If everything is okay, the function 'simpleHttpServe' never returns.
   -- But if there is some problem, it never throws an exception, but just stops.
   -- So if it stopped - it will be re-started.
-  simpleHttpServe config $
-    route [ ("/",          renderListOfConnectedNodes)
-          , ("/:nodename", renderMetricsFromNode)
-          ]
+  traceWith (teTracer tracerEnv) TracerStartedPrometheus
+    { ttPrometheusEndpoint = endpoint
+    }
+  simpleHttpServe config do
+    route
+      [ ("/",          renderListOfConnectedNodes)
+      , ("/:nodename", renderMetricsFromNode)
+      ]
   sleep 1.0
  where
   TracerEnv{teConnectedNodesNames, teAcceptedMetrics} = tracerEnv
 
   config :: Config Snap ()
-  config =
-      setPort (fromIntegral port)
-    . setBind (encodeUtf8 . T.pack $ host)
-    . setAccessLog ConfigNoLog
-    . setErrorLog ConfigNoLog
-    $ defaultConfig
+  config = defaultConfig
+    & setErrorLog ConfigNoLog
+    & setAccessLog ConfigNoLog
+    & setBind (encodeUtf8 (T.pack host))
+    & setPort (fromIntegral port)
 
   renderListOfConnectedNodes :: Snap ()
   renderListOfConnectedNodes = do

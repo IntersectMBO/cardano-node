@@ -16,9 +16,12 @@ import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
+import qualified Cardano.Testnet.Test.Gov.GovActionTimeout as Gov
 import qualified Cardano.Testnet.Test.Gov.NoConfidence as Gov
+import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO as Gov
+import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
@@ -47,7 +50,7 @@ tests = do
         [ T.testGroup "Ledger Events"
             [ ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
             , ignoreOnWindows "Treasury Growth" Gov.prop_check_if_treasury_is_growing
-            -- TODO: Replace foldBlocks with checkLedgerStateCondition
+            -- TODO: Replace foldBlocks with checkConditionResult
             , T.testGroup "Governance"
                 [ ignoreOnMacAndWindows "Committee Add New" Gov.hprop_constitutional_committee_add_new
                 , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
@@ -58,7 +61,10 @@ tests = do
                 , ignoreOnWindows "DRep Retirement" Gov.hprop_drep_retirement
                 , ignoreOnMacAndWindows "Propose And Ratify New Constitution" Gov.hprop_ledger_events_propose_new_constitution
                 , ignoreOnWindows "Propose New Constitution SPO" Gov.hprop_ledger_events_propose_new_constitution_spo
+                , ignoreOnWindows "Gov Action Timeout" Gov.hprop_check_gov_action_timeout
+                , ignoreOnWindows "Treasury Donation" Gov.hprop_ledger_events_treasury_donation
                 , ignoreOnWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
+                , ignoreOnWindows "PParam change fails for SPO" Gov.hprop_check_pparam_fails_spo
                 -- FIXME Those tests are flaky
                 -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                 ]

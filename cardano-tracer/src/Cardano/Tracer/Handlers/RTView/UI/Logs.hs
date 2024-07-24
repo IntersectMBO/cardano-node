@@ -7,8 +7,8 @@ module Cardano.Tracer.Handlers.RTView.UI.Logs
   ) where
 
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.System
 
 import           Control.Exception.Extra (ignore, try_)
 import qualified Data.Text as T

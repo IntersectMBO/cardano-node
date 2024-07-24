@@ -89,8 +89,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
   H.writeFile proposalAnchorFile "dummy anchor data"
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
   let stakeVkeyFp = gov </> "stake.vkey"
@@ -157,7 +156,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
       [ "conway", "governance", "vote", "create"
       , "--yes"
       , "--governance-action-tx-id", txidString
-      , "--governance-action-index", show @Word32 governanceActionIndex
+      , "--governance-action-index", show @Word16 governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n
       ]
@@ -220,7 +219,7 @@ data InfoActionState = InfoActionState
 
 foldBlocksCheckInfoAction
   :: FilePath -- ^ Where to store debug logs
-  -> Word32 -- ^ gov action index
+  -> Word16 -- ^ gov action index
   -> Env
   -> LedgerState
   -> [LedgerEvent]

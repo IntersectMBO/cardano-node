@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
 
     env:
-      STYLISH_HASKELL_VERSION: "0.14.6.0"
+      STYLISH_HASKELL_VERSION: "0.14.4.0"
 
       STYLISH_HASKELL_PATHS: >
         cardano-git-rev

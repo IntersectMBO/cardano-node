@@ -123,9 +123,7 @@ def all_profile_variants:
         }
       }
     , node:
-      { shutdown_on_slot_synced:
-        { explorer:                     237599
-        }
+      { shutdown_on_slot_synced:        237599
       }
     } as $chaindb_early_byron
   |
@@ -140,9 +138,7 @@ def all_profile_variants:
         }
       }
     , node:
-      { shutdown_on_slot_synced:
-        { explorer:                     38901589
-        }
+      { shutdown_on_slot_synced:        38901589
       }
     }) as $chaindb_early_alonzo
   |
@@ -520,7 +516,7 @@ def all_profile_variants:
           }
       }
     }
-    | .generator.tx_fee        = 935000
+    | .generator.tx_fee        = 940000
     ) as $plutus_loop_blst    
   ##
   ### Definition vocabulary:  genesis variants
@@ -975,6 +971,9 @@ def all_profile_variants:
   ## Fastest profile to pass analysis: just 1 block
   , $fast_base *
     { name: "fast"
+    }
+  , $fast_base * $solo *
+    { name: "fast-solo"
     }
   , $fast_base * $p2p *
     { name: "fast-p2p"

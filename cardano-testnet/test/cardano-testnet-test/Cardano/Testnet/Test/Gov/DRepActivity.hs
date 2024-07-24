@@ -3,7 +3,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Gov.DRepActivity
   ( hprop_check_drep_activity
@@ -24,18 +23,15 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import qualified Data.Map as Map
-import           Data.String
-import qualified Data.Text as Text
-import           Data.Word (Word32)
+import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep
-import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
@@ -173,7 +169,7 @@ activityChangeProposalTest
                          -- the proposal.
   -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
                    -- become expected value.
-  -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
+  -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView ceo work prefix
                            wallet votes change minWait mExpected maxWait = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
@@ -208,89 +204,6 @@ activityChangeProposalTest execConfig epochStateView ceo work prefix
 
   pure thisProposal
 
--- | Create a proposal to change the DRep activity interval.
--- Return the transaction id and the index of the governance action.
-makeActivityChangeProposal
-  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Typeable era)
-  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-                    -- using the 'getEpochStateView' function.
-  -> ConwayEraOnwards era -- ^ The 'ConwayEraOnwards' witness for current era.
-  -> FilePath -- ^ Base directory path where generated files will be stored.
-  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> Maybe (String, Word32) -- ^ The transaction id and the index of the previosu governance action if any.
-  -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
-  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> EpochInterval -- ^ Number of epochs to wait for the proposal to be registered by the chain.
-  -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
-makeActivityChangeProposal execConfig epochStateView ceo work prefix
-                           prevGovActionInfo drepActivity wallet timeout = do
-
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
-
-  baseDir <- H.createDirectoryIfMissing $ work </> prefix
-
-  let stakeVkeyFp = baseDir </> "stake.vkey"
-      stakeSKeyFp = baseDir </> "stake.skey"
-
-  cliStakeAddressKeyGen
-    $ KeyPair { verificationKey = File stakeVkeyFp
-              , signingKey = File stakeSKeyFp
-              }
-
-  proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
-  H.writeFile proposalAnchorFile "dummy anchor data"
-
-  proposalAnchorDataHash <- execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
-    ]
-
-  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
-
-  proposalFile <- H.note $ baseDir </> "sample-proposal-anchor"
-
-  void $ execCli' execConfig $
-    [ "conway", "governance", "action", "create-protocol-parameters-update"
-    , "--testnet"
-    , "--governance-action-deposit", show @Integer minDRepDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
-    ] ++ concatMap (\(prevGovernanceActionTxId, prevGovernanceActionIndex) ->
-                      [ "--prev-governance-action-tx-id", prevGovernanceActionTxId
-                      , "--prev-governance-action-index", show prevGovernanceActionIndex
-                      ]) prevGovActionInfo ++
-    [ "--drep-activity", show (unEpochInterval drepActivity)
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
-    , "--anchor-data-hash", proposalAnchorDataHash
-    , "--out-file", proposalFile
-    ]
-
-  proposalBody <- H.note $ baseDir </> "tx.body"
-  txIn <- findLargestUtxoForPaymentKey epochStateView sbe wallet
-
-  void $ execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
-    , "--tx-in", Text.unpack $ renderTxIn txIn
-    , "--proposal-file", proposalFile
-    , "--out-file", proposalBody
-    ]
-
-  signedProposalTx <- signTx execConfig cEra baseDir "signed-proposal"
-                             (File proposalBody) [SomeKeyPair $ paymentKeyInfoPair wallet]
-
-  submitTx execConfig cEra signedProposalTx
-
-  governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
-
-  governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView timeout $ \(anyNewEpochState, _, _) ->
-      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
-
-  return (governanceActionTxId, governanceActionIndex)
-
 -- | Cast votes for a governance action.
 voteChangeProposal
   :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m, Typeable era)
@@ -301,7 +214,7 @@ voteChangeProposal
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> String -- ^ The transaction id of the governance action to vote.
-  -> Word32 -- ^ The index of the governance action to vote.
+  -> Word16 -- ^ The index of the governance action to vote.
   -> [([Char], Int)] -- ^ Votes to be casted for the proposal. Each tuple contains the index
                      -- of the default DRep that will make the vote and the type of the vote
                      -- (i.e: "yes", "no", "abstain").

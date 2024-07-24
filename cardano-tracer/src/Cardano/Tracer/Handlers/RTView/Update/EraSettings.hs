@@ -9,7 +9,7 @@ module Cardano.Tracer.Handlers.RTView.Update.EraSettings
 import           Cardano.Node.Startup (NodeStartupInfo (..))
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Handlers.RTView.Utils
 
 import           Control.Monad (forever)

@@ -44,6 +44,9 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
+                   JumpInstruction (..), JumpResult (..))
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
@@ -190,6 +193,40 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         , "the considered header and the best block number known prior to this"
         , "header"
         ]
+    TraceOfferJump point ->
+      mconcat
+        [ "ChainSync Jumping -- we are offering a jump to the server, to point: "
+        , showT point
+        ]
+    TraceJumpResult (AcceptedJump instruction) ->
+      mconcat
+        [ "ChainSync Jumping -- the client accepted the jump to "
+        , showT (jumpInstructionToPoint instruction)
+        ]
+    TraceJumpResult (RejectedJump instruction) ->
+      mconcat
+        [ "ChainSync Jumping -- the client rejected the jump to "
+        , showT (jumpInstructionToPoint instruction)
+        ]
+    TraceJumpingWaitingForNextInstruction ->
+      "ChainSync Jumping -- the client is blocked, waiting for its next instruction."
+    TraceJumpingInstructionIs RunNormally ->
+      "ChainSyncJumping -- the client is asked to run normally"
+    TraceJumpingInstructionIs Restart ->
+      mconcat
+        [ "ChainSyncJumping -- the client is asked to restart. This is necessary"
+        , "when disengaging a peer of which we know no point that we could set"
+        , "the intersection of the ChainSync server to."
+        ]
+    TraceJumpingInstructionIs (JumpInstruction instruction) ->
+      mconcat
+        [ "ChainSync Jumping -- the client is asked to jump to "
+        , showT (jumpInstructionToPoint instruction)
+        ]
+    where
+      jumpInstructionToPoint = AF.headPoint . jTheirFragment . \case
+        JumpTo ji          -> ji
+        JumpToGoodPoint ji -> ji
 
   forMachine dtal = \case
     TraceDownloadedHeader h ->
@@ -238,6 +275,49 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         , "headerHash" .= showT (headerHash header)
         , "blockNo" .= aBlockNo
         ]
+    TraceOfferJump point ->
+      mconcat
+        [ "kind" .= String "TraceOfferJump"
+        , "point" .= showT point
+        ]
+    TraceJumpResult jumpResult ->
+      mconcat
+        [ "kind" .= String "TraceJumpResult"
+        , "result" .= case jumpResult of
+            AcceptedJump _ -> String "AcceptedJump"
+            RejectedJump _ -> String "RejectedJump"
+        ]
+    TraceJumpingWaitingForNextInstruction ->
+      mconcat
+        [ "kind" .= String "TraceJumpingWaitingForNextInstruction"
+        ]
+    TraceJumpingInstructionIs instruction ->
+      mconcat
+        [ "kind" .= String "TraceJumpingInstructionIs"
+        , "instr" .= instructionToObject instruction
+        ]
+    where
+      instructionToObject :: Instruction blk -> Aeson.Object
+      instructionToObject = \case
+        RunNormally ->
+          mconcat ["kind" .= String "RunNormally"]
+        Restart ->
+          mconcat ["kind" .= String "Restart"]
+        JumpInstruction info ->
+          mconcat [ "kind" .= String "JumpInstruction"
+                  , "payload" .= jumpInstructionToObject info
+                  ]
+
+      jumpInstructionToObject :: JumpInstruction blk -> Aeson.Object
+      jumpInstructionToObject = \case
+        JumpTo info ->
+          mconcat [ "kind" .= String "JumpTo"
+                  , "point" .= showT (jumpInfoToPoint info) ]
+        JumpToGoodPoint info ->
+          mconcat [ "kind" .= String "JumpToGoodPoint"
+                  , "point" .= showT (jumpInfoToPoint info) ]
+
+      jumpInfoToPoint = AF.headPoint . jTheirFragment
 
 tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
 tipToObject = \case
@@ -272,6 +352,14 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace [] ["AccessingForecastHorizon"]
     TraceGaveLoPToken {} ->
       Namespace [] ["GaveLoPToken"]
+    TraceOfferJump _ ->
+      Namespace [] ["OfferJump"]
+    TraceJumpResult _ ->
+      Namespace [] ["JumpResult"]
+    TraceJumpingWaitingForNextInstruction ->
+      Namespace [] ["JumpingWaitingForNextInstruction"]
+    TraceJumpingInstructionIs _ ->
+      Namespace [] ["JumpingInstructionIs"]
 
   severityFor ns _ =
     case ns of
@@ -292,6 +380,14 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace _ ["AccessingForecastHorizon"] ->
         Just Debug
       Namespace _ ["GaveLoPToken"] ->
+        Just Debug
+      Namespace _ ["OfferJump"] ->
+        Just Debug
+      Namespace _ ["JumpResult"] ->
+        Just Debug
+      Namespace _ ["JumpingWaitingForNextInstruction"] ->
+        Just Debug
+      Namespace _ ["JumpingInstructionIs"] ->
         Just Debug
       _ ->
         Nothing
@@ -322,6 +418,14 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
         Just "The slot number, which was previously beyond the forecast horizon, has now entered it"
       Namespace _ ["GaveLoPToken"] ->
         Just "May have added atoken to the LoP bucket of the peer"
+      Namespace _ ["OfferJump"] ->
+        Just "Offering a jump to the remote peer"
+      Namespace _ ["JumpResult"] ->
+        Just "Response to a jump offer (accept or reject)"
+      Namespace _ ["JumpingWaitingForNextInstruction"] ->
+        Just "The client is waiting for the next instruction"
+      Namespace _ ["JumpingInstructionIs"] ->
+        Just "The client got its next instruction"
       _ ->
         Nothing
 
@@ -335,6 +439,10 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
     , Namespace [] ["WaitingBeyondForecastHorizon"]
     , Namespace [] ["AccessingForecastHorizon"]
     , Namespace [] ["GaveLoPToken"]
+    , Namespace [] ["OfferJump"]
+    , Namespace [] ["JumpResult"]
+    , Namespace [] ["JumpingWaitingForNextInstruction"]
+    , Namespace [] ["JumpingInstructionIs"]
     ]
 
 --------------------------------------------------------------------------------
@@ -1151,21 +1259,16 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                 , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
-                , "dRepCount"    .= Number (fromIntegral tsDRepCount)
-                , "dRepMapSize"  .= Number (fromIntegral tsDRepMapSize)
                 ]
   forHuman TraceStartLeadershipCheckPlus {..} =
       "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
       <> " utxoSize "     <> showT tsUtxoSize
       <> " delegMapSize " <> showT tsDelegMapSize
       <> " chainDensity " <> showT tsChainDensity
-      <> " dRepCount "    <> showT tsDRepCount
-      <> " dRepMapSize "  <> showT tsDRepMapSize
   asMetrics TraceStartLeadershipCheckPlus {..} =
     [IntM "Forge.UtxoSize"     (fromIntegral tsUtxoSize),
-     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize),
-     IntM "Forge.DRepCount"    (fromIntegral tsDRepCount),
-     IntM "Forge.DRepMapSize"  (fromIntegral tsDRepMapSize)]
+     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize)]
+
 
 --------------------------------------------------------------------------------
 -- ForgeEvent Tracer

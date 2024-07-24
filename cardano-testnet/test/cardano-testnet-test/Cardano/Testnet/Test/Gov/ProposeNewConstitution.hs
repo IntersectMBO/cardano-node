@@ -103,13 +103,11 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   H.writeFile proposalAnchorFile "dummy anchor data"
   H.writeFile consitutionFile "dummy constitution data"
   constitutionHash <- execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", consitutionFile
+    [ "hash", "anchor-data", "--file-text", consitutionFile
     ]
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
   let stakeVkeyFp = gov </> "stake.vkey"
@@ -122,7 +120,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   -- Create constitution proposal
   guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
-  H.writeFile guardRailScriptFp $ Text.unpack plutusV3NonSpendingScript
+  H.writeFile guardRailScriptFp $ Text.unpack plutusV3Script
   -- TODO: Update help text for policyid. The script hash is not
   -- only useful for minting scripts
   constitutionScriptHash <- filter (/= '\n') <$>
@@ -211,7 +209,7 @@ foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
   -> String -- submitted guard rail script hash
   -> AnyNewEpochState
-  -> StateT s IO LedgerStateCondition -- ^ Accumulator at block i and fold status
+  -> StateT s IO ConditionResult -- ^ Accumulator at block i and fold status
 foldBlocksCheckConstitutionWasRatified submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState =
   if filterRatificationState submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState
   then return ConditionMet

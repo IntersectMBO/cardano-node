@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.2.3
+version:                0.2.4
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
@@ -16,6 +16,11 @@ build-type:             Simple
 extra-doc-files:        README.md
                         CHANGELOG.md
 
+flag rtview
+  Description: Enable RTView. False by default. Enable with `-f +rtview`.
+  Default: False
+  Manual:  True
+
 common project-config
   default-language:     Haskell2010
   build-depends:        base >= 4.14 && < 5
@@ -27,7 +32,11 @@ common project-config
                       , ImportQualifiedPost
                       , InstanceSigs
                       , ScopedTypeVariables
+                      , StandaloneKindSignatures
                       , TypeApplications
+
+  if flag(rtview)
+    CPP-Options:        -DRTVIEW=1
 
   ghc-options:          -Wall
                         -Wcompat
@@ -42,46 +51,18 @@ common project-config
 library
   import:               project-config
 
+
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Tracer.Acceptors.Client
-                        Cardano.Tracer.Acceptors.Run
-                        Cardano.Tracer.Acceptors.Server
-                        Cardano.Tracer.Acceptors.Utils
-
-                        Cardano.Tracer.Handlers.Logs.File
-                        Cardano.Tracer.Handlers.Logs.Journal
-                        Cardano.Tracer.Handlers.Logs.Rotator
-                        Cardano.Tracer.Handlers.Logs.TraceObjects
-                        Cardano.Tracer.Handlers.Logs.Utils
-
-                        Cardano.Tracer.Handlers.Metrics.Monitoring
-                        Cardano.Tracer.Handlers.Metrics.Prometheus
-                        Cardano.Tracer.Handlers.Metrics.Servers
-                        Cardano.Tracer.Handlers.Metrics.Utils
-
-                        Cardano.Tracer.Handlers.ReForwarder
-
-                        Cardano.Tracer.Handlers.RTView.Notifications.Check
-                        Cardano.Tracer.Handlers.RTView.Notifications.Email
-                        Cardano.Tracer.Handlers.RTView.Notifications.Send
-                        Cardano.Tracer.Handlers.RTView.Notifications.Settings
-                        Cardano.Tracer.Handlers.RTView.Notifications.Timer
-                        Cardano.Tracer.Handlers.RTView.Notifications.Types
-                        Cardano.Tracer.Handlers.RTView.Notifications.Utils
-
-                        Cardano.Tracer.Handlers.RTView.Run
-
-                        Cardano.Tracer.Handlers.RTView.SSL.Certs
+  if flag(rtview)
+    exposed-modules:    Cardano.Tracer.Handlers.RTView.Run
+                        Cardano.Tracer.Handlers.RTView.Utils
 
                         Cardano.Tracer.Handlers.RTView.State.Displayed
                         Cardano.Tracer.Handlers.RTView.State.EraSettings
                         Cardano.Tracer.Handlers.RTView.State.Historical
                         Cardano.Tracer.Handlers.RTView.State.Last
                         Cardano.Tracer.Handlers.RTView.State.Peers
-                        Cardano.Tracer.Handlers.RTView.State.TraceObjects
-
-                        Cardano.Tracer.Handlers.RTView.System
 
                         Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
                         Cardano.Tracer.Handlers.RTView.UI.CSS.Own
@@ -119,9 +100,36 @@ library
                         Cardano.Tracer.Handlers.RTView.Update.Reload
                         Cardano.Tracer.Handlers.RTView.Update.Resources
                         Cardano.Tracer.Handlers.RTView.Update.Transactions
-                        Cardano.Tracer.Handlers.RTView.Update.Utils
 
-                        Cardano.Tracer.Handlers.RTView.Utils
+  exposed-modules:      Cardano.Tracer.Acceptors.Client
+                        Cardano.Tracer.Acceptors.Run
+                        Cardano.Tracer.Acceptors.Server
+                        Cardano.Tracer.Acceptors.Utils
+
+                        Cardano.Tracer.Handlers.Logs.File
+                        Cardano.Tracer.Handlers.Logs.Journal
+                        Cardano.Tracer.Handlers.Logs.Rotator
+                        Cardano.Tracer.Handlers.Logs.TraceObjects
+                        Cardano.Tracer.Handlers.Logs.Utils
+
+                        Cardano.Tracer.Handlers.Metrics.Monitoring
+                        Cardano.Tracer.Handlers.Metrics.Prometheus
+                        Cardano.Tracer.Handlers.Metrics.Servers
+                        Cardano.Tracer.Handlers.Metrics.Utils
+
+                        Cardano.Tracer.Handlers.Notifications.Check
+                        Cardano.Tracer.Handlers.Notifications.Email
+                        Cardano.Tracer.Handlers.Notifications.Send
+                        Cardano.Tracer.Handlers.Notifications.Settings
+                        Cardano.Tracer.Handlers.Notifications.Timer
+                        Cardano.Tracer.Handlers.Notifications.Types
+                        Cardano.Tracer.Handlers.Notifications.Utils
+
+                        Cardano.Tracer.Handlers.ReForwarder
+                        Cardano.Tracer.Handlers.SSL.Certs
+                        Cardano.Tracer.Handlers.State.TraceObjects
+                        Cardano.Tracer.Handlers.System
+                        Cardano.Tracer.Handlers.Utils
 
                         Cardano.Tracer.CLI
                         Cardano.Tracer.Configuration
@@ -134,19 +142,23 @@ library
   other-modules:        Paths_cardano_tracer
   autogen-modules:      Paths_cardano_tracer
 
+  if flag(rtview)
+    build-depends:
+                        cardano-git-rev ^>=0.2.2
+                      , cassava
+                      , threepenny-gui
+                      , vector
+
   build-depends:        aeson
                       , async
                       , async-extras
                       , bimap
                       , blaze-html
                       , bytestring
-                      , cardano-git-rev ^>=0.2.2
                       , cardano-node
-                      , cassava
                       , cborg
                       , containers
                       , contra-tracer
-                      , cryptonite
                       , directory
                       , ekg
                       , ekg-core
@@ -155,7 +167,7 @@ library
                       , filepath
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.16
+                      , ouroboros-network ^>= 0.16.1
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
@@ -166,21 +178,20 @@ library
                       , stm
                       , string-qq
                       , text
-                      , threepenny-gui
                       , time
                       , trace-dispatcher
                       , trace-forward
                       , trace-resources
                       , unordered-containers
-                      , vector
                       , yaml
 
   if os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
+
   if os(windows)
-    build-depends:      Win32
+    build-depends:    Win32
   else
-    build-depends:      unix
+    build-depends:    unix
 
 executable cardano-tracer
   import:               project-config
@@ -412,13 +423,14 @@ benchmark cardano-tracer-bench
 
   main-is:              cardano-tracer-bench.hs
 
+  if flag(rtview)
+    build-depends:      stm
   build-depends:        cardano-tracer
                       , criterion
                       , directory
                       , deepseq
                       , extra
                       , filepath
-                      , stm
                       , time
                       , trace-dispatcher
 

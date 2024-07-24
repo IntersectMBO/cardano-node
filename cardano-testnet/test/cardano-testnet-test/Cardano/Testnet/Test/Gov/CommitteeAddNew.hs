@@ -106,7 +106,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   H.writeFile proposalDataFp "dummy proposal data"
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ eraName, "governance" , "hash", "anchor-data"
+    [ "hash", "anchor-data"
     , "--file-text", proposalAnchorFp
     ]
 

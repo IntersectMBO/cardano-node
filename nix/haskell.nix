@@ -22,7 +22,7 @@ let
       name = "cardano-node";
       compiler-nix-name = lib.mkDefault "ghc8107";
       # extra-compilers
-      flake.variants = lib.genAttrs ["ghc964"] (x: {compiler-nix-name = x;});
+      flake.variants = lib.genAttrs ["ghc96"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
@@ -50,6 +50,7 @@ let
           cabal
           actionlint
           shellcheck
+          stylish-haskell
         ];
 
         withHoogle = true;
@@ -119,10 +120,12 @@ let
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;
             packages.cardano-ledger-api.components.library.doHaddock = false;
             packages.cardano-ledger-babbage.components.library.doHaddock = false;
+            packages.cardano-ledger-core.components.library.doHaddock = false;
             packages.cardano-ledger-conway.components.library.doHaddock = false;
             packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
+            packages.ouroboros-consensus.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
             # Remvoe this once mingwx is mapped to null in haskell.nix (haskell.nix#2032), and we bumped _past_ that.
@@ -176,6 +179,7 @@ let
             packages.cardano-node.components.exes.cardano-node.postInstall = postInstall "cardano-node";
             packages.cardano-cli.components.exes.cardano-cli.postInstall = postInstall "cardano-cli";
             packages.cardano-submit-api.components.exes.cardano-submit-api.postInstall = postInstall "cardano-submit-api";
+            packages.cardano-profile.components.exes.cardano-profile.postInstall = postInstall "cardano-profile";
             packages.cardano-topology.components.exes.cardano-topology.postInstall = postInstall "cardano-topology";
             packages.locli.components.exes.locli.postInstall = postInstall "locli";
           })
@@ -191,7 +195,8 @@ let
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
-                "configuration/cardano/mainnet-conway-genesis.json"
+                # uncomment after mainnet conway genesis is finalized
+                #"configuration/cardano/mainnet-conway-genesis.json"
               ];
               cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"

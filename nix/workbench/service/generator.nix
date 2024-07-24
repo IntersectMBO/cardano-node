@@ -67,7 +67,7 @@ let
 
           targetNodes = __mapAttrs
             (name: { name, port, ...}@nodeSpec:
-              { inherit port;
+              { inherit name port;
                 ip = let ip = nodePublicIP nodeSpec; # getPublicIp resources nodes name
                      in __trace "generator target:  ${name}/${ip}:${toString port}" ip;
               })

@@ -20,6 +20,7 @@ module Testnet.Components.Query
   , getMinGovActionDeposit
   , getGovState
   , getCurrentEpochNo
+  , getTreasuryValue
 
   , TestnetWaitPeriod (..)
   , waitForEpochs
@@ -35,6 +36,7 @@ module Testnet.Components.Query
   , checkDRepsNumber
   , checkDRepState
   , assertNewEpochState
+  , getGovActionLifetime
   ) where
 
 import           Cardano.Api as Api
@@ -42,9 +44,11 @@ import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), 
                    StandardCrypto)
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
+import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
+import           Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
@@ -463,6 +467,18 @@ getGovState epochStateView ceo = withFrozenCallStack $ do
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
   pure $ conwayEraOnwardsConstraints ceo $ newEpochState ^. L.newEpochStateGovStateL
 
+-- | Obtain the current value of the treasury from the node
+getTreasuryValue
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadIO m
+  => MonadTest m
+  => EpochStateView
+  -> m L.Coin -- ^ The current value of the treasury
+getTreasuryValue epochStateView = withFrozenCallStack $ do
+  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
+  pure $ newEpochState ^. L.nesEpochStateL . L.epochStateTreasuryL
+
 -- | Obtain minimum deposit amount for governance action from node
 getMinGovActionDeposit
   :: HasCallStack
@@ -550,3 +566,16 @@ assertNewEpochState epochStateView sbe maxWait lens expected = withFrozenCallSta
         Refl <- H.leftFail $ assertErasEqual sbe actualEra
         pure $ newEpochState ^. lens
 
+
+-- | Obtains the @govActionLifetime@ from the protocol parameters.
+-- The @govActionLifetime@ or governance action maximum lifetime in epochs is
+-- the number of epochs such that a governance action submitted during an epoch @e@
+-- expires if it is still not ratified as of the end of epoch: @e + govActionLifetime + 1@.
+getGovActionLifetime :: (ConwayEraPParams (ShelleyLedgerEra era), H.MonadAssertion m, MonadTest m, MonadIO m)
+  => EpochStateView
+  -> ConwayEraOnwards era
+  -> m EpochInterval
+getGovActionLifetime epochStateView ceo = do
+   govState :: ConwayGovState era <- getGovState epochStateView ceo
+   return $ govState ^. L.cgsCurPParamsL
+                      . L.ppGovActionLifetimeL

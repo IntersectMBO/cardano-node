@@ -1,5 +1,8 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RecordWildCards #-}
+
 module Cardano.Benchmarking.Script
   ( Script
   , runScript
@@ -7,45 +10,64 @@ module Cardano.Benchmarking.Script
   )
 where
 
-import           Prelude
-
-import           Control.Concurrent (threadDelay)
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           System.Mem (performGC)
-
-import           Ouroboros.Network.NodeToClient (IOManager)
-
+import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
-import           Cardano.Benchmarking.Script.Env
+import qualified Cardano.Benchmarking.Script.Env as Env (ActionM, Env (..), Error (TxGenError),
+                   getEnvThreads, runActionMEnv, traceError)
 import           Cardano.Benchmarking.Script.Types
+import qualified Cardano.TxGenerator.Types as Types (TxGenError (..))
+
+import           Prelude
+
+import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.STM.TVar as STM (readTVar)
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.STM as STM (atomically)
+import           Control.Monad.Trans.Except as Except (throwE)
+import qualified Data.List as List (unwords)
+import           System.Mem (performGC)
 
 type Script = [Action]
 
-runScript :: Script -> IOManager -> IO (Either Error ())
-runScript script iom = do
+runScript :: Env.Env -> Script -> EnvConsts -> IO (Either Env.Error (), AsyncBenchmarkControl)
+runScript env script constants@EnvConsts { .. } = do
   result <- go
   performGC
   threadDelay $ 150 * 1_000
   return result
   where
-    go = runActionM execScript iom >>= \case
-      (Right a  , s ,  ()) -> do
-        cleanup s shutDownLogging
-        return $ Right a
-      (Left err , s  , ()) -> do
-        cleanup s (traceError (show err) >> shutDownLogging)
-        return $ Left err
+    go :: IO (Either Env.Error (), AsyncBenchmarkControl)
+    go = Env.runActionMEnv env execScript constants >>= \case
+      (Right abc, env', ()) -> do
+        cleanup env' shutDownLogging
+        pure (Right (), abc)
+      (Left err,  env', ()) -> do
+        cleanup env' (Env.traceError (show err) >> shutDownLogging)
+        abcMaybe <- STM.atomically $ STM.readTVar envThreads
+        case abcMaybe of
+          Just abc -> pure (Left err, abc)
+          Nothing  -> error $ List.unwords
+                                [ "Cardano.Benchmarking.Script.runScript:"
+                                , "AsyncBenchmarkControl uninitialized" ]
       where
-        cleanup s a = void $ runActionMEnv s a iom
-
+        cleanup :: Env.Env -> Env.ActionM () -> IO ()
+        cleanup env' acts = void $ Env.runActionMEnv env' acts constants
+        execScript :: Env.ActionM AsyncBenchmarkControl
         execScript = do
           setProtocolParameters QueryLocalNode
           forM_ script action
+          abcMaybe <- Env.getEnvThreads
+          case abcMaybe of
+            Nothing  -> throwE $ Env.TxGenError $ Types.TxGenError $
+              List.unwords
+                  [ "Cardano.Benchmarking.Script.runScript:"
+                  , "AsyncBenchmarkControl absent from map in execScript" ]
+            Just abc -> pure abc
 
-shutDownLogging :: ActionM ()
+shutDownLogging :: Env.ActionM ()
 shutDownLogging = do
-  traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
+  Env.traceError "QRT Last Message. LoggingLayer shutting down ..."
   liftIO $ threadDelay $ 350 * 1_000

@@ -68,7 +68,7 @@ let
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
   targetNodesList = targets: __attrValues (__mapAttrs
-                                       (name: { ip, port }: { addr = ip; port = port; })
+                                       (name: { ip, port, name }: { addr = ip; port = port; name = name; })
                                        targets);
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
@@ -114,6 +114,8 @@ in pkgs.commonLib.defServiceModule
                                              "Strength of generated load, in TPS.";
         init_cooldown   = opt int 50         "Delay between init and main submissions.";
         min_utxo_value  = opt int 10000000   "Minimum value allowed per UTxO entry";
+        keepalive       = opt int 30         "Default timeout for keep-alive mini-protocol";
+
         runScriptFn     = opt (functionTo attrs) defaultGeneratorScriptFn
           "Function accepting this service config and producing the generator run script (a list of command attrsets).  Takes effect unless runScript or runScriptFile are specified.";
         runScript       = mayOpt (listOf attrs)

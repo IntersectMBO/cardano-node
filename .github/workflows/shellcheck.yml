@@ -7,6 +7,7 @@ name: Shellcheck
 # is consistent with the one of developers.
 
 on:
+  merge_group:
   pull_request:
 
 jobs:

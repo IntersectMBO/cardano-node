@@ -14,13 +14,13 @@ module Cardano.Tracer.Handlers.RTView.UI.Notifications
   ) where
 
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
-import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.Notifications.Settings
+import           Cardano.Tracer.Handlers.Notifications.Timer
+import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Utils
 
 import           Control.Monad (unless, when)
 import           Data.Maybe (fromMaybe)
@@ -32,8 +32,8 @@ import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
 restoreEmailSettings :: TracerEnv -> UI ()
-restoreEmailSettings TracerEnv{teRTViewStateDir} = do
-  eSettings <- liftIO $ readSavedEmailSettings teRTViewStateDir
+restoreEmailSettings TracerEnv{teStateDir} = do
+  eSettings <- liftIO $ readSavedEmailSettings teStateDir
   setEmailSettings eSettings
   setStatusTestEmailButton
  where
@@ -53,8 +53,8 @@ restoreEmailSettings TracerEnv{teRTViewStateDir} = do
       findAndSet (set value elValue) window elId
 
 restoreEventsSettings :: TracerEnv -> UI ()
-restoreEventsSettings TracerEnv{teRTViewStateDir} = do
-  eSettings <- liftIO $ readSavedEventsSettings teRTViewStateDir
+restoreEventsSettings TracerEnv{teStateDir} = do
+  eSettings <- liftIO $ readSavedEventsSettings teStateDir
   setEventsSettings eSettings
   setNotifyIconState
   setSwitchAllState eSettings

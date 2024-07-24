@@ -234,7 +234,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
             -> AnyNewEpochState
             -> SlotNo
             -> BlockNo
-            -> StateT (Maybe AnyNewEpochState) IO LedgerStateCondition
+            -> StateT (Maybe AnyNewEpochState) IO ConditionResult
     handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes) _ (BlockNo blockNo) = handleException $ do
       let prettyNes = shelleyBasedEraConstraints sbe (encodePretty nes)
           blockLabel = "#### BLOCK " <> show blockNo <> " ####"

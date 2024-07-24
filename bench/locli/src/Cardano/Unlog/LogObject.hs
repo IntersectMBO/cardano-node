@@ -30,7 +30,7 @@ module Cardano.Unlog.LogObject
   )
 where
 
-import           Cardano.Prelude hiding (Text, show)
+import           Cardano.Prelude hiding (Text, show, toText)
 import           GHC.Conc (numCapabilities)
 import           Prelude (id, show, unzip3)
 

@@ -12,7 +12,7 @@
 
 module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
-import Cardano.Prelude hiding (head)
+import Cardano.Prelude hiding (head, toText)
 import Cardano.Prelude qualified as CP
 
 import Data.List                        ((!!))

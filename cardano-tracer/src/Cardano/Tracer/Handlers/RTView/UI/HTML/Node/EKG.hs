@@ -44,5 +44,6 @@ mkEKGMetricsWindow anId = do
               ]
           ]
       ]
-  on UI.click closeIt . const $ element metricsWindow #. "modal"
+  on_ UI.click closeIt do
+    element metricsWindow #. "modal"
   return metricsWindow
