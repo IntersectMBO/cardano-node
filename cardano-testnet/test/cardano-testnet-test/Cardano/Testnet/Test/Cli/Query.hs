@@ -9,8 +9,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-
-
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
   ) where
@@ -23,15 +21,14 @@ import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), St
 
 import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
-
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
 import           Cardano.Crypto.Hash (hashToStringAsHex)
 import qualified Cardano.Ledger.BaseTypes as L
-import           Cardano.Ledger.Core (valueTxOutL)
-import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
-                   utxosUtxoL)
-import qualified Cardano.Ledger.TxIn as L
+import           Cardano.Ledger.Shelley.LedgerState (nesEpochStateL, esLStateL, lsUTxOStateL, utxosUtxoL, esLStateL,
+                                                     lsUTxOStateL, nesEpochStateL, utxosUtxoL)
 import qualified Cardano.Ledger.UTxO as L
+import           Cardano.Ledger.Core (valueTxOutL)
+import qualified Cardano.Ledger.TxIn as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -44,9 +41,9 @@ import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Data ( type (:~:)(Refl) )
+import           Data.Data (type (:~:) (Refl))
 import qualified Data.Map as Map
-import           Data.String (IsString(fromString))
+import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -59,15 +56,16 @@ import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Query (watchEpochStateUpdate, checkDRepsNumber, getEpochStateView, EpochStateView,
+                   checkDRepsNumber, getEpochStateView, watchEpochStateUpdate, checkDRepsNumber, getEpochStateView,
+                   watchEpochStateUpdate )
 import           Testnet.Components.Configuration (eraToString)
-import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
-                   watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
-import           Testnet.Property.Assert (assertErasEqual)
-import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress), signTx, submitTx, retrieveTransactionId,
-                   mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx,
-                   submitTx)
+import Testnet.Process.Cli.Transaction (signTx, submitTx, retrieveTransactionId, TxOutAddress(ReferenceScriptAddress),
+                   TxOutAddress(ReferenceScriptAddress), signTx, submitTx, retrieveTransactionId, retrieveTransactionId,
+                   signTx, submitTx, mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx )
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
+import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
