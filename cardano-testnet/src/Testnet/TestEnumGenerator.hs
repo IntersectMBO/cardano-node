@@ -3,8 +3,8 @@ module Testnet.TestEnumGenerator
   , genAllConstructorsList
   ) where
 
-import Language.Haskell.TH (Body (NormalB), Con (..), Dec (DataD, ValD), Exp (ConE, ListE),
-                            Info (TyConI), Name, Pat (VarP), Q, mkName, nameBase, reify)
+import           Language.Haskell.TH (Body (NormalB), Con (..), Dec (DataD, ValD),
+                   Exp (ConE, ListE), Info (TyConI), Name, Pat (VarP), Q, mkName, nameBase, reify)
 
 -- | Create a datatype with the same constructors as the given type, but with a "Test" prefix and no arguments.
 -- For example, if the input type is 'Maybe', the output type will be 'TestMaybe', with constructors 'TestNothing'

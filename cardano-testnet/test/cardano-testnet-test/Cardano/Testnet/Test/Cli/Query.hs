@@ -1,31 +1,31 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE ExplicitNamespaces #-}
 
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (EpochInterval(EpochInterval), extractHash, Coin (Coin))
-import           Cardano.Api.Shelley (StakePoolKey, StakeCredential (StakeCredentialByKey))
+import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), extractHash)
+import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
 
-import           Cardano.Crypto.Hash (hashToStringAsHex)
-
-import           Cardano.Ledger.Shelley.LedgerState (nesEpochStateL, esLStateL, lsUTxOStateL, utxosUtxoL)
-import qualified Cardano.Ledger.UTxO as L
-import           Cardano.Ledger.Core (valueTxOutL)
-import qualified Cardano.Ledger.TxIn as L
-import qualified Cardano.Ledger.BaseTypes as L
-
-import           Cardano.CLI.Types.Key (readVerificationKeyOrFile, VerificationKeyOrFile (VerificationKeyFilePath))
+import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
+                   readVerificationKeyOrFile)
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
+import           Cardano.Crypto.Hash (hashToStringAsHex)
+import qualified Cardano.Ledger.BaseTypes as L
+import           Cardano.Ledger.Core (valueTxOutL)
+import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
+                   utxosUtxoL)
+import qualified Cardano.Ledger.TxIn as L
+import qualified Cardano.Ledger.UTxO as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -36,9 +36,9 @@ import           Data.Aeson (eitherDecodeStrictText)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
-import           Data.Data ( type (:~:)(Refl) )
+import           Data.Data (type (:~:) (Refl))
 import qualified Data.Map as Map
-import           Data.String (IsString(fromString))
+import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
@@ -48,11 +48,13 @@ import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (watchEpochStateUpdate, checkDRepsNumber, getEpochStateView)
+import           Testnet.Components.Query (checkDRepsNumber, getEpochStateView,
+                   watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
-import           Testnet.Property.Assert (assertErasEqual)
-import           Testnet.Process.Cli.Transaction (buildTransferTx, signTx, submitTx, retrieveTransactionId, buildSimpleTransferTx, TxOutAddress (ReferenceScriptAddress))
+import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
+                   buildSimpleTransferTx, buildTransferTx, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
+import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (eraToString)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)

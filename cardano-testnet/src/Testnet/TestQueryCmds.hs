@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
@@ -8,9 +8,9 @@ module Testnet.TestQueryCmds
   , forallQueryCommands
   ) where
 
-import Cardano.CLI.EraBased.Commands.Query (QueryCmds (..))
+import           Cardano.CLI.EraBased.Commands.Query (QueryCmds (..))
 
-import Testnet.TestEnumGenerator (genTestType, genAllConstructorsList)
+import           Testnet.TestEnumGenerator (genAllConstructorsList, genTestType)
 
 $(genTestType ''QueryCmds)
 
