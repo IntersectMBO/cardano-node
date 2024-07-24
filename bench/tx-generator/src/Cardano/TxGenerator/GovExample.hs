@@ -15,18 +15,28 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
--- These are all pretty reasonable warning options.
--- Maybe all but unused-imports should be suppressed in the cabal
--- configuration higher up in the codebase?
-{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns  #-}
-{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
-{-# OPTIONS_GHC -Wno-error=unused-imports          #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas          #-}
+{- These are all pretty reasonable warning options.
+ - Maybe all but unused-imports should be suppressed in the cabal
+ - configuration higher up in the codebase?
+ - These disablings of warnings and makings of warnings not errors
+ - ("softenings") aren't needed anymore as the code now stands.
+ - It could still be useful to keep these ready to reactivate in
+ - the event of rapid code restructurings until it comes time to
+ - do the final cleanup of the commit sequence.
+ -* OPTIONS_GHC -fno-warn-incomplete-uni-patterns  *-
+ -* OPTIONS_GHC -Wno-error=partial-type-signatures *-
+ -* OPTIONS_GHC -Wno-error=unused-imports          *-
+ -* OPTIONS_GHC -Wno-unrecognised-pragmas          *-
+ -}
 
-{- There used to be:
- - HLINT ignore "Unused LANGUAGE pragma"
- - HLINT ignore "Avoid lambda using `infix`"
- - but the warnings got silenced. -}
+{- These also used to be needed to pass hlint checks, but the warnings
+ - have likewise since been silenced, so they're no longer needed to
+ - make progress in the interim. In like fashion, it may be useful to
+ - let these disabled pragmas linger until the point of final clean-up
+ - of the commit sequence for intensive restructurings.
+ -* HLINT ignore "Unused LANGUAGE pragma"          *-
+ -* HLINT ignore "Avoid lambda using `infix`"      *-
+ -}
 
 module  Cardano.TxGenerator.GovExample where
 
