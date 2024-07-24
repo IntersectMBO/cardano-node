@@ -141,7 +141,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
           protocolParametersOutFile
           "test/cardano-testnet-test/files/golden/queries/protocolParametersFileOut.json"
 
-    TestQueryConstitutionHashCmd -> do
+    TestQueryConstitutionHashCmd ->
       -- constitution-hash
       -- Currently disabled (not accessible from the command line)
       pure ()
@@ -173,7 +173,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         let stakePoolsOutFile = work </> "stake-pools-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-pools" , "--out-file", stakePoolsOutFile]
 
-    TestQueryPoolStateCmd -> do
+    TestQueryPoolStateCmd ->
       -- pool-state
       -- Already tested in TestQueryStakePoolsCmd and TestQueryStakeDistributionCmd
       pure ()
@@ -231,7 +231,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- stake-snapshot
       H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-snapshot", "--all-stake-pools" ]
 
-    TestQueryKesPeriodInfoCmd -> do
+    TestQueryKesPeriodInfoCmd ->
       -- kes-period-info
       -- This is tested in hprop_kes_period_info in Cardano.Testnet.Test.Cli.KesPeriodInfo
       pure ()
@@ -280,9 +280,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
           protocolParametersOutFile
           "test/cardano-testnet-test/files/golden/queries/refScriptSizeOut.json"
 
-    TestQueryConstitutionCmd -> do
+    TestQueryConstitutionCmd ->
       -- constitution
-      pure ()
+      do
+        output <- execCli' execConfig [ eraName, "query", "constitution" ]
+        H.diffVsGoldenFile output "test/cardano-testnet-test/files/golden/queries/queryConstitutionOut.json"
 
     TestQueryGovStateCmd ->
       -- gov-state
