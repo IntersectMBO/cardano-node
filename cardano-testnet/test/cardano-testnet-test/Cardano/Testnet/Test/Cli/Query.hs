@@ -1,22 +1,31 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NumericUnderscores #-}
 
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (EpochInterval(EpochInterval))
-import           Cardano.Api.Shelley (StakePoolKey, StakeCredential (StakeCredentialByKey))
+import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), extractHash)
+import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
 
-import           Cardano.CLI.Types.Key (readVerificationKeyOrFile, VerificationKeyOrFile (VerificationKeyFilePath))
+import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
+                   readVerificationKeyOrFile)
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
+import           Cardano.Crypto.Hash (hashToStringAsHex)
+import qualified Cardano.Ledger.BaseTypes as L
+import           Cardano.Ledger.Core (valueTxOutL)
+import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
+                   utxosUtxoL)
+import qualified Cardano.Ledger.TxIn as L
+import qualified Cardano.Ledger.UTxO as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -27,21 +36,27 @@ import           Data.Aeson (eitherDecodeStrictText)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
-import           Data.String
+import           Data.Data (type (:~:) (Refl))
+import qualified Data.Map as Map
+import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Vector as Vector
 import           GHC.Stack (HasCallStack)
+import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Configuration (eraToString)
-import           Testnet.Components.Query
+import           Testnet.Components.Query (checkDRepsNumber, getEpochStateView,
+                   watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
-import           Testnet.Process.Cli.Transaction (buildTransferTx, signTx, submitTx, retrieveTransactionId, buildSimpleTransferTx, TxOutAddress (ReferenceScriptAddress))
+import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
+                   buildSimpleTransferTx, buildTransferTx, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
+import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types (eraToString)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 
@@ -78,7 +93,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     , wallets=wallet0:wallet1:_
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
-  
+
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 
   PoolNode{poolRuntime} <- H.headM poolNodes
@@ -128,7 +143,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
           protocolParametersOutFile
           "test/cardano-testnet-test/files/golden/queries/protocolParametersFileOut.json"
 
-    TestQueryConstitutionHashCmd -> do
+    TestQueryConstitutionHashCmd ->
       -- constitution-hash
       -- Currently disabled (not accessible from the command line)
       pure ()
@@ -160,7 +175,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         let stakePoolsOutFile = work </> "stake-pools-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-pools" , "--out-file", stakePoolsOutFile]
 
-    TestQueryPoolStateCmd -> do
+    TestQueryPoolStateCmd ->
       -- pool-state
       -- Already tested in TestQueryStakePoolsCmd and TestQueryStakeDistributionCmd
       pure ()
@@ -218,7 +233,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- stake-snapshot
       H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-snapshot", "--all-stake-pools" ]
 
-    TestQueryKesPeriodInfoCmd -> do
+    TestQueryKesPeriodInfoCmd ->
       -- kes-period-info
       -- This is tested in hprop_kes_period_info in Cardano.Testnet.Test.Cli.KesPeriodInfo
       pure ()
@@ -245,28 +260,33 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryRefScriptSizeCmd ->
       -- ref-script-size
       do
+        -- Set up files and vars
         refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
         alwaysSucceedsSpendingPlutusPath <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
         let transferAmount = 10_000_000
+        -- Submit a transaction to publish the reference script
         txBody <- buildTransferTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
-                    [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, 10_000_000)]
+                    [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, transferAmount)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
+        -- Wait until transaction is on chain and obtain transaction identifier
         txId <- retrieveTransactionId execConfig signedTx
-        -- wait for one block before checking for the transaction
-        _ <- waitForBlocks epochStateView 1
+        txIx <- H.evalMaybeM $ watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txId transferAmount)
+        -- Query the reference script size
         let protocolParametersOutFile = refScriptSizeWork </> "ref-script-size-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "ref-script-size"
-                                       , "--tx-in", txId ++ "#0"
+                                       , "--tx-in", txId ++ "#" ++ show (txIx :: Int)
                                        , "--out-file", protocolParametersOutFile
                                        ]
         H.diffFileVsGoldenFile
           protocolParametersOutFile
           "test/cardano-testnet-test/files/golden/queries/refScriptSizeOut.json"
 
-    TestQueryConstitutionCmd -> do
+    TestQueryConstitutionCmd ->
       -- constitution
-      pure ()
+      do
+        output <- execCli' execConfig [ eraName, "query", "constitution" ]
+        H.diffVsGoldenFile output "test/cardano-testnet-test/files/golden/queries/queryConstitutionOut.json"
 
     TestQueryGovStateCmd ->
       -- gov-state
@@ -298,13 +318,13 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         _ :: Aeson.Value <- H.readJsonFileOk drepStateOutFile
         pure ()
 
-    TestQueryDRepStakeDistributionCmd -> do
+    TestQueryDRepStakeDistributionCmd ->
       -- drep-stake-distribution
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
 
-    TestQueryCommitteeMembersStateCmd -> do
+    TestQueryCommitteeMembersStateCmd ->
       -- committee-state
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "committee-state" ]
 
     )
   where
@@ -334,6 +354,16 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     patchedOutput <- H.evalEither $ patchGovStateOutput fileContents
     liftIO $ writeFile fp patchedOutput
 
+  getTxIx :: forall m era. MonadTest m => ShelleyBasedEra era -> String -> Int -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
+  getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
+    Refl <- H.leftFail $ assertErasEqual sbe sbe'
+    shelleyBasedEraConstraints sbe' (do
+      return $ Map.foldlWithKey (\acc (L.TxIn (L.TxId thisTxId) (L.TxIx thisTxIx)) txOut ->
+        case acc of
+          Nothing | hashToStringAsHex (extractHash thisTxId) == txId &&
+                    valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just (Coin (fromIntegral amount)) -> Just $ fromIntegral thisTxIx
+                  | otherwise -> Nothing
+          x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosUtxoL)
 
 -- | @assertArrayOfSize v n@ checks that the value is a JSON array of size @n@,
 -- otherwise it fails the test.

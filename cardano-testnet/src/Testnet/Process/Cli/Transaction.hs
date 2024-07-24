@@ -27,7 +27,7 @@ import           GHC.IO.Exception (ExitCode (..))
 import           GHC.Stack
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (findLargestUtxoForPaymentKey, EpochStateView)
+import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey)
 import           Testnet.Process.Run (execCli')
 import           Testnet.Start.Types (anyEraToString)
 import           Testnet.Types
@@ -50,7 +50,7 @@ data TxOutAddress = PKAddress PaymentKeyInfo
 -- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
 -- the specified key pairs.
 -- This function takes five parameters:
--- 
+--
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
 buildTransferTx
@@ -102,7 +102,7 @@ buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = 
 -- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
 -- the specified key pairs.
 -- This function takes five parameters:
--- 
+--
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
 buildSimpleTransferTx
