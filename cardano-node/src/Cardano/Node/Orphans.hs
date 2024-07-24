@@ -50,3 +50,4 @@ instance FromJSON GenesisConfigFlags where
       <*> v .:? "BucketCapacity"
       <*> v .:? "BucketRate"
       <*> v .:? "CSJJumpSize"
+      <*> v .:? "GDDRateLimit"
