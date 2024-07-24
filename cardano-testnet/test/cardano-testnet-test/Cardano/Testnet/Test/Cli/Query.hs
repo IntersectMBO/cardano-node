@@ -320,9 +320,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- drep-stake-distribution
       H.noteM_ $ execCli' execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
 
-    TestQueryCommitteeMembersStateCmd -> do
+    TestQueryCommitteeMembersStateCmd ->
       -- committee-state
-      pure ()
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "committee-state" ]
 
     )
   where
