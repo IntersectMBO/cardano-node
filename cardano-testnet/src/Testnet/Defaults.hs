@@ -86,9 +86,9 @@ newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
   deriving Show
 
-defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
-defaultAlonzoGenesis = do
-  let genesis = Api.alonzoGenesisDefaults
+defaultAlonzoGenesis :: CardanoEra era -> Either AlonzoGenesisError AlonzoGenesis
+defaultAlonzoGenesis era = do
+  let genesis = Api.alonzoGenesisDefaults era
       prices = Ledger.agPrices genesis
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api

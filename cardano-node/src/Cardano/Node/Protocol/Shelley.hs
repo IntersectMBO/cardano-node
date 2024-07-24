@@ -19,6 +19,7 @@ module Cardano.Node.Protocol.Shelley
   , readLeaderCredentials
   , genesisHashToPraosNonce
   , validateGenesis
+  , checkExpectedGenesisHash
   ) where
 
 import qualified Cardano.Api as Api
@@ -44,6 +45,7 @@ import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParams (.
                    ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
 
 import           Control.Exception (IOException)
+import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
@@ -101,22 +103,23 @@ readGenesisAny :: FromJSON genesis
                => GenesisFile
                -> Maybe GenesisHash
                -> ExceptT GenesisReadError IO (genesis, GenesisHash)
-readGenesisAny (GenesisFile file) mbExpectedGenesisHash = do
-    content <- handleIOExceptT (GenesisReadFileError file) $
-                 BS.readFile file
-    let genesisHash = GenesisHash (Crypto.hashWith id content)
-    checkExpectedGenesisHash genesisHash
+readGenesisAny (GenesisFile file) mExpectedGenesisHash = do
+    content <- handleIOExceptT (GenesisReadFileError file) $ BS.readFile file
+    genesisHash <- checkExpectedGenesisHash content mExpectedGenesisHash
     genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
                  Aeson.eitherDecodeStrict' content
     return (genesis, genesisHash)
-  where
-    checkExpectedGenesisHash :: GenesisHash
-                             -> ExceptT GenesisReadError IO ()
-    checkExpectedGenesisHash actual =
-      case mbExpectedGenesisHash of
-        Just expected | actual /= expected
-          -> throwError (GenesisHashMismatch actual expected)
-        _ -> return ()
+
+checkExpectedGenesisHash
+  :: BS.ByteString -- ^ genesis bytes
+  -> Maybe GenesisHash -- ^ expected hash, check for hash match, if provided
+  -> ExceptT GenesisReadError IO GenesisHash
+checkExpectedGenesisHash genesisBytes mExpected = do
+  let actual = GenesisHash $ Crypto.hashWith id genesisBytes
+  forM_ mExpected $ \expected ->
+    when (actual /= expected) $
+      throwError (GenesisHashMismatch actual expected)
+  pure actual
 
 validateGenesis :: ShelleyGenesis StandardCrypto
                 -> ExceptT GenesisValidationError IO ()
@@ -291,7 +294,6 @@ instance Error GenesisReadError where
   prettyError (GenesisDecodeError fp err) =
         "There was an error parsing the genesis file: "
      <> pshow fp <> " Error: " <> pshow err
-
 
 newtype GenesisValidationError = GenesisValidationErrors [Shelley.ValidationErr]
   deriving Show

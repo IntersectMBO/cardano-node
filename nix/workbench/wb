@@ -198,6 +198,7 @@ start() {
         --verbose | -v )                 export verbose=t;;
         --trace | --debug )              set -x;;
         --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
+        --create-testnet-data )          export WB_CREATE_TESTNET_DATA=1;;
 
         --help )                         usage_start
                                          exit 1;;
