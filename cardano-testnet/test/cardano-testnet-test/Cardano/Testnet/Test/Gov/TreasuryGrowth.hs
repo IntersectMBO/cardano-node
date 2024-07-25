@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Gov.TreasuryGrowth where
 
@@ -21,7 +22,9 @@ import           Lens.Micro ((^.))
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
+import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types (eraToString)
 import           Testnet.Types
 
 import qualified Hedgehog as H
@@ -34,20 +37,24 @@ prop_check_if_treasury_is_growing :: H.Property
 prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start testnet
   conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} <- TN.mkConf tempAbsBasePath'
+  let tempBaseAbsPath = makeTmpBaseAbsPath $ tempAbsPath conf
 
-  let era = BabbageEra
+  let era = ConwayEra
       options = cardanoDefaultTestnetOptions
                   { cardanoEpochLength = 100
                   , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                   , cardanoActiveSlotsCoeff = 0.3
                   }
 
-  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
+  TestnetRuntime{testnetMagic, configurationFile, poolNodes} <- cardanoTestnetDefault options conf
 
-  -- Get socketPath
-  socketPathAbs <- Api.File <$> do
-    socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
-    H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
+  (execConfig, socketPathAbs) <- do
+    PoolNode{poolRuntime} <- H.headM poolNodes
+    poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+    let socketPath' = H.sprocketArgumentName poolSprocket1
+    socketPathAbs <- Api.File <$> H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
+    execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+    pure (execConfig, socketPathAbs)
 
   (_condition, treasuryValues) <- H.leftFailM . H.evalIO . runExceptT $
     Api.foldEpochState configurationFile socketPathAbs Api.QuickValidation (EpochNo 10) M.empty handler
@@ -64,6 +71,10 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
      else do
        H.note_ "treasury is not growing"
        H.failure
+
+  -- check if treasury query is returning positive amount
+  treasury <- read @Integer <$> execCli' execConfig [ eraToString era, "query", "treasury" ]
+  H.assertWith treasury (> 0)
   where
     handler :: AnyNewEpochState -> SlotNo -> BlockNo -> StateT (Map EpochNo Integer) IO ConditionResult
     handler (AnyNewEpochState _ newEpochState) _slotNo _blockNo = do
