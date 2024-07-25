@@ -235,7 +235,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
             -> SlotNo
             -> BlockNo
             -> StateT (Maybe AnyNewEpochState) IO ConditionResult
-    handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes) _ (BlockNo blockNo) = handleException $ do
+    handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes _) _ (BlockNo blockNo) = handleException $ do
       let prettyNes = shelleyBasedEraConstraints sbe (encodePretty nes)
           blockLabel = "#### BLOCK " <> show blockNo <> " ####"
       liftIO . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
@@ -243,7 +243,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       -- store epoch state for logging of differences
       mPrevEpochState <- get
       put (Just anes)
-      forM_ mPrevEpochState $ \(AnyNewEpochState sbe' pnes) -> do
+      forM_ mPrevEpochState $ \(AnyNewEpochState sbe' pnes _) -> do
         let prettyPnes = shelleyBasedEraConstraints sbe' (encodePretty pnes)
             difference = calculateEpochStateDiff prettyPnes prettyNes
         liftIO . appendFile diffFp $ unlines [blockLabel, difference, ""]
@@ -277,4 +277,3 @@ instance (L.EraTxOut ledgerera, L.EraGov ledgerera) => ToJSON (L.NewEpochState l
       , "rewardUpdate" .= nesRu
       , "currentStakeDistribution" .= nesPd
       ]
-

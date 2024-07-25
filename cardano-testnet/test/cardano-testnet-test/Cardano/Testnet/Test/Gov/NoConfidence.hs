@@ -243,7 +243,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
 -- | Checks if the committee is empty or not.
 committeeIsPresent :: Bool -> (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()
-committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState, _, _) =
+committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState _, _, _) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Constitutional committee does not exist pre-Conway era")
     (const $ let mCommittee = newEpochState
@@ -261,4 +261,3 @@ committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState, _, _) =
                     else Nothing
     )
     sbe
-
