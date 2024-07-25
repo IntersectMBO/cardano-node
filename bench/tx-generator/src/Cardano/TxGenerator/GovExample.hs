@@ -40,8 +40,8 @@
 
 module  Cardano.TxGenerator.GovExample where
 
-import           Cardano.Api hiding (StakeAddress, StakeCredential)
-import qualified Cardano.Api as Api (NetworkId (..))
+-- import           Cardano.Api hiding (StakeAddress, StakeCredential)
+import qualified Cardano.Api as Api (NetworkId (..), TxMetadataInEra (..))
 import qualified Cardano.Api.Byron as Byron (WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Ledger as Ledger (ConwayEraTxCert (..)
                    , ConwayTxCert (..)
@@ -56,24 +56,185 @@ import qualified Cardano.Api.Ledger as Ledger (ConwayEraTxCert (..)
                    , pattern UnRegDepositTxCert
                    , pattern UnRegTxCert
                    , ppPricesL)
-import           Cardano.Api.Shelley (GovernanceAction (..)
+import           Cardano.Api.Shelley
+                   ( Address (..)
+                   , AddressAny (..)
+                   , AddressInEra (..)
+                   , AddressTypeInEra (..)
+                   , AlonzoEraOnwards (..)
+                   , AnyCardanoEra (..)
+                   , AnyScriptWitness (..)
+                   , AssetId (..)
+                   , AsType (..)
+                   , BabbageEraOnwards (..)
+                   , BalancedTxBody (..)
+                   , BuildTx
+                   , BuildTxWith (..)
+                   , ByronEra
+                   , CardanoEra (..)
+                   , Certificate (..)
+                   , ConsensusModeParams (..)
+                   , ConwayEra
+                   , ConwayEraOnwards (..)
+                   , CtxTx
+                   , GovernanceAction (..)
+                   , EpochSlots (..)
+                   , ExceptT (..)
+                   , Featured (..)
+                   , File (..)
                    , Hash (..)
-                   , PoolId
+                   , IsShelleyBasedEra (..)
+                   , InAnyCardanoEra (..)
+                   , InAnyShelleyBasedEra (..)
+                   , KeyWitness (..)
+                   , KeyWitnessInCtx (..)
+                   , LedgerProtocolParameters (..)
+                   , LocalNodeConnectInfo (..)
+                   , NetworkId (..)
+                   -- , type PlutusScript (..)
                    , PlutusScriptOrReferenceInput (..)
+                   , PolicyId (..)
+                   , PoolId
                    , Proposal (..)
+                   , QueryConvenienceError (..)
                    , ReferenceScript (..)
+                   , Script (..)
+                   , ScriptInAnyLang (..)
+                   , ScriptValidity (..)
+                   , ScriptWitness (..)
+                   , ScriptWitnessInCtx (..)
+                   , ShelleyAddr
+                   , ShelleyBasedEra (..)
                    , ShelleyLedgerEra
+                   , ShelleyWitnessSigningKey (..)
+                   -- , type SimpleScript (..)
                    , SimpleScriptOrReferenceInput (..)
+                   , SlotNo (..)
+                   , SocketPath
                    , StakeAddress (..)
                    , StakeCredential (..)
+                   , TextEnvelope (..)
+                   , TextEnvelopeType (..)
+                   , Tx (..)
+                   , TxAuxScripts (..)
+                   , TxBody (..)
+                   , TxBodyContent (..)
+                   , TxCertificates (..)
+                   , TxCurrentTreasuryValue (..)
+                   , TxFee (..)
+                   , TxIn (..)
+                   , TxInMode (..)
+                   , TxInsReference (..)
+                   , TxInsCollateral (..)
+                   , TxIx (..)
+                   , TxMintValue (..)
+                   , TxOut (..)
+                   , TxOutDatum (..)
+                   , TxOutValue (..)
+                   , TxUpdateProposal (..)
+                   , TxValidationErrorInCardanoMode (..)
+                   , TxValidityLowerBound (..)
+                   , TxValidityUpperBound (..)
+                   , TxWithdrawals (..)
+                   , Value
                    , Vote (..)
                    , VotingProcedures (..)
-                   , LedgerProtocolParameters (..))
-import qualified Cardano.Api.Shelley as Api (
-                     convertToLedgerProtocolParameters
+                   , Witness (..)
+                   , WitCtxMint
+                   , WitCtxStake
+                   , WitCtxTxIn)
+import qualified Cardano.Api.Shelley as Api
+                   ( alonzoEraOnwardsConstraints
+                   , anyAddressInEra
+                   , anyAddressInShelleyBasedEra
+                   , anyCardanoEra
+                   , calculateMinimumUTxO
+                   , cardanoEraConstraints
+                   , caseShelleyToAllegraOrMaryEraOnwards
+                   , caseShelleyToAlonzoOrBabbageEraOnwards
+                   , caseShelleyToMaryOrAlonzoEraOnwards
+                   , collectTxBodyScriptWitnesses
+                   , convertToLedgerProtocolParameters
+                   , conwayEraOnwardsConstraints
+                   , conwayEraOnwardsToShelleyBasedEra
+                   , createAndValidateTransactionBody
                    , createVotingProcedure
+                   , defaultTxBodyContent
+                   , defaultTxValidityUpperBound
+                   , estimateBalancedTxBody
+                   , evaluateTransactionExecutionUnits
+                   , evaluateTransactionFee
+                   , executeLocalStateQueryExpr
+                   , firstExceptT
+                   , forEraInEon
+                   , forEraInEonMaybe
+                   , forShelleyBasedEraInEonMaybe
                    , fromShelleyStakeCredential
-                   , getTxBodyAndWitnesses)
+                   , getTxBody
+                   , getTxBodyAndWitnesses
+                   , getTxId
+                   , hashScript
+                   , hashScriptDataBytes
+                   , hoistEither
+                   , hoistMaybe
+                   , inEonForEra
+                   , inEonForShelleyBasedEra
+                   , left
+                   , lift
+                   , liftIO
+                   , lovelaceToTxOutValue
+                   , makeShelleyBootstrapWitness
+                   , makeShelleyKeyWitness
+                   , makeSignedTransaction
+                   , makeTransactionBodyAutoBalance
+                   , maryEraOnwardsToShelleyBasedEra
+                   , newExceptT
+                   , notScriptLockedTxIns
+                   , onLeft
+                   , onNothing
+                   , queryCurrentEra
+                   , queryStateForBalancedTx
+                   , readFileTextEnvelope
+                   , requireShelleyBasedEra
+                   , runExcept
+                   , scriptPolicyId
+                   , selectLovelace
+                   , selectStakeCredentialWitness
+                   , serialiseToRawBytesHex
+                   , serialiseToRawBytesHexText
+                   , setTxAuxScripts
+                   , setTxCertificates
+                   , setTxCurrentTreasuryValue
+                   , setTxExtraKeyWits
+                   , setTxFee
+                   , setTxIns
+                   , setTxInsCollateral
+                   , setTxInsReference
+                   , setTxMetadata
+                   , setTxMintValue
+                   , setTxOuts
+                   , setTxProtocolParams
+                   , setTxScriptValidity
+                   , setTxReturnCollateral
+                   , setTxTotalCollateral
+                   , setTxTreasuryDonation
+                   , setTxUpdateProposal
+                   , setTxValidityLowerBound
+                   , setTxValidityUpperBound
+                   , setTxWithdrawals
+                   , shelleyBasedEraConstraints
+                   , shelleyToBabbageEraConstraints
+                   , signShelleyTransaction
+                   , submitTxToNodeLocal
+                   , toCardanoEra
+                   , toLedgerEpochInfo
+                   , toLedgerValue
+                   , txInsExistInUTxO
+                   , unFeatured
+                   , valueToList
+                   , valueToLovelace
+                   , writeTxFileTextEnvelopeCddl
+                   , writeTxWitnessFileTextEnvelopeCddl)
 
 import qualified Cardano.Binary as CBOR (serialize')
 import qualified Cardano.Chain.Common as Byron (AddrAttributes (..)
@@ -217,7 +378,7 @@ demo' parametersFile = do
           txEnvNetworkId = Api.Mainnet
         , txEnvProtocolParams = protocolParameters
         , txEnvFee = TxFeeExplicit ShelleyBasedEraConway 100000
-        , txEnvMetadata = TxMetadataNone
+        , txEnvMetadata = Api.TxMetadataNone
         }
 
   run1 <- Monad.foldM (worker $ generateTx demoEnv) (FundQueue.emptyFundQueue `FundQueue.insertFund` genesisFund) [1..10]
@@ -258,7 +419,7 @@ genesisValue :: TxOutValue ConwayEra
 
 (genesisTxIn, genesisValue) =
   ( TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0)
-  , lovelaceToTxOutValue ShelleyBasedEraConway $ Coin 90000000000000
+  , Api.lovelaceToTxOutValue ShelleyBasedEraConway $ Coin 90000000000000
   )
 
 genesisFund :: Fund
@@ -286,12 +447,12 @@ localGenVote era vote = do
                              (era {- eon -} :: ConwayEraOnwards era)
                              (vote {- votingChoice -} :: Vote)
                              (Nothing :: Maybe (Url, Text))
-  _ <- shelleyBasedEraConstraints localShelleyBasedEra do
+  _ <- Api.shelleyBasedEraConstraints localShelleyBasedEra do
     _ <- pure (undefined :: AnyVotingStakeVerificationKeyOrHashOrFile)
     pure undefined
   pure ()
   where
-    localShelleyBasedEra = conwayEraOnwardsToShelleyBasedEra era
+    localShelleyBasedEra = Api.conwayEraOnwardsToShelleyBasedEra era
 
 -- Call into the CLI.
 localCheats :: forall era . {- ConwayEraOnwardsConstraints era => -} [GovernanceAction (ConwayEraOnwards era)]
@@ -304,24 +465,24 @@ localGenTx :: forall era. ()
   -> LedgerProtocolParameters era
   -> (TxInsCollateral era, [Fund])
   -> TxFee era
-  -> TxMetadataInEra era
+  -> Api.TxMetadataInEra era
   -> TxGenerator era
 localGenTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
-      (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+      (\b -> (Api.signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, Api.getTxId b))
+      (Api.createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   allKeys = Maybe.mapMaybe FundQueue.getFundKey $ inFunds ++ collFunds
-  txBodyContent = defaultTxBodyContent sbe
-    & setTxIns (map (\f -> (FundQueue.getFundTxIn f, BuildTxWith $ FundQueue.getFundWitness f)) inFunds)
-    & setTxInsCollateral collateral
-    & setTxOuts outputs
-    & setTxFee fee
-    & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
-    & setTxMetadata metadata
-    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
+  txBodyContent = Api.defaultTxBodyContent sbe
+    & Api.setTxIns (map (\f -> (FundQueue.getFundTxIn f, BuildTxWith $ FundQueue.getFundWitness f)) inFunds)
+    & Api.setTxInsCollateral collateral
+    & Api.setTxOuts outputs
+    & Api.setTxFee fee
+    & Api.setTxValidityLowerBound TxValidityNoLowerBound
+    & Api.setTxValidityUpperBound (Api.defaultTxValidityUpperBound sbe)
+    & Api.setTxMetadata metadata
+    & Api.setTxProtocolParams (BuildTxWith (Just ledgerParameters))
 
 
 localSourceToStoreTransaction ::
@@ -486,8 +647,8 @@ runTransactionBuildCmd
     , proposalFiles
     , treasuryDonation -- Maybe TxTreasuryDonation
     , buildOutputOptions
-    } = shelleyBasedEraConstraints eon $ do
-    let era = toCardanoEra eon
+    } = Api.shelleyBasedEraConstraints eon $ do
+    let era = Api.toCardanoEra eon
 
     -- The user can specify an era prior to the era that the node is currently in.
     -- We cannot use the user specified era to construct a query against a node because it may differ
@@ -500,53 +661,53 @@ runTransactionBuildCmd
             , localNodeSocketPath = nodeSocketPath
             }
 
-    inputsAndMaybeScriptWits <- firstExceptT TxCmdScriptWitnessError $ CLI.readScriptWitnessFiles eon txins
+    inputsAndMaybeScriptWits <- Api.firstExceptT TxCmdScriptWitnessError $ CLI.readScriptWitnessFiles eon txins
     certFilesAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $ CLI.readScriptWitnessFiles eon certificates
+      Api.firstExceptT TxCmdScriptWitnessError $ CLI.readScriptWitnessFiles eon certificates
 
     -- TODO: Conway Era - How can we make this more composable?
     certsAndMaybeScriptWits <-
       sequence
         [ fmap
             (,mSwit)
-            ( firstExceptT TxCmdReadTextViewFileError . newExceptT $
-                readFileTextEnvelope AsCertificate (File certFile)
+            ( Api.firstExceptT TxCmdReadTextViewFileError . Api.newExceptT $
+                Api.readFileTextEnvelope AsCertificate (File certFile)
             )
         | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
         ]
     withdrawalsAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $
+      Api.firstExceptT TxCmdScriptWitnessError $
         CLI.readScriptWitnessFilesTuple eon withdrawals
     txMetadata <-
-      firstExceptT TxCmdMetadataError . newExceptT $
+      Api.firstExceptT TxCmdMetadataError . Api.newExceptT $
         CLI.readTxMetadata eon metadataSchema metadataFiles
     valuesWithScriptWits <- readValueScriptWitnesses eon $ Maybe.fromMaybe mempty mValue
     scripts <-
-      firstExceptT TxCmdScriptFileError $
+      Api.firstExceptT TxCmdScriptFileError $
         mapM (CLI.readFileScriptInAnyLang . unFile) scriptFiles
     txAuxScripts <-
-      hoistEither $ first TxCmdAuxScriptsValidationError $ CLI.validateTxAuxScripts eon scripts
+      Api.hoistEither $ first TxCmdAuxScriptsValidationError $ CLI.validateTxAuxScripts eon scripts
 
     mProp <- case mUpdateProposalFile of
       Just (Featured w (Just updateProposalFile)) ->
-        CLI.readTxUpdateProposal w updateProposalFile & firstExceptT TxCmdReadTextViewFileError
+        CLI.readTxUpdateProposal w updateProposalFile & Api.firstExceptT TxCmdReadTextViewFileError
       _ -> pure TxUpdateProposalNone
 
     requiredSigners <-
-      mapM (firstExceptT TxCmdRequiredSignerError . newExceptT . CLI.readRequiredSigner) reqSigners
+      mapM (Api.firstExceptT TxCmdRequiredSignerError . Api.newExceptT . CLI.readRequiredSigner) reqSigners
     mReturnCollateral <- Monad.forM mReturnColl $ toTxOutInShelleyBasedEra eon
 
     txOuts <- mapM (toTxOutInAnyEra eon) txouts
 
     -- Conway related
     votingProceduresAndMaybeScriptWits <-
-      inEonForEra
+      Api.inEonForEra
         (pure mempty)
-        (\w -> firstExceptT TxCmdVoteError $ ExceptT (CLI.readVotingProceduresFiles w voteFiles))
+        (\w -> Api.firstExceptT TxCmdVoteError $ ExceptT (CLI.readVotingProceduresFiles w voteFiles))
         era
 
     proposals <-
-      newExceptT $
+      Api.newExceptT $
         first TxCmdProposalError
           <$> CLI.readTxGovernanceActions eon proposalFiles
 
@@ -567,22 +728,22 @@ runTransactionBuildCmd
         allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ filteredTxinsc
 
     AnyCardanoEra nodeEra <-
-      lift (executeLocalStateQueryExpr localNodeConnInfo Consensus.VolatileTip queryCurrentEra)
-        & onLeft (left . TxCmdQueryConvenienceError . AcqFailure)
-        & onLeft (left . TxCmdQueryConvenienceError . QceUnsupportedNtcVersion)
+      Api.lift (Api.executeLocalStateQueryExpr localNodeConnInfo Consensus.VolatileTip Api.queryCurrentEra)
+        & Api.onLeft (Api.left . TxCmdQueryConvenienceError . AcqFailure)
+        & Api.onLeft (Api.left . TxCmdQueryConvenienceError . QceUnsupportedNtcVersion)
 
     (txEraUtxo, _, eraHistory, systemStart, _, _, _, featuredCurrentTreasuryValueM) <-
-      lift
-        ( executeLocalStateQueryExpr
+      Api.lift
+        ( Api.executeLocalStateQueryExpr
             localNodeConnInfo
             Consensus.VolatileTip
-            (queryStateForBalancedTx nodeEra allTxInputs [])
+            (Api.queryStateForBalancedTx nodeEra allTxInputs [])
         )
-        & onLeft (left . TxCmdQueryConvenienceError . AcqFailure)
-        & onLeft (left . TxCmdQueryConvenienceError)
+        & Api.onLeft (Api.left . TxCmdQueryConvenienceError . AcqFailure)
+        & Api.onLeft (Api.left . TxCmdQueryConvenienceError)
 
     let currentTreasuryValueAndDonation =
-          case (treasuryDonation, unFeatured <$>
+          case (treasuryDonation, Api.unFeatured <$>
                    featuredCurrentTreasuryValueM) of
             -- We shouldn't specify the treasury value when no donation
             -- is being done
@@ -628,40 +789,40 @@ runTransactionBuildCmd
       OutputScriptCostOnly fp -> do
         let BuildTxWith mTxProtocolParams = txProtocolParams txBodyContent
 
-        pparams <- pure mTxProtocolParams & onNothing (left TxCmdProtocolParametersNotPresentInTxBody)
+        pparams <- pure mTxProtocolParams & Api.onNothing (Api.left TxCmdProtocolParametersNotPresentInTxBody)
         executionUnitPrices <-
-          pure (getExecutionUnitPrices era pparams) & onNothing (left TxCmdPParamExecutionUnitsNotAvailable)
+          pure (getExecutionUnitPrices era pparams) & Api.onNothing (Api.left TxCmdPParamExecutionUnitsNotAvailable)
 
         Refl <-
           testEquality era nodeEra
-            & hoistMaybe (TxCmdTxNodeEraMismatchError $ NodeEraMismatchError era nodeEra)
+            & Api.hoistMaybe (TxCmdTxNodeEraMismatchError $ NodeEraMismatchError era nodeEra)
 
         scriptExecUnitsMap <-
-          firstExceptT (TxCmdTxExecUnitsErr . AnyTxCmdTxExecUnitsErr) $
-            hoistEither $
-              evaluateTransactionExecutionUnits
+          Api.firstExceptT (TxCmdTxExecUnitsErr . AnyTxCmdTxExecUnitsErr) $
+            Api.hoistEither $
+              Api.evaluateTransactionExecutionUnits
                 era
                 systemStart
-                (toLedgerEpochInfo eraHistory)
+                (Api.toLedgerEpochInfo eraHistory)
                 pparams
                 txEraUtxo
                 balancedTxBody
 
-        let mScriptWits = forEraInEon era [] $ \sbe -> collectTxBodyScriptWitnesses sbe txBodyContent
+        let mScriptWits = Api.forEraInEon era [] $ \sbe -> Api.collectTxBodyScriptWitnesses sbe txBodyContent
 
         scriptCostOutput <-
-          firstExceptT TxCmdPlutusScriptCostErr $
-            hoistEither $
+          Api.firstExceptT TxCmdPlutusScriptCostErr $
+            Api.hoistEither $
               CLI.renderScriptCosts
                 txEraUtxo
                 executionUnitPrices
                 mScriptWits
                 scriptExecUnitsMap
-        liftIO $ LBS8.writeFile (unFile fp) $ Aeson.encodePretty scriptCostOutput
+        Api.liftIO $ LBS8.writeFile (unFile fp) $ Aeson.encodePretty scriptCostOutput
       OutputTxBodyOnly fpath ->
-        let noWitTx = makeSignedTransaction [] balancedTxBody
-         in lift (cardanoEraConstraints era $ writeTxFileTextEnvelopeCddl eon fpath noWitTx)
-              & onLeft (left . TxCmdWriteFileError)
+        let noWitTx = Api.makeSignedTransaction [] balancedTxBody
+         in Api.lift (Api.cardanoEraConstraints era $ Api.writeTxFileTextEnvelopeCddl eon fpath noWitTx)
+              & Api.onLeft (Api.left . TxCmdWriteFileError)
 
 runTransactionBuildEstimateCmd
   :: ()
@@ -698,37 +859,37 @@ runTransactionBuildEstimateCmd -- TODO change type
     , currentTreasuryValueAndDonation
     , txBodyOutFile
     } = do
-    let sbe = maryEraOnwardsToShelleyBasedEra eon
+    let sbe = Api.maryEraOnwardsToShelleyBasedEra eon
     ledgerPParams <-
-      firstExceptT TxCmdProtocolParamsError $ CLI.readProtocolParameters sbe protocolParamsFile
+      Api.firstExceptT TxCmdProtocolParamsError $ CLI.readProtocolParameters sbe protocolParamsFile
     inputsAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $
+      Api.firstExceptT TxCmdScriptWitnessError $
         CLI.readScriptWitnessFiles sbe txins
     certFilesAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $
+      Api.firstExceptT TxCmdScriptWitnessError $
         CLI.readScriptWitnessFiles sbe certificates
 
     withdrawalsAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $
+      Api.firstExceptT TxCmdScriptWitnessError $
         CLI.readScriptWitnessFilesTuple sbe withdrawals
     txMetadata <-
-      firstExceptT TxCmdMetadataError
-        . newExceptT
+      Api.firstExceptT TxCmdMetadataError
+        . Api.newExceptT
         $ CLI.readTxMetadata sbe metadataSchema metadataFiles
     valuesWithScriptWits <- readValueScriptWitnesses sbe $ Maybe.fromMaybe mempty mValue
     scripts <-
-      firstExceptT TxCmdScriptFileError $
+      Api.firstExceptT TxCmdScriptFileError $
         mapM (CLI.readFileScriptInAnyLang . unFile) scriptFiles
     txAuxScripts <-
-      hoistEither $ first TxCmdAuxScriptsValidationError $ CLI.validateTxAuxScripts sbe scripts
+      Api.hoistEither $ first TxCmdAuxScriptsValidationError $ CLI.validateTxAuxScripts sbe scripts
 
     txUpdateProposal <- case mUpdateProposalFile of
       Just (Featured w (Just updateProposalFile)) ->
-        CLI.readTxUpdateProposal w updateProposalFile & firstExceptT TxCmdReadTextViewFileError
+        CLI.readTxUpdateProposal w updateProposalFile & Api.firstExceptT TxCmdReadTextViewFileError
       _ -> pure TxUpdateProposalNone
 
     requiredSigners <-
-      mapM (firstExceptT TxCmdRequiredSignerError . newExceptT . CLI.readRequiredSigner) reqSigners
+      mapM (Api.firstExceptT TxCmdRequiredSignerError . Api.newExceptT . CLI.readRequiredSigner) reqSigners
 
     mReturnCollateral <- mapM (toTxOutInShelleyBasedEra sbe) mReturnColl
 
@@ -739,32 +900,32 @@ runTransactionBuildEstimateCmd -- TODO change type
 
     -- Conway related
     votingProceduresAndMaybeScriptWits <-
-      inEonForShelleyBasedEra
+      Api.inEonForShelleyBasedEra
         (pure mempty)
         ( \w ->
-            firstExceptT TxCmdVoteError . ExceptT $
-              conwayEraOnwardsConstraints w $
+            Api.firstExceptT TxCmdVoteError . ExceptT $
+              Api.conwayEraOnwardsConstraints w $
                 CLI.readVotingProceduresFiles w voteFiles
         )
         sbe
 
     proposals <-
-      lift (CLI.readTxGovernanceActions sbe proposalFiles)
-        & onLeft (left . TxCmdProposalError)
+      Api.lift (CLI.readTxGovernanceActions sbe proposalFiles)
+        & Api.onLeft (Api.left . TxCmdProposalError)
 
     certsAndMaybeScriptWits <-
-      shelleyBasedEraConstraints sbe $
+      Api.shelleyBasedEraConstraints sbe $
         sequence
           [ fmap
               (,mSwit)
-              ( firstExceptT TxCmdReadTextViewFileError . newExceptT $
-                  readFileTextEnvelope AsCertificate (File certFile)
+              ( Api.firstExceptT TxCmdReadTextViewFileError . Api.newExceptT $
+                  Api.readFileTextEnvelope AsCertificate (File certFile)
               )
           | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
           ]
 
     txBodyContent <-
-      hoistEither $
+      Api.hoistEither $
         constructTxBodyContent
           sbe
           mScriptValidity
@@ -773,7 +934,7 @@ runTransactionBuildEstimateCmd -- TODO change type
           readOnlyRefIns
           filteredTxinsc
           mReturnCollateral
-          Nothing -- TODO: Remove total collateral parameter from estimateBalancedTxBody
+          Nothing -- TODO: Remove total collateral parameter from Api.estimateBalancedTxBody
           txOuts
           mValidityLowerBound
           mValidityUpperBound
@@ -796,13 +957,13 @@ runTransactionBuildEstimateCmd -- TODO change type
           Map.fromList
             [ (sWitIndex, execUnits)
             | (sWitIndex, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ execUnits)) <-
-                collectTxBodyScriptWitnesses sbe txBodyContent
+                Api.collectTxBodyScriptWitnesses sbe txBodyContent
             ]
 
     BalancedTxBody _ balancedTxBody _ _ <-
-      hoistEither $
+      Api.hoistEither $
         first TxCmdFeeEstimationError $
-          estimateBalancedTxBody
+          Api.estimateBalancedTxBody
             eon
             txBodyContent
             ledgerPParams
@@ -814,20 +975,20 @@ runTransactionBuildEstimateCmd -- TODO change type
             shelleyWitnesses
             (Maybe.fromMaybe 0 mByronWitnesses)
             (maybe 0 unReferenceScriptSize totalReferenceScriptSize)
-            (anyAddressInShelleyBasedEra sbe changeAddr)
+            (Api.anyAddressInShelleyBasedEra sbe changeAddr)
             totalUTxOValue
 
-    let noWitTx = makeSignedTransaction [] balancedTxBody
-    lift (writeTxFileTextEnvelopeCddl sbe txBodyOutFile noWitTx)
-      & onLeft (left . TxCmdWriteFileError)
+    let noWitTx = Api.makeSignedTransaction [] balancedTxBody
+    Api.lift (Api.writeTxFileTextEnvelopeCddl sbe txBodyOutFile noWitTx)
+      & Api.onLeft (Api.left . TxCmdWriteFileError)
 
 getPoolDeregistrationInfo
   :: Certificate era
   -> Maybe PoolId
 getPoolDeregistrationInfo (ShelleyRelatedCertificate w cert) =
-  shelleyToBabbageEraConstraints w $ getShelleyDeregistrationPoolId cert
+  Api.shelleyToBabbageEraConstraints w $ getShelleyDeregistrationPoolId cert
 getPoolDeregistrationInfo (ConwayCertificate w cert) =
-  conwayEraOnwardsConstraints w $ getConwayDeregistrationPoolId cert
+  Api.conwayEraOnwardsConstraints w $ getConwayDeregistrationPoolId cert
 
 getShelleyDeregistrationPoolId
   :: Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
@@ -856,7 +1017,7 @@ getDRepDeregistrationInfo
   -> Maybe (Ledger.Credential Ledger.DRepRole StandardCrypto, Coin)
 getDRepDeregistrationInfo ShelleyRelatedCertificate{} = Nothing
 getDRepDeregistrationInfo (ConwayCertificate w cert) =
-  conwayEraOnwardsConstraints w $ getConwayDRepDeregistrationInfo cert
+  Api.conwayEraOnwardsConstraints w $ getConwayDRepDeregistrationInfo cert
 
 getConwayDRepDeregistrationInfo
   :: Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
@@ -870,9 +1031,9 @@ getStakeDeregistrationInfo
   :: Certificate era
   -> Maybe (StakeCredential, Coin)
 getStakeDeregistrationInfo (ShelleyRelatedCertificate w cert) =
-  shelleyToBabbageEraConstraints w $ getShelleyDeregistrationInfo cert
+  Api.shelleyToBabbageEraConstraints w $ getShelleyDeregistrationInfo cert
 getStakeDeregistrationInfo (ConwayCertificate w cert) =
-  conwayEraOnwardsConstraints w $ getConwayDeregistrationInfo cert
+  Api.conwayEraOnwardsConstraints w $ getConwayDeregistrationInfo cert
 
 -- There for no deposits required pre-conway for registering stake
 -- credentials.
@@ -900,8 +1061,8 @@ getConwayDeregistrationInfo cert = do
 
 getExecutionUnitPrices :: CardanoEra era -> LedgerProtocolParameters era -> Maybe Ledger.Prices
 getExecutionUnitPrices cEra (LedgerProtocolParameters pp) =
-  forEraInEonMaybe cEra $ \aeo ->
-    alonzoEraOnwardsConstraints aeo $
+  Api.forEraInEonMaybe cEra $ \aeo ->
+    Api.alonzoEraOnwardsConstraints aeo $
       pp ^. Ledger.ppPricesL
 
 runTransactionBuildRawCmd
@@ -936,38 +1097,38 @@ runTransactionBuildRawCmd
     , txBodyOutFile
     } = do
     inputsAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $
+      Api.firstExceptT TxCmdScriptWitnessError $
         CLI.readScriptWitnessFiles eon txIns
     certFilesAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $
+      Api.firstExceptT TxCmdScriptWitnessError $
         CLI.readScriptWitnessFiles eon certificates
 
     withdrawalsAndMaybeScriptWits <-
-      firstExceptT TxCmdScriptWitnessError $
+      Api.firstExceptT TxCmdScriptWitnessError $
         CLI.readScriptWitnessFilesTuple eon withdrawals
     txMetadata <-
-      firstExceptT TxCmdMetadataError
-        . newExceptT
+      Api.firstExceptT TxCmdMetadataError
+        . Api.newExceptT
         $ CLI.readTxMetadata eon metadataSchema metadataFiles
     valuesWithScriptWits <- readValueScriptWitnesses eon $ Maybe.fromMaybe mempty mValue
     scripts <-
-      firstExceptT TxCmdScriptFileError $
+      Api.firstExceptT TxCmdScriptFileError $
         mapM (CLI.readFileScriptInAnyLang . unFile) scriptFiles
     txAuxScripts <-
-      hoistEither $ first TxCmdAuxScriptsValidationError $ CLI.validateTxAuxScripts eon scripts
+      Api.hoistEither $ first TxCmdAuxScriptsValidationError $ CLI.validateTxAuxScripts eon scripts
 
     pparams <- Monad.forM mProtocolParamsFile $ \ppf ->
-      firstExceptT TxCmdProtocolParamsError (CLI.readProtocolParameters eon ppf)
+      Api.firstExceptT TxCmdProtocolParamsError (CLI.readProtocolParameters eon ppf)
 
     let mLedgerPParams = LedgerProtocolParameters <$> pparams
 
     txUpdateProposal <- case mUpdateProprosalFile of
       Just (Featured w (Just updateProposalFile)) ->
-        CLI.readTxUpdateProposal w updateProposalFile & firstExceptT TxCmdReadTextViewFileError
+        CLI.readTxUpdateProposal w updateProposalFile & Api.firstExceptT TxCmdReadTextViewFileError
       _ -> pure TxUpdateProposalNone
 
     requiredSigners <-
-      mapM (firstExceptT TxCmdRequiredSignerError . newExceptT . CLI.readRequiredSigner) reqSigners
+      mapM (Api.firstExceptT TxCmdRequiredSignerError . Api.newExceptT . CLI.readRequiredSigner) reqSigners
 
     mReturnCollateral <- mapM (toTxOutInShelleyBasedEra eon) mReturnColl
 
@@ -978,31 +1139,31 @@ runTransactionBuildRawCmd
 
     -- Conway related
     votingProceduresAndMaybeScriptWits <-
-      inEonForShelleyBasedEra
+      Api.inEonForShelleyBasedEra
         (pure mempty)
         ( \w ->
-            firstExceptT TxCmdVoteError . ExceptT $
-              conwayEraOnwardsConstraints w $
+            Api.firstExceptT TxCmdVoteError . ExceptT $
+              Api.conwayEraOnwardsConstraints w $
                 CLI.readVotingProceduresFiles w voteFiles
         )
         eon
 
     proposals <-
-      lift (CLI.readTxGovernanceActions eon proposalFiles)
-        & onLeft (left . TxCmdProposalError)
+      Api.lift (CLI.readTxGovernanceActions eon proposalFiles)
+        & Api.onLeft (Api.left . TxCmdProposalError)
 
     certsAndMaybeScriptWits <-
-      shelleyBasedEraConstraints eon $
+      Api.shelleyBasedEraConstraints eon $
         sequence
           [ fmap
               (,mSwit)
-              ( firstExceptT TxCmdReadTextViewFileError . newExceptT $
-                  readFileTextEnvelope AsCertificate (File certFile)
+              ( Api.firstExceptT TxCmdReadTextViewFileError . Api.newExceptT $
+                  Api.readFileTextEnvelope AsCertificate (File certFile)
               )
           | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
           ]
     txBody <-
-      hoistEither $
+      Api.hoistEither $
         runTxBuildRaw
           eon
           mScriptValidity
@@ -1027,9 +1188,9 @@ runTransactionBuildRawCmd
           proposals
           currentTreasuryValueAndDonation
 
-    let noWitTx = makeSignedTransaction [] txBody
-    lift (writeTxFileTextEnvelopeCddl eon txBodyOutFile noWitTx)
-      & onLeft (left . TxCmdWriteFileError)
+    let noWitTx = Api.makeSignedTransaction [] txBody
+    Api.lift (Api.writeTxFileTextEnvelopeCddl eon txBodyOutFile noWitTx)
+      & Api.onLeft (Api.left . TxCmdWriteFileError)
 
 runTxBuildRaw
   :: ()
@@ -1061,7 +1222,7 @@ runTxBuildRaw
   -> [Hash PaymentKey]
   -- ^ Required signers
   -> TxAuxScripts era
-  -> TxMetadataInEra era
+  -> Api.TxMetadataInEra era
   -> Maybe (LedgerProtocolParameters era)
   -> TxUpdateProposal era
   -> [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
@@ -1116,7 +1277,7 @@ runTxBuildRaw
         proposals
         mCurrentTreasuryValueAndDonation
 
-    first TxCmdTxBodyError $ createAndValidateTransactionBody sbe txBodyContent
+    first TxCmdTxBodyError $ Api.createAndValidateTransactionBody sbe txBodyContent
 
 constructTxBodyContent
   :: ShelleyBasedEra era
@@ -1149,7 +1310,7 @@ constructTxBodyContent
   -> Coin
   -- ^ Tx fee
   -> TxAuxScripts era
-  -> TxMetadataInEra era
+  -> Api.TxMetadataInEra era
   -> TxUpdateProposal era
   -> [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
   -> [(Proposal era, Maybe (ScriptWitness WitCtxStake era))]
@@ -1217,34 +1378,34 @@ constructTxBodyContent
           TxCmdNotSupportedInEraValidationError
           (CLI.validateTxTreasuryDonation sbe (snd <$> mCurrentTreasuryValueAndDonation))
       return $
-        shelleyBasedEraConstraints sbe $
-          ( defaultTxBodyContent sbe
-              & setTxIns (validateTxIns inputsAndMaybeScriptWits)
-              & setTxInsCollateral validatedCollateralTxIns
-              & setTxInsReference validatedRefInputs
-              & setTxOuts txouts
-              & setTxTotalCollateral validatedTotCollateral
-              & setTxReturnCollateral validatedRetCol
-              & setTxFee txFee
-              & setTxValidityLowerBound validatedLowerBound
-              & setTxValidityUpperBound mUpperBound
-              & setTxMetadata txMetadata
-              & setTxAuxScripts txAuxScripts
-              & setTxExtraKeyWits validatedReqSigners
-              & setTxProtocolParams (BuildTxWith $ LedgerProtocolParameters <$> mPparams)
-              & setTxWithdrawals (TxWithdrawals sbe $ map convertWithdrawals withdrawals)
-              & setTxCertificates (convertCertificates sbe certsAndMaybeScriptWits)
-              & setTxUpdateProposal txUpdateProposal
-              & setTxMintValue validatedMintValue
-              & setTxScriptValidity validatedTxScriptValidity
+        Api.shelleyBasedEraConstraints sbe $
+          ( Api.defaultTxBodyContent sbe
+              & Api.setTxIns (validateTxIns inputsAndMaybeScriptWits)
+              & Api.setTxInsCollateral validatedCollateralTxIns
+              & Api.setTxInsReference validatedRefInputs
+              & Api.setTxOuts txouts
+              & Api.setTxTotalCollateral validatedTotCollateral
+              & Api.setTxReturnCollateral validatedRetCol
+              & Api.setTxFee txFee
+              & Api.setTxValidityLowerBound validatedLowerBound
+              & Api.setTxValidityUpperBound mUpperBound
+              & Api.setTxMetadata txMetadata
+              & Api.setTxAuxScripts txAuxScripts
+              & Api.setTxExtraKeyWits validatedReqSigners
+              & Api.setTxProtocolParams (BuildTxWith $ LedgerProtocolParameters <$> mPparams)
+              & Api.setTxWithdrawals (TxWithdrawals sbe $ map convertWithdrawals withdrawals)
+              & Api.setTxCertificates (convertCertificates sbe certsAndMaybeScriptWits)
+              & Api.setTxUpdateProposal txUpdateProposal
+              & Api.setTxMintValue validatedMintValue
+              & Api.setTxScriptValidity validatedTxScriptValidity
           )
             { -- TODO: Create set* function for proposal procedures and voting procedures
               txProposalProcedures =
-                forShelleyBasedEraInEonMaybe sbe (`Featured` CLI.convToTxProposalProcedures proposals)
-            , txVotingProcedures = forShelleyBasedEraInEonMaybe sbe (`Featured` validatedVotingProcedures)
+                Api.forShelleyBasedEraInEonMaybe sbe (`Featured` CLI.convToTxProposalProcedures proposals)
+            , txVotingProcedures = Api.forShelleyBasedEraInEonMaybe sbe (`Featured` validatedVotingProcedures)
             }
-            & setTxCurrentTreasuryValue validatedCurrentTreasuryValue
-            & setTxTreasuryDonation validatedTreasuryDonation
+            & Api.setTxCurrentTreasuryValue validatedCurrentTreasuryValue
+            & Api.setTxTreasuryDonation validatedTreasuryDonation
    where
     convertWithdrawals
       :: (StakeAddress, Coin, Maybe (ScriptWitness WitCtxStake era))
@@ -1287,7 +1448,7 @@ runTxBuild
   -> [Hash PaymentKey]
   -- ^ Required signers
   -> TxAuxScripts era
-  -> TxMetadataInEra era
+  -> Api.TxMetadataInEra era
   -> TxUpdateProposal era
   -> Maybe Word
   -> [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
@@ -1320,10 +1481,10 @@ runTxBuild
   votingProcedures
   proposals
   mCurrentTreasuryValueAndDonation =
-    shelleyBasedEraConstraints sbe $ do
+    Api.shelleyBasedEraConstraints sbe $ do
       -- TODO: All functions should be parameterized by ShelleyBasedEra
       -- as it's not possible to call this function with ByronEra
-      let era = toCardanoEra sbe
+      let era = Api.toCardanoEra sbe
           inputsThatRequireWitnessing = [input | (input, _) <- inputsAndMaybeScriptWits]
 
       let allReferenceInputs =
@@ -1345,13 +1506,13 @@ runTxBuild
               }
 
       AnyCardanoEra nodeEra <-
-        lift (executeLocalStateQueryExpr localNodeConnInfo Consensus.VolatileTip queryCurrentEra)
-          & onLeft (left . TxCmdQueryConvenienceError . AcqFailure)
-          & onLeft (left . TxCmdQueryConvenienceError . QceUnsupportedNtcVersion)
+        Api.lift (Api.executeLocalStateQueryExpr localNodeConnInfo Consensus.VolatileTip Api.queryCurrentEra)
+          & Api.onLeft (Api.left . TxCmdQueryConvenienceError . AcqFailure)
+          & Api.onLeft (Api.left . TxCmdQueryConvenienceError . QceUnsupportedNtcVersion)
 
       Refl <-
         testEquality era nodeEra
-          & hoistMaybe (TxCmdTxNodeEraMismatchError $ NodeEraMismatchError era nodeEra)
+          & Api.hoistMaybe (TxCmdTxNodeEraMismatchError $ NodeEraMismatchError era nodeEra)
 
       let certs =
             case convertCertificates sbe certsAndMaybeScriptWits of
@@ -1361,15 +1522,15 @@ runTxBuild
 -- use readProtocolParametersOrDie from ApiTest.hs
 -- also protocolParamMaxBlockExUnits and protocolParamMaxTxExUnits
       (txEraUtxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits, drepDelegDeposits, _) <-
-        lift
-          ( executeLocalStateQueryExpr localNodeConnInfo Consensus.VolatileTip $
-              queryStateForBalancedTx nodeEra allTxInputs certs
+        Api.lift
+          ( Api.executeLocalStateQueryExpr localNodeConnInfo Consensus.VolatileTip $
+              Api.queryStateForBalancedTx nodeEra allTxInputs certs
           )
-          & onLeft (left . TxCmdQueryConvenienceError . AcqFailure)
-          & onLeft (left . TxCmdQueryConvenienceError)
+          & Api.onLeft (Api.left . TxCmdQueryConvenienceError . AcqFailure)
+          & Api.onLeft (Api.left . TxCmdQueryConvenienceError)
 
       txBodyContent <-
-        hoistEither $
+        Api.hoistEither $
           constructTxBodyContent
             sbe
             mScriptValidity
@@ -1394,23 +1555,23 @@ runTxBuild
             proposals
             mCurrentTreasuryValueAndDonation
 
-      firstExceptT TxCmdTxInsDoNotExist
-        . hoistEither
-        $ txInsExistInUTxO allTxInputs txEraUtxo
-      firstExceptT TxCmdQueryNotScriptLocked
-        . hoistEither
-        $ notScriptLockedTxIns txinsc txEraUtxo
+      Api.firstExceptT TxCmdTxInsDoNotExist
+        . Api.hoistEither
+        $ Api.txInsExistInUTxO allTxInputs txEraUtxo
+      Api.firstExceptT TxCmdQueryNotScriptLocked
+        . Api.hoistEither
+        $ Api.notScriptLockedTxIns txinsc txEraUtxo
 
       cAddr <-
-        pure (anyAddressInEra era changeAddr)
-          & onLeft (error $ "runTxBuild: Byron address used: " <> show changeAddr) -- should this throw instead?
+        pure (Api.anyAddressInEra era changeAddr)
+          & Api.onLeft (error $ "runTxBuild: Byron address used: " <> show changeAddr) -- should this throw instead?
       balancedTxBody@(BalancedTxBody _ _ _ fee) <-
-        firstExceptT (TxCmdBalanceTxBody . AnyTxBodyErrorAutoBalance)
-          . hoistEither
-          $ makeTransactionBodyAutoBalance
+        Api.firstExceptT (TxCmdBalanceTxBody . AnyTxBodyErrorAutoBalance)
+          . Api.hoistEither
+          $ Api.makeTransactionBodyAutoBalance
             sbe
             systemStart
-            (toLedgerEpochInfo eraHistory)
+            (Api.toLedgerEpochInfo eraHistory)
             pparams
             stakePools
             stakeDelegDeposits
@@ -1420,7 +1581,7 @@ runTxBuild
             cAddr
             mOverrideWits
 
-      liftIO $ putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
+      Api.liftIO $ putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
 
       return balancedTxBody
 
@@ -1438,7 +1599,7 @@ convertCertificates sbe certsAndScriptWitnesses =
     :: (Certificate era, Maybe (ScriptWitness WitCtxStake era))
     -> Maybe (StakeCredential, Witness WitCtxStake era)
   convert (cert, mScriptWitnessFiles) = do
-    sCred <- selectStakeCredentialWitness cert
+    sCred <- Api.selectStakeCredentialWitness cert
     Just $ case mScriptWitnessFiles of
       Just sWit -> (sCred, ScriptWitness ScriptWitnessForStakeAddr sWit)
       Nothing -> (sCred, KeyWitness KeyWitnessForStakeAddr)
@@ -1454,14 +1615,14 @@ txFeatureMismatch
   -> TxFeature
   -> ExceptT TxCmdError m a
 txFeatureMismatch era feature =
-  hoistEither . Left $ TxCmdTxFeatureMismatch (anyCardanoEra era) feature
+  Api.hoistEither . Left $ TxCmdTxFeatureMismatch (Api.anyCardanoEra era) feature
 
 txFeatureMismatchPure
   :: CardanoEra era
   -> TxFeature
   -> Either TxCmdError a
 txFeatureMismatchPure era feature =
-  Left (TxCmdTxFeatureMismatch (anyCardanoEra era) feature)
+  Left (TxCmdTxFeatureMismatch (Api.anyCardanoEra era) feature)
 
 validateTxIns
   :: [(TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
@@ -1484,8 +1645,8 @@ validateTxInsCollateral
   -> Either TxCmdError (TxInsCollateral era)
 validateTxInsCollateral _ [] = return TxInsCollateralNone
 validateTxInsCollateral era txins = do
-  forShelleyBasedEraInEonMaybe era (`TxInsCollateral` txins)
-    & maybe (txFeatureMismatchPure (toCardanoEra era) TxFeatureCollateral) Right
+  Api.forShelleyBasedEraInEonMaybe era (`TxInsCollateral` txins)
+    & maybe (txFeatureMismatchPure (Api.toCardanoEra era) TxFeatureCollateral) Right
 
 validateTxInsReference
   :: ShelleyBasedEra era
@@ -1493,8 +1654,8 @@ validateTxInsReference
   -> Either TxCmdError (TxInsReference BuildTx era)
 validateTxInsReference _ [] = return TxInsReferenceNone
 validateTxInsReference sbe allRefIns = do
-  forShelleyBasedEraInEonMaybe sbe (`TxInsReference` allRefIns)
-    & maybe (txFeatureMismatchPure (toCardanoEra sbe) TxFeatureReferenceInputs) Right
+  Api.forShelleyBasedEraInEonMaybe sbe (`TxInsReference` allRefIns)
+    & maybe (txFeatureMismatchPure (Api.toCardanoEra sbe) TxFeatureReferenceInputs) Right
 
 getAllReferenceInputs
   :: [(TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
@@ -1545,13 +1706,13 @@ toAddressInAnyEra
   :: CardanoEra era
   -> AddressAny
   -> Either TxCmdError (AddressInEra era)
-toAddressInAnyEra era addrAny = runExcept $ do
+toAddressInAnyEra era addrAny = Api.runExcept $ do
   case addrAny of
     AddressByron bAddr -> pure (AddressInEra ByronAddressInAnyEra bAddr)
     AddressShelley sAddr -> do
       sbe <-
-        requireShelleyBasedEra era
-          & onNothing (txFeatureMismatch era TxFeatureShelleyAddresses)
+        Api.requireShelleyBasedEra era
+          & Api.onNothing (txFeatureMismatch era TxFeatureShelleyAddresses)
 
       pure (AddressInEra (ShelleyAddressInEra sbe) sAddr)
 
@@ -1560,7 +1721,7 @@ toAddressInShelleyBasedEra
   -> Address ShelleyAddr
   -> Either TxCmdError (AddressInEra era)
 toAddressInShelleyBasedEra sbe sAddr =
-  runExcept $
+  Api.runExcept $
     pure (AddressInEra (ShelleyAddressInEra sbe) sAddr)
 
 toTxOutValueInAnyEra
@@ -1568,12 +1729,12 @@ toTxOutValueInAnyEra
   -> Value
   -> Either TxCmdError (TxOutValue era)
 toTxOutValueInAnyEra era val =
-  caseShelleyToAllegraOrMaryEraOnwards
-    ( \_ -> case valueToLovelace val of
+  Api.caseShelleyToAllegraOrMaryEraOnwards
+    ( \_ -> case Api.valueToLovelace val of
         Just l -> return (TxOutValueShelleyBased era l)
-        Nothing -> txFeatureMismatchPure (toCardanoEra era) TxFeatureMultiAssetOutputs
+        Nothing -> txFeatureMismatchPure (Api.toCardanoEra era) TxFeatureMultiAssetOutputs
     )
-    (\w -> return (TxOutValueShelleyBased era (toLedgerValue w val)))
+    (\w -> return (TxOutValueShelleyBased era (Api.toLedgerValue w val)))
     era
 
 toTxOutValueInShelleyBasedEra
@@ -1581,12 +1742,12 @@ toTxOutValueInShelleyBasedEra
   -> Value
   -> Either TxCmdError (TxOutValue era)
 toTxOutValueInShelleyBasedEra sbe val =
-  caseShelleyToAllegraOrMaryEraOnwards
-    ( \_ -> case valueToLovelace val of
+  Api.caseShelleyToAllegraOrMaryEraOnwards
+    ( \_ -> case Api.valueToLovelace val of
         Just l -> return (TxOutValueShelleyBased sbe l)
-        Nothing -> txFeatureMismatchPure (toCardanoEra sbe) TxFeatureMultiAssetOutputs
+        Nothing -> txFeatureMismatchPure (Api.toCardanoEra sbe) TxFeatureMultiAssetOutputs
     )
-    (\w -> return (TxOutValueShelleyBased sbe (toLedgerValue w val)))
+    (\w -> return (TxOutValueShelleyBased sbe (Api.toLedgerValue w val)))
     sbe
 
 toTxOutInShelleyBasedEra
@@ -1594,20 +1755,20 @@ toTxOutInShelleyBasedEra
   -> TxOutShelleyBasedEra
   -> ExceptT TxCmdError IO (TxOut CtxTx era)
 toTxOutInShelleyBasedEra era (TxOutShelleyBasedEra addr' val' mDatumHash refScriptFp) = do
-  addr <- hoistEither $ toAddressInShelleyBasedEra era addr'
-  val <- hoistEither $ toTxOutValueInShelleyBasedEra era val'
+  addr <- Api.hoistEither $ toAddressInShelleyBasedEra era addr'
+  val <- Api.hoistEither $ toTxOutValueInShelleyBasedEra era val'
 
   datum <-
-    caseShelleyToMaryOrAlonzoEraOnwards
+    Api.caseShelleyToMaryOrAlonzoEraOnwards
       (const (pure TxOutDatumNone))
       (`toTxAlonzoDatum` mDatumHash)
       era
 
   refScript <-
-    inEonForEra
+    Api.inEonForEra
       (pure ReferenceScriptNone)
       (`getReferenceScript` refScriptFp)
-      (toCardanoEra era)
+      (Api.toCardanoEra era)
 
   pure $ TxOut addr val datum refScript
 
@@ -1615,8 +1776,8 @@ toTxOutByronEra
   :: TxOutAnyEra
   -> ExceptT TxCmdError IO (TxOut CtxTx ByronEra)
 toTxOutByronEra (TxOutAnyEra addr' val' _ _) = do
-  addr <- hoistEither $ toAddressInAnyEra ByronEra addr'
-  let ada = TxOutValueByron $ selectLovelace val'
+  addr <- Api.hoistEither $ toAddressInAnyEra ByronEra addr'
+  let ada = TxOutValueByron $ Api.selectLovelace val'
   pure $ TxOut addr ada TxOutDatumNone ReferenceScriptNone
 
 -- TODO: toTxOutInAnyEra eventually will not be needed because
@@ -1627,18 +1788,18 @@ toTxOutInAnyEra
   -> TxOutAnyEra
   -> ExceptT TxCmdError IO (TxOut CtxTx era)
 toTxOutInAnyEra era (TxOutAnyEra addr' val' mDatumHash refScriptFp) = do
-  let cEra = toCardanoEra era
-  addr <- hoistEither $ toAddressInAnyEra cEra addr'
-  val <- hoistEither $ toTxOutValueInAnyEra era val'
+  let cEra = Api.toCardanoEra era
+  addr <- Api.hoistEither $ toAddressInAnyEra cEra addr'
+  val <- Api.hoistEither $ toTxOutValueInAnyEra era val'
 
   datum <-
-    caseShelleyToMaryOrAlonzoEraOnwards
+    Api.caseShelleyToMaryOrAlonzoEraOnwards
       (const (pure TxOutDatumNone))
       (`toTxAlonzoDatum` mDatumHash)
       era
 
   refScript <-
-    caseShelleyToAlonzoOrBabbageEraOnwards
+    Api.caseShelleyToAlonzoOrBabbageEraOnwards
       (const (pure ReferenceScriptNone))
       (`getReferenceScript` refScriptFp)
       era
@@ -1651,7 +1812,7 @@ getReferenceScript
   -> ExceptT TxCmdError IO (ReferenceScript era)
 getReferenceScript w = \case
   ReferenceScriptAnyEraNone -> return ReferenceScriptNone
-  ReferenceScriptAnyEra fp -> ReferenceScript w <$> firstExceptT TxCmdScriptFileError (CLI.readFileScriptInAnyLang fp)
+  ReferenceScriptAnyEra fp -> ReferenceScript w <$> Api.firstExceptT TxCmdScriptFileError (CLI.readFileScriptInAnyLang fp)
 
 toTxAlonzoDatum
   :: ()
@@ -1663,15 +1824,15 @@ toTxAlonzoDatum supp cliDatum =
     TxOutDatumByNone -> pure TxOutDatumNone
     TxOutDatumByHashOnly h -> pure (TxOutDatumHash supp h)
     TxOutDatumByHashOf sDataOrFile -> do
-      sData <- firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile sDataOrFile
-      pure (TxOutDatumHash supp $ hashScriptDataBytes sData)
+      sData <- Api.firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile sDataOrFile
+      pure (TxOutDatumHash supp $ Api.hashScriptDataBytes sData)
     TxOutDatumByValue sDataOrFile -> do
-      sData <- firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile sDataOrFile
+      sData <- Api.firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile sDataOrFile
       pure (TxOutDatumInTx supp sData)
     TxOutInlineDatumByValue sDataOrFile -> do
-      let cEra = toCardanoEra supp
-      forEraInEon cEra (txFeatureMismatch cEra TxFeatureInlineDatums) $ \babbageOnwards -> do
-        sData <- firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile sDataOrFile
+      let cEra = Api.toCardanoEra supp
+      Api.forEraInEon cEra (txFeatureMismatch cEra TxFeatureInlineDatums) $ \babbageOnwards -> do
+        sData <- Api.firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile sDataOrFile
         pure $ TxOutDatumInline babbageOnwards sData
 
 -- TODO: Currently we specify the policyId with the '--mint' option on the cli
@@ -1685,16 +1846,16 @@ createTxMintValue
   -> (Value, [ScriptWitness WitCtxMint era])
   -> Either TxCmdError (TxMintValue BuildTx era)
 createTxMintValue era (val, scriptWitnesses) =
-  if List.null (valueToList val) && List.null scriptWitnesses
+  if List.null (Api.valueToList val) && List.null scriptWitnesses
     then return TxMintNone
     else do
-      caseShelleyToAllegraOrMaryEraOnwards
-        (const (txFeatureMismatchPure (toCardanoEra era) TxFeatureMintValue))
+      Api.caseShelleyToAllegraOrMaryEraOnwards
+        (const (txFeatureMismatchPure (Api.toCardanoEra era) TxFeatureMintValue))
         ( \w -> do
             -- The set of policy ids for which we need witnesses:
             let witnessesNeededSet :: Set PolicyId
                 witnessesNeededSet =
-                  Set.fromList [pid | (AssetId pid _, _) <- valueToList val]
+                  Set.fromList [pid | (AssetId pid _, _) <- Api.valueToList val]
 
             let witnessesProvidedMap :: Map PolicyId (ScriptWitness WitCtxMint era)
                 witnessesProvidedMap = Map.fromList $ gatherMintingWitnesses scriptWitnesses
@@ -1730,11 +1891,11 @@ createTxMintValue era (val, scriptWitnesses) =
 
 scriptWitnessPolicyId :: ScriptWitness witctx era -> Maybe PolicyId
 scriptWitnessPolicyId (SimpleScriptWitness _ (SScript script)) =
-  Just . scriptPolicyId $ SimpleScript script
+  Just . Api.scriptPolicyId $ SimpleScript script
 scriptWitnessPolicyId (SimpleScriptWitness _ (SReferenceScript _ mPid)) =
   PolicyId <$> mPid
 scriptWitnessPolicyId (PlutusScriptWitness _ plutusVersion (PScript script) _ _ _) =
-  Just . scriptPolicyId $ PlutusScript plutusVersion script
+  Just . Api.scriptPolicyId $ PlutusScript plutusVersion script
 scriptWitnessPolicyId (PlutusScriptWitness _ _ (PReferenceScript _ mPid) _ _ _) =
   PolicyId <$> mPid
 
@@ -1743,7 +1904,7 @@ readValueScriptWitnesses
   -> (Value, [ScriptWitnessFiles WitCtxMint])
   -> ExceptT TxCmdError IO (Value, [ScriptWitness WitCtxMint era])
 readValueScriptWitnesses era (v, sWitFiles) = do
-  sWits <- mapM (firstExceptT TxCmdScriptWitnessError . CLI.readScriptWitness era) sWitFiles
+  sWits <- mapM (Api.firstExceptT TxCmdScriptWitnessError . CLI.readScriptWitness era) sWitFiles
   return (v, sWits)
 
 -- ----------------------------------------------------------------------------
@@ -1762,15 +1923,15 @@ runTransactionSignCmd
     , outTxFile = outTxFile
     } = do
     sks <- Monad.forM witnessSigningData $ \d ->
-      lift (CLI.readWitnessSigningData d)
-        & onLeft (left . TxCmdReadWitnessSigningDataError)
+      Api.lift (CLI.readWitnessSigningData d)
+        & Api.onLeft (Api.left . TxCmdReadWitnessSigningDataError)
 
     let (sksByron, sksShelley) = partitionSomeWitnesses $ map CLI.categoriseSomeSigningWitness sks
 
     case txOrTxBody of
       InputTxFile (File inputTxFilePath) -> do
-        inputTxFile <- liftIO $ CLI.fileOrPipe inputTxFilePath
-        anyTx <- lift (CLI.readFileTx inputTxFile) & onLeft (left . TxCmdTextEnvCddlError)
+        inputTxFile <- Api.liftIO $ CLI.fileOrPipe inputTxFilePath
+        anyTx <- Api.lift (CLI.readFileTx inputTxFile) & Api.onLeft (Api.left . TxCmdTextEnvCddlError)
 
         InAnyShelleyBasedEra sbe tx <- pure anyTx
 
@@ -1778,18 +1939,18 @@ runTransactionSignCmd
 
         byronWitnesses <-
           pure (mkShelleyBootstrapWitnesses sbe mNetworkId txbody sksByron)
-            & onLeft (left . TxCmdBootstrapWitnessError)
+            & Api.onLeft (Api.left . TxCmdBootstrapWitnessError)
 
-        let newShelleyKeyWits = map (makeShelleyKeyWitness sbe txbody) sksShelley
+        let newShelleyKeyWits = map (Api.makeShelleyKeyWitness sbe txbody) sksShelley
             allKeyWits = existingTxKeyWits ++ newShelleyKeyWits ++ byronWitnesses
-            signedTx = makeSignedTransaction allKeyWits txbody
+            signedTx = Api.makeSignedTransaction allKeyWits txbody
 
-        lift (writeTxFileTextEnvelopeCddl sbe outTxFile signedTx)
-          & onLeft (left . TxCmdWriteFileError)
+        Api.lift (Api.writeTxFileTextEnvelopeCddl sbe outTxFile signedTx)
+          & Api.onLeft (Api.left . TxCmdWriteFileError)
       InputTxBodyFile (File txbodyFilePath) -> do
-        txbodyFile <- liftIO $ CLI.fileOrPipe txbodyFilePath
+        txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
         IncompleteCddlTxBody { .. } <-
-          firstExceptT TxCmdTextEnvCddlError . newExceptT $
+          Api.firstExceptT TxCmdTextEnvCddlError . Api.newExceptT $
             CLI.readFileTxBody txbodyFile
 
         case unIncompleteCddlTxBody of
@@ -1798,15 +1959,15 @@ runTransactionSignCmd
             -- Byron witnesses require the network ID. This can either be provided
             -- directly or derived from a provided Byron address.
             byronWitnesses <-
-              firstExceptT TxCmdBootstrapWitnessError
-                . hoistEither
+              Api.firstExceptT TxCmdBootstrapWitnessError
+                . Api.hoistEither
                 $ mkShelleyBootstrapWitnesses sbe mNetworkId txbody sksByron
 
-            let shelleyKeyWitnesses = map (makeShelleyKeyWitness sbe txbody) sksShelley
-                tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+            let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness sbe txbody) sksShelley
+                tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
 
-            lift (writeTxFileTextEnvelopeCddl sbe outTxFile tx)
-              & onLeft (left . TxCmdWriteFileError)
+            Api.lift (Api.writeTxFileTextEnvelopeCddl sbe outTxFile tx)
+              & Api.onLeft (Api.left . TxCmdWriteFileError)
 
 -- ----------------------------------------------------------------------------
 -- Transaction submission
@@ -1823,9 +1984,9 @@ runTransactionSubmitCmd
     , networkId
     , txFile
     } = do
-    txFileOrPipe <- liftIO $ CLI.fileOrPipe txFile
+    txFileOrPipe <- Api.liftIO $ CLI.fileOrPipe txFile
     InAnyShelleyBasedEra era tx <-
-      lift (CLI.readFileTx txFileOrPipe) & onLeft (left . TxCmdTextEnvCddlError)
+      Api.lift (CLI.readFileTx txFileOrPipe) & Api.onLeft (Api.left . TxCmdTextEnvCddlError)
     let txInMode = TxInMode era tx
         localNodeConnInfo =
           LocalNodeConnectInfo
@@ -1834,13 +1995,13 @@ runTransactionSubmitCmd
             , localNodeSocketPath = nodeSocketPath
             }
 
-    res <- liftIO $ submitTxToNodeLocal localNodeConnInfo txInMode
+    res <- Api.liftIO $ Api.submitTxToNodeLocal localNodeConnInfo txInMode
     case res of
-      Net.Tx.SubmitSuccess -> liftIO $ Text.putStrLn "Transaction successfully submitted."
+      Net.Tx.SubmitSuccess -> Api.liftIO $ Text.putStrLn "Transaction successfully submitted."
       Net.Tx.SubmitFail reason ->
         case reason of
-          TxValidationErrorInCardanoMode err -> left . TxCmdTxSubmitError . Text.pack $ show err
-          TxValidationEraMismatch mismatchErr -> left $ TxCmdTxSubmitErrorEraMismatch mismatchErr
+          TxValidationErrorInCardanoMode err -> Api.left . TxCmdTxSubmitError . Text.pack $ show err
+          TxValidationEraMismatch mismatchErr -> Api.left $ TxCmdTxSubmitErrorEraMismatch mismatchErr
 
 -- ----------------------------------------------------------------------------
 -- Transaction fee calculation
@@ -1860,9 +2021,9 @@ runTransactionCalculateMinFeeCmd
     -- , outputFormat
     -- , outFile
     } = do
-    txbodyFile <- liftIO $ CLI.fileOrPipe txbodyFilePath
+    txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
     IncompleteCddlTxBody { .. } <-
-      firstExceptT TxCmdTextEnvCddlError . newExceptT $
+      Api.firstExceptT TxCmdTextEnvCddlError . Api.newExceptT $
         CLI.readFileTxBody txbodyFile
 
     let nShelleyKeyWitW32 = fromIntegral nShelleyKeyWitnesses
@@ -1870,13 +2031,13 @@ runTransactionCalculateMinFeeCmd
     InAnyShelleyBasedEra sbe txbody <- pure unIncompleteCddlTxBody
 
     lpparams <-
-      firstExceptT TxCmdProtocolParamsError $
+      Api.firstExceptT TxCmdProtocolParamsError $
         CLI.readProtocolParameters sbe protocolParamsFile
 
-    let shelleyfee = evaluateTransactionFee sbe lpparams txbody nShelleyKeyWitW32 0 sReferenceScript
+    let shelleyfee = Api.evaluateTransactionFee sbe lpparams txbody nShelleyKeyWitW32 0 sReferenceScript
 
     let byronfee =
-          shelleyBasedEraConstraints sbe $
+          Api.shelleyBasedEraConstraints sbe $
             calculateByronWitnessFees (lpparams ^. Ledger.ppMinFeeAL) nByronKeyWitnesses
 
     let Coin fee = shelleyfee + byronfee
@@ -1887,21 +2048,21 @@ runTransactionCalculateMinFeeCmd
     -- link against the new cardano-cli.
     -- This whole code block can't really be used until the update works.
     -- What used to be there before the above was:
-    liftIO $ Text.putStrLn textToWrite
+    Api.liftIO $ Text.putStrLn textToWrite
     {-
     case (newOutputFormat outputFormat outFile, outFile) of
       (OutputFormatText, Nothing) ->
-        liftIO $ Text.putStrLn textToWrite
+        Api.liftIO $ Text.putStrLn textToWrite
       (OutputFormatText, Just file) ->
-        firstExceptT TxCmdWriteFileError . newExceptT $ writeTextFile file textToWrite
+        Api.firstExceptT TxCmdWriteFileError . Api.newExceptT $ writeTextFile file textToWrite
       (OutputFormatJson, Nothing) ->
-        liftIO $ LBS8.putStrLn jsonToWrite
+        Api.liftIO $ LBS8.putStrLn jsonToWrite
       (OutputFormatJson, Just file) ->
-        firstExceptT TxCmdWriteFileError . newExceptT $ writeLazyByteStringFile file jsonToWrite
+        Api.firstExceptT TxCmdWriteFileError . Api.newExceptT $ writeLazyByteStringFile file jsonToWrite
     -}
 
 -- Extra logic to handle byron witnesses.
--- TODO: move this to Cardano.API.Fee.evaluateTransactionFee.
+-- TODO: move this to Cardano.API.Fee.Api.evaluateTransactionFee.
 calculateByronWitnessFees
   :: ()
   => Coin
@@ -1957,11 +2118,11 @@ runTransactionCalculateMinValueCmd
     , protocolParamsFile
     , txOut
     } = do
-    pp <- firstExceptT TxCmdProtocolParamsError (CLI.readProtocolParameters eon protocolParamsFile)
+    pp <- Api.firstExceptT TxCmdProtocolParamsError (CLI.readProtocolParameters eon protocolParamsFile)
     out <- toTxOutInShelleyBasedEra eon txOut
 
-    let minValue = calculateMinimumUTxO eon out pp
-    liftIO . IO.print $ minValue
+    let minValue = Api.calculateMinimumUTxO eon out pp
+    Api.liftIO . IO.print $ minValue
 
 runTransactionPolicyIdCmd
   :: ()
@@ -1972,9 +2133,9 @@ runTransactionPolicyIdCmd
     { scriptFile = File sFile
     } = do
     ScriptInAnyLang _ script <-
-      firstExceptT TxCmdScriptFileError $
+      Api.firstExceptT TxCmdScriptFileError $
         CLI.readFileScriptInAnyLang sFile
-    liftIO . Text.putStrLn . serialiseToRawBytesHexText $ hashScript script
+    Api.liftIO . Text.putStrLn . Api.serialiseToRawBytesHexText $ Api.hashScript script
 
 partitionSomeWitnesses
   :: [ByronOrShelleyWitness]
@@ -2005,9 +2166,9 @@ mkShelleyBootstrapWitness
 mkShelleyBootstrapWitness _ Nothing _ (ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
   Left MissingNetworkIdOrByronAddressError
 mkShelleyBootstrapWitness sbe (Just nw) txBody (ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
-  Right $ makeShelleyBootstrapWitness sbe (Byron.WitnessNetworkId nw) txBody skey
+  Right $ Api.makeShelleyBootstrapWitness sbe (Byron.WitnessNetworkId nw) txBody skey
 mkShelleyBootstrapWitness sbe _ txBody (ShelleyBootstrapWitnessSigningKeyData skey (Just addr)) =
-  Right $ makeShelleyBootstrapWitness sbe (Byron.WitnessByronAddress addr) txBody skey
+  Right $ Api.makeShelleyBootstrapWitness sbe (Byron.WitnessByronAddress addr) txBody skey
 
 -- | Attempt to construct Shelley bootstrap witnesses until an error is
 -- encountered.
@@ -2033,8 +2194,8 @@ runTransactionHashScriptDataCmd
   Cmd.TransactionHashScriptDataCmdArgs
     { scriptDataOrFile
     } = do
-    d <- firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile scriptDataOrFile
-    liftIO $ BS8.putStrLn $ serialiseToRawBytesHex (hashScriptDataBytes d)
+    d <- Api.firstExceptT TxCmdScriptDataError $ CLI.readScriptDataOrFile scriptDataOrFile
+    Api.liftIO $ BS8.putStrLn $ Api.serialiseToRawBytesHex (Api.hashScriptDataBytes d)
 
 runTransactionTxIdCmd
   :: ()
@@ -2047,17 +2208,17 @@ runTransactionTxIdCmd
     InAnyShelleyBasedEra _era txbody <-
       case inputTxBodyOrTxFile of
         InputTxBodyFile (File txbodyFilePath) -> do
-          txbodyFile <- liftIO $ CLI.fileOrPipe txbodyFilePath
+          txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
           IncompleteCddlTxBody { .. } <-
-            firstExceptT TxCmdTextEnvCddlError . newExceptT $
+            Api.firstExceptT TxCmdTextEnvCddlError . Api.newExceptT $
               CLI.readFileTxBody txbodyFile
           pure unIncompleteCddlTxBody
         InputTxFile (File txFilePath) -> do
-          txFile <- liftIO $ CLI.fileOrPipe txFilePath
-          InAnyShelleyBasedEra era tx <- lift (CLI.readFileTx txFile) & onLeft (left . TxCmdTextEnvCddlError)
-          return . InAnyShelleyBasedEra era $ getTxBody tx
+          txFile <- Api.liftIO $ CLI.fileOrPipe txFilePath
+          InAnyShelleyBasedEra era tx <- Api.lift (CLI.readFileTx txFile) & Api.onLeft (Api.left . TxCmdTextEnvCddlError)
+          return . InAnyShelleyBasedEra era $ Api.getTxBody tx
 
-    liftIO $ BS8.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
+    Api.liftIO $ BS8.putStrLn $ Api.serialiseToRawBytesHex (Api.getTxId txbody)
 
 runTransactionViewCmd
   :: ()
@@ -2071,26 +2232,26 @@ runTransactionViewCmd
     } =
     case inputTxBodyOrTxFile of
       InputTxBodyFile (File txbodyFilePath) -> do
-        txbodyFile <- liftIO $ CLI.fileOrPipe txbodyFilePath
+        txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
         IncompleteCddlTxBody { unIncompleteCddlTxBody = InAnyShelleyBasedEra era txbody } <-
-          firstExceptT TxCmdTextEnvCddlError . newExceptT $
+          Api.firstExceptT TxCmdTextEnvCddlError . Api.newExceptT $
             CLI.readFileTxBody txbodyFile
         -- Why are we differentiating between a transaction body and a transaction?
-        -- In the case of a transaction body, we /could/ simply call @makeSignedTransaction []@
+        -- In the case of a transaction body, we /could/ simply call @Api.makeSignedTransaction []@
         -- to get a transaction which would allow us to reuse friendlyTxBS. However,
         -- this would mean that we'd have an empty list of witnesses mentioned in the output, which
         -- is arguably not part of the transaction body.
-        firstExceptT TxCmdWriteFileError . newExceptT $
+        Api.firstExceptT TxCmdWriteFileError . Api.newExceptT $
           case outputFormat of
-            ViewOutputFormatYaml -> friendlyTxBody FriendlyYaml mOutFile (toCardanoEra era) txbody
-            ViewOutputFormatJson -> friendlyTxBody FriendlyJson mOutFile (toCardanoEra era) txbody
+            ViewOutputFormatYaml -> friendlyTxBody FriendlyYaml mOutFile (Api.toCardanoEra era) txbody
+            ViewOutputFormatJson -> friendlyTxBody FriendlyJson mOutFile (Api.toCardanoEra era) txbody
       InputTxFile (File txFilePath) -> do
-        txFile <- liftIO $ CLI.fileOrPipe txFilePath
-        InAnyShelleyBasedEra era tx <- lift (CLI.readFileTx txFile) & onLeft (left . TxCmdTextEnvCddlError)
-        firstExceptT TxCmdWriteFileError . newExceptT $
+        txFile <- Api.liftIO $ CLI.fileOrPipe txFilePath
+        InAnyShelleyBasedEra era tx <- Api.lift (CLI.readFileTx txFile) & Api.onLeft (Api.left . TxCmdTextEnvCddlError)
+        Api.firstExceptT TxCmdWriteFileError . Api.newExceptT $
           case outputFormat of
-            ViewOutputFormatYaml -> friendlyTx FriendlyYaml mOutFile (toCardanoEra era) tx
-            ViewOutputFormatJson -> friendlyTx FriendlyJson mOutFile (toCardanoEra era) tx
+            ViewOutputFormatYaml -> friendlyTx FriendlyYaml mOutFile (Api.toCardanoEra era) tx
+            ViewOutputFormatJson -> friendlyTx FriendlyJson mOutFile (Api.toCardanoEra era) tx
 
 -- ----------------------------------------------------------------------------
 -- Witness commands
@@ -2107,27 +2268,27 @@ runTransactionWitnessCmd
     , mNetworkId
     , outFile
     } = do
-    txbodyFile <- liftIO $ CLI.fileOrPipe txbodyFilePath
+    txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
     IncompleteCddlTxBody { unIncompleteCddlTxBody = InAnyShelleyBasedEra sbe txbody } <-
-      firstExceptT TxCmdTextEnvCddlError . newExceptT $
+      Api.firstExceptT TxCmdTextEnvCddlError . Api.newExceptT $
         CLI.readFileTxBody txbodyFile
     someWit <-
-      firstExceptT TxCmdReadWitnessSigningDataError
-        . newExceptT
+      Api.firstExceptT TxCmdReadWitnessSigningDataError
+        . Api.newExceptT
         $ CLI.readWitnessSigningData witnessSigningData
     witness <-
       case CLI.categoriseSomeSigningWitness someWit :: ByronOrShelleyWitness of
         -- Byron witnesses require the network ID. This can either be provided
         -- directly or derived from a provided Byron address.
         AByronWitness bootstrapWitData ->
-          firstExceptT TxCmdBootstrapWitnessError
-            . hoistEither
+          Api.firstExceptT TxCmdBootstrapWitnessError
+            . Api.hoistEither
             $ mkShelleyBootstrapWitness sbe mNetworkId txbody bootstrapWitData
         AShelleyKeyWitness skShelley ->
-          pure $ makeShelleyKeyWitness sbe txbody skShelley
+          pure $ Api.makeShelleyKeyWitness sbe txbody skShelley
 
-    firstExceptT TxCmdWriteFileError . newExceptT $
-      writeTxWitnessFileTextEnvelopeCddl sbe outFile witness
+    Api.firstExceptT TxCmdWriteFileError . Api.newExceptT $
+      Api.writeTxWitnessFileTextEnvelopeCddl sbe outFile witness
 
 runTransactionSignWitnessCmd
   :: ()
@@ -2139,26 +2300,26 @@ runTransactionSignWitnessCmd
     , witnessFiles = witnessFiles
     , outFile = outFile
     } = do
-    txbodyFile <- liftIO $ CLI.fileOrPipe txbodyFilePath
-    IncompleteCddlTxBody { unIncompleteCddlTxBody = InAnyShelleyBasedEra era txbody } <- lift (CLI.readFileTxBody txbodyFile) & onLeft (left . TxCmdTextEnvCddlError)
+    txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
+    IncompleteCddlTxBody { unIncompleteCddlTxBody = InAnyShelleyBasedEra era txbody } <- Api.lift (CLI.readFileTxBody txbodyFile) & Api.onLeft (Api.left . TxCmdTextEnvCddlError)
     -- TODO: Left off here. Remember we were never reading byron key witnesses anyways!
     witnesses <-
       sequence
         [ do
             InAnyShelleyBasedEra era' witness <-
-              lift (CLI.readFileTxKeyWitness file) & onLeft (left . TxCmdCddlWitnessError)
+              Api.lift (CLI.readFileTxKeyWitness file) & Api.onLeft (Api.left . TxCmdCddlWitnessError)
 
             case testEquality era era' of
               Nothing ->
-                left $
+                Api.left $
                   TxCmdWitnessEraMismatch
-                    (AnyCardanoEra $ toCardanoEra era)
-                    (AnyCardanoEra $ toCardanoEra era')
+                    (AnyCardanoEra $ Api.toCardanoEra era)
+                    (AnyCardanoEra $ Api.toCardanoEra era')
                     witnessFile
               Just Refl -> return witness
         | witnessFile@(WitnessFile file) <- witnessFiles
         ]
 
-    let tx = makeSignedTransaction witnesses txbody
+    let tx = Api.makeSignedTransaction witnesses txbody
 
-    lift (writeTxFileTextEnvelopeCddl era outFile tx) & onLeft (left . TxCmdWriteFileError)
+    Api.lift (Api.writeTxFileTextEnvelopeCddl era outFile tx) & Api.onLeft (Api.left . TxCmdWriteFileError)
