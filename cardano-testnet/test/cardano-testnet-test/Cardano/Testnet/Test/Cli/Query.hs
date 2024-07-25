@@ -113,7 +113,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   -- If we don't wait, the leadershi-schedule test will say SPO has no stake
   _ <- waitForEpochs epochStateView (EpochInterval 1)
 
-  forallQueryCommands (\case
+  forallQueryCommands $ \case
 
     TestQueryLeadershipScheduleCmd ->
       -- leadership-schedule
@@ -326,7 +326,18 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- committee-state
       H.noteM_ $ execCli' execConfig [ eraName, "query", "committee-state" ]
 
-    )
+    TestQueryTreasuryValueCmd -> do
+      -- to stdout
+      execCli' execConfig [ eraName, "query", "treasury" ]
+        >>=
+          (`H.diffVsGoldenFile`
+              "test/cardano-testnet-test/files/golden/queries/treasuryOut.txt")
+      let treasuryOutFile = work </> "treasury-out.txt"
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury", "--out-file", treasuryOutFile]
+      H.diffFileVsGoldenFile
+        treasuryOutFile
+        "test/cardano-testnet-test/files/golden/queries/treasuryOut.txt"
+
   where
   patchGovStateOutput :: String -> Either String String
   patchGovStateOutput output = do
@@ -334,7 +345,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     return $ T.unpack $ decodeUtf8 $ prettyPrintJSON $ patchGovStateJSON eOutput
     where
       patchGovStateJSON :: Aeson.Object -> Aeson.Object
-      patchGovStateJSON o = Aeson.delete "futurePParams" o
+      patchGovStateJSON = Aeson.delete "futurePParams"
 
   readVerificationKeyFromFile :: (MonadIO m, MonadCatch m, MonadTest m,  HasTextEnvelope (VerificationKey keyrole), SerialiseAsBech32 (VerificationKey keyrole))
     => AsType keyrole
