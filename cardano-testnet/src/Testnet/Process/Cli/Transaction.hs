@@ -54,7 +54,8 @@ data TxOutAddress = PKAddress PaymentKeyInfo
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
 buildTransferTx
-  :: Typeable era
+  :: HasCallStack
+  => Typeable era
   => H.MonadAssertion m
   => MonadTest m
   => MonadCatch m
@@ -106,7 +107,8 @@ buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = 
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
 buildSimpleTransferTx
-  :: Typeable era
+  :: HasCallStack
+  => Typeable era
   => H.MonadAssertion m
   => MonadTest m
   => MonadCatch m
