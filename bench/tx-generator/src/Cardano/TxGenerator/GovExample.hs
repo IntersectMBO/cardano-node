@@ -91,7 +91,6 @@ import           Cardano.Api.Shelley
                    , LedgerProtocolParameters (..)
                    , LocalNodeConnectInfo (..)
                    , NetworkId (..)
-                   -- , type PlutusScript (..)
                    , PlutusScriptOrReferenceInput (..)
                    , PolicyId (..)
                    , PoolId
@@ -107,7 +106,6 @@ import           Cardano.Api.Shelley
                    , ShelleyBasedEra (..)
                    , ShelleyLedgerEra
                    , ShelleyWitnessSigningKey (..)
-                   -- , type SimpleScript (..)
                    , SimpleScriptOrReferenceInput (..)
                    , SlotNo (..)
                    , SocketPath
@@ -240,11 +238,25 @@ import qualified Cardano.Binary as CBOR (serialize')
 import qualified Cardano.Chain.Common as Byron (AddrAttributes (..)
                    , NetworkMagic (..), mkAttributes)
 import qualified Cardano.CLI.EraBased.Commands.Transaction as Cmd
+                   ( TransactionBuildCmdArgs (..)
+                   , TransactionBuildEstimateCmdArgs (..)
+                   , TransactionBuildRawCmdArgs (..)
+                   , TransactionCalculateMinFeeCmdArgs (..)
+                   , TransactionCalculateMinValueCmdArgs (..)
+                   , TransactionCmds (..)
+                   , TransactionHashScriptDataCmdArgs (..)
+                   , TransactionPolicyIdCmdArgs (..)
+                   , TransactionSignCmdArgs (..)
+                   , TransactionSignWitnessCmdArgs (..)
+                   , TransactionSubmitCmdArgs (..)
+                   , TransactionTxIdCmdArgs (..)
+                   , TransactionViewCmdArgs (..)
+                   , TransactionWitnessCmdArgs (..))
 -- Unqualified imports of types need to be re-qualified before a PR.
 -- Adjust line break to stylish-haskell/fourmolu/etc.
-import           Cardano.CLI.Json.Friendly (FriendlyFormat (..)
-                   , friendlyTx
-                   , friendlyTxBody)
+import           Cardano.CLI.Json.Friendly
+                   (FriendlyFormat (..))
+import qualified Cardano.CLI.Json.Friendly as CLI (friendlyTx , friendlyTxBody)
 import           Cardano.CLI.Read (ByronOrShelleyWitness (..)
                    , IncompleteCddlTxBody (..)
                    , ShelleyBootstrapWitnessSigningKeyData (..))
@@ -264,9 +276,10 @@ import qualified Cardano.CLI.Read as CLI (categoriseSomeSigningWitness
                    , readTxUpdateProposal
                    , readVotingProceduresFiles
                    , readWitnessSigningData)
-import qualified Cardano.CLI.EraBased.Run.Genesis.Common as CLI (
-                     readProtocolParameters)
-import           Cardano.CLI.Types.Common (CertificateFile (..)
+import qualified Cardano.CLI.EraBased.Run.Genesis.Common as CLI
+                   (readProtocolParameters)
+import           Cardano.CLI.Types.Common
+                   ( CertificateFile (..)
                    , InputTxBodyOrTxFile (..)
                    {-
                     - QueryOutputFormat is renamed in the latest
@@ -291,16 +304,16 @@ import           Cardano.CLI.Types.Common (CertificateFile (..)
                    , TxTreasuryDonation (..)
                    , ViewOutputFormat (..)
                    , WitnessFile (..))
-import           Cardano.CLI.Types.Errors.BootstrapWitnessError (
-                     BootstrapWitnessError (..))
-import           Cardano.CLI.Types.Errors.NodeEraMismatchError (
-                     NodeEraMismatchError (..))
-import           Cardano.CLI.Types.Errors.TxCmdError (
-                     AnyTxCmdTxExecUnitsErr (..)
+import           Cardano.CLI.Types.Errors.BootstrapWitnessError
+                    (BootstrapWitnessError (..))
+import           Cardano.CLI.Types.Errors.NodeEraMismatchError
+                    (NodeEraMismatchError (..))
+import           Cardano.CLI.Types.Errors.TxCmdError
+                   ( AnyTxCmdTxExecUnitsErr (..)
                    , AnyTxBodyErrorAutoBalance (..)
                    , TxCmdError (..))
-import qualified Cardano.CLI.Types.Errors.TxValidationError as CLI (
-                     convertToTxVotingProcedures
+import qualified Cardano.CLI.Types.Errors.TxValidationError as CLI
+                   ( convertToTxVotingProcedures
                    , convToTxProposalProcedures
                    , validateRequiredSigners
                    , validateTxAuxScripts
@@ -318,17 +331,26 @@ import qualified Cardano.Ledger.Api.PParams as Ledger (ppMinFeeAL)
 import qualified Cardano.Ledger.Api.Tx.Cert as Ledger (pattern RetirePoolTxCert)
 import           Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), Url)
 import           Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Coin as Ledger ()
 import           Cardano.Ledger.Crypto -- exports only types and classes
 import           Cardano.TxGenerator.FundQueue (Fund (..), FundInEra (..), FundQueue)
-import qualified Cardano.TxGenerator.FundQueue as FundQueue (
-                     emptyFundQueue, getFundCoin, getFundKey
-                   , getFundTxIn, getFundWitness, insertFund, toList)
+import qualified Cardano.TxGenerator.FundQueue as FundQueue
+                   ( emptyFundQueue
+                   , getFundCoin
+                   , getFundKey
+                   , getFundTxIn
+                   , getFundWitness
+                   , insertFund
+                   , toList)
 import           Cardano.TxGenerator.Setup.SigningKey
+                   ( PaymentKey
+                   , SigningKey)
+import qualified Cardano.TxGenerator.Setup.SigningKey as TxGen
+                    (parseSigningKeyTE)
 import           Cardano.TxGenerator.Types (FundSource
                    , FundToStoreList, TxEnvironment (..)
                    , TxGenError (..), TxGenerator)
-import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
+import qualified Cardano.TxGenerator.Utils as TxGen
+                    (inputsToOutputsWithFee)
 import           Cardano.TxGenerator.UTxO (ToUTxOList, makeToUTxOList, mkUTxOVariant)
 
 import qualified Control.Monad as Monad (foldM, forM)
@@ -399,14 +421,14 @@ demo' parametersFile = do
       return newState
 
 signingKey :: SigningKey PaymentKey
-signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyData
+signingKey = fromRight (error "signingKey: parseError") $ TxGen.parseSigningKeyTE keyData
   where
     keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
               , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
 
 drepSigningKey :: SigningKey PaymentKey
-drepSigningKey = fromRight (error "drepSigningKey: parseError") $ parseSigningKeyTE keyData
+drepSigningKey = fromRight (error "drepSigningKey: parseError") $ TxGen.parseSigningKeyTE keyData
   where
     keyData = TextEnvelope { teType = TextEnvelopeType "DRepSigningKey_ed25519"
                            , teDescription = fromString "Delegate Representative Signing Key"
@@ -544,7 +566,7 @@ generateTx TxEnvironment{..}
     addNewOutputFunds = put . List.foldl' FundQueue.insertFund FundQueue.emptyFundQueue
 
     computeOutputValues :: [Coin] -> [Coin]
-    computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
+    computeOutputValues = TxGen.inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
     computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
@@ -588,7 +610,7 @@ generateTxPure TxEnvironment{..} inQueue
     (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
 
     computeOutputValues :: [Coin] -> [Coin]
-    computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
+    computeOutputValues = TxGen.inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
     computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
@@ -2244,15 +2266,15 @@ runTransactionViewCmd
         -- is arguably not part of the transaction body.
         Api.firstExceptT TxCmdWriteFileError . Api.newExceptT $
           case outputFormat of
-            ViewOutputFormatYaml -> friendlyTxBody FriendlyYaml mOutFile (Api.toCardanoEra era) txbody
-            ViewOutputFormatJson -> friendlyTxBody FriendlyJson mOutFile (Api.toCardanoEra era) txbody
+            ViewOutputFormatYaml -> CLI.friendlyTxBody FriendlyYaml mOutFile (Api.toCardanoEra era) txbody
+            ViewOutputFormatJson -> CLI.friendlyTxBody FriendlyJson mOutFile (Api.toCardanoEra era) txbody
       InputTxFile (File txFilePath) -> do
         txFile <- Api.liftIO $ CLI.fileOrPipe txFilePath
         InAnyShelleyBasedEra era tx <- Api.lift (CLI.readFileTx txFile) & Api.onLeft (Api.left . TxCmdTextEnvCddlError)
         Api.firstExceptT TxCmdWriteFileError . Api.newExceptT $
           case outputFormat of
-            ViewOutputFormatYaml -> friendlyTx FriendlyYaml mOutFile (Api.toCardanoEra era) tx
-            ViewOutputFormatJson -> friendlyTx FriendlyJson mOutFile (Api.toCardanoEra era) tx
+            ViewOutputFormatYaml -> CLI.friendlyTx FriendlyYaml mOutFile (Api.toCardanoEra era) tx
+            ViewOutputFormatJson -> CLI.friendlyTx FriendlyJson mOutFile (Api.toCardanoEra era) tx
 
 -- ----------------------------------------------------------------------------
 -- Witness commands
