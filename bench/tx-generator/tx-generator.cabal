@@ -125,6 +125,7 @@ library
                       , cborg >= 0.2.2 && < 0.3
                       , containers
                       , constraints-extras
+                      , data-default-class
                       , dlist
                       , extra
                       , formatting
