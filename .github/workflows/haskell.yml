@@ -4,6 +4,16 @@ on:
   pull_request: # Required for workflows to be able to be approved from forks
   merge_group:
 
+  push:
+    # we need this to populate cache for `main` branch to make it available to the child branches, see
+    # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache
+    branches:
+      - master
+  # GH caches are removed when not accessed within 7 days - this schedule runs the job every 6 days making
+  # sure that we always have some caches on main
+  schedule:
+    - cron: '0 0 */6 * *'
+
   # DO NOT DELETE.
   # This is required for nightly builds and is invoked by nightly-trigger.yml
   # on a schedule trigger.
@@ -20,25 +30,35 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.sys.os }}
 
     strategy:
       fail-fast: false
       matrix:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
         ghc: ["9.6", "9.8"]
-        cabal: ["3.10.2.1"]
-        os: [windows-latest, ubuntu-latest]
+        cabal: ["3.12"]
+        sys:
+          - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
+          - { os: ubuntu-latest, shell: bash }
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
-          - os: macos-latest
-            cabal: "3.10.2.1"
+          - cabal: "3.12"
             ghc: "9.6"
+            sys:
+              os: macos-latest
+              shell: bash
+    defaults:
+      run:
+        shell: ${{ matrix.sys.shell }}
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-04-24"
+      CABAL_CACHE_VERSION: "2024-07-26"
+      # these two are msys2 env vars, they have no effect on non-msys2 installs.
+      MSYS2_PATH_TYPE: inherit
+      MSYSTEM: MINGW64
 
     concurrency:
       group: >
@@ -47,7 +67,7 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
+        f+${{ matrix.sys.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
 
@@ -60,7 +80,7 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
+        f+${{ matrix.sys.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
     - name: Install Haskell
@@ -81,7 +101,6 @@ jobs:
       run: cabal update
 
     - name: Configure build
-      shell: bash
       run: |
         cp .github/workflows/cabal.project.local.ci cabal.project.local
         echo "# cabal.project.local"
@@ -96,10 +115,11 @@ jobs:
     - name: Record dependencies
       id: record-deps
       run: |
-        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
-        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
-        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
         cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
+
+    # Use a fresh cache each month
+    - name: Store month number as environment variable used in cache version
+      run:  echo "MONTHNUM=$(date -u '+%m')" >> $GITHUB_ENV
 
     # From the dependency list we restore the cached dependencies.
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
@@ -111,7 +131,11 @@ jobs:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist-newstyle
-        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        key:
+          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-${{ hashFiles('dependencies.txt') }}
+        # try to restore previous cache from this month if there's no cache for the dependencies set
+        restore-keys: |
+          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-
 
     # Now we install the dependencies. If the cache was found and restored in the previous step,
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
@@ -127,7 +151,8 @@ jobs:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist-newstyle
-        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        key:
+          ${{ steps.cache.outputs.cache-primary-key }}
 
     # Now we build.
     - name: Build all
@@ -145,7 +170,6 @@ jobs:
       if: ${{ failure() }}
       env:
         TMP: ${{ runner.temp }}
-      shell: bash
       run: |
         cd $TMP
         find . -name 'module' -type f -exec dirname {} \; | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
@@ -154,11 +178,10 @@ jobs:
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
       with:
-        name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
+        name: failed-test-workspaces-${{ matrix.sys.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
         path: ${{ runner.temp }}/workspaces.tgz
 
     - name: "Tar artifacts"
-      shell: bash
       run: |
         mkdir -p artifacts
 
@@ -176,7 +199,6 @@ jobs:
 
     - name: Delete socket files in chairman tests in preparation for uploading artifacts
       if: ${{ always() }}
-      shell: bash
       run: |
         if [ -d "${{ runner.temp }}/chairman" ]; then
           find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
@@ -187,7 +209,7 @@ jobs:
       if: ${{ always() }}
       continue-on-error: true
       with:
-        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
+        name: chairman-test-artifacts-${{ matrix.sys.os }}-${{ matrix.ghc }}
         path: ${{ runner.temp }}/chairman/
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
