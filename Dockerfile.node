@@ -37,15 +37,6 @@ RUN useradd -rm -d /home/cardano -s /bin/bash -g 1001 -G sudo -u 1001 cardano
 RUN mkdir -p /home/cardano/data/db
 RUN mkdir /home/cardano/ipc
 RUN cd /home/cardano && git clone https://github.com/input-output-hk/cardano-configurations.git
-RUN cd /home/cardano/cardano-configurations/network/mainnet/cardano-node && \
-    rm -f config.json topology.json  config.json.1 && \
-    wget  https://book.play.dev.cardano.org/environments-pre/mainnet/config.json && \
-    wget  https://book.play.dev.cardano.org/environments-pre/mainnet/topology.json && \
-    wget  https://book.play.dev.cardano.org/environments-pre/mainnet/byron-genesis.json && \
-    wget  https://book.play.dev.cardano.org/environments-pre/mainnet/shelley-genesis.json && \
-    wget  https://book.play.dev.cardano.org/environments-pre/mainnet/alonzo-genesis.json && \
-    wget  https://book.play.dev.cardano.org/environments/mainnet/conway-genesis.json	
-RUN cd /home/cardano/cardano-configurations/network/mainnet/cardano-node/ && sed -i -e 's/127.0.0.1/0.0.0.0/g' /home/cardano/cardano-configurations/network/mainnet/cardano-node/config.json
 RUN chown -R 1001:1001 /home/cardano/ipc 
 RUN chown -R 1001:1001 /home/cardano/data
 RUN chown -R 1001:1001 /home/cardano/cardano-configurations
