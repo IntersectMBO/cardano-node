@@ -252,7 +252,7 @@ getCommitteeMembers epochStateView ceo = withFrozenCallStack $ do
   fmap (Map.keys . L.committeeMembers) . H.nothingFail $ strictMaybeToMaybe $ govState ^. L.cgsCommitteeL
 
 committeeIsPresent :: (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()
-committeeIsPresent (AnyNewEpochState sbe newEpochState, _, _) =
+committeeIsPresent (AnyNewEpochState sbe newEpochState _, _, _) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Constitutional committee does not exist pre-Conway era")
     (\_ -> do

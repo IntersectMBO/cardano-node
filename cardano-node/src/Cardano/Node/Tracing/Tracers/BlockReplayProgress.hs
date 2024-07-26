@@ -74,8 +74,10 @@ replayBlockStats :: MonadIO m
   -> ChainDB.TraceEvent blk
   -> m ReplayBlockStats
 replayBlockStats ReplayBlockStats {..} _context
-    (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt []
-                                      (LedgerDB.ReplayStart replayTo) _)) = do
+    (ChainDB.TraceLedgerDBEvent
+     (LedgerDB.LedgerReplayEvent
+      (LedgerDB.TraceReplayProgressEvent
+       (LedgerDB.ReplayedBlock pt [] (LedgerDB.ReplayStart replayTo) _)))) = do
       let slotno = toInteger $ unSlotNo (realPointSlot pt)
           endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
           progress' = (fromInteger slotno * 100.0) / fromInteger (max slotno endslot)
