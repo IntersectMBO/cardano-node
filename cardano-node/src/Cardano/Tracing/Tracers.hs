@@ -777,7 +777,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
-    , Consensus.csjTracer = tracerOnOff (traceChainSyncJumping trSel) verb "ChainSync Jumping" tr
+    , Consensus.csjTracer = tracerOnOff (traceChainSyncJumping trSel) verb "CSJ" tr
     , Consensus.gddTracer = tracerOnOff (traceGdd trSel) verb "GDD" tr
     }
  where

@@ -320,6 +320,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "CSJ"]
     configureTracers configReflection trConfig [consensusCsjTr]
 
+    !consensusGddTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "GDD"]
+    configureTracers configReflection trConfig [consensusGddTr]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
