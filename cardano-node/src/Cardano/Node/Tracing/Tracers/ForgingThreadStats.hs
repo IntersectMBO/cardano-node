@@ -79,7 +79,7 @@ instance MetaTrace ForgeThreadStats where
         "How many times was this node slot leader?")
       ,("blocksForged",
         "How many blocks did this node forge?")
-      ,("lotsMissed",
+      ,("slotsMissed",
         "How many slots did this node miss?")
       ]
 
