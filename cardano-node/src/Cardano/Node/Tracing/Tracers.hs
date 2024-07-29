@@ -317,12 +317,12 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     !consensusStartupErrorTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "Startup"]
+    configureTracers configReflection trConfig [consensusStartupErrorTr]
 
     !consensusGsmTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "GSM"]
-
-    configureTracers configReflection trConfig [consensusStartupErrorTr]
+    configureTracers configReflection trConfig [consensusGsmTr]
 
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
