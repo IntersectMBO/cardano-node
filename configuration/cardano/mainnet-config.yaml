@@ -299,5 +299,5 @@ hasPrometheus:
 #   BulkSyncGracePeriod: 10 # seconds
 #   BucketCapacity:  100000 # tokens
 #   BucketRate:         500 # tokens per second
-#   CSJJumpSize:       6479 # slots. This value is 3*k - 1
+#   CSJJumpSize:       4320 # slots. This value is 2*k
 #   GDDRateLimit:       1.0 # seconds
