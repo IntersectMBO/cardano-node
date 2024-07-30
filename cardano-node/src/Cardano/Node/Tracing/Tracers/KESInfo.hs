@@ -60,8 +60,8 @@ deriving newtype instance ToJSON KESPeriod
 instance LogFormatting HotKey.KESInfo where
   forMachine _dtal forgeStateInfo =
     let maxKesEvos = endKesPeriod - startKesPeriod
-        oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
-        kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
+        expiryKesPeriod = startKesPeriod + maxKesEvos
+        kesPeriodsUntilExpiry = max 0 (expiryKesPeriod - currKesPeriod)
     in
       if kesPeriodsUntilExpiry > 7
         then mconcat
@@ -86,8 +86,8 @@ instance LogFormatting HotKey.KESInfo where
 
   forHuman forgeStateInfo =
     let maxKesEvos = endKesPeriod - startKesPeriod
-        oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
-        kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
+        expiryKesPeriod = startKesPeriod + maxKesEvos
+        kesPeriodsUntilExpiry = max 0 (expiryKesPeriod - currKesPeriod)
     in if kesPeriodsUntilExpiry > 7
       then "KES info startPeriod  " <> (Text.pack . show) startKesPeriod
             <> " currPeriod " <> (Text.pack . show) currKesPeriod
@@ -106,16 +106,13 @@ instance LogFormatting HotKey.KESInfo where
 
   asMetrics forgeStateInfo =
       let maxKesEvos = endKesPeriod - startKesPeriod
-          oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
+          expiryKesPeriod = startKesPeriod + maxKesEvos
+          kesPeriodsUntilExpiry = max 0 (expiryKesPeriod - currKesPeriod)
       in  [
-            IntM "operationalCertificateStartKESPeriod"
-              (fromIntegral startKesPeriod)
-          , IntM "operationalCertificateExpiryKESPeriod"
-              (fromIntegral (startKesPeriod + maxKesEvos))
-          , IntM "currentKESPeriod"
-              (fromIntegral currKesPeriod)
-          , IntM "remainingKESPeriods"
-              (fromIntegral (max 0 (oCertExpiryKesPeriod - currKesPeriod)))
+            IntM "operationalCertificateStartKESPeriod" (fromIntegral startKesPeriod)
+          , IntM "operationalCertificateExpiryKESPeriod" (fromIntegral expiryKesPeriod)
+          , IntM "currentKESPeriod" (fromIntegral currKesPeriod)
+          , IntM "remainingKESPeriods" (fromIntegral kesPeriodsUntilExpiry)
           ]
     where
     HotKey.KESInfo
@@ -130,8 +127,8 @@ instance MetaTrace HotKey.KESInfo where
 
     severityFor (Namespace _ _) (Just forgeStateInfo) = Just $
       let maxKesEvos = endKesPeriod - startKesPeriod
-          oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
-          kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
+          expiryKesPeriod = startKesPeriod + maxKesEvos
+          kesPeriodsUntilExpiry = max 0 (expiryKesPeriod - currKesPeriod)
       in if kesPeriodsUntilExpiry > 7
         then Info
         else if kesPeriodsUntilExpiry <= 1
