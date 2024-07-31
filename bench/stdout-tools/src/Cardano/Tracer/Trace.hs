@@ -33,12 +33,12 @@ import qualified Data.Aeson as Aeson
 --------------------------------------------------------------------------------
 
 -- Keep it simple!
--- Keep the same order commonly used for traces!
+-- Keep the same order commonly used for traces for any speed advantage!
 -- Use `ns` and `at` to filter and only decode the `remainder` if needed.
 data Trace = Trace
   -- Keep it non-strict, avoids executing the parser until requested.
   { at :: Either String UTCTime
-  -- The namespace is the fastest way of filtering messages, use it first
+  -- The namespace is the fastest way of filtering messages, use it first.
   , ns :: Text.Text
     -- Only do `fromJSON` if needed, `Aeson` decoding is costly!
   , remainder :: Text.Text
@@ -47,7 +47,7 @@ data Trace = Trace
 
 -- Fast & Ugly, Ugly & Fast.
 -- Too many assumptions (assumption is the parent of all thing that did not go
--- quite as expected) but here we pretend that we don't care.
+-- quite as expected) but here we pretend that we don't care and so far so good.
 fromJson :: Text.Text -> Either Text.Text Trace
 fromJson text =
   -- Look for '{"at":"''
@@ -62,7 +62,7 @@ fromJson text =
           -- If this fails it's provably not a valid trace message.
           parseTimeOutput = {-# SCC "fromJson_parseUTCTime" #-}
                             ParseTime.parseUTCTime atText
-              -- Drop the date's last '"' and assume ',"ns":"' is there.
+          -- Drop the date's last '"' and assume ',"ns":"' is there.
           text''' = {-# SCC "fromJson_drop_ns" #-}
                     Text.drop 8 text'' -- Drops '","ns":"'.
           -- Consume all the text until the next '"'.
@@ -73,12 +73,13 @@ fromJson text =
           remainderText = {-# SCC "fromJson_remainder" #-}
                           "{" <> Text.drop 2 text''''
       in Right $ Trace parseTimeOutput nsText remainderText
-    -- Assumption failed.
+    -- An assumption failed (not shocking (?)).
     _ -> Left text
 
 --------------------------------------------------------------------------------
 
--- Keep the same order commonly used for trace messages!
+-- Keep the same order commonly used for trace messages, if any speed advantage
+-- can be obtained by doing this I take it.
 data Remainder a = Remainder
   { remainderData :: a
   , sev           :: Text.Text
@@ -171,7 +172,7 @@ data DataResources = DataResources
 
 msgCustomOptions :: Aeson.Options
 msgCustomOptions = Aeson.defaultOptions
-  { Aeson.fieldLabelModifier = drop 9
+  { Aeson.fieldLabelModifier = drop 9 -- Drop the "resources" prefix.
   , Aeson.constructorTagModifier = id
   }
 
