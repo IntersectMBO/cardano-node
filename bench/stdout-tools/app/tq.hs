@@ -71,10 +71,12 @@ cliFunctionReader str = case str of
   "10s-silences" -> Right $ FilterReduce.silencesFR 10
   "count-FLSLCP" -> Right $ FilterReduce.countNamespaceFR "Forge.Loop.StartLeadershipCheckPlus"
   "missed-slots" -> Right   FilterReduce.missedSlotsFR
+  "slot-pauses"  -> Right $ FilterReduce.slotPausesFR 1.75
   "utxo-size"    -> Right   FilterReduce.utxoSizeFR
   "heap-changes" -> Right   FilterReduce.heapChangesFR
   "live-changes" -> Right   FilterReduce.liveChangesFR
   "rss-changes"  -> Right   FilterReduce.rssChangesFR
+  "cpu-ticks"    -> Right   FilterReduce.cpuTicksFR
   _ -> Left str
 
 main :: IO ()
