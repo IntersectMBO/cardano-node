@@ -1,5 +1,8 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -17,7 +20,7 @@ module Testnet.Start.Cardano
   , cardanoTestnetDefault
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
-  , requestAvailablePortNumbers
+  , retryOnAddressInUseError
   ) where
 
 
@@ -30,27 +33,24 @@ import           Cardano.Node.Configuration.Topology
 
 import           Prelude hiding (lines)
 
+import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
-import           Data.IORef
 import qualified Data.List as L
 import           Data.Maybe
-import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Time (UTCTime)
+import           Data.Time (UTCTime, diffUTCTime)
+import           Data.Time.Clock (NominalDiffTime)
 import qualified Data.Time.Clock as DTC
 import           Data.Word (Word32)
-import           GHC.IO.Unsafe (unsafePerformIO)
 import           GHC.Stack
 import qualified GHC.Stack as GHC
-import           Network.Socket (PortNumber)
 import           System.FilePath ((</>))
 import qualified System.Info as OS
-import qualified System.Random.Stateful as R
 import           Text.Printf (printf)
 
 import           Testnet.Components.Configuration
@@ -66,6 +66,7 @@ import           Testnet.Types as TR hiding (shelleyGenesis)
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import qualified Hedgehog.Extras.Stock.OS as OS
 
 -- | There are certain conditions that need to be met in order to run
@@ -122,41 +123,6 @@ getDefaultShelleyGenesis opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   return (startTime, Defaults.defaultShelleyGenesis startTime opts)
-
--- | Hardcoded testnet IP address
-testnetIpv4Address :: Text
-testnetIpv4Address = "127.0.0.1"
-
--- | Starting port number, from which testnet nodes will get new ports.
-defaultTestnetNodeStartingPortNumber :: PortNumber
-defaultTestnetNodeStartingPortNumber = 20000
-
--- | Global counter used to track which testnet node's ports were already allocated
-availablePortNumber :: IORef PortNumber
-availablePortNumber = unsafePerformIO $ do
-  let startingPort = toInteger defaultTestnetNodeStartingPortNumber
-  -- add a random offset to the starting port number to avoid clashes when starting multiple testnets
-  randomPart <- R.uniformRM (1,9) R.globalStdGen
-  newIORef . fromInteger $ startingPort + randomPart * 1000
-{-# NOINLINE availablePortNumber #-}
-
--- | Request a list of unused port numbers for testnet nodes. This shifts 'availablePortNumber' by
--- 'maxPortsPerRequest' in order to make sure that each node gets an unique port.
-requestAvailablePortNumbers
-  :: HasCallStack
-  => MonadIO m
-  => MonadTest m
-  => Int -- ^ Number of ports to request
-  -> m [PortNumber]
-requestAvailablePortNumbers numberOfPorts
-  | numberOfPorts > fromIntegral maxPortsPerRequest = withFrozenCallStack $ do
-    H.note_ $ "Tried to allocate " <> show numberOfPorts <> " port numbers in one request. "
-      <> "It's allowed to allocate no more than " <> show maxPortsPerRequest <> " per request."
-    H.failure
-  | otherwise = liftIO $ atomicModifyIORef' availablePortNumber $ \n ->
-      (n + maxPortsPerRequest, [n..n + fromIntegral numberOfPorts - 1])
-    where
-      maxPortsPerRequest = 50
 
 -- | Setup a number of credentials and pools, like this:
 --
@@ -227,8 +193,6 @@ cardanoTestnet
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
       era = cardanoNodeEra testnetOptions
-
-  portNumbers <- requestAvailablePortNumbers numPoolNodes
 
    -- Sanity checks
   testnetMinimumConfigurationRequirements testnetOptions
@@ -340,12 +304,12 @@ cardanoTestnet
           }
         }
 
-
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
     config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
 
     H.evalIO $ LBS.writeFile (unFile configurationFile) config
 
+    portNumbers <- replicateM numPoolNodes $ H.randomPort testnetDefaultIpv4Address
     -- Byron related
     forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
       let iStr = printf "%03d" (i - 1)
@@ -357,7 +321,7 @@ cardanoTestnet
     forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do
       let producers = flip map (filter (/= myPortNumber) portNumbers) $ \otherProducerPort ->
             RemoteAddress
-              { raAddress = testnetIpv4Address
+              { raAddress = showIpv4Address testnetDefaultIpv4Address
               , raPort = otherProducerPort
               , raValency = 1
               }
@@ -370,8 +334,8 @@ cardanoTestnet
       let nodeName = mkNodeName i
           keyDir = tmpAbsPath </> poolKeyDir i
       H.note_ $ "Node name: " <> nodeName
-      eRuntime <- runExceptT $
-        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetIpv4Address port testnetMagic
+      eRuntime <- runExceptT . retryOnAddressInUseError $
+        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic
           [ "run"
           , "--config", unFile configurationFile
           , "--topology", keyDir </> "topology.json"
@@ -440,3 +404,38 @@ cardanoTestnet
     writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do
       genesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis." <> eraName <> ".spec.json"
       H.evalIO $ LBS.writeFile genesisJsonFile $ Aeson.encode toWrite
+
+-- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
+retryOnAddressInUseError
+  :: forall m a. HasCallStack
+  => MonadTest m
+  => MonadIO m
+  => ExceptT NodeStartFailure m a -- ^ action being retried
+  -> ExceptT NodeStartFailure m a
+retryOnAddressInUseError act = withFrozenCallStack $ go maximumTimeout retryTimeout
+  where
+    go :: HasCallStack => NominalDiffTime -> NominalDiffTime -> ExceptT NodeStartFailure m a
+    go timeout interval
+      | timeout <= 0 = withFrozenCallStack $ do
+        H.note_ "Exceeded timeout when retrying node start"
+        act
+      | otherwise = withFrozenCallStack $ do
+        !time <- liftIO DTC.getCurrentTime
+        catchError act $ \case
+          NodeAddressAlreadyInUseError _ -> do
+            liftIO $ threadDelay (round $ interval * 1_000_000)
+            !time' <- liftIO DTC.getCurrentTime
+            let elapsedTime = time' `diffUTCTime` time
+                newTimeout = timeout - elapsedTime
+            H.note_ $ "Retrying on 'address in use' error, timeout: " <> show newTimeout
+            go newTimeout interval
+          e -> throwError e
+
+    -- Retry timeout in seconds. This should be > 2 * net.inet.tcp.msl on darwin,
+    -- net.inet.tcp.msl in RFC 793 determines TIME_WAIT socket timeout.
+    -- Usually it's 30 or 60 seconds. We take two times that plus some extra time.
+    maximumTimeout = 150
+    -- Wait for that many seconds before retrying.
+    retryTimeout = 5
+
+

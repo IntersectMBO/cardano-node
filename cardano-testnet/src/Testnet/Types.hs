@@ -38,6 +38,8 @@ module Testnet.Types
   , ShelleyGenesis(..)
   , shelleyGenesis
   , getStartTime
+  , testnetDefaultIpv4Address
+  , showIpv4Address
   ) where
 
 import           Cardano.Api
@@ -55,12 +57,14 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.Aeson as A
+import           Data.List (intercalate)
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
+import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
-import           Network.Socket (PortNumber)
+import           Network.Socket (HostAddress, PortNumber, hostAddressToTuple, tupleToHostAddress)
 import           System.FilePath
 import qualified System.Process as IO
 
@@ -115,7 +119,7 @@ poolNodeStdout = nodeStdout . poolRuntime
 
 data NodeRuntime = NodeRuntime
   { nodeName :: !String
-  , nodeIpv4 :: !Text
+  , nodeIpv4 :: !HostAddress
   , nodePort :: !PortNumber
   , nodeSprocket :: !Sprocket
   , nodeStdinHandle :: !IO.Handle
@@ -191,3 +195,13 @@ readNodeLoggingFormat = \case
 
 allNodes :: TestnetRuntime -> [NodeRuntime]
 allNodes tr = fmap poolRuntime (poolNodes tr)
+
+-- | Hardcoded testnet IPv4 address pointing to the local host
+testnetDefaultIpv4Address :: HostAddress
+testnetDefaultIpv4Address = tupleToHostAddress (127, 0, 0, 1)
+
+-- | Format IPv4 address as a string-like e.g. @127.0.0.1@
+showIpv4Address :: IsString s => HostAddress -> s
+showIpv4Address address = fromString . intercalate "." $ show <$> [a,b,c,d]
+  where (a,b,c,d) = hostAddressToTuple address
+

@@ -73,8 +73,8 @@ library
                       , ouroboros-network-api
                       , prettyprinter
                       , process
-                      , random
                       , resourcet
+                      , retry
                       , safe-exceptions
                       , scientific
                       , si-timers
@@ -82,6 +82,7 @@ library
                       , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog
+                      , temporary
                       , text
                       , time
                       , transformers

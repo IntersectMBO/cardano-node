@@ -13,6 +13,7 @@
 module Testnet.Runtime
   ( startNode
   , startLedgerNewEpochStateLogging
+  , NodeStartFailure (..)
   ) where
 
 import           Cardano.Api
@@ -31,12 +32,13 @@ import           Data.Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Algorithm.Diff
 import           Data.Algorithm.DiffOutput
+import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as BSC
+import           Data.List (isInfixOf)
 import qualified Data.List as List
-import           Data.Text (Text, unpack)
 import           GHC.Stack
 import qualified GHC.Stack as GHC
-import           Network.Socket (PortNumber)
+import           Network.Socket (HostAddress, PortNumber)
 import           Prettyprinter (unAnnotate)
 import qualified System.Directory as IO
 import           System.FilePath
@@ -47,7 +49,7 @@ import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
 import           Testnet.Types (NodeRuntime (NodeRuntime), TestnetRuntime (configurationFile),
-                   poolSprockets)
+                   poolSprockets, showIpv4Address)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -61,9 +63,20 @@ data NodeStartFailure
   | ExecutableRelatedFailure ExecutableError
   | FileRelatedFailure IOException
   | NodeExecutableError (Doc Ann)
+  | NodeAddressAlreadyInUseError (Doc Ann)
  -- | NodePortNotOpenError IOException
   | MaxSprocketLengthExceededError
   deriving Show
+
+-- | Analyze @stderr@ contents and return the appropriate error. If the node didn't start because the address
+-- was already in use, 'NodeAddressAlreadyInUse' is returned.
+mkNodeNonEmptyStderrError
+  :: String -- ^ @stderr@ contents
+  -> NodeStartFailure
+mkNodeNonEmptyStderrError stderr' = do
+  if "Address already in use" `isInfixOf` stderr'
+    then NodeAddressAlreadyInUseError $ pretty stderr'
+    else NodeExecutableError $ pretty stderr'
 
 instance Error NodeStartFailure where
   prettyError = \case
@@ -71,21 +84,30 @@ instance Error NodeStartFailure where
     ExecutableRelatedFailure e -> "Cannot run cardano-node executable" <+> pshow e
     FileRelatedFailure e -> "File error:" <+> prettyException e
     NodeExecutableError e -> "Cardano node process did not start:" <+> unAnnotate e
+    NodeAddressAlreadyInUseError e -> "Cardano node process did not start - address already in use:" <+> unAnnotate e
     MaxSprocketLengthExceededError -> "Max sprocket length exceeded"
 
 -- TODO: We probably want a check that this node has the necessary config files to run and
 -- if it doesn't we fail hard.
 -- | Start a node, creating file handles, sockets and temp-dirs.
+--
+-- If the port in the function argument was obtained using 'H.randomPort' which binds to the port first and then
+-- closes it, on some operating systems, like MacOS, the port can get stuck in TIME_WAIT state for a
+-- significant period. Unfortunately there is no Haskell API giving the ability to check that - this
+-- means that the user of this function needs to retry on 'NodeAddressAlreadyInUseError' until this
+-- function succeeds.
+-- (see state diagram in https://www.rfc-editor.org/rfc/rfc793#section-3.2 p. 23.)
 startNode
   :: HasCallStack
   => MonadResource m
   => MonadCatch m
   => MonadFail m
+  => MonadTest m
   => TmpAbsolutePath
   -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
-  -> Text
+  -> HostAddress
   -- ^ Node IPv4 address
   -> PortNumber
   -- ^ Node port
@@ -107,62 +129,110 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       socketRelPath = socketDir </> node </> "sock"
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 
-  hNodeStdout <- handleIOExceptionsWith FileRelatedFailure . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
-  hNodeStderr <- handleIOExceptionsWith FileRelatedFailure . liftIO $ IO.openFile nodeStderrFile IO.ReadWriteMode
+  hNodeStdout <- retryOpenFile nodeStdoutFile IO.WriteMode
+  hNodeStderr <- retryOpenFile nodeStderrFile IO.ReadWriteMode
 
-  unless (List.length (H.sprocketArgumentName sprocket) <= H.maxSprocketArgumentNameLength) $
-     left MaxSprocketLengthExceededError
+  -- Sometimes the handles are not getting properly closed when node fails to start. This results in
+  -- operating system holding the file lock for longer than it's necessary. This in the end prevents retrying
+  -- node start and acquiring a lock for the same stderr/stdout files again.
+  closeHandlesOnError [hNodeStdout, hNodeStderr] $ do
 
-  let socketAbsPath = H.sprocketSystemName sprocket
+    unless (List.length (H.sprocketArgumentName sprocket) <= H.maxSprocketArgumentNameLength) $
+       left MaxSprocketLengthExceededError
 
-  nodeProcess
-    <- firstExceptT ExecutableRelatedFailure
-         $ hoistExceptT liftIO $ procNode $ mconcat
-                       [ nodeCmd
-                       , [ "--socket-path", H.sprocketArgumentName sprocket
-                         , "--port", show port
-                         , "--host-addr", unpack ipv4
+    let socketAbsPath = H.sprocketSystemName sprocket
+
+    nodeProcess
+      <- firstExceptT ExecutableRelatedFailure
+           $ hoistExceptT liftIO $ procNode $ mconcat
+                         [ nodeCmd
+                         , [ "--socket-path", H.sprocketArgumentName sprocket
+                           , "--port", show port
+                           , "--host-addr", showIpv4Address ipv4
+                           ]
                          ]
-                       ]
 
-  (Just stdIn, _, _, hProcess, _)
-    <- firstExceptT ProcessRelatedFailure $ initiateProcess
-          $ nodeProcess
-             { IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout
-             , IO.std_err = IO.UseHandle hNodeStderr
-             , IO.cwd = Just tempBaseAbsPath
-             }
+    -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
+    -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
+    -- is out of CLOSING state.
+    H.note_ $ "Waiting for port " <> show port <> " to be available before starting node"
+    H.assertM $ Ping.waitForPortClosed 30 0.1 port
 
-  -- We force the evaluation of initiateProcess so we can be sure that
-  -- the process has started. This allows us to read stderr in order
-  -- to fail early on errors generated from the cardano-node binary.
-  _ <- liftIO (IO.getPid hProcess)
-    >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
+    (Just stdIn, _, _, hProcess, _)
+      <- firstExceptT ProcessRelatedFailure $ initiateProcess
+            $ nodeProcess
+               { IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout
+               , IO.std_err = IO.UseHandle hNodeStderr
+               , IO.cwd = Just tempBaseAbsPath
+               }
 
-  -- Wait for socket to be created
-  eSprocketError <-
-    Ping.waitForSprocket
-      30  -- timeout
-      0.2 -- check interval
-      sprocket
+    -- We force the evaluation of initiateProcess so we can be sure that
+    -- the process has started. This allows us to read stderr in order
+    -- to fail early on errors generated from the cardano-node binary.
+    _ <- liftIO (IO.getPid hProcess)
+      >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
 
-  -- If we do have anything on stderr, fail.
-  stdErrContents <- liftIO $ IO.readFile nodeStderrFile
-  unless (null stdErrContents)
-    $ left . NodeExecutableError $ pretty stdErrContents
+    -- Wait for socket to be created
+    eSprocketError <-
+      Ping.waitForSprocket
+        30  -- timeout
+        0.2 -- check interval
+        sprocket
 
-  -- No stderr and no socket? Fail.
-  firstExceptT
-    (\ioex ->
-      NodeExecutableError . hsep $
-        ["Socket", pretty socketAbsPath, "was not created after 30 seconds. There was no output on stderr. Exception:", prettyException ioex])
-    $ hoistEither eSprocketError
+    -- If we do have anything on stderr, fail.
+    stdErrContents <- liftIO $ IO.readFile nodeStderrFile
+    unless (null stdErrContents) $
+      throwError $ mkNodeNonEmptyStderrError stdErrContents
 
-  -- Ping node and fail on error
-  Ping.pingNode (fromIntegral testnetMagic) sprocket
-    >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
+    -- No stderr and no socket? Fail.
+    firstExceptT
+      (\ioex ->
+        NodeExecutableError . hsep $
+          ["Socket", pretty socketAbsPath, "was not created after 30 seconds. There was no output on stderr. Exception:", prettyException ioex])
+      $ hoistEither eSprocketError
 
-  pure $ NodeRuntime node ipv4 port sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
+    -- Ping node and fail on error
+    Ping.pingNode (fromIntegral testnetMagic) sprocket
+      >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
+
+    pure $ NodeRuntime node ipv4 port sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
+  where
+    -- close provided list of handles when 'ExceptT' throws an error
+    closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a
+    closeHandlesOnError handles action =
+      catchE action $ \e -> do
+        liftIO $ mapM_ IO.hClose handles
+        throwE e
+
+    -- Sometimes even when we close the files manually, the operating system still holds the lock for some
+    -- reason. This is most prominent on MacOS. Therefore, as a last resort, instead of
+    -- failing the node startup procedure, we simply try to use a different file name for the logs, with
+    -- the suffix @-n.log@ where @n@ is an attempt number.
+    retryOpenFile :: MonadIO m
+                  => MonadCatch m
+                  => FilePath -- ^ path we're trying to open
+                  -> IO.IOMode
+                  -> ExceptT NodeStartFailure m IO.Handle
+    retryOpenFile fullPath mode = go 0
+      where
+        go :: MonadIO m
+           => MonadCatch m
+           => Int
+           -> ExceptT NodeStartFailure m IO.Handle
+        go n = do
+          let (path, extension) = splitExtension fullPath
+              path' = if n > 0
+                         then path <> "-" <> show n <> extension
+                         else fullPath
+          r <- fmap (first FileRelatedFailure) . try . liftIO $ IO.openFile path' mode
+          case r of
+            Right h -> pure h
+            Left e
+              -- give up after 1000 attempts
+              | n >= 1000 -> throwE e
+              | otherwise -> go (n + 1)
+
+
 
 createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath
 createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do
