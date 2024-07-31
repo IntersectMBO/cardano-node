@@ -20,6 +20,8 @@ module Cardano.Tracer.Reducer
   -- Changes of a data point with timestamp.
   , Changes (..)
 
+  , CpuTicks (..)
+
   ) where
 
 --------------------------------------------------------------------------------
@@ -30,6 +32,7 @@ import           Data.Kind (Type)
 import           Data.Foldable (toList)
 -- package: time.
 import           Data.Time.Clock (UTCTime, NominalDiffTime, diffUTCTime)
+import           Data.Time.Format.ISO8601 (iso8601Show)
 -- package: text.
 import qualified Data.Text as Text
 -- package: containers.
@@ -63,6 +66,9 @@ newtype Changes t = Changes (t -> Integer)
 
 instance Show (Changes t) where
   show _ = "Changes"
+
+data CpuTicks = CpuTicks
+  deriving Show
 
 --------------------------------------------------------------------------------
 
@@ -142,5 +148,49 @@ instance Reducer (Changes t) where
                   then replicate (33 - size) ' '
                   else ""
       in putStrLn $ showT ++ "; " ++ extra ++ show h
+    )
+    (toList sq)
+
+instance Reducer CpuTicks where
+  type instance Elem  CpuTicks = (UTCTime, Trace.Remainder Trace.DataResources)
+  type instance Accum CpuTicks = (Maybe (UTCTime,Integer), Seq.Seq (UTCTime, NominalDiffTime, Integer))
+  initialOf _ = (Nothing, Seq.empty)
+  reducerOf CpuTicks ans@(maybePrev, sq) (at, resources) = do
+    case maybePrev of
+      Nothing ->
+        let actualCpu = (Trace.resourcesCentiCpu . Trace.remainderData) resources
+        in (
+             Just (at, actualCpu)
+           , Seq.singleton (
+                             at
+                           , 0
+                           , actualCpu
+                           --, (Trace.resourcesCentiGC  . Trace.remainderData) resources
+                           --, (Trace.resourcesCentiMut . Trace.remainderData) resources
+                           )
+           )
+      (Just (prevAt,_prevCpu)) ->
+        let actualCpu = (Trace.resourcesCentiCpu . Trace.remainderData) resources
+        in if False
+           then ans
+           else (
+                  Just (at, actualCpu)
+                , sq Seq.|> (
+                              at
+                            , diffUTCTime at prevAt
+                            , actualCpu
+                            --, (Trace.resourcesCentiGC  . Trace.remainderData) resources
+                            --, (Trace.resourcesCentiMut . Trace.remainderData) resources
+                            )
+                )
+  showAns _ = show
+  printAns _ (_, sq) = mapM_
+    (\(t,nt,cpu) ->
+      putStrLn $
+                  iso8601Show t
+        ++ "," ++ show (realToFrac nt :: Double)
+        ++ "," ++ show cpu
+        -- ++ "," ++ show gc
+        -- ++ "," ++ show mut
     )
     (toList sq)
