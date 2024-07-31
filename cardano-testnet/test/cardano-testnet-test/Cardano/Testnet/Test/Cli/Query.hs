@@ -32,9 +32,11 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Lens ((^?))
 import           Control.Monad (forM_)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Lens as Aeson
 import           Data.Bifunctor (bimap)
 import           Data.Data (type (:~:) (Refl))
 import qualified Data.Map as Map
@@ -208,6 +210,39 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         let stakePoolsOutFile = work </> "stake-distribution-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-distribution"
                                        , "--out-file", stakePoolsOutFile ]
+
+    TestQuerySPOStakeDistributionCmd ->
+      -- spo-stake-distribution
+      do
+        -- Query all SPOs
+        aesonSpoDist :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution", "--all-spos" ]
+        secondHash <- H.evalMaybe $ T.unpack <$> aesonSpoDist ^? Aeson.nth 1 . Aeson.nth 0 . Aeson._String
+        secondAmount <- H.evalMaybe $ aesonSpoDist ^? Aeson.nth 1 . Aeson.nth 1 . Aeson._Number
+
+        -- Query individual SPO using result and ensure result is the same
+        secondSpoInfo :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution", "--spo-key-hash", secondHash ]
+        individualHash <- H.evalMaybe $ T.unpack <$> secondSpoInfo ^? Aeson.nth 0 . Aeson.nth 0 . Aeson._String
+        individualAmount <- H.evalMaybe $ secondSpoInfo ^? Aeson.nth 0 . Aeson.nth 1 . Aeson._Number
+        secondHash === individualHash
+        secondAmount === individualAmount
+
+        -- Query individual SPO using SPOs verification file
+        let spoKey = verificationKey . poolNodeKeysCold $ Defaults.defaultSpoKeys 1
+        fileQueryResult :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution"
+                                                                         , "--spo-verification-key-file", unFile spoKey
+                                                                         ]
+        fileQueryHash <- H.evalMaybe $ T.unpack <$> fileQueryResult ^? Aeson.nth 0 . Aeson.nth 0 . Aeson._String
+        fileQueryAmount <- H.evalMaybe $ fileQueryResult ^? Aeson.nth 0 . Aeson.nth 1 . Aeson._Number
+
+        -- Query individual SPO using SPOs bech32 of key and compare to previous result
+        delegatorVKey :: VerificationKey StakePoolKey <- readVerificationKeyFromFile AsStakePoolKey work spoKey
+        keyQueryResult :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution"
+                                                                        , "--spo-verification-key", T.unpack $ serialiseToBech32 delegatorVKey
+                                                                        ]
+        keyQueryHash <- H.evalMaybe $ T.unpack <$> keyQueryResult ^? Aeson.nth 0 . Aeson.nth 0 . Aeson._String
+        keyQueryAmount <- H.evalMaybe $ keyQueryResult ^? Aeson.nth 0 . Aeson.nth 1 . Aeson._Number
+        fileQueryHash === keyQueryHash
+        fileQueryAmount === keyQueryAmount
 
     TestQueryStakeAddressInfoCmd ->
       -- stake-address-info

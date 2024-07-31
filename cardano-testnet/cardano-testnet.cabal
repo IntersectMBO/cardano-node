@@ -234,6 +234,7 @@ test-suite cardano-testnet-test
                       , hedgehog
                       , hedgehog-extras
                       , http-conduit
+                      , lens
                       , lens-aeson
                       , microlens
                       , mtl
