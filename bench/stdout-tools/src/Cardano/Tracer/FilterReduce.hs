@@ -17,12 +17,13 @@ module Cardano.Tracer.FilterReduce
 
   , countNamespace, countNamespaceFR
 
-  , missedSlots, missedSlotsFR
+  , missedSlots, missedSlotsFR, slotPauses, slotPausesFR
 
   , utxoSize, utxoSizeFR
   , heapChanges, heapChangesFR
   , liveChanges, liveChangesFR
   , rssChanges, rssChangesFR
+  , cpuTicks, cpuTicksFR
   ) where
 
 --------------------------------------------------------------------------------
@@ -160,6 +161,29 @@ missedSlots = (,)
 missedSlotsFR :: FilterReduce
 missedSlotsFR = uncurry MkFilterReduce missedSlots
 
+slotPauses :: NominalDiffTime
+           -> ( Filter.Compose
+                  (Filter.Compose
+                    (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                    Filter.Namespace
+                  )
+                  Filter.RightAt
+              , Reducer.Silences
+              )
+slotPauses s = (,)
+  ( Filter.ParseTrace
+    Filter.<->
+    Filter.RightTrace
+    Filter.<->
+    Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus"
+    Filter.<->
+    Filter.RightAt
+  )
+  (Reducer.Silences s)
+
+slotPausesFR :: NominalDiffTime -> FilterReduce
+slotPausesFR s = uncurry MkFilterReduce (slotPauses s)
+
 utxoSize :: ( Filter.Compose
                (Filter.Compose
                  (Filter.Compose
@@ -267,6 +291,33 @@ rssChanges = (,)
 
 rssChangesFR :: FilterReduce
 rssChangesFR = uncurry MkFilterReduce rssChanges
+
+cpuTicks :: ( Filter.Compose
+                (Filter.Compose
+                   (Filter.Compose
+                      (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                      Filter.Namespace
+                   )
+                   Filter.RightAt
+                )
+                (Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+            , Reducer.CpuTicks
+            )
+cpuTicks = (,)
+  ( Filter.ParseTrace
+    Filter.<->
+    Filter.RightTrace
+    Filter.<->
+    Filter.Namespace "Resources"
+    Filter.<->
+    Filter.RightAt
+    Filter.<->
+    (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+  )
+  Reducer.CpuTicks
+
+cpuTicksFR :: FilterReduce
+cpuTicksFR = uncurry MkFilterReduce cpuTicks
 
 --------------------------------------------------------------------------------
 
