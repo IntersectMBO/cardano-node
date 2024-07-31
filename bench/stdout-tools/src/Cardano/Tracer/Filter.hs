@@ -8,6 +8,7 @@ module Cardano.Tracer.Filter
     Filter (..)
 
   , Id (..), Compose (..), (<->), (<.>)
+  , Or (..)
 
   -- Trace message validation.
   , ParseTrace (..), RightTrace (..), RightAt (..)
@@ -74,6 +75,24 @@ f1 <-> f2 = Compose f1 f2
 (<.>) :: f1 -> f2 -> Compose f2 f1
 f1 <.> f2 = Compose f2 f1
 
+--------------------------------------------------------------------------------
+
+data Or f1 f2 = Or f1 f2
+  deriving Show
+
+instance ( Filter f1
+         , Filter f2
+         , FilterInput f1 ~ FilterInput f2
+         , FilterOutput f1 ~ FilterOutput f2
+         )
+      => Filter (Or f1 f2) where
+  type instance FilterInput  (Or f1 f2) = FilterInput f1
+  type instance FilterOutput (Or f1 f2) = FilterOutput f1
+  filterOf (Or f1 f2) input =
+    case filterOf f1 input of
+      Nothing -> filterOf f2 input
+      ans -> ans
+
 -- TODO: FIXME: This one is not a "filter", is a "map" function
 --------------------------------------------------------------------------------
 
@@ -138,7 +157,7 @@ instance Filter Namespace where
     else Nothing
 
 -- To use after `RightTrace`.
--- One of the slowest filter, use after `Namespace` when possible.
+-- One of the slowest filters, use after `Namespace` when possible.
 instance Aeson.FromJSON t => Filter (Aeson t) where
   type instance FilterInput  (Aeson t) = Trace.Trace
   type instance FilterOutput (Aeson t) = t -- Decoded remainder
