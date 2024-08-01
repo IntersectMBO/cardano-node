@@ -264,7 +264,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         -- Set up files and vars
         refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
         alwaysSucceedsSpendingPlutusPath <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
-        let transferAmount = 10_000_000
+        let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
         txBody <- buildTransferTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
                     [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, transferAmount)]
@@ -366,14 +366,14 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     patchedOutput <- H.evalEither $ patchGovStateOutput fileContents
     liftIO $ writeFile fp patchedOutput
 
-  getTxIx :: forall m era. MonadTest m => ShelleyBasedEra era -> String -> Int -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
+  getTxIx :: forall m era. MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
   getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
     Refl <- H.leftFail $ assertErasEqual sbe sbe'
     shelleyBasedEraConstraints sbe' (do
       return $ Map.foldlWithKey (\acc (L.TxIn (L.TxId thisTxId) (L.TxIx thisTxIx)) txOut ->
         case acc of
           Nothing | hashToStringAsHex (extractHash thisTxId) == txId &&
-                    valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just (Coin (fromIntegral amount)) -> Just $ fromIntegral thisTxIx
+                    valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just amount -> Just $ fromIntegral thisTxIx
                   | otherwise -> Nothing
           x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosUtxoL)
 

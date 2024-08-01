@@ -15,6 +15,7 @@ module Testnet.Process.Cli.Transaction
   ) where
 
 import           Cardano.Api hiding (Certificate, TxBody)
+import           Cardano.Api.Ledger (Coin (unCoin))
 
 import           Prelude
 
@@ -67,7 +68,7 @@ buildTransferTx
   -> FilePath -- ^ Base directory path where the unsigned transaction file will be stored.
   -> String -- ^ Prefix for the output unsigned transaction file name. The extension will be @.txbody@.
   -> PaymentKeyInfo -- ^ Payment key pair used for paying the transaction.
-  -> [(TxOutAddress, Int)] -- ^ List of pairs of transaction output addresses and amounts.
+  -> [(TxOutAddress, Coin)] -- ^ List of pairs of transaction output addresses and amounts.
   -> m (File TxBody In)
 buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
 
@@ -89,12 +90,12 @@ buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = 
     computeTxOuts = concat <$> sequence
       [ case txOut of
           PKAddress dstWallet ->
-            return ["--tx-out", T.unpack (paymentKeyInfoAddr dstWallet) <> "+" ++ show amount ]
+            return ["--tx-out", T.unpack (paymentKeyInfoAddr dstWallet) <> "+" ++ show (unCoin amount) ]
           ReferenceScriptAddress (File referenceScriptJSON) -> do
             scriptAddress <- execCli' execConfig [ anyEraToString cEra, "address", "build"
                                                  , "--payment-script-file", referenceScriptJSON
                                                  ]
-            return [ "--tx-out", scriptAddress <> "+" ++ show amount
+            return [ "--tx-out", scriptAddress <> "+" ++ show (unCoin amount)
                    , "--tx-out-reference-script-file", referenceScriptJSON
                    ]
       | (txOut, amount) <- txOutputs
@@ -121,7 +122,7 @@ buildSimpleTransferTx
   -> String -- ^ Prefix for the output unsigned transaction file name. The extension will be @.txbody@.
   -> PaymentKeyInfo -- ^ Payment key pair used for paying the transaction.
   -> PaymentKeyInfo -- ^ Payment key of the recipient of the transaction.
-  -> Int -- ^ Amount of ADA to transfer (in Lovelace).
+  -> Coin -- ^ Amount of ADA to transfer (in Lovelace).
   -> m (File TxBody In)
 buildSimpleTransferTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
   buildTransferTx execConfig epochStateView sbe work prefix srcWallet [(PKAddress dstWallet, amount)]
