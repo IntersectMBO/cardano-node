@@ -45,7 +45,7 @@ data SignedTx
 
 data ReferenceScriptJSON
 
-data TxOutAddress = PKAddress PaymentKeyInfo
+data TxOutAddress = PubKeyAddress PaymentKeyInfo
                   | ReferenceScriptAddress (File ReferenceScriptJSON In)
 
 -- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
@@ -89,7 +89,7 @@ spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs
     srcAddress = T.unpack $ paymentKeyInfoAddr srcWallet
     computeTxOuts = concat <$> sequence
       [ case txOut of
-          PKAddress dstWallet ->
+          PubKeyAddress dstWallet ->
             return ["--tx-out", T.unpack (paymentKeyInfoAddr dstWallet) <> "+" ++ show (unCoin amount) ]
           ReferenceScriptAddress (File referenceScriptJSON) -> do
             scriptAddress <- execCli' execConfig [ anyEraToString cEra, "address", "build"
@@ -125,7 +125,7 @@ simpleSpendOutputsOnlyTx
   -> Coin -- ^ Amount of ADA to transfer (in Lovelace).
   -> m (File TxBody In)
 simpleSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
-  spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet [(PKAddress dstWallet, amount)]
+  spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet [(PubKeyAddress dstWallet, amount)]
 
 -- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
 --
