@@ -37,6 +37,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import           Data.Data (type (:~:) (Refl))
+import           Data.Either.Extra (mapLeft)
 import qualified Data.Map as Map
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
@@ -339,9 +340,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         "test/cardano-testnet-test/files/golden/queries/treasuryOut.txt"
 
   where
-  patchGovStateOutput :: String -> Either String String
+  patchGovStateOutput :: String -> Either JsonDecodeError String
   patchGovStateOutput output = do
-    eOutput <- eitherDecodeStrictText (T.pack output)
+    eOutput <- mapLeft JsonDecodeError $ eitherDecodeStrictText (T.pack output)
     return $ T.unpack $ decodeUtf8 $ prettyPrintJSON $ patchGovStateJSON eOutput
     where
       patchGovStateJSON :: Aeson.Object -> Aeson.Object
