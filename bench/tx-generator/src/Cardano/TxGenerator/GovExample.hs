@@ -103,7 +103,7 @@ import qualified Cardano.CLI.Read as CLI (categoriseSomeSigningWitness
                    , readTxUpdateProposal
                    , readVotingProceduresFiles
                    , readWitnessSigningData)
-import qualified Cardano.CLI.EraBased.Run.Genesis as CLI (
+import qualified Cardano.CLI.EraBased.Run.Genesis.Common as CLI (
                      readProtocolParameters)
 import           Cardano.CLI.Types.Common (CertificateFile (..)
                    , InputTxBodyOrTxFile (..)
@@ -696,9 +696,7 @@ runTransactionBuildEstimateCmd -- TODO change type
     , plutusCollateral
     , totalReferenceScriptSize
     -- The new field name:
-    -- , currentTreasuryValueAndDonation
-    , currentTreasuryValue
-    , treasuryDonation
+    , currentTreasuryValueAndDonation
     , txBodyOutFile
     } = do
     let sbe = maryEraOnwardsToShelleyBasedEra eon
@@ -766,12 +764,6 @@ runTransactionBuildEstimateCmd -- TODO change type
           | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
           ]
 
-    let currentTreasuryValueAndDonation ::
-             Maybe (TxCurrentTreasuryValue, TxTreasuryDonation)
-        currentTreasuryValueAndDonation = do
-          value    <- currentTreasuryValue
-          donation <- treasuryDonation
-          pure (value, donation)
     txBodyContent <-
       hoistEither $
         constructTxBodyContent
@@ -941,9 +933,7 @@ runTransactionBuildRawCmd
     , mUpdateProprosalFile
     , voteFiles
     , proposalFiles
-    -- , currentTreasuryValueAndDonation
-    , currentTreasuryValue
-    , treasuryDonation
+    , currentTreasuryValueAndDonation
     , txBodyOutFile
     } = do
     inputsAndMaybeScriptWits <-
@@ -1012,12 +1002,6 @@ runTransactionBuildRawCmd
               )
           | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
           ]
-    let currentTreasuryValueAndDonation ::
-             Maybe (TxCurrentTreasuryValue, TxTreasuryDonation)
-        currentTreasuryValueAndDonation = do
-          value    <- currentTreasuryValue
-          donation <- treasuryDonation
-          pure (value, donation)
     txBody <-
       hoistEither $
         runTxBuildRaw
