@@ -587,7 +587,13 @@ instance ( ConvertRawHash blk
           <> "%"
       ChainDB.TraceSnapshotEvent ev -> case ev of
         LedgerDB.InvalidSnapshot snap failure ->
-          "Invalid snapshot " <> showT snap <> showT failure
+          "Invalid snapshot " <> showT snap <> showT failure <> context
+          where
+            context = case failure of
+              LedgerDB.InitFailureRead{} ->
+                   " This is most likely an expected change in the serialization format,"
+                <> " which currently requires a chain replay"
+              _ -> ""
         LedgerDB.TookSnapshot snap pt ->
           "Took ledger snapshot " <> showT snap <>
           " at " <> renderRealPointAsPhrase pt
