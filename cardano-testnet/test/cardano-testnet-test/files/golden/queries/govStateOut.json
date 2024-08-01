@@ -660,6 +660,9 @@
         "txFeePerByte": 1,
         "utxoCostPerByte": 4310
     },
+    "futurePParams": {
+        "tag": "NoPParamsUpdate"
+    },
     "nextRatifyState": {
         "enactedGovActions": [],
         "expiredGovActions": [],
