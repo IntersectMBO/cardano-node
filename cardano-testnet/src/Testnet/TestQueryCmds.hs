@@ -15,7 +15,7 @@ import           Testnet.TestEnumGenerator (genAllConstructorsList, genTestType)
 -- | A datatype with the same constructors as 'QueryCmds', but with a "Test" prefix and no arguments.
 -- The generated type is called 'TestQueryCmds'.
 $(genTestType ''QueryCmds)
--- | A list of all constructors of 'TestQueryCmds', which are nullary.
+
 -- | A list of all constructors of 'TestQueryCmds', which are nullary.
 -- The generated list is called 'allTestQueryCmdsConstructors'.
 $(genAllConstructorsList ''TestQueryCmds)
