@@ -53,7 +53,8 @@ import           Testnet.Components.Query (checkDRepsNumber, getEpochStateView,
                    watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
-                   buildSimpleTransferTx, buildTransferTx, retrieveTransactionId, signTx, submitTx)
+                   retrieveTransactionId, signTx, simpleSpendOutputsOnlyTx, spendOutputsOnlyTx,
+                   submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
@@ -246,7 +247,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "next-tx" ]
         -- Now we create a transaction and check if it exists in the mempool
         mempoolWork <- H.createDirectoryIfMissing $ work </> "mempool-test"
-        txBody <- buildSimpleTransferTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
+        txBody <- simpleSpendOutputsOnlyTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
         signedTx <- signTx execConfig cEra mempoolWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet0]
         submitTx execConfig cEra signedTx
         txId <- retrieveTransactionId execConfig signedTx
@@ -266,7 +267,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         alwaysSucceedsSpendingPlutusPath <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
         let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
-        txBody <- buildTransferTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
+        txBody <- spendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
                     [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, transferAmount)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx

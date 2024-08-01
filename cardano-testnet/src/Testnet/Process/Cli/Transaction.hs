@@ -2,8 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Process.Cli.Transaction
-  ( buildSimpleTransferTx
-  , buildTransferTx
+  ( simpleSpendOutputsOnlyTx
+  , spendOutputsOnlyTx
   , signTx
   , submitTx
   , failToSubmitTx
@@ -54,7 +54,7 @@ data TxOutAddress = PKAddress PaymentKeyInfo
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
-buildTransferTx
+spendOutputsOnlyTx
   :: HasCallStack
   => Typeable era
   => H.MonadAssertion m
@@ -70,7 +70,7 @@ buildTransferTx
   -> PaymentKeyInfo -- ^ Payment key pair used for paying the transaction.
   -> [(TxOutAddress, Coin)] -- ^ List of pairs of transaction output addresses and amounts.
   -> m (File TxBody In)
-buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
+spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
 
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe srcWallet
   fixedTxOuts :: [String] <- computeTxOuts
@@ -107,7 +107,7 @@ buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = 
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
-buildSimpleTransferTx
+simpleSpendOutputsOnlyTx
   :: HasCallStack
   => Typeable era
   => H.MonadAssertion m
@@ -124,8 +124,8 @@ buildSimpleTransferTx
   -> PaymentKeyInfo -- ^ Payment key of the recipient of the transaction.
   -> Coin -- ^ Amount of ADA to transfer (in Lovelace).
   -> m (File TxBody In)
-buildSimpleTransferTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
-  buildTransferTx execConfig epochStateView sbe work prefix srcWallet [(PKAddress dstWallet, amount)]
+simpleSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
+  spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet [(PKAddress dstWallet, amount)]
 
 -- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
 --
