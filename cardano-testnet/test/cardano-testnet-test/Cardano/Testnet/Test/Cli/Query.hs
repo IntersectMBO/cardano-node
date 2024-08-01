@@ -13,7 +13,9 @@ module Cardano.Testnet.Test.Cli.Query
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), extractHash)
+import qualified Cardano.Api.Genesis as Api
+import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), StandardCrypto,
+                   extractHash, unboundRational)
 import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
 
 import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
@@ -32,25 +34,21 @@ import           Prelude
 
 import           Control.Monad (forM_)
 import           Control.Monad.Catch (MonadCatch)
-import           Data.Aeson (eitherDecodeStrictText)
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import           Data.Data (type (:~:) (Refl))
-import           Data.Either.Extra (mapLeft)
 import qualified Data.Map as Map
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Vector as Vector
-import           GHC.Stack (HasCallStack)
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (checkDRepsNumber, getEpochStateView,
-                   watchEpochStateUpdate)
+                   watchEpochStateUpdate, EpochStateView)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
                    retrieveTransactionId, signTx, simpleSpendOutputsOnlyTx, spendOutputsOnlyTx,
@@ -64,6 +62,7 @@ import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog as H
+import           Hedgehog.Extras (readJsonFile, MonadAssertion)
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Test.Golden as H
 
@@ -86,6 +85,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         , cardanoNodeEra = cEra
+        , cardanoActiveSlotsCoeff = 0.5
         }
 
   TestnetRuntime
@@ -293,14 +293,16 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryGovStateCmd ->
       -- gov-state
       do
+        -- wait for the proposal stage to end
+        shelleyGenesisVal <- H.evalEitherM $ readJsonFile shelleyGeneisFile
+        newSlot <- waitForFuturePParamsToStabilise epochStateView shelleyGenesisVal
+        H.note_ $ "Current slot is: " ++ show newSlot
         -- to stdout
         output <- execCli' execConfig [ eraName, "query", "gov-state" ]
-        patchedOutput <- H.evalEither $ patchGovStateOutput output
-        H.diffVsGoldenFile patchedOutput "test/cardano-testnet-test/files/golden/queries/govStateOut.json"
+        H.diffVsGoldenFile output "test/cardano-testnet-test/files/golden/queries/govStateOut.json"
         -- to a file
         let govStateOutFile = work </> "gov-state-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "gov-state", "--out-file", govStateOutFile ]
-        patchGovStateOutputFile govStateOutFile
         H.diffFileVsGoldenFile
           govStateOutFile
           "test/cardano-testnet-test/files/golden/queries/govStateOut.json"
@@ -333,13 +335,34 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
 
   where
-  patchGovStateOutput :: String -> Either JsonDecodeError String
-  patchGovStateOutput output = do
-    eOutput <- mapLeft JsonDecodeError $ eitherDecodeStrictText (T.pack output)
-    return $ T.unpack $ decodeUtf8 $ prettyPrintJSON $ patchGovStateJSON eOutput
-    where
-      patchGovStateJSON :: Aeson.Object -> Aeson.Object
-      patchGovStateJSON = Aeson.delete "futurePParams"
+  -- | Wait for the part of the epoch when futurePParams are known
+  waitForFuturePParamsToStabilise
+    :: HasCallStack
+    => MonadIO m
+    => MonadTest m
+    => MonadAssertion m
+    => MonadCatch m
+    => EpochStateView
+    -> ShelleyGenesis StandardCrypto
+    -> m SlotNo -- ^ The block number reached
+  waitForFuturePParamsToStabilise epochStateView shelleyGenesisConf = withFrozenCallStack $
+    H.noteShowM . H.nothingFailM $
+      watchEpochStateUpdate epochStateView (EpochInterval 2) $ \(_, slotNo, _) -> do
+        pure $ if areFuturePParamsStable shelleyGenesisConf slotNo
+               then Just slotNo
+               else Nothing
+
+  areFuturePParamsStable :: ShelleyGenesis StandardCrypto -> SlotNo -> Bool
+  areFuturePParamsStable
+    ShelleyGenesis{ Api.sgActiveSlotsCoeff = activeSlotsCoeff
+                  , Api.sgEpochLength = L.EpochSize epochLength
+                  , Api.sgSecurityParam = securityParam
+                  }
+    (SlotNo slotNo) =
+    let firstSlotOfEpoch = slotNo `div` epochLength * epochLength
+        slotsInEpochToWaitOut = ceiling (4 * fromIntegral securityParam / unboundRational activeSlotsCoeff) + 1
+        minSlotInThisEpochToWaitTo = firstSlotOfEpoch + slotsInEpochToWaitOut + 1
+    in slotNo >= minSlotInThisEpochToWaitTo
 
   readVerificationKeyFromFile :: (MonadIO m, MonadCatch m, MonadTest m,  HasTextEnvelope (VerificationKey keyrole), SerialiseAsBech32 (VerificationKey keyrole))
     => AsType keyrole
@@ -352,12 +375,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
   verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
     makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
-
-  patchGovStateOutputFile :: (MonadTest m, MonadIO m) => FilePath -> m ()
-  patchGovStateOutputFile fp = do
-    fileContents <- liftIO $ readFile fp
-    patchedOutput <- H.evalEither $ patchGovStateOutput fileContents
-    liftIO $ writeFile fp patchedOutput
 
   getTxIx :: forall m era. MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
   getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
