@@ -264,11 +264,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       do
         -- Set up files and vars
         refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
-        alwaysSucceedsSpendingPlutusPath <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+        plutusV3Script <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
         let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
         txBody <- spendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
-                    [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, transferAmount)]
+                    [(ReferenceScriptAddress plutusV3Script, transferAmount)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
         -- Wait until transaction is on chain and obtain transaction identifier
