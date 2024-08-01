@@ -2,8 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Process.Cli.Transaction
-  ( buildSimpleTransferTx
-  , buildTransferTx
+  ( simpleSpendOutputsOnlyTx
+  , spendOutputsOnlyTx
   , signTx
   , submitTx
   , failToSubmitTx
@@ -15,6 +15,7 @@ module Testnet.Process.Cli.Transaction
   ) where
 
 import           Cardano.Api hiding (Certificate, TxBody)
+import           Cardano.Api.Ledger (Coin (unCoin))
 
 import           Prelude
 
@@ -44,16 +45,19 @@ data SignedTx
 
 data ReferenceScriptJSON
 
-data TxOutAddress = PKAddress PaymentKeyInfo
+data TxOutAddress = PubKeyAddress PaymentKeyInfo
                   | ReferenceScriptAddress (File ReferenceScriptJSON In)
+                  -- ^ The output will be created at the script address
 
--- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
--- the specified key pairs.
--- This function takes five parameters:
+-- | Calls @cardano-cli@ to build a simple ADA transfer transaction to
+-- the specified outputs of the specified amount of ADA. In the case of
+-- a reference script address, the output will be the corresponding script
+-- address, and the script will be published as a reference script in
+-- the output.
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
-buildTransferTx
+spendOutputsOnlyTx
   :: HasCallStack
   => Typeable era
   => H.MonadAssertion m
@@ -67,9 +71,9 @@ buildTransferTx
   -> FilePath -- ^ Base directory path where the unsigned transaction file will be stored.
   -> String -- ^ Prefix for the output unsigned transaction file name. The extension will be @.txbody@.
   -> PaymentKeyInfo -- ^ Payment key pair used for paying the transaction.
-  -> [(TxOutAddress, Int)] -- ^ List of pairs of transaction output addresses and amounts.
+  -> [(TxOutAddress, Coin)] -- ^ List of pairs of transaction output addresses and amounts.
   -> m (File TxBody In)
-buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
+spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
 
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe srcWallet
   fixedTxOuts :: [String] <- computeTxOuts
@@ -88,25 +92,24 @@ buildTransferTx execConfig epochStateView sbe work prefix srcWallet txOutputs = 
     srcAddress = T.unpack $ paymentKeyInfoAddr srcWallet
     computeTxOuts = concat <$> sequence
       [ case txOut of
-          PKAddress dstWallet ->
-            return ["--tx-out", T.unpack (paymentKeyInfoAddr dstWallet) <> "+" ++ show amount ]
+          PubKeyAddress dstWallet ->
+            return ["--tx-out", T.unpack (paymentKeyInfoAddr dstWallet) <> "+" ++ show (unCoin amount) ]
           ReferenceScriptAddress (File referenceScriptJSON) -> do
             scriptAddress <- execCli' execConfig [ anyEraToString cEra, "address", "build"
                                                  , "--payment-script-file", referenceScriptJSON
                                                  ]
-            return [ "--tx-out", scriptAddress <> "+" ++ show amount
+            return [ "--tx-out", scriptAddress <> "+" ++ show (unCoin amount)
                    , "--tx-out-reference-script-file", referenceScriptJSON
                    ]
       | (txOut, amount) <- txOutputs
       ]
 
--- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
--- the specified key pairs.
--- This function takes five parameters:
+-- | Calls @cardano-cli@ to build a simple ADA transfer transaction to
+-- transfer to the specified recipient the specified amount of ADA.
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
-buildSimpleTransferTx
+simpleSpendOutputsOnlyTx
   :: HasCallStack
   => Typeable era
   => H.MonadAssertion m
@@ -121,10 +124,10 @@ buildSimpleTransferTx
   -> String -- ^ Prefix for the output unsigned transaction file name. The extension will be @.txbody@.
   -> PaymentKeyInfo -- ^ Payment key pair used for paying the transaction.
   -> PaymentKeyInfo -- ^ Payment key of the recipient of the transaction.
-  -> Int -- ^ Amount of ADA to transfer (in Lovelace).
+  -> Coin -- ^ Amount of ADA to transfer (in Lovelace).
   -> m (File TxBody In)
-buildSimpleTransferTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
-  buildTransferTx execConfig epochStateView sbe work prefix srcWallet [(PKAddress dstWallet, amount)]
+simpleSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
+  spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet [(PubKeyAddress dstWallet, amount)]
 
 -- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
 --

@@ -37,6 +37,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import           Data.Data (type (:~:) (Refl))
+import           Data.Either.Extra (mapLeft)
 import qualified Data.Map as Map
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
@@ -52,7 +53,8 @@ import           Testnet.Components.Query (checkDRepsNumber, getEpochStateView,
                    watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
-                   buildSimpleTransferTx, buildTransferTx, retrieveTransactionId, signTx, submitTx)
+                   retrieveTransactionId, signTx, simpleSpendOutputsOnlyTx, spendOutputsOnlyTx,
+                   submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
@@ -245,7 +247,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "next-tx" ]
         -- Now we create a transaction and check if it exists in the mempool
         mempoolWork <- H.createDirectoryIfMissing $ work </> "mempool-test"
-        txBody <- buildSimpleTransferTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
+        txBody <- simpleSpendOutputsOnlyTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
         signedTx <- signTx execConfig cEra mempoolWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet0]
         submitTx execConfig cEra signedTx
         txId <- retrieveTransactionId execConfig signedTx
@@ -262,11 +264,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       do
         -- Set up files and vars
         refScriptSizeWork <- H.createDirectoryIfMissing $ work </> "ref-script-size-test"
-        alwaysSucceedsSpendingPlutusPath <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
-        let transferAmount = 10_000_000
+        plutusV3Script <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
+        let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
-        txBody <- buildTransferTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
-                    [(ReferenceScriptAddress alwaysSucceedsSpendingPlutusPath, transferAmount)]
+        txBody <- spendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
+                    [(ReferenceScriptAddress plutusV3Script, transferAmount)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
         -- Wait until transaction is on chain and obtain transaction identifier
@@ -339,9 +341,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         "test/cardano-testnet-test/files/golden/queries/treasuryOut.txt"
 
   where
-  patchGovStateOutput :: String -> Either String String
+  patchGovStateOutput :: String -> Either JsonDecodeError String
   patchGovStateOutput output = do
-    eOutput <- eitherDecodeStrictText (T.pack output)
+    eOutput <- mapLeft JsonDecodeError $ eitherDecodeStrictText (T.pack output)
     return $ T.unpack $ decodeUtf8 $ prettyPrintJSON $ patchGovStateJSON eOutput
     where
       patchGovStateJSON :: Aeson.Object -> Aeson.Object
@@ -365,14 +367,14 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     patchedOutput <- H.evalEither $ patchGovStateOutput fileContents
     liftIO $ writeFile fp patchedOutput
 
-  getTxIx :: forall m era. MonadTest m => ShelleyBasedEra era -> String -> Int -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
+  getTxIx :: forall m era. MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
   getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
     Refl <- H.leftFail $ assertErasEqual sbe sbe'
     shelleyBasedEraConstraints sbe' (do
       return $ Map.foldlWithKey (\acc (L.TxIn (L.TxId thisTxId) (L.TxIx thisTxIx)) txOut ->
         case acc of
           Nothing | hashToStringAsHex (extractHash thisTxId) == txId &&
-                    valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just (Coin (fromIntegral amount)) -> Just $ fromIntegral thisTxIx
+                    valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just amount -> Just $ fromIntegral thisTxIx
                   | otherwise -> Nothing
           x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosUtxoL)
 
