@@ -47,10 +47,13 @@ data ReferenceScriptJSON
 
 data TxOutAddress = PubKeyAddress PaymentKeyInfo
                   | ReferenceScriptAddress (File ReferenceScriptJSON In)
+                  -- ^ The output will be created at the script address
 
--- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
--- the specified key pairs.
--- This function takes five parameters:
+-- | Calls @cardano-cli@ to build a simple ADA transfer transaction to
+-- the specified outputs of the specified amount of ADA. In the case of
+-- a reference script address, the output will be the corresponding script
+-- address, and the script will be published as a reference script in
+-- the output.
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
@@ -101,9 +104,8 @@ spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs
       | (txOut, amount) <- txOutputs
       ]
 
--- | Calls @cardano-cli@ to sign a simple ADA transfer transaction using
--- the specified key pairs.
--- This function takes five parameters:
+-- | Calls @cardano-cli@ to build a simple ADA transfer transaction to
+-- transfer to the specified recipient the specified amount of ADA.
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
