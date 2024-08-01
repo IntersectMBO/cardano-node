@@ -61,7 +61,7 @@ import           Testnet.Components.Query (watchEpochStateUpdate, checkDRepsNumb
                    watchEpochStateUpdate )
 import           Testnet.Components.Configuration (eraToString)
 import qualified Testnet.Defaults as Defaults
-import Testnet.Process.Cli.Transaction (signTx, submitTx, retrieveTransactionId, TxOutAddress(ReferenceScriptAddress),
+import           Testnet.Process.Cli.Transaction (signTx, submitTx, retrieveTransactionId, TxOutAddress(ReferenceScriptAddress),
                    TxOutAddress(ReferenceScriptAddress), signTx, submitTx, retrieveTransactionId, retrieveTransactionId,
                    signTx, submitTx, mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx )
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
