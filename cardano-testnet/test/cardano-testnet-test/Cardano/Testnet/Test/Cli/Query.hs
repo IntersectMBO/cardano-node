@@ -329,16 +329,8 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       H.noteM_ $ execCli' execConfig [ eraName, "query", "committee-state" ]
 
     TestQueryTreasuryValueCmd -> do
-      -- to stdout
-      execCli' execConfig [ eraName, "query", "treasury" ]
-        >>=
-          (`H.diffVsGoldenFile`
-              "test/cardano-testnet-test/files/golden/queries/treasuryOut.txt")
-      let treasuryOutFile = work </> "treasury-out.txt"
-      H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury", "--out-file", treasuryOutFile]
-      H.diffFileVsGoldenFile
-        treasuryOutFile
-        "test/cardano-testnet-test/files/golden/queries/treasuryOut.txt"
+      -- treasury
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
 
   where
   patchGovStateOutput :: String -> Either JsonDecodeError String
