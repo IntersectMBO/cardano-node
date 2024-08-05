@@ -425,6 +425,9 @@ runChainCommand s@State{sMultiSummary=Just summ@Summary{..}}
 runChainCommand _ c@WriteMetaGenesis{} = missingCommandData c
   ["multi objects"]
 
+-- | Slots are input here, in the `Unlog` command.
+--   `runLiftLogObjects` does the IO and `Aeson` processing with
+--   `readLogObjectStream` as a helper.
 runChainCommand s
   c@(Unlog rlf okDErr loAnyLimit) = do
   progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
@@ -537,6 +540,8 @@ runChainCommand s@State{sRun=Just _run, sChain=Just Chain{..}}
 runChainCommand _ c@TimelineChain{} = missingCommandData c
   ["run metadata & genesis", "chain"]
 
+-- | `CollectSlots` is the step slots make from `sRunLogs` to
+--   `sSlotsRaw`. `deltifySlotStats` is the crucial post-processing after
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   c@(CollectSlots ignores) = do
   let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
@@ -544,6 +549,17 @@ runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
     progress "perf-ignored-log" . R . unJsonLogfile
   progress "slots" (Q $ printf "building slot %d timelines" $ length objs)
   (scalars, slotsRaw) <-
+    -- `mapAndUnzip` just maps using a function producing a pair and
+    -- unzips the result. `redistribute` just takes a triple in the
+    -- form of (t1, (t2, t3)) mapping it to ((t1, t2), (t1, t3)),
+    -- repeating the first component to pair it with both halves of the
+    -- second component. `collectSlotStats` just maps coalescing the log
+    -- entries into per- (time) slot structures collecting everything
+    -- described in one of the `LogObject` lists, done in parallel across
+    -- the distinct log files. `deltifySlotStats` then differences the
+    -- timestamps within a slot against the `Genesis` to provide a
+    -- relative slot start time, and then differences other fields
+    -- against each other and that baseline to measure timings.
     fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
     & firstExceptT (CommandError c)
@@ -560,6 +576,8 @@ runChainCommand s@State{sSlotsRaw=Just slotsRaw}
 runChainCommand _ c@DumpSlotsRaw = missingCommandData c
   ["unfiltered slots"]
 
+-- | `FilterSlots` takes raw slots in `sSlotsRaw` and cleans them up to
+--   be put at long last in `sSlots` for consumption by higher-level code.
 runChainCommand s@State{sRun=Just run, sSlotsRaw=Just slotsRaw}
   c@(FilterSlots fltfs fltExprs) = do
   progress "slots" (Q $ printf "filtering %d slot timelines" $ length slotsRaw)
@@ -591,6 +609,7 @@ runChainCommand s@State{sSlots=Just slots}
 runChainCommand _ c@DumpSlots = missingCommandData c
   ["filtered slots"]
 
+-- | `TimelineSlots` exports the processed slots in renderable form.
 runChainCommand s@State{sRun=Just _run, sSlots=Just slots}
   c@(TimelineSlots rc comments) = do
   progress "mach" (Q $ printf "dumping %d slot timelines: %s" (length slots) (show rc :: String))
