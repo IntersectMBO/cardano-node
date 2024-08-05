@@ -147,7 +147,7 @@ in with final;
   all-profiles-json = workbench.profile-names-json;
 
   # Disable failing python uvloop tests
-  python38 = prev.python38.override {
+  python39 = prev.python39.override {
     packageOverrides = pythonFinal: pythonPrev: {
       uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
         disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" "tests/test_dns.py" ];
