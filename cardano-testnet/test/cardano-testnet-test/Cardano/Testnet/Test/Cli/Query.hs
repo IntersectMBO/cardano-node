@@ -85,6 +85,8 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         , cardanoNodeEra = cEra
+        -- We change slotCoeff because epochLength must be equal to:
+        -- securityParam * 10 / slotCoeff
         , cardanoActiveSlotsCoeff = 0.5
         }
 
@@ -352,6 +354,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
                then Just slotNo
                else Nothing
 
+  -- We wait till a slot after: 4 * securityParam / slotCoeff
+  -- If we query 'govState' before that we get 'PotentialPParamsUpdate'
+  -- in 'futurePParams' field
   areFuturePParamsStable :: ShelleyGenesis StandardCrypto -> SlotNo -> Bool
   areFuturePParamsStable
     ShelleyGenesis{ Api.sgActiveSlotsCoeff = activeSlotsCoeff
