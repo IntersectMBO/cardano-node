@@ -51,7 +51,7 @@ import           Testnet.Components.Query (checkDRepsNumber, getEpochStateView,
                    watchEpochStateUpdate, EpochStateView)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
-                   retrieveTransactionId, signTx, simpleSpendOutputsOnlyTx, spendOutputsOnlyTx,
+                   retrieveTransactionId, signTx, mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx,
                    submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
@@ -112,7 +112,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
 
   checkDRepsNumber epochStateView sbe 3
 
-  -- If we don't wait, the leadershi-schedule test will say SPO has no stake
+  -- If we don't wait, the leadership-schedule test will say SPO has no stake
   _ <- waitForEpochs epochStateView (EpochInterval 1)
 
   forallQueryCommands $ \case
@@ -247,7 +247,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         H.noteM_ $ execCli' execConfig [ eraName, "query", "tx-mempool", "next-tx" ]
         -- Now we create a transaction and check if it exists in the mempool
         mempoolWork <- H.createDirectoryIfMissing $ work </> "mempool-test"
-        txBody <- simpleSpendOutputsOnlyTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
+        txBody <- mkSimpleSpendOutputsOnlyTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
         signedTx <- signTx execConfig cEra mempoolWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet0]
         submitTx execConfig cEra signedTx
         txId <- retrieveTransactionId execConfig signedTx
@@ -267,7 +267,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         plutusV3Script <- File <$> liftIO (makeAbsolute "test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus")
         let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
-        txBody <- spendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
+        txBody <- mkSpendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
                     [(ReferenceScriptAddress plutusV3Script, transferAmount)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
@@ -364,7 +364,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         minSlotInThisEpochToWaitTo = firstSlotOfEpoch + slotsInEpochToWaitOut + 1
     in slotNo >= minSlotInThisEpochToWaitTo
 
-  readVerificationKeyFromFile :: (MonadIO m, MonadCatch m, MonadTest m,  HasTextEnvelope (VerificationKey keyrole), SerialiseAsBech32 (VerificationKey keyrole))
+  readVerificationKeyFromFile :: (HasCallStack, MonadIO m, MonadCatch m, MonadTest m,  HasTextEnvelope (VerificationKey keyrole), SerialiseAsBech32 (VerificationKey keyrole))
     => AsType keyrole
     -> FilePath
     -> File content direction
@@ -376,7 +376,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
     makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
 
-  getTxIx :: forall m era. MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
+  getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
   getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
     Refl <- H.leftFail $ assertErasEqual sbe sbe'
     shelleyBasedEraConstraints sbe' (do
