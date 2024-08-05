@@ -1,12 +1,12 @@
 Usage: cardano-testnet (cardano | version | help)
 
 Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
-  [ --byron-era
-  | --shelley-era
+  [ --shelley-era
   | --allegra-era
   | --mary-era
   | --alonzo-era
   | --babbage-era
+  | --conway-era
   ]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
