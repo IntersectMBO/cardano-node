@@ -17,9 +17,14 @@ extra-doc-files:        README.md
                         CHANGELOG.md
 
 flag rtview
-  Description: Enable RTView. False by default. Enable with `-f +rtview`.
-  Default: False
-  Manual:  True
+  description:          Enable RTView. False by default. Enable with `-f +rtview`.
+  default:              False
+  manual:               True
+
+flag systemd
+  description:          Enable systemd support.
+  default:              True
+  manual:               True
 
 common project-config
   default-language:     Haskell2010
@@ -34,6 +39,9 @@ common project-config
                       , ScopedTypeVariables
                       , StandaloneKindSignatures
                       , TypeApplications
+
+  if flag(systemd) && os(linux)
+    cpp-options:        -DSYSTEMD
 
   if flag(rtview)
     CPP-Options:        -DRTVIEW=1
@@ -185,7 +193,7 @@ library
                       , unordered-containers
                       , yaml
 
-  if os(linux)
+  if flag(systemd) && os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
 
   if os(windows)
@@ -246,6 +254,7 @@ library demo-forwarder-lib
                       , vector
                       , vector-algorithms
                       , QuickCheck
+
 
 executable demo-forwarder
   import:               project-config

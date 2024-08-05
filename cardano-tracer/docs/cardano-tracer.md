@@ -32,6 +32,10 @@ You can think of Cardano node as a **producer** of logging/monitoring informatio
 
 There are 3 kinds of such an information:
 
+> Attention: systemd is enabled by default on Linux. It can be
+> disabled manually with a cabal flag: `-f -systemd` when building on
+> systems without it.
+
 1. Trace object, which contains different logging data. `cardano-tracer` constantly asks for new trace objects each `N` seconds, receives them and stores them in the log files and/or in Linux `systemd`'s journal.
 2. EKG metric, which contains some system metric. Please [read EKG documentation](https://hackage.haskell.org/package/ekg-core) for more info. `cardano-tracer` constantly asks for new EKG metrics each `N` seconds, receives them and displays them using monitoring tools.
 3. Data points, which contains arbitrary information about the node. Please note that `cardano-tracer` asks for new data points only by _explicit_ request when it needs it, there is no constant asking.
