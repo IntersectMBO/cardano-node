@@ -2,8 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Process.Cli.Transaction
-  ( simpleSpendOutputsOnlyTx
-  , spendOutputsOnlyTx
+  ( mkSimpleSpendOutputsOnlyTx
+  , mkSpendOutputsOnlyTx
   , signTx
   , submitTx
   , failToSubmitTx
@@ -57,7 +57,7 @@ data TxOutAddress = PubKeyAddress PaymentKeyInfo
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
-spendOutputsOnlyTx
+mkSpendOutputsOnlyTx
   :: HasCallStack
   => Typeable era
   => H.MonadAssertion m
@@ -73,7 +73,7 @@ spendOutputsOnlyTx
   -> PaymentKeyInfo -- ^ Payment key pair used for paying the transaction.
   -> [(TxOutAddress, Coin)] -- ^ List of pairs of transaction output addresses and amounts.
   -> m (File TxBody In)
-spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
+mkSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
 
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe srcWallet
   fixedTxOuts :: [String] <- computeTxOuts
@@ -109,7 +109,7 @@ spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
-simpleSpendOutputsOnlyTx
+mkSimpleSpendOutputsOnlyTx
   :: HasCallStack
   => Typeable era
   => H.MonadAssertion m
@@ -126,8 +126,8 @@ simpleSpendOutputsOnlyTx
   -> PaymentKeyInfo -- ^ Payment key of the recipient of the transaction.
   -> Coin -- ^ Amount of ADA to transfer (in Lovelace).
   -> m (File TxBody In)
-simpleSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
-  spendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet [(PubKeyAddress dstWallet, amount)]
+mkSimpleSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet dstWallet amount =
+  mkSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet [(PubKeyAddress dstWallet, amount)]
 
 -- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
 --
