@@ -97,7 +97,7 @@ in with final;
 
   profiteur = haskell-nix.tool compiler-nix-name "profiteur" {
     cabalProjectLocal = ''
-      allow-newer: pofiteur:base, ghc-prof:base
+      allow-newer: profiteur:base, ghc-prof:base
     '';
   };
 
