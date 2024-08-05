@@ -14,6 +14,8 @@ module Cardano.Benchmarking.Profile.Builtin.ForgeStress (
 
 import           Prelude
 import           Data.Function ((&))
+-- Package: time.
+import qualified Data.Time as Time
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
@@ -48,11 +50,27 @@ durationXL = V.timescaleCompressed . P.shutdownOnSlot 4800
 
 --------------------------------------------------------------------------------
 
+timescaleUTXOHD :: Types.Profile -> Types.Profile
+timescaleUTXOHD =
+    P.slotDuration 1 . P.epochLength 300
+  . P.activeSlotsCoeff 0.25 . P.parameterK 3
+
+extraFutureOffset :: Time.NominalDiffTime
+extraFutureOffset = 3 * 3 / 0.25
+
+durationUTXOHD :: Types.Profile -> Types.Profile
+durationUTXOHD = timescaleUTXOHD . P.shutdownOnSlot 1200
+               . P.analysisEpoch3Plus
+
+valueUTXOHD :: Types.Profile -> Types.Profile
+valueUTXOHD = P.txIn 25 . P.txOut 25 . P.txFee 1000000 . P.tps 15
+
 profilesNoEraForgeStress :: [Types.Profile]
 profilesNoEraForgeStress =
   let fs = P.empty & base
       -- Helpers by composition size:
       n1 = V.genesisVariantLast . V.hosts 1 -- TODO: Why "forge-stress*solo*" is the only one not using epoch 300 ???
+      n2 = V.genesisVariantLast . V.hosts 2 -- TODO: Why "forge-stress*solo*" is the only one not using epoch 300 ???
       n3 = V.genesisVariant300  . V.hosts 3
       n6 = V.genesisVariant300  . V.hosts 6
   in [
@@ -64,6 +82,8 @@ profilesNoEraForgeStress =
   , fs & P.name "forge-stress-pre-solo-xs"   . V.valueLocal . n1 . V.datasetOct2021 . durationXS . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo"      . V.valueLocal . n1 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-pre-solo-xl"   . V.valueLocal . n1 . V.datasetOct2021 . durationXL . P.traceForwardingOn                                         
+  -- 2 node versions (pre).
+  , fs & P.name "forge-stress-utxohd-duo"    . valueUTXOHD  . n2 . V.datasetCurrent . durationUTXOHD . P.traceForwardingOn . P.extraFutureOffset extraFutureOffset
   -- 3 nodes versions (non-pre).
   , fs & P.name "forge-stress"               . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-notracer"      . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOff                                        . P.analysisUnitary

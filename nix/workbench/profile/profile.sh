@@ -32,39 +32,16 @@ local op=${1:-$profile_default_op}; test $# -gt 0 && shift
 
 case "$op" in
     profile-names | names | list | lsp )
-        if test "${WB_CARDANO_PROFILE:-0}" != "0"
-        then
-            cardano-profile names
-        else
-            profile all-profiles | jq 'keys'
-        fi;;
+        cardano-profile names;;
 
     all-profiles | all )
-        if test "${WB_CARDANO_PROFILE:-0}" != "0"
-        then
-            cardano-profile all
-        else
-            with_era_profiles '
-              map (generate_all_era_profiles(.; null; null))
-              | add
-            '
-        fi;;
+        cardano-profile all;;
 
     has-profile )
         local usage="USAGE: wb profile $op NAME"
         local name=${1:?$usage}
 
-        if test "${WB_CARDANO_PROFILE:-0}" != "0"
-        then
-            profile profile-names | jq --exit-status --arg name "$name" 'map (. == $name) | any' >/dev/null
-        else
-            with_era_profiles '
-              map (generate_all_era_profiles(.; null; null)
-                   | map (.name == $name)
-                   | any)
-              | any
-            ' --exit-status --arg name "$name" >/dev/null
-        fi;;
+        profile profile-names | jq --exit-status --arg name "$name" 'map (. == $name) | any' >/dev/null;;
 
     ## XXX:  does not respect overlays!!
     compose )
