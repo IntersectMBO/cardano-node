@@ -554,8 +554,9 @@ lookupTextRef ref = Map.findWithDefault Text.empty ref dict
   where
     dict    = Map.fromList [(hash t, t) | t <- concat [allKeys, kinds, legacy, newTr]]
     kinds   = map ("Cardano.Node." <>) allKeys
-    allKeys = concatMap Map.keys [fst3 interpreters, snd3 interpreters, thd3 interpreters]
-              & filter (not . Text.null)
+    allKeys = concatMap
+                (filter (not . Text.null) . Map.keys)
+                [fst3 interpreters, snd3 interpreters, thd3 interpreters]
 
     -- common string parses from legacy tracing with no known interpreter
     legacy = map ("cardano.node." <>)

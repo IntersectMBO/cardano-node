@@ -378,7 +378,7 @@ callComputeSummary =
 stateAnchor :: [Text] -> State -> Anchor
 stateAnchor tags State{sFilters, sWhen, sClusterPerf, sChain} =
   tagsAnchor tags sWhen sFilters
-             ((sClusterPerf <&> fmap (head . mpDomainSlots) . head & join.join) <|>
+             (join ((fmap (head . mpDomainSlots) . head) =<< sClusterPerf) <|>
               (sChain       <&> cDomSlots))
              (sChain        <&> cDomBlocks)
 

@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 {- HLINT ignore "Use map" -}
@@ -128,7 +129,7 @@ mkGenesisTransaction key ttl fee txins txouts
       (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   txBodyContent = defaultTxBodyContent shelleyBasedEra
-    & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
+    & setTxIns (map (, BuildTxWith $ KeyWitness KeyWitnessForSpending) txins)
     & setTxOuts txouts
     & setTxFee (mkTxFee fee)
     & setTxValidityLowerBound TxValidityNoLowerBound

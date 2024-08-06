@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Test.Unlog.Org where
 

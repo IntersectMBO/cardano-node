@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 #if __GLASGOW_HASKELL__ >= 908
