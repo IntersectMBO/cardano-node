@@ -7,8 +7,8 @@ include nix.mk
 PROJECT_NAME = cardano-node
 NUM_PROC     = $(shell nproc --all)
 
-## One of:  shey alra mary alzo bage
-ERA     ?= bage
+## One of: coay shey alra mary alzo bage
+ERA     ?= coay
 
 PROFILE ?= default-${ERA}
 BACKEND ?= supervisor
