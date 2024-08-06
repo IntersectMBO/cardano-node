@@ -5,7 +5,7 @@ include lib.mk
 include nix.mk
 
 PROJECT_NAME = cardano-node
-NUM_PROC     = $(nproc --all)
+NUM_PROC     = $(shell nproc --all)
 
 ## One of:  shey alra mary alzo bage
 ERA     ?= bage
