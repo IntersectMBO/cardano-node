@@ -395,7 +395,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 $ StartupSocketConfigError err
         Exception.throwIO err
 
-  dbPath <- canonDbPath nc
+  _dbPath <- canonDbPath nc
 
   publicPeerSelectionVar <- Diffusion.makePublicPeerSelectionStateVar
   let diffusionArguments :: Diffusion.Arguments IO Socket      RemoteAddress
@@ -456,7 +456,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         useLedgerVar   <- newTVarIO ntUseLedgerPeers
         useBootstrapVar <- newTVarIO ntUseBootstrapPeers
         let nodeArgs = RunNodeArgs
-              { rnTraceConsensus = consensusTracers tracers
+              { rnGenesisConfig  = error "TODO"
+              , rnTraceConsensus = consensusTracers tracers
               , rnTraceNTN       = nodeToNodeTracers tracers
               , rnTraceNTC       = nodeToClientTracers tracers
               , rnProtocolInfo   = pInfo
@@ -512,7 +513,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
               , srnDiskPolicyArgs               = diskPolicyArgs
-              , srnDatabasePath                 = dbPath
+              , srnDatabasePath                 = error "srnDatabasePath: dbPath"
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
               , srnDiffusionTracers             = diffusionTracers tracers
@@ -539,7 +540,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            (length ipProducerAddrs)
 
             nodeArgs = RunNodeArgs
-                { rnTraceConsensus = consensusTracers tracers
+                { rnGenesisConfig  = error "TODO" 
+                , rnTraceConsensus = consensusTracers tracers
                 , rnTraceNTN       = nodeToNodeTracers tracers
                 , rnTraceNTC       = nodeToClientTracers tracers
                 , rnProtocolInfo   = pInfo
@@ -585,7 +587,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
               , srnDiskPolicyArgs              = diskPolicyArgs
-              , srnDatabasePath                = dbPath
+              , srnDatabasePath                = error "srnDatabasePath: dbPath"
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
               , srnDiffusionTracers            = diffusionTracers tracers

@@ -332,6 +332,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            <> traceWith chainSyncServerHeaderMetricsTr
       , Consensus.chainSyncServerBlockTracer = Tracer $
           traceWith chainSyncServerBlockTr
+      , Consensus.consensusSanityCheckTracer = error "TODO"
       , Consensus.blockFetchDecisionTracer = Tracer $
           traceWith blockFetchDecisionTr
       , Consensus.blockFetchClientTracer = Tracer $
@@ -341,6 +342,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith blockFetchServerTr
       , Consensus.forgeStateInfoTracer = Tracer $
           traceWith (traceAsKESInfo (Proxy @blk) forgeKESInfoTr)
+      , Consensus.gddTracer = error "TODO"
       , Consensus.txInboundTracer = Tracer $
            traceWith txInboundTr
       , Consensus.txOutboundTracer = Tracer $
