@@ -35,14 +35,22 @@ import           Prelude
 import           Control.Monad (forM_)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encode.Pretty as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
 import           Data.Data (type (:~:) (Refl))
 import qualified Data.Map as Map
-import           Data.String (IsString (fromString))
+import           Data.String
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Vector as Vector
+import           GHC.Exts (IsList (..))
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import qualified GHC.Stack as GHC
 import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
@@ -315,14 +323,21 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         -- to stdout
         -- TODO: deserialize to a Haskell value when
         -- https://github.com/IntersectMBO/cardano-cli/issues/606 is tackled
-        dreps :: Aeson.Value <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-state", "--all-dreps" ]
-        assertArrayOfSize dreps 3
+        dreps <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-state", "--all-dreps", "--include-stake"]
+        let drepsRedacted = redactJsonFields (fromList [("keyHash", "<redacted>")]) dreps
+        H.diffVsGoldenFile
+          (TL.unpack . TL.decodeUtf8 $ Aeson.encodePretty drepsRedacted)
+          "test/cardano-testnet-test/files/golden/queries/drepStateOut.json"
+
         -- to a file
         let drepStateOutFile = work </> "drep-state-out.json"
+            drepStateRedactedOutFile = work </> "drep-state-out-redacted.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "drep-state", "--all-dreps"
-                                       , "--out-file", drepStateOutFile ]
-        _ :: Aeson.Value <- H.readJsonFileOk drepStateOutFile
-        pure ()
+                                       , "--include-stake", "--out-file", drepStateOutFile]
+        redactJsonFieldsInFile (fromList [("keyHash", "<redacted>")]) drepStateOutFile drepStateRedactedOutFile
+        H.diffFileVsGoldenFile
+          drepStateRedactedOutFile
+          "test/cardano-testnet-test/files/golden/queries/drepStateOut.json"
 
     TestQueryDRepStakeDistributionCmd ->
       -- drep-stake-distribution
@@ -392,30 +407,42 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
                   | otherwise -> Nothing
           x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosUtxoL)
 
--- | @assertArrayOfSize v n@ checks that the value is a JSON array of size @n@,
--- otherwise it fails the test.
-assertArrayOfSize :: ()
-  => HasCallStack
+-- | @redactJsonStringFieldInFile [(k0, v0), (k1, v1), ..] sourceFilePath targetFilePath@ reads the JSON at @sourceFilePath@, and then
+-- replaces the value associated to @k0@ by @v0@, replaces the value associated to @k1@ by @v1@, etc.
+-- Then the obtained JSON is written to @targetFilePath@. This replacement is done recursively
+-- so @k0@, @k1@, etc. can appear at any depth within the JSON.
+redactJsonFieldsInFile
+  :: ()
   => MonadTest m
-  => Aeson.Value
-  -> Int
+  => MonadIO m
+  => HasCallStack
+  => Map.Map Text Text -- ^ Map from key name, to the new (String) value to attach to this key
+  -> FilePath
+  -> FilePath
   -> m ()
-assertArrayOfSize v n =
-  case v of
-    Aeson.Array a -> do
-      let actualLength = Vector.length a
-      if actualLength == n
-      then H.success
-      else do
-        H.note_ $ "Expected an array of length " <> show n <> ", but got: " <> show actualLength
-        H.failure
-    Aeson.Object _ -> failWrongType "object"
-    Aeson.Bool _   -> failWrongType "bool"
-    Aeson.Number _ -> failWrongType "number"
-    Aeson.Null     -> failWrongType "null"
-    Aeson.String _ -> failWrongType "string"
-   where
-     failWrongType got = do
-       H.note_ $ "Expected a JSON object, but received: " <> got
-       H.failure
+redactJsonFieldsInFile changes sourceFilePath targetFilePath = GHC.withFrozenCallStack $ do
+  contents <- H.evalIO $ LBS.readFile sourceFilePath
+  case Aeson.eitherDecode contents :: Either String Aeson.Value of
+    Left err -> do
+      H.note_ $ "Failed to decode JSON: " <> err
+      H.success
+    Right json -> do
+      let redactedJson = redactJsonFields changes json
+      H.evalIO $ LBS.writeFile targetFilePath $ Aeson.encodePretty redactedJson
 
+redactJsonFields :: () => Map.Map Text Text -> Aeson.Value -> Aeson.Value
+redactJsonFields changes v =
+  case v of
+    Aeson.Object object ->
+      let object' = Aeson.mapWithKey
+                      (\k v' ->
+                        case Map.lookup (Aeson.toText k) changes of
+                          Just replacement -> Aeson.String replacement
+                          Nothing -> recurse v')
+                      object in
+          Aeson.Object object'
+    Aeson.Array vector ->
+      Aeson.Array $ Vector.map recurse vector
+    _ -> v
+  where
+    recurse = redactJsonFields changes
