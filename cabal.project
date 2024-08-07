@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-06-23T23:01:13Z
-  , cardano-haskell-packages 2024-07-24T14:16:32Z
+  , cardano-haskell-packages 2024-08-01T16:18:12Z
 
 packages:
   cardano-node
@@ -65,3 +65,71 @@ allow-newer: katip:Win32
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+
+
+
+source-repository-package
+    type: git
+    location:https://github.com/IntersectMBO/plutus.git
+    tag: 6df3318bc7b5d5ed465bc638d81b9f8a14e1cbf1
+    --sha256: sha256-D8n3prn/8ACy5K6sPcipO4mmdMvpKEsEojCmdOTUs74=
+    subdir: plutus-ledger-api
+            plutus-core
+            prettyprinter-configurable
+            plutus-tx
+            plutus-tx-plugin 
+
+
+source-repository-package
+    type: git
+    location:https://github.com/IntersectMBO/cardano-ledger.git
+    tag: 98a9c7fd491ed3174d98cc6391aa30022d60de66
+    --sha256: sha256-+C8sqCKaA3iJMiIZ/KaTpeyafGgP67PtSZ98UpZthOo=
+    subdir: eras/allegra/impl
+            eras/alonzo/impl
+            eras/alonzo/test-suite
+            eras/babbage/impl
+            eras/babbage/test-suite
+            eras/conway/impl
+            eras/conway/test-suite
+            eras/mary/impl
+            eras/shelley/impl
+            eras/shelley/test-suite
+            eras/shelley-ma/test-suite
+            libs/cardano-ledger-api
+            libs/cardano-ledger-core
+            libs/cardano-ledger-binary
+            libs/cardano-protocol-tpraos
+            libs/non-integral
+            libs/small-steps
+            libs/cardano-data
+            libs/set-algebra
+            libs/vector-map
+
+
+source-repository-package
+    type: git
+    location:https://github.com/IntersectMBO/ouroboros-consensus.git
+    tag: 4071356594a05ac4c3b6fba0cab066c0ed0ec276
+    --sha256: sha256-Y7vbKSWF+QR9OVweo3NBLHKl7SWmthIPAZZycEoICbI=
+    subdir: ouroboros-consensus
+            ouroboros-consensus-cardano
+            ouroboros-consensus-protocol
+            ouroboros-consensus-diffusion
+            sop-extras
+            strict-sop-core
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-api.git
+    tag: 126fdb207609626a02a2d4908c220e91a0c16d86
+    --sha256: sha256-GdGrxfLl8QXLUI0eAMvilW9H9hOheuyAGJ5ngQRREbE=
+    subdir: cardano-api
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-cli.git
+    tag: 88592ef252bf81791425f728c97d68564d50bff5
+    --sha256: sha256-QpszxzVwIlDcMVremzgq+G12lFlZIrwafTTII8hgjL8=
+    subdir: cardano-cli
