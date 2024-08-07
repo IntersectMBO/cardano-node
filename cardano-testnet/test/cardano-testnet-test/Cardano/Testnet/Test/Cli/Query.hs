@@ -7,6 +7,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
@@ -164,12 +165,22 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- tip
       do
         -- to stdout
-        _ :: QueryTipLocalStateOutput <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "tip" ]
-        -- to a file
+        tips :: QueryTipLocalStateOutput <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "tip" ]
+        let changes = fromList (map (, "<redacted>") ["hash", "block", "epoch", "slot", "slotInEpoch", "slotsToEpochEnd"])
+            tipsRedacted = redactJsonFields changes (Aeson.toJSON tips)
+        H.diffVsGoldenFile
+          (TL.unpack . TL.decodeUtf8 $ Aeson.encodePretty tipsRedacted)
+          "test/cardano-testnet-test/files/golden/queries/tipOut.json"
+         -- to a file
         let tipOutFile = work </> "tip-out.json"
+            tipOutRedactedFile = work </> "tip-out-redacted.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "tip"
-                                       , "--out-file", tipOutFile ]
+                                       , "--out-file", tipOutFile]
         _ :: QueryTipLocalStateOutput <- H.readJsonFileOk tipOutFile
+        redactJsonFieldsInFile changes tipOutFile tipOutRedactedFile
+        H.diffFileVsGoldenFile
+          tipOutRedactedFile
+          "test/cardano-testnet-test/files/golden/queries/tipOut.json"
         pure ()
 
     TestQueryStakePoolsCmd ->
