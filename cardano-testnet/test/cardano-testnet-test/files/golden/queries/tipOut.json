@@ -1,0 +1,10 @@
+{
+    "block": "<redacted>",
+    "epoch": "<redacted>",
+    "era": "Conway",
+    "hash": "<redacted>",
+    "slot": "<redacted>",
+    "slotInEpoch": "<redacted>",
+    "slotsToEpochEnd": "<redacted>",
+    "syncProgress": "100.00"
+}
