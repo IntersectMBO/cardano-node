@@ -4,6 +4,7 @@
 
 * Update `cardano-ping` dependency
 * Add `--num-dreps` parameter
+* Update tracing configuration for ChainSync jumping
 
 ## 8.7.0
 

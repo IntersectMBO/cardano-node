@@ -9,6 +9,8 @@
   - `--mempool-capacity-override` and `--no-mempool-capacity-override` can be set in the configuration file via the key `MempoolCapacityBytesOverride`.
   - `--snapshot-interval` can be set in the configuration file via the key `SnapshotInterval`.
   - `--num-of-disk-snapshots` can be set in the configuration file via the key `NumOfDiskSnapshots`.
+- Update tracing with Genesis messages
+- Update configuration with Genesis parameters
 
 ## 8.2.1 -- August 2023
 
