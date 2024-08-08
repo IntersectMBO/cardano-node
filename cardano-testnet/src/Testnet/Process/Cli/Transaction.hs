@@ -48,12 +48,13 @@ data ReferenceScriptJSON
 data TxOutAddress = PubKeyAddress PaymentKeyInfo
                   | ReferenceScriptAddress (File ReferenceScriptJSON In)
                   -- ^ The output will be created at the script address
+                  -- and the output will include the reference script.
 
 -- | Calls @cardano-cli@ to build a simple ADA transfer transaction to
 -- the specified outputs of the specified amount of ADA. In the case of
--- a reference script address, the output will be the corresponding script
--- address, and the script will be published as a reference script in
--- the output.
+-- a reference script address, the output will be created at the
+-- corresponding script address, and the output will contain the reference
+-- script.
 --
 -- Returns the generated @File TxBody In@ file path to the created unsigned
 -- transaction file.
@@ -77,12 +78,14 @@ mkSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutpu
 
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe srcWallet
   fixedTxOuts :: [String] <- computeTxOuts
-  void $ execCli' execConfig $
-    [ anyEraToString cEra, "transaction", "build"
-    , "--change-address", srcAddress
-    , "--tx-in", T.unpack $ renderTxIn txIn
-    ] ++ fixedTxOuts ++
-    [ "--out-file", unFile txBody
+  void $ execCli' execConfig $ mconcat
+    [ [ anyEraToString cEra, "transaction", "build"
+      , "--change-address", srcAddress
+      , "--tx-in", T.unpack $ renderTxIn txIn
+      ]
+    , fixedTxOuts
+    , [ "--out-file", unFile txBody
+      ]
     ]
   return txBody
   where
