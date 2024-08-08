@@ -18,6 +18,7 @@ module Cardano.Node.Configuration.TopologyP2P
   , PeerAdvertise(..)
   , nodeAddressToSockAddr
   , readTopologyFile
+  , readPeerSnapshotFile
   , readTopologyFileOrError
   , rootConfigToRelayAccessPoint
   )
@@ -29,9 +30,11 @@ import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
+import           Ouroboros.Network.ConsensusMode
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
+                   UseLedgerPeers (..))
 import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
@@ -41,6 +44,7 @@ import           Control.Applicative (Alternative (..))
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Exception.Base (Exception (..))
+import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson
 import           Data.Bifunctor (Bifunctor (..))
@@ -175,6 +179,7 @@ data NetworkTopology = RealNodeTopology { ntLocalRootPeersGroups :: !LocalRootPe
                                         , ntPublicRootPeers      :: ![PublicRootPeers]
                                         , ntUseLedgerPeers       :: !UseLedgerPeers
                                         , ntUseBootstrapPeers    :: !UseBootstrapPeers
+                                        , ntPeerSnapshotPath     :: !(Maybe PeerSnapshotFile)
                                         }
   deriving (Eq, Show)
 
@@ -183,7 +188,8 @@ instance FromJSON NetworkTopology where
                 RealNodeTopology <$> (o .: "localRoots"                                  )
                                  <*> (o .: "publicRoots"                                 )
                                  <*> (o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers  )
-                                 <*> (o .:? "bootstrapPeers" .!= DontUseBootstrapPeers)
+                                 <*> (o .:? "bootstrapPeers" .!= DontUseBootstrapPeers   )
+                                 <*> (o .:? "peerSnapshotFile")
 
 instance ToJSON NetworkTopology where
   toJSON top =
@@ -192,10 +198,12 @@ instance ToJSON NetworkTopology where
                        , ntPublicRootPeers
                        , ntUseLedgerPeers
                        , ntUseBootstrapPeers
+                       , ntPeerSnapshotPath
                        } -> object [ "localRoots"         .= ntLocalRootPeersGroups
                                    , "publicRoots"        .= ntPublicRootPeers
                                    , "useLedgerAfterSlot" .= ntUseLedgerPeers
                                    , "bootstrapPeers"     .= ntUseBootstrapPeers
+                                   , "peerSnapshotFile"   .= ntPeerSnapshotPath
                                    ]
 
 --
@@ -235,7 +243,8 @@ instance FromJSON (Legacy NetworkTopology) where
               RealNodeTopology <$> fmap getLegacy (o .: "LocalRoots")
                                <*> fmap getLegacy (o .: "PublicRoots")
                                <*> (o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers)
-                               <*> pure DontUseBootstrapPeers)
+                               <*> pure DontUseBootstrapPeers
+                               <*> pure Nothing)
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 --
@@ -262,11 +271,19 @@ readTopologyFile tr nc = do
           -> Either Text (Legacy NetworkTopology)
           -> IO (Either Text NetworkTopology)
   combine a b = case (a, b) of
-    (Right {}, _)     -> return a
+    (Right t, _)
+      -> if isGenesisCompatible (ncConsensusMode nc) (ntUseBootstrapPeers t)
+           then return a
+           else do
+             traceWith tr (NetworkConfigUpdateError msg)
+             return $ Right (t { ntUseBootstrapPeers = DontUseBootstrapPeers } )
     (_, Right {})     -> traceWith tr NetworkConfigLegacy
                            >> return (getLegacy <$> b)
     (Left _, Left _)  -> -- ignore parsing error of legacy format
                          return a
+
+  msg = Text.pack $    "Cardano.Node.Configuration.Topology.readTopologyFile: "
+                    <> "Bootstrap peers are not used in Genesis consensus mode."
 
   handler :: IOException -> Text
   handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
@@ -289,6 +306,9 @@ readTopologyFile tr nc = do
     , "source. "
     ]
 
+  isGenesisCompatible GenesisMode (UseBootstrapPeers{}) = False
+  isGenesisCompatible _ _ = True
+
 readTopologyFileOrError :: Tracer IO (StartupTrace blk)
                         -> NodeConfiguration -> IO NetworkTopology
 readTopologyFileOrError tr nc =
@@ -297,6 +317,12 @@ readTopologyFileOrError tr nc =
                            <> Text.unpack err)
              pure
 
+readPeerSnapshotFile :: PeerSnapshotFile -> IO LedgerPeerSnapshot
+readPeerSnapshotFile (PeerSnapshotFile psf) = either error pure =<< runExceptT
+  (handleLeftT (left . ("Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <>)) $ do
+    bs <- BS.readFile psf `catchIOExceptT` displayException
+    hoistEither (eitherDecode . LBS.fromStrict $ bs))
+
 --
 -- Checking for chance of progress in bootstrap phase
 --
@@ -304,7 +330,7 @@ readTopologyFileOrError tr nc =
 -- | This function returns false if non-trustable peers are configured
 --
 isValidTrustedPeerConfiguration :: NetworkTopology -> Bool
-isValidTrustedPeerConfiguration (RealNodeTopology (LocalRootPeersGroups lprgs) _ _ ubp) =
+isValidTrustedPeerConfiguration (RealNodeTopology (LocalRootPeersGroups lprgs) _ _ ubp _) =
     case ubp of
       DontUseBootstrapPeers   -> True
       UseBootstrapPeers []    -> anyTrustable

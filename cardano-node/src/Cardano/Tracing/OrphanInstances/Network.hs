@@ -244,6 +244,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       TraceLedgerPeersDomains {}     -> Debug
       TraceLedgerPeersResult {}      -> Debug
       TraceLedgerPeersFailure {}     -> Debug
+      UsingBigLedgerPeerSnapshot {}  -> Debug
 
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
@@ -484,6 +485,9 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceChurnTimeout {} -> Notice
 
       TraceDebugState {} -> Info
+
+      TraceVerifyPeerSnapshot True  -> Info
+      TraceVerifyPeerSnapshot False -> Error
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1422,7 +1426,10 @@ instance ToObject TraceLedgerPeers where
       , "domainAccessPoint" .= show dap
       , "error" .= show reason
       ]
-
+  toObject _verb UsingBigLedgerPeerSnapshot =
+    mconcat
+      [ "kind" .= String "UsingBigLedgerPeerSnapshot"
+      ]
 
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
@@ -1939,6 +1946,9 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
             ]
+  toObject _verb (TraceVerifyPeerSnapshot result) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "result" .= result ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
