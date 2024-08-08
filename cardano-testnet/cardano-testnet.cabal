@@ -82,6 +82,7 @@ library
                       , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog
+                      , template-haskell
                       , temporary
                       , text
                       , time
@@ -110,12 +111,14 @@ library
                         Testnet.Start.Byron
                         Testnet.Start.Types
                         Testnet.SubmitApi
+                        Testnet.TestQueryCmds
                         Testnet.Types
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
                         Parsers.Version
                         Testnet.Start.Cardano
+                        Testnet.TestEnumGenerator
                         Paths_cardano_testnet
 
   autogen-modules:      Paths_cardano_testnet
