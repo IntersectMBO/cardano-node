@@ -64,7 +64,7 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
-import           "contra-tracer" Control.Tracer (Tracer (..))
+import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 
@@ -332,6 +332,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            <> traceWith chainSyncServerHeaderMetricsTr
       , Consensus.chainSyncServerBlockTracer = Tracer $
           traceWith chainSyncServerBlockTr
+      , Consensus.consensusSanityCheckTracer = nullTracer -- error "TODO"
       , Consensus.blockFetchDecisionTracer = Tracer $
           traceWith blockFetchDecisionTr
       , Consensus.blockFetchClientTracer = Tracer $
@@ -341,6 +342,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith blockFetchServerTr
       , Consensus.forgeStateInfoTracer = Tracer $
           traceWith (traceAsKESInfo (Proxy @blk) forgeKESInfoTr)
+      , Consensus.gddTracer = nullTracer -- error "TODO"
       , Consensus.txInboundTracer = Tracer $
            traceWith txInboundTr
       , Consensus.txOutboundTracer = Tracer $

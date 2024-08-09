@@ -220,6 +220,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
+  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Debug
+    -- error "getSeverityAnnotation.TraceLastShutdownUnclean:TODO"
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -489,6 +491,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
+      ChainDB.TraceLastShutdownUnclean -> "TraceLastShutdownUnclean"
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -588,7 +591,7 @@ instance ( ConvertRawHash blk
       ChainDB.TraceSnapshotEvent ev -> case ev of
         LedgerDB.InvalidSnapshot snap failure ->
           "Invalid snapshot " <> showT snap <> showT failure
-        LedgerDB.TookSnapshot snap pt ->
+        LedgerDB.TookSnapshot snap pt _enclosedTiming ->
           "Took ledger snapshot " <> showT snap <>
           " at " <> renderRealPointAsPhrase pt
         LedgerDB.DeletedSnapshot snap ->
@@ -892,6 +895,8 @@ instance ( ConvertRawHash blk
          , ToObject (LedgerEvent blk)
          , ToObject (SelectView (BlockProtocol blk)))
       => ToObject (ChainDB.TraceEvent blk) where
+  toObject _verb ChainDB.TraceLastShutdownUnclean =
+    mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
@@ -1054,7 +1059,7 @@ instance ( ConvertRawHash blk
 
   toObject MinimalVerbosity (ChainDB.TraceSnapshotEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceSnapshotEvent ev) = case ev of
-    LedgerDB.TookSnapshot snap pt ->
+    LedgerDB.TookSnapshot snap pt _enclosedTiming ->
       mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show pt ]
