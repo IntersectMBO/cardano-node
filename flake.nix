@@ -354,10 +354,22 @@
 
       flake = eachSystem supportedSystems (system:
         let
-          inherit (haskellNix) config;
           pkgs = import nixpkgs {
-            inherit config system overlays;
+            inherit system overlays;
+
+            config = haskellNix.config // {
+              allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+                # Nomad 1.7+ is under an unfree license
+                "nomad"
+                # Vault is now under an unfree license
+                "vault-bin"
+              ];
+
+              # norouter is marked as broken
+              allowBroken = true;
+            };
           };
+
           inherit (mkFlakeAttrs pkgs) environments packages checks apps project ciJobs devShells workbench;
         in
         {
