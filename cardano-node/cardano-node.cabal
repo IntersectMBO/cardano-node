@@ -200,6 +200,7 @@ library
                       , safe-exceptions
                       , scientific
                       , si-timers
+                      , singletons
                       , sop-core
                       , stm
                       , strict-sop-core

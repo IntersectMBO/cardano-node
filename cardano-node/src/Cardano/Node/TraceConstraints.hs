@@ -7,6 +7,8 @@
 module Cardano.Node.TraceConstraints (TraceConstraints) where
 
 
+import           Prelude (Show)
+
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Ledger.Credential
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -44,6 +46,8 @@ type TraceConstraints blk =
     , HasKESInfo blk
     , GetKESInfo blk
     , RunNode blk
+    , Show blk
+    , Show (Header blk)
 
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
