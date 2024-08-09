@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
-        ghc: ["9.6", "9.8"]
+        ghc: ["9.6", "9.8", "9.10"]
         cabal: ["3.12"]
         sys:
           - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
@@ -47,7 +47,7 @@ jobs:
           - cabal: "3.12"
             ghc: "9.6"
             sys:
-              os: macos-latest
+              os: macos-13
               shell: bash
     defaults:
       run:

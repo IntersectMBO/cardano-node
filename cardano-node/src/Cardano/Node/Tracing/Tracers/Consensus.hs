@@ -71,10 +71,10 @@ import           Ouroboros.Network.TxSubmission.Outbound
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
-import           Data.Foldable (Foldable (..))
 import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
+import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Time (DiffTime, NominalDiffTime)
 import           Data.Word (Word32, Word64)
@@ -648,7 +648,7 @@ instance (LogFormatting peer, Show peer) =>
   forMachine _ xs       = mconcat
     [ "kind"  .= String "PeersFetch"
     , "peers" .= toJSON
-      (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
+      (List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
   asMetrics peers = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
 

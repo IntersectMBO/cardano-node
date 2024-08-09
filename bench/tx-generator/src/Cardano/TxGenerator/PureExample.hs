@@ -21,7 +21,7 @@ import           Control.Monad (foldM)
 import           Control.Monad.Trans.State.Strict
 import           Data.Aeson (eitherDecodeFileStrict')
 import           Data.Either (fromRight)
-import           Data.List (foldl')
+import           Data.List as List (foldl')
 import           Data.String (fromString)
 import           System.Exit (die)
 
@@ -121,7 +121,7 @@ generateTx TxEnvironment{..}
       return $ Right funds
 
     addNewOutputFunds :: [Fund] -> Generator ()
-    addNewOutputFunds = put . foldl' insertFund emptyFundQueue
+    addNewOutputFunds = put . List.foldl' insertFund emptyFundQueue
 
     computeOutputValues :: [L.Coin] -> [L.Coin]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
@@ -147,7 +147,7 @@ generateTxPure ::
 generateTxPure TxEnvironment{..} inQueue
   = do
       (tx, txId) <- generator inputs outputs
-      let outQueue = foldl' insertFund emptyFundQueue (toFunds txId)
+      let outQueue = List.foldl' insertFund emptyFundQueue (toFunds txId)
       pure (tx, outQueue)
   where
     inputs = toList inQueue
