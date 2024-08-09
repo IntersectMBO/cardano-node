@@ -767,7 +767,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
                         (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr)
         <> (\(TraceLabelPeer _ ev) -> ev) `contramap` Tracer (traceServedCount mbEKGDirect)
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
-    , Consensus.consensusSanityCheckTracer = error "TODO"
+    , Consensus.consensusSanityCheckTracer = nullTracer -- error "TODO"
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
     , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
@@ -775,7 +775,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
         tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
-    , Consensus.gddTracer = error "TODO"
+    , Consensus.gddTracer = nullTracer -- error "TODO"
     , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @blk) trSel tr

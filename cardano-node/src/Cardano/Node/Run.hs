@@ -95,10 +95,11 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
                    RunNodeArgs (..), StdRunNodeArgs (..))
-import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
+import qualified Ouroboros.Consensus.Node as Node (NodeDatabasePaths(..), getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Consensus.Node.Genesis
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
@@ -395,7 +396,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 $ StartupSocketConfigError err
         Exception.throwIO err
 
-  _dbPath <- canonDbPath nc
+  dbPath <- canonDbPath nc
 
   publicPeerSelectionVar <- Diffusion.makePublicPeerSelectionStateVar
   let diffusionArguments :: Diffusion.Arguments IO Socket      RemoteAddress
@@ -456,7 +457,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         useLedgerVar   <- newTVarIO ntUseLedgerPeers
         useBootstrapVar <- newTVarIO ntUseBootstrapPeers
         let nodeArgs = RunNodeArgs
-              { rnGenesisConfig  = error "TODO"
+              { rnGenesisConfig  = disableGenesisConfig
               , rnTraceConsensus = consensusTracers tracers
               , rnTraceNTN       = nodeToNodeTracers tracers
               , rnTraceNTC       = nodeToClientTracers tracers
@@ -513,7 +514,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
               , srnDiskPolicyArgs               = diskPolicyArgs
-              , srnDatabasePath                 = error "srnDatabasePath: dbPath"
+              , srnDatabasePath                 = Node.OnePathForAllDbs dbPath
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
               , srnDiffusionTracers             = diffusionTracers tracers
@@ -540,7 +541,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            (length ipProducerAddrs)
 
             nodeArgs = RunNodeArgs
-                { rnGenesisConfig  = error "TODO" 
+                { rnGenesisConfig  = disableGenesisConfig 
                 , rnTraceConsensus = consensusTracers tracers
                 , rnTraceNTN       = nodeToNodeTracers tracers
                 , rnTraceNTC       = nodeToClientTracers tracers
@@ -587,7 +588,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
               , srnDiskPolicyArgs              = diskPolicyArgs
-              , srnDatabasePath                = error "srnDatabasePath: dbPath"
+              , srnDatabasePath                = Node.OnePathForAllDbs dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
               , srnDiffusionTracers            = diffusionTracers tracers

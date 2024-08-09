@@ -220,8 +220,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
-  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = 
-    error "getSeverityAnnotation.TraceLastShutdownUnclean:TODO"
+  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Debug
+    -- error "getSeverityAnnotation.TraceLastShutdownUnclean:TODO"
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -491,7 +491,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
-      ChainDB.TraceLastShutdownUnclean -> error "TraceLastShutdownUnclean: TODO"
+      ChainDB.TraceLastShutdownUnclean -> "TraceLastShutdownUnclean"
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
