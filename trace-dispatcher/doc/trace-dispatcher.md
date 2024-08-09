@@ -331,6 +331,9 @@ TraceOptionForwarder: # Configure the forwarder
 
 # Frequency of Peer messages set to two seconds
 TraceOptionPeerFrequency: 2000
+
+# Any metrics emittted will get this prefix
+TraceOptionMetricsPrefix: "cardano.node"
 ```
 
 The same in JSON looks like this:
@@ -362,7 +365,8 @@ The same in JSON looks like this:
     },
     "mode": "Initiator"
   },
-  "TraceOptionPeerFrequency": 2000
+  "TraceOptionPeerFrequency": 2000,
+  "TraceOptionMetricsPrefix": "cardano.node"
 }
 ```
 
@@ -383,11 +387,11 @@ implement some advanced functionality.
 
 Presently, the process of adding a new tracer involves making changes in three specific modules. However, we anticipate that this requirement will be simplified once the old tracing system is phased out. The current modules where modifications are needed to add a new tracer are:
 
-- **Cardano.Node.Tracing.Tracers**
+- __Cardano.Node.Tracing.Tracers__
 
-- **Cardano.Node.Tracing.Documentation**
+- __Cardano.Node.Tracing.Documentation__
 
-- **Cardano.Node.Tracing.Consistency**
+- __Cardano.Node.Tracing.Consistency__
 
 ## Message Filtering based on Severity
 

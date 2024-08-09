@@ -39,7 +39,7 @@ instance LogFormatting ReplayBlockStats where
       ]
   forHuman ReplayBlockStats {..} = "Block replay progress " <> textShow rpsProgress <> "%"
   asMetrics ReplayBlockStats {..} =
-     [DoubleM "ChainDB.BlockReplayProgress" rpsProgress]
+     [DoubleM "blockReplayProgress" rpsProgress]
 
 instance MetaTrace ReplayBlockStats where
   namespaceFor ReplayBlockStats {} = Namespace [] ["LedgerReplay"]
@@ -52,7 +52,7 @@ instance MetaTrace ReplayBlockStats where
   documentFor _ = Nothing
 
   metricsDocFor (Namespace _ ["LedgerReplay"]) =
-     [("ChainDB.BlockReplayProgress", "Progress in percent")]
+     [("blockReplayProgress", "Progress in percent")]
   metricsDocFor _ = []
 
   allNamespaces =

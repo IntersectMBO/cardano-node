@@ -52,17 +52,17 @@ instance LogFormatting ForgeThreadStats where
     <> " last slot "      <> showT ftsLastSlot
   forMachine _dtal ForgeThreadStats {..} =
     mconcat [ "kind" .= String "ForgeThreadStats"
-             , "nodeCannotForgeNum" .= String (showT ftsNodeCannotForgeNum)
-             , "nodeIsLeaderNum"    .= String (showT ftsNodeIsLeaderNum)
-             , "blocksForgedNum"    .= String (showT ftsBlocksForgedNum)
+             , "nodeCannotForge" .= String (showT ftsNodeCannotForgeNum)
+             , "nodeIsLeader"    .= String (showT ftsNodeIsLeaderNum)
+             , "blocksForged"    .= String (showT ftsBlocksForgedNum)
              , "slotsMissed"        .= String (showT ftsSlotsMissedNum)
              , "lastSlot"           .= String (showT ftsLastSlot)
              ]
   asMetrics ForgeThreadStats {..} =
-    [ IntM "Forge.NodeCannotForgeNum" (fromIntegral ftsNodeCannotForgeNum)
-    , IntM "Forge.NodeIsLeaderNum"    (fromIntegral ftsNodeIsLeaderNum)
-    , IntM "Forge.BlocksForgedNum"    (fromIntegral ftsBlocksForgedNum)
-    , IntM "Forge.SlotsMissed"        (fromIntegral ftsSlotsMissedNum)
+    [ IntM "nodeCannotForge" (fromIntegral ftsNodeCannotForgeNum)
+    , IntM "nodeIsLeader"    (fromIntegral ftsNodeIsLeaderNum)
+    , IntM "blocksForged"    (fromIntegral ftsBlocksForgedNum)
+    , IntM "slotsMissed"     (fromIntegral ftsSlotsMissedNum)
     ]
 
 instance MetaTrace ForgeThreadStats where
@@ -73,13 +73,13 @@ instance MetaTrace ForgeThreadStats where
     documentFor _ = Just ""
 
     metricsDocFor _ =
-      [("Forge.NodeCannotForgeNum",
+      [("nodeCannotForge",
         "How many times was this node unable to forge [a block]?")
-      ,("Forge.NodeIsLeaderNum",
+      ,("nodeIsLeader",
         "How many times was this node slot leader?")
-      ,("Forge.BlocksForgedNum",
+      ,("blocksForged",
         "How many blocks did this node forge?")
-      ,("Forge.SlotsMissed",
+      ,("slotsMissed",
         "How many slots did this node miss?")
       ]
 
@@ -112,16 +112,16 @@ instance LogFormatting ForgingStats where
     <> " slots missed "   <> showT fsSlotsMissedNum
   forMachine _dtal ForgingStats {..} =
     mconcat [ "kind" .= String "ForgingStats"
-             , "nodeCannotForgeNum" .= String (showT fsNodeCannotForgeNum)
-             , "nodeIsLeaderNum"    .= String (showT fsNodeIsLeaderNum)
-             , "blocksForgedNum"    .= String (showT fsBlocksForgedNum)
+             , "nodeCannotForge" .= String (showT fsNodeCannotForgeNum)
+             , "nodeIsLeader"    .= String (showT fsNodeIsLeaderNum)
+             , "blocksForged"    .= String (showT fsBlocksForgedNum)
              , "slotsMissed"        .= String (showT fsSlotsMissedNum)
              ]
   asMetrics ForgingStats {..} =
-    [ IntM "Forge.NodeCannotForgeNum" (fromIntegral fsNodeCannotForgeNum)
-    , IntM "Forge.NodeIsLeaderNum"    (fromIntegral fsNodeIsLeaderNum)
-    , IntM "Forge.BlocksForgedNum"    (fromIntegral fsBlocksForgedNum)
-    , IntM "Forge.SlotsMissed"        (fromIntegral fsSlotsMissedNum)
+    [ IntM "nodeCannotForge" (fromIntegral fsNodeCannotForgeNum)
+    , IntM "nodeIsLeader"    (fromIntegral fsNodeIsLeaderNum)
+    , IntM "blocksForged"    (fromIntegral fsBlocksForgedNum)
+    , IntM "slotsMissed"     (fromIntegral fsSlotsMissedNum)
     ]
 
 instance MetaTrace ForgingStats where
@@ -136,15 +136,15 @@ instance MetaTrace ForgingStats where
       \\nslotsMissed shows how many slots were missed in this node."
 
     metricsDocFor _ =
-      [("Forge.NodeCannotForgeNum",
+      [("nodeCannotForge",
         "How many times was this node unable to forge [a block]?")
-      ,("Forge.NodeIsLeaderNum",
+      ,("nodeIsLeader",
         "How many times was this node slot leader?")
-      ,("Forge.BlocksForgedNum",
+      ,("blocksForged",
         "How many blocks did this node forge?")
-      ,("Forge.SlotsMissed",
+      ,("slotsMissed",
         "How many slots did this node miss?")
-      ,("Forge.LastSlot",
+      ,("lastSlot",
         "")
       ]
 

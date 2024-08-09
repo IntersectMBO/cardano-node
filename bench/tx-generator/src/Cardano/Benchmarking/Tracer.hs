@@ -25,32 +25,30 @@ module Cardano.Benchmarking.Tracer
   )
 where
 
-import           GHC.Generics
+import           Cardano.Api
 
+import           Cardano.Benchmarking.LogTypes
+import           Cardano.Benchmarking.Types
+import           Cardano.Benchmarking.Version as Version
+import           Cardano.Logging
+import           Cardano.Node.Startup
+import           Ouroboros.Network.IOManager (IOManager)
+
+import           Control.Monad (forM, guard)
 import           Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Kind
-import qualified Data.Map.Strict as Map
-
-import           Control.Monad (forM, guard)
 import           Data.List (find)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Proxy
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock
+import           GHC.Generics
 
-import           Ouroboros.Network.IOManager (IOManager)
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
-
-import           Cardano.Api
-import           Cardano.Logging
-import           Cardano.Node.Startup
-
-import           Cardano.Benchmarking.LogTypes
-import           Cardano.Benchmarking.Types
-import           Cardano.Benchmarking.Version as Version
 
 pattern TracerNameBench     :: Text
 pattern TracerNameBench     = "Benchmark"
@@ -178,6 +176,7 @@ initialTraceConfig = TraceConfig {
     , tcNodeName = Nothing
     , tcPeerFrequency = Just 2000 -- Every 2 seconds
     , tcResourceFrequency = Just 1000 -- Every second
+    , tcMetricsPrefix = Nothing
     }
   where
     setMaxDetail :: Text -> ([Text], [ConfigOption])

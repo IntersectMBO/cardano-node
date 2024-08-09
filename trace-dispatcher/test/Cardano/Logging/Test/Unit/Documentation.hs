@@ -42,5 +42,6 @@ config1 = TraceConfig {
     , tcNodeName = Nothing
     , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
+    , tcMetricsPrefix = Just "cardano"
     }
 

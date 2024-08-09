@@ -29,14 +29,14 @@ updateResourcesHistory
   -> IO ()
 updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName metricValue now =
   case metricName of
-    "Resources.Stat.Cputicks"    -> updateCPUUsage
-    "Resources.Mem.Resident"     -> updateRSSMemory
-    "Resources.RTS.GcLiveBytes"  -> updateGCLiveMemory
-    "Resources.RTS.GcMajorNum"   -> updateGCMajorNum
-    "Resources.RTS.GcMinorNum"   -> updateGCMinorNum
-    "Resources.RTS.Gcticks"      -> updateCPUTimeGC
-    "Resources.RTS.Mutticks"     -> updateCPUTimeApp
-    "Resources.RTS.Stat.Threads" -> updateThreadsNum
+    "Stat.cputicks"    -> updateCPUUsage
+    "Mem.resident"     -> updateRSSMemory
+    "RTS.gcLiveBytes"  -> updateGCLiveMemory
+    "RTS.gcMajorNum"   -> updateGCMajorNum
+    "RTS.gcMinorNum"   -> updateGCMinorNum
+    "RTS.gcticks"      -> updateCPUTimeGC
+    "RTS.mutticks"     -> updateCPUTimeApp
+    "Stat.threads"     -> updateThreadsNum
     _ -> return ()
  where
   updateCPUUsage =
