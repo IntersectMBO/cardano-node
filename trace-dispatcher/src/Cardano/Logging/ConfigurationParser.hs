@@ -18,7 +18,7 @@ import           Control.Exception (throwIO)
 import qualified Data.Aeson as AE
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import           Data.List (foldl')
+import           Data.List as List (foldl')
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, listToMaybe)
 import           Data.Text (Text, intercalate, split)
@@ -122,7 +122,7 @@ parseRepresentation bs = transform (decodeEither' bs)
     transform (Right rl) = Right $ transform' emptyTraceConfig rl
     transform' :: TraceConfig -> ConfigRepresentation -> TraceConfig
     transform' TraceConfig {tcOptions=to'} cr =
-      let to''  = foldl' (\ tci (nsp, opts') ->
+      let to''  = List.foldl' (\ tci (nsp, opts') ->
                               let ns' = split (=='.') nsp
                                   ns'' = if ns' == [""] then [] else ns'
                                   ns''' = case ns'' of
@@ -164,7 +164,7 @@ configToRepresentation traceConfig =
     toOptionRepresentation :: Map.Map [Text] [ConfigOption]
                               ->  Map.Map Text ConfigOptionRep
     toOptionRepresentation internalOptMap =
-      foldl' conversion Map.empty (Map.toList internalOptMap)
+      List.foldl' conversion Map.empty (Map.toList internalOptMap)
 
     conversion :: Map.Map Text ConfigOptionRep
                 -> ([Text],[ConfigOption])

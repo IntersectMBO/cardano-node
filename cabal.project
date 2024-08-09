@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-06-23T23:01:13Z
-  , cardano-haskell-packages 2024-07-24T14:16:32Z
+  , hackage.haskell.org 2024-08-08T19:27:29Z
+  , cardano-haskell-packages 2024-08-09T06:07:58Z
 
 packages:
   cardano-node
@@ -58,9 +58,26 @@ package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
 constraints:
-  wai-extra < 3.1.15,
+  , wai-extra < 3.1.15
+  , plutus-ledger-api ^>= 1.31
 
-allow-newer: katip:Win32
+allow-newer:
+  , katip:Win32
+
+  , ekg:base
+  , ekg:filepath
+  , ekg-json:base
+  , servant-server:base
+  , servant-server:containers
+  , servant-server:aeson
+  , servant-server:filepath
+  , servant:base
+  , cardano-cli:base
+  , libsystemd-journal:base
+
+  , exceptions:stm
+  , unix:filepath
+
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly

@@ -7,7 +7,7 @@ module Cardano.Logging.Consistency (
 import           Cardano.Logging.ConfigurationParser
 import           Cardano.Logging.Types
 
-import           Data.Foldable (foldl')
+import           Data.Foldable as Foldable (foldl')
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import qualified Data.Text as T
@@ -69,7 +69,7 @@ checkNamespace nsLookup ns = go nsLookup ns
 --   Warns as well if namespaces in all namespaces are ending in the
 --   middle of another namespace.
 asNSLookup :: [[T.Text]] -> (NSLookup, NSWarnings)
-asNSLookup = foldl' (fillLookup []) (NSLookup Map.empty, [])
+asNSLookup = Foldable.foldl' (fillLookup []) (NSLookup Map.empty, [])
   where
     fillLookup :: [T.Text] -> (NSLookup, NSWarnings) -> [T.Text] -> (NSLookup, NSWarnings)
     fillLookup _nsFull (NSLookup nsl, nsw)  [] = (NSLookup nsl, nsw)

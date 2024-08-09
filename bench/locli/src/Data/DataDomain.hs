@@ -10,7 +10,6 @@ where
 import Cardano.Prelude
 
 import Witherable qualified as Wither
-import Data.List.NonEmpty qualified as NE
 
 import Cardano.Util
 import Data.CDF
@@ -61,7 +60,7 @@ traverseDataDomain' ::
 traverseDataDomain' f xs =
   DataDomain
   <$> (Interval <$> f (xs <&> low . ddRaw) <*> f (xs <&> high . ddRaw))
-  <*> (let lohis = NE.unzip $ (fmap (low &&& high) . ddFiltered) `Wither.mapMaybe` xs
+  <*> (let lohis = neUnzip $ (fmap (low &&& high) . ddFiltered) `Wither.mapMaybe` xs
        in Just <$> (Interval <$> f (fst lohis) <*> f (snd lohis)))
   <*> f (xs <&> ddRawCount)
   <*> f (xs <&> ddFilteredCount)
@@ -97,3 +96,12 @@ intersectDataDomains xs =
   , ddRawCount      =   I $ sum $ xs <&> unI . ddRawCount
   , ddFilteredCount =   I $ sum $ xs <&> unI . ddFilteredCount
   }
+
+-- In base@4.20 the Data.List.NonEmpty.unzip is deprecated and suggests that
+-- Data.Function.unzip should be used instead,but base versions earlier than
+-- 4.20 do not have that.
+-- Neatest solution is to cargo cult it here and switch to Data.Function.unzip
+-- later.
+neUnzip :: Functor f => f (a,b) -> (f a, f b)
+neUnzip xs = (fst <$> xs, snd <$> xs)
+
