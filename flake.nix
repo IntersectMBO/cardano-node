@@ -65,6 +65,8 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
+
+    cardanoPerf.url = "github:input-output-hk/cardano-perf";
   };
 
   outputs =
@@ -417,8 +419,15 @@
         }).appendModule [
           customConfig.haskellNix
         ];
+
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
         inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
+
+        nomad =
+          if final.system == "x86_64-linux" then
+            input.cardanoPerf.packages.${final.system}.nomad
+          else
+            prev.nomad;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
