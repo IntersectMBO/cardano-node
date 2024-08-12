@@ -33,6 +33,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Function
 import qualified Data.List as List
+import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.String (fromString)
 import qualified Data.Text as Text
@@ -146,11 +147,13 @@ procCli = GHC.withFrozenCallStack $ H.procFlex "cardano-cli" "CARDANO_CLI"
 procNode
   :: HasCallStack
   => MonadIO m
-  => [String]
+  => Maybe String
+  -- ^ Name of the executable. If omitted, defaults to @cardano-node@
+  -> [String]
   -- ^ Arguments to the CLI command
   -> ExceptT ExecutableError m CreateProcess
   -- ^ Captured stdout
-procNode = GHC.withFrozenCallStack $ procFlexNew "cardano-node" "CARDANO_NODE"
+procNode execName = GHC.withFrozenCallStack $ procFlexNew (fromMaybe "cardano-node" execName) "CARDANO_NODE"
 
 -- | Create a 'CreateProcess' describing how to start the cardano-submit-api process
 -- and an argument list.

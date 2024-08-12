@@ -35,6 +35,7 @@ import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
 
+-- | Historical way to run a list of nodes (@cardano-testnet cardano ...@).
 runTestnet :: (Conf -> H.Integration a) -> IO ()
 runTestnet tn = do
   tvRunning <- STM.newTVarIO False
@@ -59,6 +60,15 @@ runTestnet tn = do
       IO.putStrLn ""
       IO.exitFailure
 
+-- -- | Command to run a list of nodes, when receiving their configurations
+-- -- from the user (@cardano-testnet nodes ...@).
+-- runNodes :: [CardanoNodesOptions] -> IO ()
+-- runNodes opts = do
+--   undefined
+--   -- Async.forConcurrently_ f undefined
+--   where
+--     f = undefined
+--     -- nodeNames = ["node" <> show i | i <- [1..length opts]]
 
 testnetProperty :: (Conf -> H.Integration ()) -> H.Property
 testnetProperty tn = integrationWorkspace "testnet" $ \workspaceDir -> do

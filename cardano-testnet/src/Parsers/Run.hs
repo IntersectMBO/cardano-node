@@ -31,7 +31,8 @@ opts envCli = Opt.info (commands envCli <**> helper) idm
 -- by allowing the user to start testnets in any era (excluding Byron)
 -- via StartCardanoTestnet
 data CardanoTestnetCommands
-  = StartCardanoTestnet CardanoTestnetOptions
+  = StartCardanoNodes CardanoTestnetOptions
+  | StartCardanoTestnet CardanoTestnetOptions
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
@@ -39,6 +40,7 @@ commands :: EnvCli -> Parser CardanoTestnetCommands
 commands envCli =
   asum
     [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
+    , fmap StartCardanoTestnet (subparser (cmdNodes envCli))
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref (opts envCli)) (subparser cmdHelp)
     ]
@@ -46,6 +48,7 @@ commands envCli =
 
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
+  StartCardanoNodes cmdOpts -> runCardanoOptions cmdOpts
   StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts

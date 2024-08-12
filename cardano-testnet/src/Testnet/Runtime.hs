@@ -104,6 +104,8 @@ startNode
   => MonadFail m
   => MonadTest m
   => TmpAbsolutePath
+  -- ^ The name of the executable to use. If omitted, defaults to @cardano-node@
+  -> Maybe String
   -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
@@ -116,7 +118,7 @@ startNode
   -> [String]
   -- ^ The command --socket-path will be added automatically.
   -> ExceptT NodeStartFailure m NodeRuntime
-startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
+startNode tp execName node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -144,7 +146,7 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
     nodeProcess
       <- firstExceptT ExecutableRelatedFailure
-           $ hoistExceptT liftIO $ procNode $ mconcat
+           $ hoistExceptT liftIO $ procNode execName $ mconcat
                          [ nodeCmd
                          , [ "--socket-path", H.sprocketArgumentName sprocket
                            , "--port", show port

@@ -3,6 +3,7 @@
 
 module Parsers.Cardano
   ( cmdCardano
+  , cmdNodes
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), EraInEon (..), ToCardanoEra (..), bounded)
@@ -24,9 +25,14 @@ import           Testnet.Types (readNodeLoggingFormat)
 
 
 optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
-optsTestnet envCli = CardanoTestnetOptions
-  -- TODO <$> (OA.many pSpo <|> pNumSpoNodes)
-  <$> pNumSpoNodes
+optsTestnet = pCardanoTestnetOptions pNumSpoNodes
+
+optsNodes :: EnvCli -> Parser CardanoTestnetOptions
+optsNodes = pCardanoTestnetOptions pPerNodeOptions
+
+pCardanoTestnetOptions :: Parser [TestnetNodeOptions] -> EnvCli -> Parser CardanoTestnetOptions
+pCardanoTestnetOptions pTestnetNodeOptions envCli = CardanoTestnetOptions
+  <$> pTestnetNodeOptions
   <*> pCardanoEra
   <*> OA.option auto
       (   OA.long "epoch-length"
@@ -77,7 +83,6 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
-
   where
     -- TODO replace era in 'CardanoTestnetOptions' 'AnyShelleyBasedEra' - we're not supporting
     -- byron testnets
@@ -97,33 +102,21 @@ pNumSpoNodes =
      <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
      )
 
-
-_pSpo :: Parser TestnetNodeOptions
-_pSpo =
-  SpoTestnetNodeOptions . Just
-    <$> parseNodeConfigFile
-    <*> pure [] -- TODO: Consider adding support for extra args
-
-parseNodeConfigFile :: Parser NodeConfigurationYaml
-parseNodeConfigFile = NodeConfigurationYaml <$>
-  strOption
-    (mconcat
-       [ long "configuration-file"
-       , metavar "NODE-CONFIGURATION"
-       , help helpText
-       , completer (bashCompleter "file")
-       ]
-    )
- where
-   helpText = unwords
-               [ "Configuration file for the cardano-node(s)."
-               , "Specify a configuration file per node you want to have in the cluster."
-               , "Or use num-pool-nodes to use cardano-testnet's default configuration."
-               ]
-
+pPerNodeOptions :: Parser [TestnetNodeOptions]
+pPerNodeOptions =
+  many pTestnetNodeOptions
+  where
+    pTestnetNodeOptions :: Parser TestnetNodeOptions
+    pTestnetNodeOptions =
+      PerNodeOption <$>
+        OA.strOption
+          (OA.long "single-node-options" <> OA.metavar "FILEPATH")
 
 cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetOptions
 cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)
+
+cmdNodes :: EnvCli -> Mod CommandFields CardanoTestnetOptions
+cmdNodes envCli = command' "nodes" "Start a testnet in any era, with node-specific options" (optsNodes envCli)
 
 pNetworkId :: Parser Int
 pNetworkId =

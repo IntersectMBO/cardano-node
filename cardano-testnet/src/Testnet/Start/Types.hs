@@ -1,9 +1,12 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
   ( CardanoTestnetOptions(..)
+  , PerNodeConfiguration(..)
   , cardanoDefaultTestnetOptions
 
   , anyEraToString
@@ -25,6 +28,7 @@ import           Prelude
 
 import           Data.Char (toLower)
 import           Data.Word
+import           GHC.Generics (Generic)
 import           GHC.Stack
 import           System.FilePath (addTrailingPathSeparator)
 
@@ -70,11 +74,24 @@ data TestnetNodeOptions
   = SpoTestnetNodeOptions (Maybe NodeConfigurationYaml) [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
+  | PerNodeOption FilePath
+    -- ^ Path of the file containing the configuration
   deriving (Eq, Show)
 
-extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
-extraSpoNodeCliArgs (SpoTestnetNodeOptions _ args) = args
+-- | The content of a specific node configuration file, as written to disk in JSON
+data PerNodeConfiguration = PerNodeConfiguration
+  { executable :: Maybe FilePath
+  } deriving (Eq, Show, Generic)
 
+instance FromJSON PerNodeConfiguration where
+
+instance ToJSON PerNodeConfiguration where
+
+extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
+extraSpoNodeCliArgs =
+  \case
+    SpoTestnetNodeOptions _ args -> args
+    PerNodeOption _ -> []
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =

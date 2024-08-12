@@ -5,6 +5,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Start.Cardano
   ( ForkPoint(..)
@@ -206,8 +207,11 @@ cardanoTestnet
 
   H.note_ OS.os
 
-  if all isJust [mconfig | SpoTestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
-  then
+  let spoConfigs = catMaybes [mconfig | SpoTestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
+
+  if not $ null spoConfigs
+  then do
+    -- We don't support custom 'NodeConfigurationYaml' values.
     -- TODO: We need a very simple non-obscure way of generating the files necessary
     -- to run a testnet. "create-staked" is not a good way to do this especially because it
     -- makes assumptions about where things should go and where genesis template files should be.
@@ -329,13 +333,32 @@ cardanoTestnet
       H.lbsWriteFile (tmpAbsPath </> poolKeyDir i </> "topology.json") . encode $
         RealNodeTopology producers
 
+    perNodeOptions :: [Maybe PerNodeConfiguration] <-
+      forM (cardanoNodes testnetOptions) $ \case
+        SpoTestnetNodeOptions _ args -> pure Nothing
+        PerNodeOption perNodeFilePath -> do
+          eitherPerNodeOpt <- Aeson.eitherDecode @PerNodeConfiguration <$> H.evalIO (LBS.readFile perNodeFilePath)
+          perNodeOpt <-
+                case eitherPerNodeOpt of
+                  Left errMsg -> do
+                    H.note_ $ "Cannot read per node configuration file at " <> perNodeFilePath <> ": " <> errMsg
+                    H.failure
+                  Right opts' ->
+                    pure opts'
+          pure $ Just perNodeOpt
+
     let keysWithPorts = L.zip3 [1..] poolKeys portNumbers
     ePoolNodes <- H.forConcurrently keysWithPorts $ \(i, key, port) -> do
       let nodeName = mkNodeName i
           keyDir = tmpAbsPath </> poolKeyDir i
+          execName =
+            case perNodeOptions !! (i - 1) of
+              Nothing -> Nothing
+              Just (PerNodeConfiguration Nothing) -> Nothing
+              Just (PerNodeConfiguration (Just execName')) -> Just execName'
       H.note_ $ "Node name: " <> nodeName
       eRuntime <- runExceptT . retryOnAddressInUseError $
-        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic
+        startNode (TmpAbsolutePath tmpAbsPath) execName nodeName testnetDefaultIpv4Address port testnetMagic
           [ "run"
           , "--config", unFile configurationFile
           , "--topology", keyDir </> "topology.json"
