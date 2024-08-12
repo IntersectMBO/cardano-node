@@ -140,7 +140,12 @@ in project.shellFor {
       # Publish
       bench-data-publish
       # Publish tunnel
-      yq nomad vault-bin norouter socat
+      yq nomad bao socat
+
+      # TODO: Doesn't build with Go >=1.21
+      # https://github.com/norouter/norouter/issues/165
+      # norouter
+
       # Debugging
       postgresql
       # Performance report generation
