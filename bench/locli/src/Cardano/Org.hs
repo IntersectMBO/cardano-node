@@ -82,13 +82,18 @@ render Table{..} =
                              (cycle ["_", "#"])
                              constRows)
     where
-      constRows = (chunksOf nTotalColumns tConstants                                          -- we can fit so many definitions per row
-                   & mapLast (\row -> row <> replicate (nTotalColumns - length row) ("", "")) -- last row needs completion
-                   & fmap (`zip` allColWidths))                                               -- and we supply column widths for justification
-                  <&> transpose . fmap (\((name, value), w) ->                                -- each row -> row pair of justified [Name, Definition]
-                                          [ T.justifyRight w ' ' name
-                                          , T.justifyRight w ' ' value])
-                   & concat                                                                   -- merge into a single list of rows
+      -- merge into a single list of rows
+      constRows = concatMap
+        -- each row -> row pair of justified [Name, Definition]
+        (transpose . fmap (\((name, value), w) ->
+                             [ T.justifyRight w ' ' name
+                             , T.justifyRight w ' ' value]))
+        -- we can fit so many definitions per row
+        (chunksOf nTotalColumns tConstants
+           & mapLast -- last row needs completion
+               (\row -> row <> replicate (nTotalColumns - length row) ("", ""))
+           & fmap (`zip` allColWidths))
+           -- and we supply column widths for justification
 
    rowHdrWidth, nTotalColumns :: Int
    rowHdrWidth = maximum $ length <$> (maybeToList tApexHeader
