@@ -1,4 +1,4 @@
-Usage: cardano-testnet (cardano | version | help)
+Usage: cardano-testnet (cardano | nodes | version | help)
 
 Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [ --shelley-era
@@ -19,6 +19,26 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--enable-new-epoch-state-logging]
 
   Start a testnet in any era
+
+Usage: cardano-testnet nodes [--single-node-options FILEPATH]
+  [ --shelley-era
+  | --allegra-era
+  | --mary-era
+  | --alonzo-era
+  | --babbage-era
+  | --conway-era
+  ]
+  [--epoch-length SLOTS]
+  [--slot-length SECONDS]
+  --testnet-magic INT
+  [--active-slots-coeff DOUBLE]
+  [--max-lovelace-supply WORD64]
+  [--enable-p2p BOOL]
+  [--nodeLoggingFormat LOGGING_FORMAT]
+  [--num-dreps NUMBER]
+  [--enable-new-epoch-state-logging]
+
+  Start a testnet in any era, with node-specific options
 
 Usage: cardano-testnet version 
 
