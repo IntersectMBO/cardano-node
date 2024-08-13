@@ -476,10 +476,10 @@ runSlotFilters Run{genesis} flts slots =
  where
    domain :: [(JsonLogfile, [SlotStats a])] -> DataDomain I SlotNo
    domain filtered = mkDataDomain
-     ((CP.head samplePre  <&> slSlot) & fromMaybe 0)
-     ((lastMay samplePre  <&> slSlot) & fromMaybe 0)
-     ((CP.head samplePost <&> slSlot) & fromMaybe 0)
-     ((lastMay samplePost <&> slSlot) & fromMaybe 0)
+     (maybe 0 slSlot (CP.head samplePre))
+     (maybe 0 slSlot (lastMay samplePre))
+     (maybe 0 slSlot (CP.head samplePost))
+     (maybe 0 slSlot (lastMay samplePost))
      (fromIntegral . unSlotNo)
     where
       samplePre  =    slots !! 0 & snd
