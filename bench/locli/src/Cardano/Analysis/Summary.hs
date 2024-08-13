@@ -202,9 +202,7 @@ computeSummary sumAnalysisTime
 
    sumChainRejectionStats :: [(ChainFilter, Int)]
    sumChainRejectionStats =
-     cRejecta
-     <&> fmap fst . filter (not . snd) . beAcceptance
-      &  concat
+     concatMap (fmap fst . filter (not . snd) . beAcceptance) cRejecta
       &  foldr' (\k m -> Map.insertWith (+) k 1 m) Map.empty
       &  Map.toList
 
