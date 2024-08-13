@@ -52,8 +52,7 @@ summariseMultiSummary _ _ [] = error "Asked to summarise empty list of Summary"
 summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
   sumHosts               <- pure $ cdf centiles $ xs <&> unI . sumHosts
   sumLogObjectsTotal     <- pure $ cdf centiles $ xs <&> unI . sumLogObjectsTotal
-  sumChainRejectionStats <- pure $ xs <&> sumChainRejectionStats
-                                 & concat
+  sumChainRejectionStats <- pure $ concatMap sumChainRejectionStats xs
   sumBlocksRejected      <- pure $ cdf centiles $ xs <&> unI . sumBlocksRejected
   sumDomainTime          <- pure $ xs <&> sumDomainTime
                                    & traverseDataDomain (cdf centiles . fmap unI)
