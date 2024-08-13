@@ -1,11 +1,10 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 
 module Parsers.Cardano
   ( cmdCardano
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), EraInEon (..), ToCardanoEra (..), bounded)
+import           Cardano.Api (EraInEon (..), bounded, AnyShelleyBasedEra (AnyShelleyBasedEra))
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
@@ -25,9 +24,8 @@ import           Testnet.Types (readNodeLoggingFormat)
 
 optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
 optsTestnet envCli = CardanoTestnetOptions
-  -- TODO <$> (OA.many pSpo <|> pNumSpoNodes)
   <$> pNumSpoNodes
-  <*> pCardanoEra
+  <*> pAnyShelleyBasedEra'
   <*> OA.option auto
       (   OA.long "epoch-length"
       <>  OA.help "Epoch length, in number of slots"
@@ -77,14 +75,10 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
-
   where
-    -- TODO replace era in 'CardanoTestnetOptions' 'AnyShelleyBasedEra' - we're not supporting
-    -- byron testnets
-    pCardanoEra :: Parser AnyCardanoEra
-    pCardanoEra =
-      pAnyShelleyBasedEra envCli <&>
-        \case EraInEon eon -> AnyCardanoEra $ toCardanoEra eon
+    pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
+    pAnyShelleyBasedEra' =
+      pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =

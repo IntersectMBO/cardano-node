@@ -7,6 +7,7 @@ module Testnet.Start.Types
   , cardanoDefaultTestnetOptions
 
   , anyEraToString
+  , anyShelleyBasedEraToString
   , eraToString
 
   , TestnetNodeOptions(..)
@@ -38,7 +39,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
     cardanoNodes :: [TestnetNodeOptions]
-  , cardanoNodeEra :: AnyCardanoEra -- ^ The era to start at
+  , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoEpochLength :: Int -- ^ An epoch's duration, in number of slots
   , cardanoSlotLength :: Double -- ^ Slot length, in seconds
   , cardanoTestnetMagic :: Int
@@ -53,7 +54,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
 cardanoDefaultTestnetOptions :: CardanoTestnetOptions
 cardanoDefaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
-  , cardanoNodeEra = AnyCardanoEra BabbageEra
+  , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraBabbage
   , cardanoEpochLength = 500
   , cardanoSlotLength = 0.1
   , cardanoTestnetMagic = 42
@@ -107,5 +108,9 @@ anyEraToString :: AnyCardanoEra -> String
 anyEraToString (AnyCardanoEra e) = eraToString e
 
 -- | @eraToString ByronEra@ returns @"byron"@
-eraToString :: CardanoEra a -> String
+eraToString :: Pretty (eon era) => eon era -> String
 eraToString = map toLower . docToString . pretty
+
+-- | @anyShelleyBasedEraToString $ AnyShelleyBasedEra ShelleyBasedEraConway@ returns @"conway"@
+anyShelleyBasedEraToString :: AnyShelleyBasedEra -> String
+anyShelleyBasedEraToString (AnyShelleyBasedEra sbe) = eraToString sbe

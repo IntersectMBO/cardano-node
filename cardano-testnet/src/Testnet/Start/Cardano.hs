@@ -99,8 +99,8 @@ cardanoTestnetDefault
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault opts conf = do
-  AnyCardanoEra cEra <- pure $ cardanoNodeEra cardanoDefaultTestnetOptions
-  alonzoGenesis <- getDefaultAlonzoGenesis cEra
+  AnyShelleyBasedEra sbe <- pure $ cardanoNodeEra cardanoDefaultTestnetOptions
+  alonzoGenesis <- getDefaultAlonzoGenesis sbe
   (startTime, shelleyGenesis) <- getDefaultShelleyGenesis opts
   cardanoTestnet opts conf startTime shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
 
@@ -108,9 +108,9 @@ cardanoTestnetDefault opts conf = do
 getDefaultAlonzoGenesis :: ()
   => HasCallStack
   => MonadTest m
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> m AlonzoGenesis
-getDefaultAlonzoGenesis cEra = H.evalEither $ first prettyError (Defaults.defaultAlonzoGenesis cEra)
+getDefaultAlonzoGenesis sbe = H.evalEither $ first prettyError (Defaults.defaultAlonzoGenesis sbe)
 
 -- | A start time and 'ShelleyGenesis' value that are fit to pass to 'cardanoTestnet'
 getDefaultShelleyGenesis :: ()
@@ -192,7 +192,8 @@ cardanoTestnet
       numPoolNodes = length $ cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
-      era = cardanoNodeEra testnetOptions
+      asbe = cardanoNodeEra testnetOptions
+  AnyShelleyBasedEra sbe <- pure asbe
 
    -- Sanity checks
   testnetMinimumConfigurationRequirements testnetOptions
@@ -236,7 +237,7 @@ cardanoTestnet
 
     configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
 
-    _ <- createSPOGenesisAndFiles nPools nDReps era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+    _ <- createSPOGenesisAndFiles nPools nDReps asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
     -- TODO: This should come from the configuration!
     let poolKeyDir :: Int -> FilePath
@@ -305,7 +306,7 @@ cardanoTestnet
         }
 
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
+    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
 
     H.evalIO $ LBS.writeFile (unFile configurationFile) config
 
