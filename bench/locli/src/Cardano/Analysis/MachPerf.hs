@@ -622,10 +622,12 @@ summariseClusterPerf centiles mps@(headline:_) = do
   cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
   cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
   cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
-  mpResourceCDFs       <- sequence $ traverse identity (mps <&> mpResourceCDFs) <&>
-    \case
-      [] -> Left CDFEmptyDataset
-      (xs :: [CDF I Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
+  mpResourceCDFs       <- mapM
+    (\case
+       [] -> Left CDFEmptyDataset
+       (xs :: [CDF I Word64])
+         -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64))
+       (traverse (identity . mpResourceCDFs) mps)
 
   pure MachPerf
     { mpVersion        = mpVersion headline
