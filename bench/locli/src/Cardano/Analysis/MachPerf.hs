@@ -679,7 +679,7 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
     }
  where
    slotDomains :: [DataDomain I SlotNo]
-   slotDomains = concat $ mps <&> mpDomainSlots
+   slotDomains = concatMap mpDomainSlots mps
 
    comb :: forall a. Divisible a => Combine (CDF I) a
    comb = stdCombine2 centiles
