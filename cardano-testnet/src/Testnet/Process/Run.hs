@@ -313,6 +313,7 @@ data ExecutableError
   | RetrievePlanJsonFailure IOException
   | ReadFileFailure IOException
   | MissingExecutable FilePath String
+  | CannotFindExecutable String
   deriving Show
 
 
@@ -334,7 +335,7 @@ binDist pkg = do
       (component:_) -> case component & binFile of
         Just bin -> return $ addExeSuffix (Text.unpack bin)
         Nothing -> left $ MissingExecutable pJsonFp $ "missing bin-file in: " <> show component
-      [] -> error $ "Cannot find exe:" <> pkg <> " in plan"
+      [] -> left $ CannotFindExecutable $ "Cannot find exe: " <> pkg
     Left message -> left $ CannotDecodePlanJSON pJsonFp $ "Cannot decode plan: " <> message
   where matching :: Component -> Bool
         matching component = case componentName component of
