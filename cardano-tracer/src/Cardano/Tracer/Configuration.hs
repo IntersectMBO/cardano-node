@@ -163,7 +163,7 @@ checkMeaninglessValues TracerConfig
   problems = catMaybes
     [ case network of
         AcceptAt addr -> check "AcceptAt is empty" $ nullAddress addr
-        ConnectTo addrs -> check "ConnectTo are empty" $ all nullAddress $ addrs
+        ConnectTo addrs -> check "ConnectTo are empty" $ all nullAddress addrs
     , check "empty logRoot(s)" $ notNull . NE.filter invalidFileMode $ logging
     , (check "no host(s) in hasEKG" . nullEndpoints) =<< hasEKG
     , (check "no host in hasPrometheus" . nullEndpoint) =<< hasPrometheus
