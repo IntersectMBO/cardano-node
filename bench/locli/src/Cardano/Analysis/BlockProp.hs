@@ -306,7 +306,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
                   (Interval (blk0  & beSlotNo)  (blkL  & beSlotNo) <&> I)
                   (mFltDoms <&> fmap I . fst3)
                   (beSlotNo blkL - beSlotNo blk0 & I . fromIntegral . unSlotNo)
-                  (mFltDoms <&> thd3 & maybe (I 0) I)
+                  (maybe (I 0) (I . thd3) mFltDoms)
   , cDomBlocks  = DataDomain
                   (Interval (blk0  & beBlockNo) (blkL  & beBlockNo) <&> I)
                   (mFltDoms <&> fmap I . snd3)
