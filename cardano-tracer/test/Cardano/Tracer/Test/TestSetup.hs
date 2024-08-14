@@ -70,5 +70,5 @@ getTestSetup def =
   customExecParser
     (prefs showHelpOnEmpty)
     (info parseTestSetup mempty)
-    <&> (def <>)
     <&> mergeTestSetup
+    . (def <>)
