@@ -90,13 +90,15 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfBlocksPerHost          <- cdf2OfCDFs comb $ bs <&> cdfBlocksPerHost
   cdfBlocksFilteredRatio    <- cdf2OfCDFs comb $ bs <&> cdfBlocksFilteredRatio
   cdfBlocksChainedRatio     <- cdf2OfCDFs comb $ bs <&> cdfBlocksChainedRatio
-  bpPropagation             <- sequence $ transpose (bs <&> Map.toList . bpPropagation) <&>
+  bpPropagation             <- forM (transpose $ Map.toList . bpPropagation <$> bs) $
     \case
-      [] -> Left CDFEmptyDataset
-      xs@((d,_):ds) -> do
-        unless (all ((d ==) . fst) ds) $
-          Left $ CDFIncoherentSamplingCentiles [Centile . read . T.unpack . T.drop 3 . fst <$> xs]
-        (d,) <$> cdf2OfCDFs comb (snd <$> xs)
+       [] -> Left CDFEmptyDataset
+       xs@((d, _) : ds)
+         -> do unless (all ((d ==) . fst) ds) $
+                 Left $
+                     CDFIncoherentSamplingCentiles
+                         [Centile . read . T.unpack . T.drop 3 . fst <$> xs]
+               (d, ) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
     { bpVersion             = bpVersion headline
     , bpDomainSlots         = slotDomains
