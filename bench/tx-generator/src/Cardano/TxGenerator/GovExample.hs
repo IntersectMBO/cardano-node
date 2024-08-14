@@ -638,7 +638,7 @@ mkTxBody
                       metadata
                       outputs
   Api.ShelleyBasedEraShelley ->
-    Api.createAndValidateTransactionBody (undefined {- shelleyBasedEra @(Api.ShelleyBasedEra Api.ShelleyEra) -}) $
+    Api.createAndValidateTransactionBody shelleyBasedEra $
       mkTxBodyContent shelleyBasedEra
                       ledgerParameters
                       inFunds
