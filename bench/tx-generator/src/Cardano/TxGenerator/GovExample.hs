@@ -514,7 +514,13 @@ type Generator = State FundQueue
 -- turns out fake ones like I used earlier error out.
 -- Cardano.Api.Governance.Actions.createAnchor
 --         :: Url -> ByteString -> Anchor StandardCrypto
-localGenVote :: forall era . {- ConwayEraOnwardsConstraints era => -} Api.ConwayEraOnwards era -> Vote -> IO ()
+-- There's a lingering undefined here, but it's worth keeping because
+-- this is at least meant to push directly towards issuing votes.
+localGenVote :: forall era .
+  {- ConwayEraOnwardsConstraints era => -}
+     Api.ConwayEraOnwards era
+  -> Vote
+  -> IO ()
 localGenVote era vote = do
   let _procedure = Api.createVotingProcedure
                              (era {- eon -} :: Api.ConwayEraOnwards era)
@@ -527,24 +533,21 @@ localGenVote era vote = do
   where
     localShelleyBasedEra = Api.conwayEraOnwardsToShelleyBasedEra era
 
-
-{-
-mkSignedTx :: forall shelleyBasedConwayEra shelleyBasedShelleyEra
-                   shelleyBasedEra shelleyEra conwayEra era .
-  ( shelleyBasedEra ~ Api.ShelleyBasedEra era
-  , shelleyEra ~ Api.ShelleyEra
-  )
-  -- This is a very suspicious constraint.
-  -- => Api.IsShelleyBasedEra era
+mkSignedTx :: forall
+                  era
+                  shelleyBasedEra
+            . ()
+  => Api.ShelleyBasedEra era ~ shelleyBasedEra
+  => Api.IsCardanoEra era
   => Api.IsShelleyBasedEra shelleyBasedEra
   => shelleyBasedEra
-  -> LedgerProtocolParameters _
+  -> LedgerProtocolParameters era
   -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral _, [Fund]) -- (collateral, collFunds)
-  -> Api.TxFee shelleyBasedEra -- fee
-  -> Api.TxMetadataInEra shelleyBasedEra -- metadata
-  -> [Api.TxOut Api.CtxTx shelleyBasedEra] -- outputs
-  -> Either TxGenError (Api.Tx shelleyBasedEra, Api.TxId)
+  -> (Api.TxInsCollateral era, [Fund])
+  -> Api.TxFee era
+  -> Api.TxMetadataInEra era
+  -> [Api.TxOut Api.CtxTx era] -- outputs
+  -> Either Api.TxBodyError (Api.Tx era, Api.TxId)
 mkSignedTx
      shelleyBasedEra
      ledgerParameters
@@ -552,60 +555,33 @@ mkSignedTx
      (collateral, collFunds)
      fee
      metadata
-     outputs = case shelleyBasedEra of
-  Api.ShelleyBasedEraAllegra -> eraErr "Allegra"
-  Api.ShelleyBasedEraAlonzo -> eraErr "Alonzo"
-  Api.ShelleyBasedEraBabbage -> eraErr "Babbage"
-  Api.ShelleyBasedEraMary -> eraErr "Mary"
-  Api.ShelleyBasedEraConway ->
-    case mkTxBody shelleyBasedEra
-               ledgerParameters
-               inFunds
-               (collateral, collFunds)
-               fee
-               metadata
-               outputs of
-        Left err -> Left $ ApiError err
-        Right body ->
-          Right (Api.signShelleyTransaction shelleyBasedEra body signingKeys, Api.getTxId body)
-  Api.ShelleyBasedEraShelley ->
-    case mkTxBody shelleyBasedEra
-               ledgerParameters
-               inFunds
-               (collateral, collFunds)
-               fee
-               metadata
-               outputs of
-        Left err -> Left $ ApiError err
-        Right body ->
-          Right (Api.signShelleyTransaction shelleyBasedEra body signingKeys, Api.getTxId body)
+     outputs = flip (Api.inEonForEra $ eraErr "Unsupported era")
+       (Api.toCardanoEra shelleyBasedEra)
+       \eonEra ->
+           Arrow.right (flip (Api.signShelleyTransaction eonEra) signingKeys
+                           &&& Api.getTxId)
+               (mkTxBody eonEra
+                        ledgerParameters
+                        inFunds
+                        (collateral, collFunds)
+                        fee
+                        metadata
+                        outputs)
   where
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
     signingKeys :: [ShelleyWitnessSigningKey]
     signingKeys = map WitnessPaymentKey allKeys
     allKeys :: [SigningKey PaymentKey]
     allKeys = Maybe.mapMaybe FundQueue.getFundKey $ inFunds ++ collFunds
--}
 
-{-
-mkTxBody :: forall shelleyBasedConwayEra shelleyBasedShelleyEra
-                   shelleyBasedEra shelleyEra conwayEra t era .
-  ( shelleyBasedEra ~ Api.ShelleyBasedEra era
-  , Api.ShelleyBasedEra conwayEra ~ shelleyBasedConwayEra
-  , shelleyBasedShelleyEra ~ Api.ShelleyBasedEra Api.ShelleyEra
-  , conwayEra ~ Api.ConwayEra
-  , shelleyEra ~ Api.ShelleyEra
-  )
-  -- This is a very suspicious constraint.
-  -- => Api.IsShelleyBasedEra era
+mkTxBody :: forall shelleyBasedEra era .  ()
+  => shelleyBasedEra ~ Api.ShelleyBasedEra era
+  => Api.IsCardanoEra era
   => Api.IsShelleyBasedEra shelleyBasedEra
-  => Api.IsShelleyBasedEra shelleyBasedConwayEra
-  => Api.IsShelleyBasedEra shelleyBasedShelleyEra
-  => t ~ era
   => shelleyBasedEra
   -> LedgerProtocolParameters era
   -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral era, era) -- (collateral, collFunds)
+  -> (Api.TxInsCollateral era, _) -- (collateral, collFunds)
   -> Api.TxFee era -- fee
   -> Api.TxMetadataInEra era -- metadata
   -> [Api.TxOut Api.CtxTx era] -- outputs
@@ -617,32 +593,18 @@ mkTxBody
      (collateral, collFunds)
      fee
      metadata
-     outputs = case shelleyBasedEra of
-  Api.ShelleyBasedEraAllegra -> eraErr "Allegra"
-  Api.ShelleyBasedEraAlonzo -> eraErr "Alonzo"
-  Api.ShelleyBasedEraBabbage -> eraErr "Babbage"
-  Api.ShelleyBasedEraMary -> eraErr "Mary"
-  Api.ShelleyBasedEraConway ->
-    Api.createAndValidateTransactionBody (undefined {- shelleyBasedEra @(Api.ShelleyBasedEra Api.ConwayEra) -}) $
-      mkTxBodyContent shelleyBasedEra
-                      ledgerParameters
-                      inFunds
-                      (collateral, collFunds)
-                      fee
-                      metadata
-                      outputs
-  Api.ShelleyBasedEraShelley ->
-    Api.createAndValidateTransactionBody (undefined {- shelleyBasedEra @(Api.ShelleyBasedEra Api.ShelleyEra) -}) $
-      mkTxBodyContent shelleyBasedEra
-                      ledgerParameters
-                      inFunds
-                      (collateral, collFunds)
-                      fee
-                      metadata
-                      outputs
+     outputs = flip (Api.inEonForEra $ eraErr "Unsupported era")
+       (Api.toCardanoEra shelleyBasedEra)
+       \eonEra -> Api.createAndValidateTransactionBody eonEra $
+         mkTxBodyContent eonEra
+                         ledgerParameters
+                         inFunds
+                         (collateral, collFunds)
+                         fee
+                         metadata
+                         outputs
   where
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
--}
 
 upgradeLedgerPParams :: forall crypto {- functor -} . ()
   -- => Functor functor
@@ -653,23 +615,6 @@ upgradeLedgerPParams :: forall crypto {- functor -} . ()
 upgradeLedgerPParams ledgerParams =
   Ledger.upgradePParams (Default.def :: Ledger.UpgradePParams Identity (Ledger.ConwayEra crypto)) ledgerParams
 
--- forall era . Api.ShelleyBasedEra _ -> Api.TxBodyContent Api.BuildTx era
-{-
-mkTxBodyContent :: forall era shelleyBasedEra .
-  ( Api.ShelleyBasedEra era ~ shelleyBasedEra
-  )
-  -- This is a very suspicious constraint.
-  -- => Api.IsShelleyBasedEra era
-  => Api.IsShelleyBasedEra shelleyBasedEra
-  => shelleyBasedEra
-  -> LedgerProtocolParameters _
-  -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral _, _) -- (collateral, collFunds)
-  -> Api.TxFee _ -- fee
-  -> Api.TxMetadataInEra _ -- metadata
-  -> [Api.TxOut Api.CtxTx _] -- outputs
-  -> Api.TxBodyContent Api.BuildTx _
--}
 mkTxBodyContent :: forall era . ()
   => Api.IsCardanoEra era
   => Api.ShelleyBasedEra era
@@ -688,10 +633,7 @@ mkTxBodyContent
      fee
      metadata
      outputs =
-  Api.defaultTxBodyContent undefined
-    -- & Api.setTxIns (map (\f -> (FundQueue.getFundTxIn f, Api.BuildTxWith $ FundQueue.getFundWitness f)) inFunds)
-    -- & Api.setTxIns (map (FundQueue.getFundTxIn &&& (Api.BuildTxWith . FundQueue.getFundWitness) [(FundQueue.getFundTxIn f, Api.BuildTxWith $ FundQueue.getFundWitness f)) inFunds)
-    -- & Api.setTxIns [(FundQueue.getFundTxIn f, Api.BuildTxWith $ FundQueue.getFundWitness f) | f <- inFunds]
+  Api.defaultTxBodyContent shelleyBasedEra
     & Api.setTxIns (map getTxIn inFunds)
     & Api.setTxInsCollateral collateral
     & Api.setTxOuts outputs -- (map downgradeTxOut outputs)
@@ -701,7 +643,6 @@ mkTxBodyContent
     & Api.setTxMetadata metadata
     & Api.setTxProtocolParams (Api.BuildTxWith $ Just ledgerParameters)
 
--- getTxIn :: Fund -> (Api.TxIn, Api.Witness WitCtxTxIn era)
 getTxIn :: forall shelleyBasedEra . ()
   => Api.IsCardanoEra shelleyBasedEra
   => Fund
