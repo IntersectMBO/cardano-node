@@ -628,13 +628,13 @@ mkTxBody :: forall -- shelleyBasedConwayEra shelleyBasedShelleyEra
   -- => Api.IsShelleyBasedEra shelleyBasedConwayEra
   -- => Api.IsShelleyBasedEra shelleyBasedShelleyEra
   => shelleyBasedEra
-  -> LedgerProtocolParameters era
+  -> LedgerProtocolParameters _
   -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral era, era) -- (collateral, collFunds)
-  -> Api.TxFee era -- fee
-  -> Api.TxMetadataInEra era -- metadata
-  -> [Api.TxOut Api.CtxTx era] -- outputs
-  -> Either Api.TxBodyError (Api.TxBody era)
+  -> (Api.TxInsCollateral _, _) -- (collateral, collFunds)
+  -> Api.TxFee _ -- fee
+  -> Api.TxMetadataInEra _ -- metadata
+  -> [Api.TxOut Api.CtxTx _] -- outputs
+  -> Either Api.TxBodyError (Api.TxBody _)
 mkTxBody
      shelleyBasedEra
      ledgerParameters
@@ -642,30 +642,18 @@ mkTxBody
      (collateral, collFunds)
      fee
      metadata
-     outputs = case shelleyBasedEra of
-  Api.ShelleyBasedEraAllegra -> eraErr "Allegra"
-  Api.ShelleyBasedEraAlonzo -> eraErr "Alonzo"
-  Api.ShelleyBasedEraBabbage -> eraErr "Babbage"
-  Api.ShelleyBasedEraMary -> eraErr "Mary"
-  Api.ShelleyBasedEraConway ->
-    Api.createAndValidateTransactionBody shelleyBasedEra $
-      mkTxBodyContent shelleyBasedEra
-                      ledgerParameters
-                      inFunds
-                      (collateral, collFunds)
-                      fee
-                      metadata
-                      outputs
-  Api.ShelleyBasedEraShelley ->
-    Api.createAndValidateTransactionBody shelleyBasedEra $
-      mkTxBodyContent shelleyBasedEra
-                      ledgerParameters
-                      inFunds
-                      (collateral, collFunds)
-                      fee
-                      metadata
-                      outputs
+     outputs = Api.inEonForEra (eraErr "Unsupported era")
+       (\eonEra -> Api.createAndValidateTransactionBody eonEra $
+         mkTxBodyContent eonEra
+                         ledgerParameters
+                         inFunds
+                         (collateral, collFunds)
+                         fee
+                         metadata
+                         outputs)
+       (Api.toCardanoEra shelleyBasedEra)
   where
+    -- shelleyEra = Api.toCardanoEra shelleyBasedEra
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
 
 upgradeLedgerPParams :: forall crypto {- functor -} . ()
