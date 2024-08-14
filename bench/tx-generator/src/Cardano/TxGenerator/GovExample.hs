@@ -628,13 +628,13 @@ mkTxBody :: forall -- shelleyBasedConwayEra shelleyBasedShelleyEra
   -- => Api.IsShelleyBasedEra shelleyBasedConwayEra
   -- => Api.IsShelleyBasedEra shelleyBasedShelleyEra
   => shelleyBasedEra
-  -> LedgerProtocolParameters _
+  -> LedgerProtocolParameters era
   -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral _, _) -- (collateral, collFunds)
-  -> Api.TxFee _ -- fee
-  -> Api.TxMetadataInEra _ -- metadata
-  -> [Api.TxOut Api.CtxTx _] -- outputs
-  -> Either Api.TxBodyError (Api.TxBody _)
+  -> (Api.TxInsCollateral era, _) -- (collateral, collFunds)
+  -> Api.TxFee era -- fee
+  -> Api.TxMetadataInEra era -- metadata
+  -> [Api.TxOut Api.CtxTx era] -- outputs
+  -> Either Api.TxBodyError (Api.TxBody era)
 mkTxBody
      shelleyBasedEra
      ledgerParameters
