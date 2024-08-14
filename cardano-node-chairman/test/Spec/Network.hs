@@ -40,7 +40,7 @@ hprop_isPortOpen_False = H.propertyOnce . H.workspace "temp-network" $ \_ -> do
   -- port is actually open by another program
   ports <- H.evalIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
   results <- forM ports H.isPortOpen
-  H.assert (False `L.elem` results)
+  H.assert $ L.any not results
 
 hprop_isPortOpen_True :: Property
 hprop_isPortOpen_True = H.propertyOnce . H.workspace "temp-network" $ \_ -> do
