@@ -689,37 +689,38 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
       & doInsert loBlock
   -- 2. Acquire:Forge (forger only)
   LogObject{loAt, loHost, loBody=LOBlockForged{loBlock,loPrev,loBlockNo,loSlotNo}} ->
-    getBlock loBlock
-    <&> bimapMbe'
-          (const.Left $
-           BPError loHost loBlock (Just lo) BPEDuplicateForge)
-          (const.Left $
-           BPError loHost loBlock (Just lo) (BPEUnexpectedForObserver Forge))
-    & fromMaybe
-      (MFE $ ForgerEvents
-        { bfeHost         = loHost
-        , bfeBlock        = loBlock
-        , bfeBlockPrev    = loPrev
-        , bfeBlockNo      = loBlockNo
-        , bfeSlotNo       = loSlotNo
-        , bfeSlotStart    = slotStart genesis loSlotNo
-        , bfeEpochNo      = fst $ genesis `unsafeParseSlot` loSlotNo
-        , bfeBlockSize    = SNothing
-        , bfeStarted      = mvStarted
-        , bfeBlkCtx       = mvBlkCtx
-        , bfeLgrState     = mvLgrState
-        , bfeLgrView      = mvLgrView
-        , bfeLeading      = mvLeading
-        , bfeTicked       = mvTicked
-        , bfeMemSnap      = mvMemSnap
-        , bfeForged       = SJust loAt
-        , bfeAnnounced    = SNothing
-        , bfeAnnouncedCum = SNothing
-        , bfeSending      = SNothing
-        , bfeAdopted      = SNothing
-        , bfeChainDelta   = 0
-        , bfeErrs         = []
-        })
+    maybe
+      (MFE
+         $ ForgerEvents
+             { bfeHost         = loHost
+             , bfeBlock        = loBlock
+             , bfeBlockPrev    = loPrev
+             , bfeBlockNo      = loBlockNo
+             , bfeSlotNo       = loSlotNo
+             , bfeSlotStart    = slotStart genesis loSlotNo
+             , bfeEpochNo      = fst $ genesis `unsafeParseSlot` loSlotNo
+             , bfeBlockSize    = SNothing
+             , bfeStarted      = mvStarted
+             , bfeBlkCtx       = mvBlkCtx
+             , bfeLgrState     = mvLgrState
+             , bfeLgrView      = mvLgrView
+             , bfeLeading      = mvLeading
+             , bfeTicked       = mvTicked
+             , bfeMemSnap      = mvMemSnap
+             , bfeForged       = SJust loAt
+             , bfeAnnounced    = SNothing
+             , bfeAnnouncedCum = SNothing
+             , bfeSending      = SNothing
+             , bfeAdopted      = SNothing
+             , bfeChainDelta   = 0
+             , bfeErrs         = []
+             })
+      (bimapMbe'
+         (const . Left $ BPError loHost loBlock (Just lo) BPEDuplicateForge)
+         (const . Left
+            $ BPError
+                loHost loBlock (Just lo) (BPEUnexpectedForObserver Forge)))
+      (getBlock loBlock)
     & doInsert loBlock
   -- 3. Adopt
   LogObject{loAt, loHost,
