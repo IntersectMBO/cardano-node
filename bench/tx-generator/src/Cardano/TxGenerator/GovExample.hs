@@ -593,7 +593,6 @@ mkSignedTx
     allKeys = Maybe.mapMaybe FundQueue.getFundKey $ inFunds ++ collFunds
 -}
 
-{-
 mkTxBody :: forall shelleyBasedConwayEra shelleyBasedShelleyEra
                    shelleyBasedEra shelleyEra conwayEra t era .
   ( shelleyBasedEra ~ Api.ShelleyBasedEra era
@@ -648,7 +647,6 @@ mkTxBody
                       outputs
   where
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
--}
 
 upgradeLedgerPParams :: forall crypto {- functor -} . ()
   -- => Functor functor
