@@ -688,7 +688,7 @@ mkTxBodyContent
      fee
      metadata
      outputs =
-  Api.defaultTxBodyContent undefined
+  Api.defaultTxBodyContent shelleyBasedEra
     -- & Api.setTxIns (map (\f -> (FundQueue.getFundTxIn f, Api.BuildTxWith $ FundQueue.getFundWitness f)) inFunds)
     -- & Api.setTxIns (map (FundQueue.getFundTxIn &&& (Api.BuildTxWith . FundQueue.getFundWitness) [(FundQueue.getFundTxIn f, Api.BuildTxWith $ FundQueue.getFundWitness f)) inFunds)
     -- & Api.setTxIns [(FundQueue.getFundTxIn f, Api.BuildTxWith $ FundQueue.getFundWitness f) | f <- inFunds]
