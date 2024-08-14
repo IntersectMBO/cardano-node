@@ -61,7 +61,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   -- how many votes to cast
   let drepVotes, spoVotes :: [(String, Int)]
       drepVotes = zip (concatMap (uncurry replicate) [(5, "yes"), (3, "no"), (2, "abstain")]) [1..]
-      spoVotes = zip (concatMap (uncurry replicate) [(1, "yes")]) [1..]
+      spoVotes = [("yes", 1)]
   H.noteShow_ drepVotes
 
   let nDrepVotes :: Int
