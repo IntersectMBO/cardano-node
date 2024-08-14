@@ -135,8 +135,8 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
       let submitApiRequestEndpoint = "POST " <> uriBase <> "/api/submit/tx"
 
       request <- H.evalM $ parseRequest submitApiRequestEndpoint
-        <&> setRequestBodyFile txbodySignedBinFp
         <&> setRequestHeader "Content-Type" ["application/cbor"]
+         .  setRequestBodyFile txbodySignedBinFp
 
       response <- H.evalM $ httpLbs request
 
