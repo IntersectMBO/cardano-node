@@ -3,6 +3,7 @@
 ###
 import "epoch-timeline"    as timeline;
 import "delta-blockbudget" as blockbudget;
+import "delta-blocksizes"  as blocksizes;
 import "delta-v8-preview"  as v8preview;
 import "delta-v9-preview"  as v9preview;
 
@@ -28,6 +29,7 @@ def overlays:
   , "stepshalf":    blockbudget::delta_stepshalf
   , "v8-preview":   v8preview::delta
   , "v9-preview":   v9preview::delta
+  , "blocksize64k": blocksizes::delta_64kblocks
   };
 
 def pParamsWithOverlays(epoch; overlay_names):

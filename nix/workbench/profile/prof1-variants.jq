@@ -547,6 +547,11 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview", "doublebudget"]
     ) as $costmodel_v9_preview_doubleb
+  |
+    ($costmodel_v9_preview
+      | .genesis.pparamsOverlays      as $ovls
+      | .genesis.pparamsOverlays      = $ovls + ["blocksize64k"]
+    ) as $ovl_conway64kblocksize
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -618,6 +623,12 @@ def all_profile_variants:
      }|
      .node.rts_flags_override         = ["-xn"]
     ) as $rts_xn
+  |
+    ({ extra_desc:                     "RTSflags collect all event/profiling data not requiring a -prof build"
+     , suffix:                         "rtsprof"
+     }|
+     .node.rts_flags_override         = ["-l", "-hT"]
+    ) as $rts_prof
   |
   ##
   ### Definition vocabulary:  scenario
@@ -895,6 +906,20 @@ def all_profile_variants:
     ($nomad_perf_plutussecp_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
     ) as $plutussecp_nomadperf_template
   |
+  # This combination of dense topology and reduced block size aims to locally reproduce UTxO-HD in-memory heap size increase on 9.0 and 9.1
+  # runtime: 30mins
+    ($p2p * $dataset_miniature * $ovl_conway64kblocksize *
+      { name: "6-dense"
+      , desc: "6 local nodes, P2P enabled, dense topology, reduced block size"
+      , composition:
+        { topology:                 "torus-dense" }
+      ,  node:
+        { shutdown_on_slot_synced: 1800 }
+      , analysis:
+        { filters:                  ["unitary", "size-full"] }
+      }
+    ) as $default_dense_local_template
+  |
 
   ### First, auto-named profiles:
   ###
@@ -926,6 +951,12 @@ def all_profile_variants:
   , $p2p *
     { name: "default-p2p"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with P2P enabled"
+    }
+  , $default_dense_local_template *
+    { name: "6-dense"
+    }
+  , $default_dense_local_template * $rts_prof *
+    { name: "6-dense-rtsprof"
     }
   , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
