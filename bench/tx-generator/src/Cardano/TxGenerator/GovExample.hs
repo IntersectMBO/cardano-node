@@ -629,7 +629,7 @@ mkTxBody
   Api.ShelleyBasedEraBabbage -> eraErr "Babbage"
   Api.ShelleyBasedEraMary -> eraErr "Mary"
   Api.ShelleyBasedEraConway ->
-    Api.createAndValidateTransactionBody (undefined {- shelleyBasedEra @(Api.ShelleyBasedEra Api.ConwayEra) -}) $
+    Api.createAndValidateTransactionBody shelleyBasedEra $
       mkTxBodyContent shelleyBasedEra
                       ledgerParameters
                       inFunds
