@@ -13,7 +13,6 @@ module Testnet.Start.Types
   , eraToString
 
   , TestnetNodeOptions(..)
-  , extraSpoNodeCliArgs
   , cardanoDefaultTestnetNodeOptions
 
   , NodeLoggingFormat(..)
@@ -71,7 +70,7 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
 data TestnetNodeOptions
-  = SpoTestnetNodeOptions (Maybe NodeConfigurationYaml) [String]
+  = SpoTestnetNodeOptions [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   | PerNodeOption FilePath
@@ -87,17 +86,11 @@ instance FromJSON PerNodeConfiguration where
 
 instance ToJSON PerNodeConfiguration where
 
-extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
-extraSpoNodeCliArgs =
-  \case
-    SpoTestnetNodeOptions _ args -> args
-    PerNodeOption _ -> []
-
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =
-  [ SpoTestnetNodeOptions Nothing []
-  , SpoTestnetNodeOptions Nothing []
-  , SpoTestnetNodeOptions Nothing []
+  [ SpoTestnetNodeOptions []
+  , SpoTestnetNodeOptions []
+  , SpoTestnetNodeOptions []
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)

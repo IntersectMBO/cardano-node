@@ -20,7 +20,6 @@ import           Options.Applicative
 import qualified Options.Applicative as OA
 
 import           Testnet.Start.Cardano
-import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
 
 
@@ -94,7 +93,7 @@ pCardanoTestnetOptions pTestnetNodeOptions envCli = CardanoTestnetOptions
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
   OA.option
-     ((`L.replicate` SpoTestnetNodeOptions Nothing []) <$> auto)
+     ((`L.replicate` SpoTestnetNodeOptions []) <$> auto)
      (   OA.long "num-pool-nodes"
      <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
      <>  OA.metavar "COUNT"
