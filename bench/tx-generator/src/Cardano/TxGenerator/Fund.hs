@@ -76,7 +76,10 @@ getFundCoin (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
 -- TODO: facilitate casting KeyWitnesses between eras -- Note [Era transitions]
 -- | The `Fund` alternative is checked against `cardanoEra`, but
 -- `getFundWitness` otherwise wraps `_fundWitness`.
-getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> Witness WitCtxTxIn era
+getFundWitness :: forall era. ()
+  => IsCardanoEra era
+  => Fund
+  -> Witness WitCtxTxIn era
 getFundWitness fund = case (cardanoEra @era, fund) of
   (ByronEra   , Fund (InAnyCardanoEra ByronEra   a)) -> _fundWitness a
   (ShelleyEra , Fund (InAnyCardanoEra ShelleyEra a)) -> _fundWitness a
