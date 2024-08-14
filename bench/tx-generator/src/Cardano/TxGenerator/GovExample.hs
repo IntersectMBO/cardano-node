@@ -514,7 +514,13 @@ type Generator = State FundQueue
 -- turns out fake ones like I used earlier error out.
 -- Cardano.Api.Governance.Actions.createAnchor
 --         :: Url -> ByteString -> Anchor StandardCrypto
-localGenVote :: forall era . {- ConwayEraOnwardsConstraints era => -} Api.ConwayEraOnwards era -> Vote -> IO ()
+-- There's a lingering undefined here, but it's worth keeping because
+-- this is at least meant to push directly towards issuing votes.
+localGenVote :: forall era .
+  {- ConwayEraOnwardsConstraints era => -}
+     Api.ConwayEraOnwards era
+  -> Vote
+  -> IO ()
 localGenVote era vote = do
   let _procedure = Api.createVotingProcedure
                              (era {- eon -} :: Api.ConwayEraOnwards era)
