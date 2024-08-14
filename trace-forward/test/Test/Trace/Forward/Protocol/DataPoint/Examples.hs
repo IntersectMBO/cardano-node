@@ -1,5 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 {- HLINT ignore "Use map" -}
 
@@ -41,7 +42,7 @@ dataPointForwarderCount = go 0
       { recvMsgDone = return n
       , recvMsgDataPointsRequest =
           \(dpNames :: [DataPointName]) ->
-            return ( zip dpNames (repeat Nothing)
+            return ( map (, Nothing) dpNames
                    , go (succ n)
                    )
       }
