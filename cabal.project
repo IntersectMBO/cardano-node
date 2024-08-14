@@ -51,7 +51,7 @@ package snap-server
   flags: +openssl
 
 package bitvec
-   flags: -simd
+  flags: -simd
 
 -- required for haddocks to build successfully
 package plutus-scripts-bench

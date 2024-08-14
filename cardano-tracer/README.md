@@ -1,5 +1,9 @@
 # Cardano Tracer
 
+> Attention: systemd is enabled by default on Linux. It can be
+> disabled manually with a cabal flag: `-f -systemd` when building on
+> systems without it.
+
 `cardano-tracer` is a service for logging and monitoring over Cardano nodes. After it is connected to the node, it periodically asks the node for different information, receives it, and handles it.
 
 For more details please [read the documentation](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md).

@@ -1,7 +1,9 @@
 # ChangeLog
 
-## 0.2.4 (July 12, 2024)
+## 0.2.4 (August 13, 2024)
 
+* `systemd` is enabled by default. To disable it use the cabal
+  flag: `-f -systemd`.
 * Put RTView behind a feature flag that is disabled by default. To enable RTView,
   use the cabal flag `-f +rtview`. No change to the service configuration.
 * EKG monitoring moved from `threepenny-gui` to direct HTML rendering.

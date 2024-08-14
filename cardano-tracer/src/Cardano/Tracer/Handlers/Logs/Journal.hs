@@ -1,10 +1,5 @@
 {-# LANGUAGE CPP #-}
-
-#if defined(linux_HOST_OS)
-#define LINUX
-#endif
-
-#ifdef LINUX
+#ifdef SYSTEMD
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 #endif
@@ -13,13 +8,13 @@ module Cardano.Tracer.Handlers.Logs.Journal
   ( writeTraceObjectsToJournal
   ) where
 
-#ifdef LINUX
+#ifdef SYSTEMD
 import qualified Cardano.Logging as L
 #endif
 import           Cardano.Logging (TraceObject (..))
 import           Cardano.Tracer.Types (NodeName)
 
-#ifdef LINUX
+#ifdef SYSTEMD
 import           Data.Char (isDigit)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -66,7 +61,7 @@ writeTraceObjectsToJournal nodeName = mapM_ (sendJournalFields . mkJournalFields
   mkPriority L.Alert     = Alert
   mkPriority L.Emergency = Emergency
 #else
--- It works on Linux only.
+-- It works only on Linux distributions with systemd support.
 writeTraceObjectsToJournal :: NodeName -> [TraceObject] -> IO ()
-writeTraceObjectsToJournal _ _ = return ()
+writeTraceObjectsToJournal _ _ = pure ()
 #endif
