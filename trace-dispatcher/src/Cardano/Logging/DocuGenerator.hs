@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 {- HLINT ignore "Use map" -}
 
@@ -172,7 +173,7 @@ documentTracer tracer = do
     documentMetrics :: [LogDoc] -> [([Text],DocuResult)]
     documentMetrics logDocs =
       let nameCommentNamespaceList =
-            concatMap (\ld -> zip (Map.toList (ldMetricsDoc ld)) (repeat (ldNamespace ld))) logDocs
+            concatMap (\ld -> map (, ldNamespace ld) (Map.toList (ldMetricsDoc ld))) logDocs
           sortedNameCommentNamespaceList =
             sortBy (\a b -> compare ((fst . fst) a) ((fst . fst) b)) nameCommentNamespaceList
           groupedNameCommentNamespaceList =
