@@ -533,24 +533,45 @@ localGenVote era vote = do
   where
     localShelleyBasedEra = Api.conwayEraOnwardsToShelleyBasedEra era
 
-
 {-
-mkSignedTx :: forall shelleyBasedConwayEra shelleyBasedShelleyEra
-                   shelleyBasedEra shelleyEra conwayEra era .
-  ( shelleyBasedEra ~ Api.ShelleyBasedEra era
-  , shelleyEra ~ Api.ShelleyEra
+mkSignedTx :: forall shelleyBasedEra
+                     -- era
+                     -- shelleyEra conwayEra
+                     -- _stubEra1 _stubEra2 .
+                     shelleyBasedConwayEra
+                     shelleyBasedShelleyEra
+                     .
+  (
+  --   shelleyBasedEra ~ Api.ShelleyBasedEra era
+  -- , shelleyBasedShelleyEra ~ Api.ShelleyBasedEra shelleyEra
+  -- , shelleyBasedConwayEra ~ Api.ShelleyBasedEra conwayEra
   )
   -- This is a very suspicious constraint.
   -- => Api.IsShelleyBasedEra era
   => Api.IsShelleyBasedEra shelleyBasedEra
+  => Api.IsShelleyBasedEra shelleyBasedShelleyEra
+  => Api.IsShelleyBasedEra shelleyBasedConwayEra
   => shelleyBasedEra
-  -> LedgerProtocolParameters _
+  -> LedgerProtocolParameters _ -- _stubEra1
   -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral _, [Fund]) -- (collateral, collFunds)
+  -> (Api.TxInsCollateral _ {- _stubEra2 -}, [Fund]) -- (collateral, collFunds)
   -> Api.TxFee shelleyBasedEra -- fee
   -> Api.TxMetadataInEra shelleyBasedEra -- metadata
   -> [Api.TxOut Api.CtxTx shelleyBasedEra] -- outputs
   -> Either TxGenError (Api.Tx shelleyBasedEra, Api.TxId)
+-}
+mkSignedTx :: forall
+                  shelleyBasedEra
+            . ()
+  => Api.IsShelleyBasedEra shelleyBasedEra
+  => _
+  -> _
+  -> _
+  -> _
+  -> _
+  -> _
+  -> _
+  -> Either _ (Api.Tx shelleyBasedEra, Api.TxId)
 mkSignedTx
      shelleyBasedEra
      ledgerParameters
@@ -558,6 +579,8 @@ mkSignedTx
      (collateral, collFunds)
      fee
      metadata
+     outputs = undefined
+{-
      outputs = case shelleyBasedEra of
   Api.ShelleyBasedEraAllegra -> eraErr "Allegra"
   Api.ShelleyBasedEraAlonzo -> eraErr "Alonzo"
@@ -573,7 +596,7 @@ mkSignedTx
                outputs of
         Left err -> Left $ ApiError err
         Right body ->
-          Right (Api.signShelleyTransaction shelleyBasedEra body signingKeys, Api.getTxId body)
+          Right (Api.signShelleyTransaction (Api.shelleyBasedEra {- @shelleyBasedConwayEra-}) body signingKeys, Api.getTxId body)
   Api.ShelleyBasedEraShelley ->
     case mkTxBody shelleyBasedEra
                ledgerParameters
@@ -584,29 +607,26 @@ mkSignedTx
                outputs of
         Left err -> Left $ ApiError err
         Right body ->
-          Right (Api.signShelleyTransaction shelleyBasedEra body signingKeys, Api.getTxId body)
+          Right (Api.signShelleyTransaction (Api.shelleyBasedEra {- @shelleyBasedShelleyEra -}) body signingKeys, Api.getTxId body)
+-}
   where
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
     signingKeys :: [ShelleyWitnessSigningKey]
     signingKeys = map WitnessPaymentKey allKeys
     allKeys :: [SigningKey PaymentKey]
     allKeys = Maybe.mapMaybe FundQueue.getFundKey $ inFunds ++ collFunds
--}
 
-mkTxBody :: forall shelleyBasedConwayEra shelleyBasedShelleyEra
-                   shelleyBasedEra shelleyEra conwayEra t era .
+mkTxBody :: forall -- shelleyBasedConwayEra shelleyBasedShelleyEra
+                   -- conwayEra shelleyEra
+                   shelleyBasedEra era .
   ( shelleyBasedEra ~ Api.ShelleyBasedEra era
-  , Api.ShelleyBasedEra conwayEra ~ shelleyBasedConwayEra
-  , shelleyBasedShelleyEra ~ Api.ShelleyBasedEra Api.ShelleyEra
-  , conwayEra ~ Api.ConwayEra
-  , shelleyEra ~ Api.ShelleyEra
+  -- , Api.ShelleyBasedEra conwayEra ~ shelleyBasedConwayEra
+  -- , shelleyBasedShelleyEra ~ Api.ShelleyBasedEra Api.ShelleyEra
   )
-  -- This is a very suspicious constraint.
-  -- => Api.IsShelleyBasedEra era
+  => Api.IsCardanoEra era
   => Api.IsShelleyBasedEra shelleyBasedEra
-  => Api.IsShelleyBasedEra shelleyBasedConwayEra
-  => Api.IsShelleyBasedEra shelleyBasedShelleyEra
-  => t ~ era
+  -- => Api.IsShelleyBasedEra shelleyBasedConwayEra
+  -- => Api.IsShelleyBasedEra shelleyBasedShelleyEra
   => shelleyBasedEra
   -> LedgerProtocolParameters era
   -> [Fund] -- inFunds
