@@ -82,7 +82,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
 
 
   let propVotes :: [(String, Int)]
-      propVotes = zip (concatMap (uncurry replicate) [(1, "yes")]) [1..]
+      propVotes = [("yes", 1)]
   annotateShow propVotes
 
   (governanceActionTxId, governanceActionIndex) <-
