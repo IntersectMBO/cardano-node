@@ -40,10 +40,10 @@ import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Bifunctor (bimap)
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (type (:~:) (Refl))
 import qualified Data.Map as Map
 import           Data.String
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -56,11 +56,11 @@ import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (checkDRepsNumber, getEpochStateView,
-                   watchEpochStateUpdate, EpochStateView)
+import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
+                   watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
-                   retrieveTransactionId, signTx, mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx,
+                   mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx,
                    submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
@@ -71,7 +71,7 @@ import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog as H
-import           Hedgehog.Extras (readJsonFile, MonadAssertion)
+import           Hedgehog.Extras (MonadAssertion, readJsonFile)
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Test.Golden as H
 
@@ -361,6 +361,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryTreasuryValueCmd -> do
       -- treasury
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
+
+    TestQuerySPOStakeDistributionCmd -> do
+      pure () -- FIXME: https://github.com/IntersectMBO/cardano-node/pull/5932
 
   where
   -- | Wait for the part of the epoch when futurePParams are known

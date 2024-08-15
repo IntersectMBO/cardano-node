@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 9.1
-                      , cardano-cli ^>= 9.2.1
+                      , cardano-api ^>= 9.2
+                      , cardano-cli ^>= 9.3
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2

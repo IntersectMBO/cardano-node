@@ -17,8 +17,8 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad (unless, void)
+import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import           System.Exit
@@ -95,7 +95,7 @@ doTreasuryDonation :: ()
   -> Int -- ^ The amount to donate
   -> m ()
 doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasury' treasuryDonation = do
-  currentTreasury <- 
+  currentTreasury <-
     case currentTreasury' of
       Nothing -> do
         v <- unCoin <$> getTreasuryValue epochStateView
@@ -133,24 +133,24 @@ doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasur
         -- greater or equal to zero.
         ct >= 0 && td >= 0
       H.noteM_ $ execCli' execConfig
-        [ "conway", "transaction", "view" , "--tx-file", txBodyFp
+        [ "debug", "transaction", "view" , "--tx-file", txBodyFp
         , "--output-json", "--out-file", txViewFp]
-    
+
       H.noteM_ $ execCli' execConfig
         [ "conway", "transaction", "sign"
         , "--tx-body-file", txBodyFp
         , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
         , "--out-file", signedTxFp
         ]
-    
+
       H.noteM_ $ execCli' execConfig
-        [ "conway", "transaction", "view" , "--tx-file", signedTxFp ]
-    
+        [ "debug", "transaction", "view" , "--tx-file", signedTxFp ]
+
       H.noteM_ $ execCli' execConfig
         [ "conway", "transaction", "submit" , "--tx-file", signedTxFp ]
-    
+
       void $ waitForEpochs epochStateView (EpochInterval 3)
-    
+
       L.Coin finalTreasury <- getTreasuryValue epochStateView
       H.note_ $ "finalTreasury: " <> show finalTreasury
       finalTreasury H.=== (currentTreasury + toInteger treasuryDonation)
