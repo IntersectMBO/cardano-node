@@ -44,7 +44,7 @@ Obtaining ``cardano-node``
 Building from source
 ====================
 
-Documentation for building the node can be found `here <https://developers.cardano.org/docs/get-started/installing-cardano-node>`_.
+Documentation for building the node can be found `here <https://developers.cardano.org/docs/get-started/cardano-node/installing-cardano-node>`_.
 
 Executables
 ===========
@@ -151,7 +151,7 @@ Using ``cardano-cli``
 *********************
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
-Usage documentation can be found at ``https://github.com/input-output-hk/cardano-cli/tree/master/cardano-cli/README.md``.
+Usage documentation can be found at `<https://developers.cardano.org/docs/get-started/cardano-cli/get-started/>`_.
 
 The general synopsis is as follows:
 
