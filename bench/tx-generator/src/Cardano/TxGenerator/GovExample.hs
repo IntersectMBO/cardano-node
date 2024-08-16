@@ -97,7 +97,6 @@ import           Cardano.Api.Shelley
                    , KeyWitnessInCtx (..)
                    , LedgerProtocolParameters (..)
                    , LocalNodeConnectInfo (..)
-                   , NetworkId (..)
                    , PlutusScriptOrReferenceInput (..)
                    , PolicyId (..)
                    , PoolId
@@ -425,6 +424,7 @@ import qualified Data.Text.IO as Text (putStrLn)
 import           Data.Void (Void)
 import           Data.Type.Equality (TestEquality (..), (:~:) (..))
 import           Lens.Micro ((^.))
+import           Ouroboros.Network.Magic (NetworkMagic (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as
          Consensus (Target (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as
@@ -437,7 +437,6 @@ import           Paths_tx_generator
 -- It may be worth including ConwayEraOnwardsConstraints somehow.
 
 
-{-
 demo :: IO ()
 demo = getDataFileName "data/protocol-parameters.json" >>= demo'
 
@@ -449,7 +448,7 @@ demo' parametersFile = do
       demoEnv = TxEnvironment {
           txEnvNetworkId = Api.Mainnet
         , txEnvProtocolParams = protocolParameters
-        , txEnvFee = Api.TxFeeExplicit Api.ShelleyBasedEraConway 100000
+        , txEnvFee = Api.TxFeeExplicit Api.shelleyBasedEra 100000
         , txEnvMetadata = Api.TxMetadataNone
         }
 
@@ -458,7 +457,7 @@ demo' parametersFile = do
   putStrLn $ "Are run results identical? " ++ show (FundQueue.toList run1 == FundQueue.toList run2)
   where
     worker ::
-         Generator (Either TxGenError (Api.Tx Api.ConwayEra))
+         Generator (Either TxGenError (Api.Tx era))
       -> FundQueue
       -> Int
       -> IO FundQueue
@@ -469,7 +468,14 @@ demo' parametersFile = do
         Right tx -> print tx
         Left err -> print err
       return newState
--}
+
+txEnvEra :: Api.IsShelleyBasedEra era => TxEnvironment era
+txEnvEra = TxEnvironment
+  { txEnvNetworkId = Api.Testnet $ NetworkMagic 0
+  , txEnvProtocolParams = undefined -- this has a lot of fields
+  , txEnvFee = Api.TxFeeExplicit Api.shelleyBasedEra undefined
+  , txEnvMetadata = Api.TxMetadataNone
+  }
 
 signingKey :: SigningKey PaymentKey
 signingKey = fromRight (error "signingKey: parseError") $ TxGen.parseSigningKeyTE keyData
@@ -533,40 +539,33 @@ localGenVote era vote = do
   where
     localShelleyBasedEra = Api.conwayEraOnwardsToShelleyBasedEra era
 
-mkSignedTx :: forall
-                  era
-                  shelleyBasedEra
-            . ()
-  => Api.ShelleyBasedEra era ~ shelleyBasedEra
-  => Api.IsCardanoEra era
-  => Api.IsShelleyBasedEra shelleyBasedEra
-  => shelleyBasedEra
-  -> LedgerProtocolParameters era
-  -> [Fund] -- inFunds
+mkSignedTx :: forall era
+                     . ()
+  => Api.IsShelleyBasedEra era
+  => LedgerProtocolParameters era
+  -> [Fund]
   -> (Api.TxInsCollateral era, [Fund])
   -> Api.TxFee era
   -> Api.TxMetadataInEra era
-  -> [Api.TxOut Api.CtxTx era] -- outputs
+  -> [Api.TxOut Api.CtxTx era]
   -> Either Api.TxBodyError (Api.Tx era, Api.TxId)
 mkSignedTx
-     shelleyBasedEra
      ledgerParameters
      inFunds
      (collateral, collFunds)
      fee
      metadata
      outputs = flip (Api.inEonForEra $ eraErr "Unsupported era")
-       (Api.toCardanoEra shelleyBasedEra)
+       (Api.toCardanoEra (Api.shelleyBasedEra :: Api.ShelleyBasedEra era))
        \eonEra ->
            Arrow.right (flip (Api.signShelleyTransaction eonEra) signingKeys
                            &&& Api.getTxId)
-               (mkTxBody eonEra
-                        ledgerParameters
-                        inFunds
-                        (collateral, collFunds)
-                        fee
-                        metadata
-                        outputs)
+               (mkTxBody ledgerParameters
+                         inFunds
+                         (collateral, collFunds)
+                         fee
+                         metadata
+                         outputs)
   where
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
     signingKeys :: [ShelleyWitnessSigningKey]
@@ -574,36 +573,37 @@ mkSignedTx
     allKeys :: [SigningKey PaymentKey]
     allKeys = Maybe.mapMaybe FundQueue.getFundKey $ inFunds ++ collFunds
 
-mkTxBody :: forall shelleyBasedEra era .  ()
-  => shelleyBasedEra ~ Api.ShelleyBasedEra era
-  => Api.IsCardanoEra era
-  => Api.IsShelleyBasedEra shelleyBasedEra
-  => shelleyBasedEra
-  -> LedgerProtocolParameters era
-  -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral era, _) -- (collateral, collFunds)
-  -> Api.TxFee era -- fee
-  -> Api.TxMetadataInEra era -- metadata
-  -> [Api.TxOut Api.CtxTx era] -- outputs
+mkTxBody :: forall era
+                   .  ()
+  => Api.IsShelleyBasedEra era
+  => LedgerProtocolParameters era
+  -> [Fund]
+  -> (Api.TxInsCollateral era, [Fund])
+  -> Api.TxFee era
+  -> Api.TxMetadataInEra era
+  -> [Api.TxOut Api.CtxTx era]
   -> Either Api.TxBodyError (Api.TxBody era)
 mkTxBody
-     shelleyBasedEra
      ledgerParameters
      inFunds
      (collateral, collFunds)
      fee
      metadata
-     outputs = flip (Api.inEonForEra $ eraErr "Unsupported era")
-       (Api.toCardanoEra shelleyBasedEra)
-       \eonEra -> Api.createAndValidateTransactionBody eonEra $
-         mkTxBodyContent eonEra
-                         ledgerParameters
+     outputs
+  = flip (Api.inEonForEra $ eraErr "Unsupported era") cardanoEra $
+       flip Api.createAndValidateTransactionBody bodyContent
+  where
+    bodyContent :: Api.TxBodyContent Api.BuildTx era
+    bodyContent = mkTxBodyContent ledgerParameters
                          inFunds
                          (collateral, collFunds)
                          fee
                          metadata
                          outputs
-  where
+    cardanoEra :: Api.CardanoEra era
+    cardanoEra = Api.toCardanoEra shelleyBasedEra
+    shelleyBasedEra :: Api.ShelleyBasedEra era
+    shelleyBasedEra = Api.shelleyBasedEra
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
 
 upgradeLedgerPParams :: forall crypto {- functor -} . ()
@@ -616,20 +616,18 @@ upgradeLedgerPParams ledgerParams =
   Ledger.upgradePParams (Default.def :: Ledger.UpgradePParams Identity (Ledger.ConwayEra crypto)) ledgerParams
 
 mkTxBodyContent :: forall era . ()
-  => Api.IsCardanoEra era
-  => Api.ShelleyBasedEra era
-  -> LedgerProtocolParameters era
+  => Api.IsShelleyBasedEra era
+  => LedgerProtocolParameters era
   -> [Fund] -- inFunds
-  -> (Api.TxInsCollateral era, _) -- (collateral, collFunds)
+  -> (Api.TxInsCollateral era, [Fund])
   -> Api.TxFee era -- fee
   -> Api.TxMetadataInEra era -- metadata
   -> [Api.TxOut Api.CtxTx era] -- outputs
   -> Api.TxBodyContent Api.BuildTx era
 mkTxBodyContent
-     shelleyBasedEra
      ledgerParameters
      inFunds
-     (collateral, collFunds)
+     (collateral, _collFunds)
      fee
      metadata
      outputs =
@@ -642,6 +640,8 @@ mkTxBodyContent
     & Api.setTxValidityUpperBound (Api.defaultTxValidityUpperBound shelleyBasedEra)
     & Api.setTxMetadata metadata
     & Api.setTxProtocolParams (Api.BuildTxWith $ Just ledgerParameters)
+  where
+    shelleyBasedEra :: Api.ShelleyBasedEra era = Api.shelleyBasedEra
 
 getTxIn :: forall shelleyBasedEra . ()
   => Api.IsCardanoEra shelleyBasedEra
@@ -649,90 +649,8 @@ getTxIn :: forall shelleyBasedEra . ()
   -> (Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness WitCtxTxIn shelleyBasedEra))
 getTxIn = FundQueue.getFundTxIn &&& Api.BuildTxWith . FundQueue.getFundWitness
 
--- runTxBuildRaw from CLI
-localGenTx :: forall era. ()
-  => Ledger.EraTx (Ledger.PreviousEra (ShelleyLedgerEra era))
-  => Ledger.EraTx (ShelleyLedgerEra era)
-  => Api.IsConwayBasedEra era
-  => Api.IsShelleyBasedEra era
-  => Api.ConwayEraOnwards era
-  -> LedgerProtocolParameters era
-  -> (Api.TxInsCollateral era, [Fund])
-  -> Api.TxFee era
-  -> Api.TxMetadataInEra era
-  -- -> TxGenerator era
-  -> [Fund]
-  -> [Api.TxOut Api.CtxTx era]
-  -> Either TxGenError (Api.Tx era, Api.TxId)
-localGenTx ceo ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
-  = case txBody of
-      Left err -> Left $ ApiError err
-      Right txBody' ->
-        case signTxBody txBody' of
-          (signedBody, txId) ->
-            case upgradeTx signedBody of
-              Left err -> Left $ (((undefined :: _ -> TxGenError) err) :: TxGenError) -- Left . TxGenError $ show _err
-              Right upgradedBody -> Right (upgradedBody, txId)
- -- signShelleyTransaction :: ShelleyBasedEra era -> TxBody era -> [ShelleyWitnessSigningKey] -> Tx era
- -- createAndValidateTransactionBody :: ShelleyBasedEra era -> TxBodyContent Api.BuildTx era -> Either TxBodyError (Tx era)
- where
-  sbe :: Api.ShelleyBasedEra tyVar10
-  sbe = Api.conwayEraOnwardsToShelleyBasedEra (undefined {- Api.ConwayEraOnwardsConway -} :: eraVar1 {- Api.ConwayEraOnwards era -})
-  signingKeys :: [ShelleyWitnessSigningKey]
-  signingKeys = map WitnessPaymentKey allKeys
-  signTxBody :: Api.TxBody signEra -> (Api.Tx signEra, Api.TxId)
-  signTxBody body =
-   (Api.signShelleyTransaction sbe body signingKeys, Api.getTxId body)
-  downgradedProtocolParameters :: LedgerProtocolParameters tyVar9
-  downgradedProtocolParameters = undefined {- LedgerProtocolParameters
-    . Ledger.downgradePParams (undefined :: _ {- Void -})
-    $ unLedgerProtocolParameters ledgerParameters -}
-  allKeys :: [SigningKey PaymentKey]
-  allKeys = Maybe.mapMaybe FundQueue.getFundKey $ inFunds ++ collFunds
-  {- upgradeTx :: (Ledger.Tx (ShelleyLedgerEra tyVar8)
-                  ~ Ledger.Tx (Ledger.PreviousEra (ShelleyLedgerEra tyVar8))
-               , tyVar8 ~ era)
-    -- => Ledger.EraTx (Ledger.PreviousEra (ShelleyLedgerEra tyVar8))
-    => Ledger.EraTx (Ledger.PreviousEra (ShelleyLedgerEra tyVar8))
-    => Ledger.EraTx (ShelleyLedgerEra tyVar8)
-    => Api.Tx tyVar8 -> Either (Ledger.TxUpgradeError (ShelleyLedgerEra tyVar8) {- Ledger.TxUpgradeError era -}) (Api.Tx tyVar8 {- tyVar2 -} {- Api.Tx era -}) -}
-  upgradeTx :: Api.Tx tyVar8 -> Either d (Api.Tx tyVar8)
-  upgradeTx (Api.ShelleyTx shelleyEra (shelleyTx :: Ledger.Tx (ShelleyLedgerEra tyVar8))) =
-    Arrow.right (Api.ShelleyTx shelleyEra) $ undefined -- Ledger.upgradeTx undefined -- shelleyTx
-    -- undefined -- Arrow.right (Api.ShelleyTx shelleyEra) $ Ledger.upgradeTx shelleyTx
-  downgradedMetadata :: Api.TxMetadataInEra tyVar7
-  downgradedMetadata = case metadata of
-    Api.TxMetadataNone -> Api.TxMetadataNone
-    Api.TxMetadataInEra _ txmd -> Api.TxMetadataInEra (undefined :: tyVar6) txmd
-  downgradeReferenceScript :: Api.IsBabbageBasedEra beo => Api.ReferenceScript beo -> Api.ReferenceScript tyVar5
-  downgradeReferenceScript = \case
-    Api.ReferenceScript babbageEra script -> undefined
-    _ -> undefined
-  {-
-   case babbageEra of
-     Api.BabbageEraOnwardsBabbage -> Api.ReferenceScript Api.BabbageEraOnwardsBabbage script
-     Api.BabbageEraOnwardsConway  -> Api.ReferenceScript Api.BabbageEraOnwardsConway script
-  -}
-  downgradeTxOut :: Api.TxOut Api.CtxTx tyVar3 -> Api.TxOut Api.CtxTx era
-  downgradeTxOut = undefined
-  build :: Api.BuildTxWith Api.BuildTx (Maybe (LedgerProtocolParameters tyVar4))
-  build = Api.BuildTxWith $ Just downgradedProtocolParameters
-  txBody :: Either (Api.TxBodyError) (Api.TxBody era)
-  txBody = Api.createAndValidateTransactionBody sbe txBodyContent
-  txBodyContent :: Api.TxBodyContent Api.BuildTx era
-  txBodyContent = Api.defaultTxBodyContent sbe
-    & Api.setTxIns (map (\f -> (FundQueue.getFundTxIn f, Api.BuildTxWith $ FundQueue.getFundWitness f)) inFunds)
-    & Api.setTxInsCollateral collateral
-    & Api.setTxOuts (map downgradeTxOut outputs)
-    & Api.setTxFee fee
-    & Api.setTxValidityLowerBound Api.TxValidityNoLowerBound
-    & Api.setTxValidityUpperBound (Api.defaultTxValidityUpperBound sbe)
-    & Api.setTxMetadata downgradedMetadata
-    & Api.setTxProtocolParams build
-
-
-localSourceToStoreTransaction ::
-     Monad m
+localSourceToStoreTransaction :: forall m era split . ()
+  => Monad m
   => TxGenerator era
   -> FundSource m
   -> ([Coin] -> split)
@@ -742,66 +660,64 @@ localSourceToStoreTransaction ::
 localSourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
   fundSource >>= either (return . Left) go
  where
+  go :: [Fund] -> m (Either TxGenError (Api.Tx era))
   go inputFunds = do
     let
       -- 'getFundCoin' unwraps the 'TxOutValue' in a fund field
       -- so it's all just 'Lovelace' instead of a coproduct
       -- maintaining distinctions.
-      outValues = inToOut $ map FundQueue.getFundCoin inputFunds
-      (outputs, toFunds) = mkTxOut outValues
+      outValues :: split = inToOut $ map FundQueue.getFundCoin inputFunds
+      (outputs :: [Api.TxOut Api.CtxTx era], toFunds :: Api.TxId -> [Fund]) = mkTxOut outValues
     case txGenerator inputFunds outputs of
-        Left err -> return $ Left err
-        Right (tx, txId) -> do
+        Left (err :: TxGenError) -> return $ Left err
+        Right (tx :: Api.Tx era, txId :: Api.TxId) -> do
           fundToStore $ toFunds txId
           return $ Right tx
 
-{-
-mkSignedTx' :: forall era shelleyBasedEra . ()
-  => shelleyBasedEra ~ Api.ShelleyBasedEra era
-  => Api.IsShelleyBasedEra shelleyBasedEra
-  => LedgerProtocolParameters _
-  -> (Api.TxInsCollateral shelleyBasedEra, [Fund])
+mkSignedTx' :: forall era . ()
+  => Api.IsShelleyBasedEra era
+  => LedgerProtocolParameters era
+  -> (Api.TxInsCollateral era, [Fund])
   -> Api.TxFee era
-  -> Api.TxMetadataInEra shelleyBasedEra
+  -> Api.TxMetadataInEra era
   -> [Fund]
-  -> [Api.TxOut Api.CtxTx shelleyBasedEra]
-  -> Either TxGenError (Api.Tx shelleyBasedEra, Api.TxId)
+  -> [Api.TxOut Api.CtxTx era]
+  -> Either Api.TxBodyError (Api.Tx era, Api.TxId)
 mkSignedTx' ledgerParameters collateralFunds fee metadata inFunds outputs =
-  mkSignedTx (Api.shelleyBasedEra @shelleyBasedEra) ledgerParameters inFunds collateralFunds fee metadata outputs
--}
+  mkSignedTx ledgerParameters inFunds collateralFunds fee metadata outputs
 
-{-
-generateTx :: forall era shelleyBasedEra .
-  () -- (shelleyBasedEra ~ Api.ShelleyBasedEra era)
-  => Api.IsShelleyBasedEra shelleyBasedEra
-  => TxEnvironment shelleyBasedEra
-  -> Generator (Either TxGenError (Api.Tx shelleyBasedEra))
+exampleGenerator :: Api.IsShelleyBasedEra era
+  => Generator (Either TxGenError (Api.Tx era))
+exampleGenerator = generateTx txEnvEra
+
+generateTx :: forall era
+                     . ()
+  => Api.IsShelleyBasedEra era
+  => TxEnvironment era
+  -> Generator (Either TxGenError (Api.Tx era))
 generateTx TxEnvironment{..}
   = localSourceToStoreTransaction
         generator
         consumeInputFunds
         computeOutputValues
-        (makeToUTxOList $ repeat computeUTxO)
+        utxoList
         addNewOutputFunds
   where
-    fee :: _
+    fee :: Coin
     Api.TxFeeExplicit _ fee = txEnvFee
-    -- ceo :: shelleyBasedEra
-    -- ceo = Api.shelleyBasedEra
-    -- recall type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either TxGenError (Tx era, TxId)
-    generator :: TxGenerator shelleyBasedEra
+    generator :: TxGenerator era
     generator =
-        case Api.convertToLedgerProtocolParameters undefined txEnvProtocolParams of
+        case Api.convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
           Right ledgerParameters ->
-            mkSignedTx' ledgerParameters collateralFunds txEnvFee txEnvMetadata @TxGenerator shelleyBasedEra
-            -- \inFunds outputs -> mkSignedTx ceo ledgerParameters inFunds collateralFunds txEnvFee txEnvMetadata outputs
-          Left err -> \_ _ -> Left (ApiError err)
+            \inFunds outputs -> Arrow.left ApiError $ mkSignedTx' ledgerParameters collateralFunds txEnvFee txEnvMetadata inFunds outputs
+          Left err -> \_ _ -> Left $ ApiError err
       where
+        shelleyBasedEra :: Api.ShelleyBasedEra era = Api.shelleyBasedEra
         -- collateralFunds are needed for Plutus transactions
-        collateralFunds :: (Api.TxInsCollateral shelleyBasedEra, [Fund])
+        collateralFunds :: (Api.TxInsCollateral era, [Fund])
         collateralFunds = (Api.TxInsCollateralNone, [])
 
--- Create a transaction that uses all the available funds.
+    -- Create a transaction that uses all the available funds.
     consumeInputFunds :: Generator (Either TxGenError [Fund])
     consumeInputFunds = do
       funds <- FundQueue.toList <$> get
@@ -815,58 +731,64 @@ generateTx TxEnvironment{..}
     computeOutputValues = TxGen.inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO :: ToUTxO _
+    computeUTxO :: ToUTxO era
     computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
 
+    utxoList :: ToUTxOList era [Coin]
+    utxoList = makeToUTxOList $ repeat computeUTxO
 
-{-
-generateTxM ::
-      TxEnvironment Api.ConwayEra
-  ->  Generator (Either TxGenError (Api.Tx Api.ConwayEra))
+
+generateTxM :: forall era . ()
+  => Api.IsShelleyBasedEra era
+  => TxEnvironment era
+  -> Generator (Either TxGenError (Api.Tx era))
 generateTxM txEnv
   = do
       inFunds <- get
       case generateTxPure txEnv inFunds of
         Right (tx, outFunds)  -> put outFunds >> pure (Right tx)
         Left err              -> pure (Left err)
--}
 
-generateTxPure :: forall era shelleyBasedEra .
-  (shelleyBasedEra ~ Api.ShelleyBasedEra era)
-  => Api.IsShelleyBasedEra shelleyBasedEra
-  => TxEnvironment shelleyBasedEra
+generateTxPure :: forall era . ()
+  => Api.IsShelleyBasedEra era
+  => TxEnvironment era
   -> FundQueue
-  -> Either TxGenError (Api.Tx shelleyBasedEra, FundQueue)
+  -> Either TxGenError (Api.Tx era, FundQueue)
 generateTxPure TxEnvironment{..} inQueue
   = do
-      (tx, txId) <- generator inputs outputs
+      (tx :: Api.Tx era, txId :: Api.TxId) <- generator inputs outputs
       let outQueue = List.foldl' FundQueue.insertFund FundQueue.emptyFundQueue (toFunds txId)
       pure (tx, outQueue)
   where
     inputs = FundQueue.toList inQueue
     Api.TxFeeExplicit _ fee = txEnvFee
-    -- ceo :: shelleyBasedEra
-    -- ceo = Api.shelleyBasedEra
-    generator :: TxGenerator shelleyBasedEra
+    generator :: TxGenerator era
     generator =
-        case Api.convertToLedgerProtocolParameters undefined txEnvProtocolParams of
-          Right ledgerParameters -> mkSignedTx' ledgerParameters collateralFunds txEnvFee txEnvMetadata
-          Left err -> \_ _ -> Left (ApiError err)
-      where
-        -- collateralFunds are needed for Plutus transactions
-        collateralFunds :: (Api.TxInsCollateral shelleyBasedEra, [Fund])
-        collateralFunds = (Api.TxInsCollateralNone, [])
+        case Api.convertToLedgerProtocolParameters shelleyBasedEra
+                                                   txEnvProtocolParams of
+          Right ledgerParameters ->
+            \inFunds outs -> Arrow.left ApiError $
+                mkSignedTx' ledgerParameters collateralFunds txEnvFee txEnvMetadata inFunds outs
+          Left err -> \_ _ -> Left $ ApiError err
 
+    shelleyBasedEra :: Api.ShelleyBasedEra era = Api.shelleyBasedEra
+    -- collateralFunds are needed for Plutus transactions
+    collateralFunds :: (Api.TxInsCollateral era, [Fund])
+    collateralFunds = (Api.TxInsCollateralNone, [])
+
+    outValues :: [Coin]
     outValues = computeOutputValues $ map FundQueue.getFundCoin inputs
+    -- [Coin] -> ([Api.TxOut Ctx era], TxId -> [Fund])
+    outputs :: [Api.TxOut Api.CtxTx era]
+    toFunds :: Api.TxId -> [Fund] -- ToUTxOList era [Coin]
     (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
 
     computeOutputValues :: [Coin] -> [Coin]
     computeOutputValues = TxGen.inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO :: ToUTxO _
+    computeUTxO :: ToUTxO era
     computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
--}
 
 
 {-
@@ -1467,9 +1389,7 @@ runTransactionBuildRawCmd
     let noWitTx = Api.makeSignedTransaction [] txBody
     Api.lift (Api.writeTxFileTextEnvelopeCddl eon txBodyOutFile noWitTx)
       & Api.onLeft (Api.left . CLI.TxCmdWriteFileError)
--}
 
-{-
 runTxBuildRaw
   :: ()
   => Api.ShelleyBasedEra era
