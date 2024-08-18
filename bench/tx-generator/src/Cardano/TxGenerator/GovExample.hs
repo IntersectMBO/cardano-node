@@ -352,27 +352,14 @@ import           Cardano.CLI.Types.Governance
 import qualified Cardano.CLI.Types.Output as CLI (renderScriptCosts)
 import qualified Cardano.CLI.Types.TxFeature as CLI (TxFeature (..))
 import qualified Cardano.Ledger.Api.PParams as Ledger
-                 ( EraPParams (..)
-                 , ppMinFeeAL
-                 )
-import qualified Cardano.Ledger.Api.Tx.Body as Ledger
-                  (EraTxBody (..))
-import qualified Cardano.Ledger.Api.Tx.Cert as Ledger
-                  (pattern RetirePoolTxCert)
-import           Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), Url)
+                   (EraPParams (..))
+import           Cardano.Ledger.BaseTypes (Url)
 import           Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Ledger
-                 ( Era (..)
-                 , EraTx (..)
-                 , EraTxBody (..)
-                 , PreviousEra
-                 , downgradePParams
-                 , upgradePParams)
+                   (upgradePParams)
 import qualified Cardano.Ledger.Api.Era as Ledger
-                 ( BabbageEra
-                 , ConwayEra
-                 , ShelleyEra)
-import           Cardano.Ledger.Crypto -- exports only types and classes
+                   ( BabbageEra
+                   , ConwayEra)
 import qualified Cardano.Ledger.Crypto as Crypto
                  (Crypto (..))
 import           Cardano.TxGenerator.FundQueue (Fund (..), FundInEra (..), FundQueue)
@@ -397,40 +384,22 @@ import qualified Cardano.TxGenerator.Utils as TxGen
 import           Cardano.TxGenerator.UTxO (ToUTxO, ToUTxOList, makeToUTxOList, mkUTxOVariant)
 
 import           Control.Arrow ((&&&))
-import qualified Control.Arrow as Arrow (first, left, right)
-import qualified Control.Monad as Monad (foldM, forM)
+import qualified Control.Arrow as Arrow (left, right)
+import qualified Control.Monad as Monad (foldM)
 import           Control.Monad.Trans.State.Strict
-import           Data.Aeson ((.=))
-import qualified Data.Aeson as Aeson (eitherDecodeFileStrict', object)
-import qualified Data.Aeson.Encode.Pretty as Aeson (encodePretty)
-import qualified Data.ByteString as ByteString
-import qualified Data.ByteString.Char8 as BS8
-import qualified Data.ByteString.Lazy.Char8 as LBS8
+import qualified Data.Aeson as Aeson (eitherDecodeFileStrict')
 import qualified Data.Default.Class as Default
                   (Default (..))
 import           Data.Either (fromRight)
 import           Data.Function ((&))
 import           Data.Functor.Identity (Identity (..))
-import qualified Data.List as List (foldl', null)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (fromList, keysSet)
-import qualified Data.Maybe as Maybe (catMaybes, fromMaybe, mapMaybe)
-import           Data.Set (Set)
-import qualified Data.Set as Set (elems, fromList, toList, (\\))
+import qualified Data.List as List (foldl')
+import qualified Data.Maybe as Maybe (mapMaybe)
 import           Data.String (fromString)
 import           Data.Text (Text)
-import qualified Data.Text as Text (pack)
-import qualified Data.Text.IO as Text (putStrLn)
-import           Data.Void (Void)
-import           Data.Type.Equality (TestEquality (..), (:~:) (..))
-import           Lens.Micro ((^.))
-import           Ouroboros.Network.Magic (NetworkMagic (..))
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as
-         Consensus (Target (..))
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as
-            Net.Tx (SubmitResult (..))
+import qualified Data.Tuple.Extra as Extra (uncurry3)
+import qualified Data.Type.Equality as Equality ((:~:)(..), testEquality)
 import           System.Exit (die)
-import qualified System.IO as IO (print)
 
 import           Paths_tx_generator
 
@@ -445,17 +414,21 @@ demo' parametersFile = do
   protocolParameters <- either die pure =<< Aeson.eitherDecodeFileStrict' parametersFile
   let
       demoEnv :: TxEnvironment Api.ConwayEra
-      demoEnv = TxEnvironment {
-          txEnvNetworkId = Api.Mainnet
+      demoEnv = TxEnvironment
+        { txEnvNetworkId = Api.Mainnet
         , txEnvProtocolParams = protocolParameters
         , txEnvFee = Api.TxFeeExplicit Api.shelleyBasedEra 100000
-        , txEnvMetadata = Api.TxMetadataNone
-        }
+        , txEnvMetadata = Api.TxMetadataNone }
 
-  run1 <- Monad.foldM (worker $ generateTx demoEnv) (FundQueue.emptyFundQueue `FundQueue.insertFund` genesisFund) [1..10]
-  run2 <- Monad.foldM (worker $ generateTxM demoEnv) (FundQueue.emptyFundQueue `FundQueue.insertFund` genesisFund) [1..10]
-  putStrLn $ "Are run results identical? " ++ show (FundQueue.toList run1 == FundQueue.toList run2)
+  run1 <- mkRun $ generateTx demoEnv
+  run2 <- mkRun $ generateTxM demoEnv
+  putStrLn . ("Are run results identical? " ++) . show $
+    FundQueue.toList run1 == FundQueue.toList run2
   where
+    mkRun :: Generator (Either TxGenError (Api.Tx era)) -> IO FundQueue
+    mkRun = Extra.uncurry3 Monad.foldM . (, fundQueue, [1..10]) . worker
+    fundQueue :: FundQueue
+    fundQueue = FundQueue.emptyFundQueue `FundQueue.insertFund` genesisFund
     worker ::
          Generator (Either TxGenError (Api.Tx era))
       -> FundQueue
@@ -468,14 +441,6 @@ demo' parametersFile = do
         Right tx -> print tx
         Left err -> print err
       return newState
-
-txEnvEra :: Api.IsShelleyBasedEra era => TxEnvironment era
-txEnvEra = TxEnvironment
-  { txEnvNetworkId = Api.Testnet $ NetworkMagic 0
-  , txEnvProtocolParams = undefined -- this has a lot of fields
-  , txEnvFee = Api.TxFeeExplicit Api.shelleyBasedEra undefined
-  , txEnvMetadata = Api.TxMetadataNone
-  }
 
 signingKey :: SigningKey PaymentKey
 signingKey = fromRight (error "signingKey: parseError") $ TxGen.parseSigningKeyTE keyData
@@ -608,7 +573,7 @@ mkTxBody
 
 upgradeLedgerPParams :: forall crypto {- functor -} . ()
   -- => Functor functor
-  => Crypto crypto
+  => Crypto.Crypto crypto
   => Default.Default (Ledger.UpgradePParams Identity (Ledger.ConwayEra crypto))
   => Ledger.PParams (Ledger.BabbageEra crypto)
   -> Ledger.PParams (Ledger.ConwayEra crypto)
@@ -685,10 +650,6 @@ mkSignedTx' :: forall era . ()
   -> Either Api.TxBodyError (Api.Tx era, Api.TxId)
 mkSignedTx' ledgerParameters collateralFunds fee metadata inFunds outputs =
   mkSignedTx ledgerParameters inFunds collateralFunds fee metadata outputs
-
-exampleGenerator :: Api.IsShelleyBasedEra era
-  => Generator (Either TxGenError (Api.Tx era))
-exampleGenerator = generateTx txEnvEra
 
 generateTx :: forall era
                      . ()
@@ -991,7 +952,7 @@ runTransactionBuildCmd
         executionUnitPrices <-
           pure (getExecutionUnitPrices era pparams) & Api.onNothing (Api.left CLI.TxCmdPParamExecutionUnitsNotAvailable)
 
-        Refl <-
+        Equality.Refl <-
           testEquality era nodeEra
             & Api.hoistMaybe (CLI.TxCmdTxNodeEraMismatchError $ NodeEraMismatchError era nodeEra)
 
@@ -1708,7 +1669,7 @@ runTxBuild
           & Api.onLeft (Api.left . CLI.TxCmdQueryConvenienceError . AcqFailure)
           & Api.onLeft (Api.left . CLI.TxCmdQueryConvenienceError . QceUnsupportedNtcVersion)
 
-      Refl <-
+      Equality.Refl <-
         testEquality era nodeEra
           & Api.hoistMaybe (CLI.TxCmdTxNodeEraMismatchError $ NodeEraMismatchError era nodeEra)
 
@@ -2487,6 +2448,7 @@ runTransactionWitnessCmd
 
     Api.firstExceptT CLI.TxCmdWriteFileError . Api.newExceptT $
       Api.writeTxWitnessFileTextEnvelopeCddl sbe outFile witness
+-}
 
 runTransactionSignWitnessCmd
   :: ()
@@ -2507,18 +2469,17 @@ runTransactionSignWitnessCmd
             InAnyShelleyBasedEra era' witness <-
               Api.lift (CLI.readFileTxKeyWitness file) & Api.onLeft (Api.left . CLI.TxCmdCddlWitnessError)
 
-            case testEquality era era' of
+            case Equality.testEquality era era' of
               Nothing ->
                 Api.left $
                   CLI.TxCmdWitnessEraMismatch
                     (AnyCardanoEra $ Api.toCardanoEra era)
                     (AnyCardanoEra $ Api.toCardanoEra era')
                     witnessFile
-              Just Refl -> return witness
+              Just Equality.Refl -> return witness
         | witnessFile@(WitnessFile file) <- witnessFiles
         ]
 
     let tx = Api.makeSignedTransaction witnesses txbody
 
     Api.lift (Api.writeTxFileTextEnvelopeCddl era outFile tx) & Api.onLeft (Api.left . CLI.TxCmdWriteFileError)
--}
