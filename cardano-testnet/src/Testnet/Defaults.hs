@@ -424,7 +424,7 @@ defaultByronProtocolParamsJsonValue =
 
 defaultShelleyGenesis
   :: UTCTime
-  -> CardanoTestnetOptions
+  -> CardanoTestnetOptions a
   -> Api.ShelleyGenesis StandardCrypto
 defaultShelleyGenesis startTime testnetOptions = do
   let CardanoTestnetOptions

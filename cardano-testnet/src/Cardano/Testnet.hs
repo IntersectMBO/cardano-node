@@ -12,7 +12,6 @@ module Cardano.Testnet (
   CardanoTestnetOptions(..),
   TestnetNodeOptions(..),
   cardanoDefaultTestnetOptions,
-  cardanoDefaultTestnetNodeOptions,
   getDefaultAlonzoGenesis,
   getDefaultShelleyGenesis,
 

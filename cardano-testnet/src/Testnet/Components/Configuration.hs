@@ -120,12 +120,12 @@ numSeededUTxOKeys = 3
 
 newtype NumPools = NumPools Int
 
-numPools :: CardanoTestnetOptions -> NumPools
-numPools CardanoTestnetOptions { cardanoNodes } = NumPools $ length cardanoNodes
+numPools :: CardanoTestnetOptions a -> NumPools
+numPools CardanoTestnetOptions { cardanoNodesOptions } = NumPools $ length cardanoNodesOptions
 
 newtype NumDReps = NumDReps Int
 
-numDReps :: CardanoTestnetOptions -> NumDReps
+numDReps :: CardanoTestnetOptions a -> NumDReps
 numDReps CardanoTestnetOptions { cardanoNumDReps } = NumDReps cardanoNumDReps
 
 createSPOGenesisAndFiles

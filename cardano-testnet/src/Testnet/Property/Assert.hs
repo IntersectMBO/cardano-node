@@ -84,7 +84,7 @@ assertByDeadlineIOCustom str deadline f = withFrozenCallStack $ do
 assertExpectedSposInLedgerState
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => FilePath -- ^ Stake pools query output filepath
-  -> CardanoTestnetOptions
+  -> CardanoTestnetOptions a
   -> ExecConfig
   -> m ()
 assertExpectedSposInLedgerState output tNetOptions execConfig = withFrozenCallStack $ do

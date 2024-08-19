@@ -111,10 +111,10 @@ pPerNodeOptions =
         OA.strOption
           (OA.long "single-node-options" <> OA.metavar "FILEPATH")
 
-cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetOptions
+cmdCardano :: EnvCli -> Mod CommandFields (CardanoTestnetOptions FilePath)
 cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)
 
-cmdNodes :: EnvCli -> Mod CommandFields CardanoTestnetOptions
+cmdNodes :: EnvCli -> Mod CommandFields (CardanoTestnetOptions FilePath)
 cmdNodes envCli = command' "nodes" "Start a testnet in any era, with node-specific options" (optsNodes envCli)
 
 pNetworkId :: Parser Int

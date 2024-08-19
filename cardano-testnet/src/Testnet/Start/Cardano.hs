@@ -5,14 +5,12 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Start.Cardano
   ( ForkPoint(..)
   , CardanoTestnetOptions(..)
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetOptions
-  , cardanoDefaultTestnetNodeOptions
 
   , TestnetRuntime (..)
 
@@ -70,7 +68,7 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
-testnetMinimumConfigurationRequirements :: MonadTest m => CardanoTestnetOptions -> m ()
+testnetMinimumConfigurationRequirements :: MonadTest m => CardanoTestnetOptions a -> m ()
 testnetMinimumConfigurationRequirements cTestnetOpts = do
   let actualLength = length (cardanoNodes cTestnetOpts)
   when (actualLength < 2) $ do
@@ -94,7 +92,7 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 cardanoTestnetDefault
   :: ()
   => HasCallStack
-  => CardanoTestnetOptions
+  => CardanoTestnetOptions a
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault opts conf = do
@@ -116,7 +114,7 @@ getDefaultShelleyGenesis :: ()
   => HasCallStack
   => MonadIO m
   => MonadTest m
-  => CardanoTestnetOptions
+  => CardanoTestnetOptions a
   -> m (UTCTime, ShelleyGenesis StandardCrypto)
 getDefaultShelleyGenesis opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -173,7 +171,7 @@ getDefaultShelleyGenesis opts = do
 -- >         └── utxo.{addr,skey,vkey}
 cardanoTestnet :: ()
   => HasCallStack
-  => CardanoTestnetOptions -- ^ The options to use. Must be consistent with the genesis files.
+  => CardanoTestnetOptions PerNodeConfiguration -- ^ The options to use. Must be consistent with the genesis files.
   -> Conf
   -> UTCTime -- ^ The starting time. Must be the same as the one in the shelley genesis.
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
@@ -191,6 +189,7 @@ cardanoTestnet
       numPoolNodes = length $ cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
+      perNodesOptions = cardanoNodesOptions testnetOptions
       era = cardanoNodeEra testnetOptions
 
    -- Sanity checks
@@ -320,19 +319,7 @@ cardanoTestnet
     H.lbsWriteFile (tmpAbsPath </> poolKeyDir i </> "topology.json") . encode $
       RealNodeTopology producers
 
-  perNodeOptions :: [Maybe PerNodeConfiguration] <-
-    forM (cardanoNodes testnetOptions) $ \case
-      SpoTestnetNodeOptions _args -> pure Nothing
-      PerNodeOption perNodeFilePath -> do
-        eitherPerNodeOpt <- Aeson.eitherDecode @PerNodeConfiguration <$> H.evalIO (LBS.readFile perNodeFilePath)
-        perNodeOpt <-
-              case eitherPerNodeOpt of
-                Left errMsg -> do
-                  H.note_ $ "Cannot read per node configuration file at " <> perNodeFilePath <> ": " <> errMsg
-                  H.failure
-                Right opts' ->
-                  pure opts'
-        pure $ Just perNodeOpt
+-- perNodesOptions
 
   let keysWithPorts = L.zip3 [1..] poolKeys portNumbers
   ePoolNodes <- H.forConcurrently keysWithPorts $ \(i, key, port) -> do
@@ -341,8 +328,8 @@ cardanoTestnet
         execName =
           case perNodeOptions !! (i - 1) of
             Nothing -> Nothing
-            Just (PerNodeConfiguration Nothing) -> Nothing
-            Just (PerNodeConfiguration (Just execName')) -> Just execName'
+            Just (PerNodeConfiguration Nothing _nodeArgs) -> Nothing
+            Just (PerNodeConfiguration (Just execName') _nodeArgs) -> Just execName'
     H.note_ $ "Node name: " <> nodeName
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) execName nodeName testnetDefaultIpv4Address port testnetMagic

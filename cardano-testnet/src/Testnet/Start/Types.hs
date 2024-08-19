@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -13,7 +12,6 @@ module Testnet.Start.Types
   , eraToString
 
   , TestnetNodeOptions(..)
-  , cardanoDefaultTestnetNodeOptions
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -36,11 +34,10 @@ import           Testnet.Filepath
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
 
-
-data CardanoTestnetOptions = CardanoTestnetOptions
+data CardanoTestnetOptions a = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
-    cardanoNodes :: [TestnetNodeOptions]
+    cardanoNodesOptions :: [a]
   , cardanoNodeEra :: AnyCardanoEra -- ^ The era to start at
   , cardanoEpochLength :: Int -- ^ An epoch's duration, in number of slots
   , cardanoSlotLength :: Double -- ^ Slot length, in seconds
@@ -53,9 +50,9 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   } deriving (Eq, Show)
 
-cardanoDefaultTestnetOptions :: CardanoTestnetOptions
+cardanoDefaultTestnetOptions :: CardanoTestnetOptions PerNodeConfiguration
 cardanoDefaultTestnetOptions = CardanoTestnetOptions
-  { cardanoNodes = cardanoDefaultTestnetNodeOptions
+  { cardanoNodesOptions = replicate 3 mempty -- 3 nodes by default
   , cardanoNodeEra = AnyCardanoEra BabbageEra
   , cardanoEpochLength = 500
   , cardanoSlotLength = 0.1
@@ -68,30 +65,34 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoEnableNewEpochStateLogging = True
   }
 
--- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
-data TestnetNodeOptions
-  = SpoTestnetNodeOptions [String]
-    -- ^ These arguments will be appended to the default set of CLI options when
-    -- starting the node.
-  | PerNodeOption FilePath
-    -- ^ Path of the file containing the configuration
+-- | Options of a single node in a testnet
+data TestnetNodeOptions =
+  -- | Path of the file containing a node's configuration. The file should contain JSON representing
+  -- instances of 'PerNodeConfiguration'
+  TestnetNodeOptions FilePath
   deriving (Eq, Show)
 
 -- | The content of a specific node configuration file, as written to disk in JSON
 data PerNodeConfiguration = PerNodeConfiguration
-  { executable :: Maybe FilePath
+  { executable :: Maybe FilePath -- ^ The path to the node executable to use
+  , nodeArgs :: [String] -- ^ The arguments to pass to the node executable. They will be appended to the default set of CLI options
+                         -- when starting the node
   } deriving (Eq, Show, Generic)
 
 instance FromJSON PerNodeConfiguration where
 
 instance ToJSON PerNodeConfiguration where
 
-cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
-cardanoDefaultTestnetNodeOptions =
-  [ SpoTestnetNodeOptions []
-  , SpoTestnetNodeOptions []
-  , SpoTestnetNodeOptions []
-  ]
+instance Semigroup PerNodeConfiguration where
+  PerNodeConfiguration exec1 args1
+    <> PerNodeConfiguration exec2 args2 =
+       PerNodeConfiguration (exec1 <> exec2) (args1 <> args2)
+
+instance Monoid PerNodeConfiguration where
+  mempty =
+    PerNodeConfiguration
+      Nothing -- No default executable
+      [] -- No custom arguments
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
