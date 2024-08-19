@@ -21,7 +21,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
 Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
                            configuration for all nodes.
-                           (default: [SpoTestnetNodeOptions Nothing [],SpoTestnetNodeOptions Nothing [],SpoTestnetNodeOptions Nothing []])
+                           (default: [SpoTestnetNodeOptions [],SpoTestnetNodeOptions [],SpoTestnetNodeOptions []])
   --shelley-era            Specify the Shelley era
   --allegra-era            Specify the Allegra era
   --mary-era               Specify the Mary era
