@@ -82,10 +82,19 @@ in with final;
     index-state = "2023-08-05T00:00:00Z";
   };
 
+  # The ghc-hls point release compatibility table is documented at
+  # https://haskell-language-server.readthedocs.io/en/latest/support/ghc-version-support.html
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
     src = {
       ghc8107 = haskell-nix.sources."hls-2.2";
-    }.${compiler-nix-name} or haskell-nix.sources."hls-2.3";
+      ghc927 = haskell-nix.sources."hls-2.0";
+      ghc945 = haskell-nix.sources."hls-2.2";
+      ghc946 = haskell-nix.sources."hls-2.2";
+      ghc947 = haskell-nix.sources."hls-2.5";
+      ghc963 = haskell-nix.sources."hls-2.5";
+      ghc964 = haskell-nix.sources."hls-2.6";
+      ghc981 = haskell-nix.sources."hls-2.6";
+    }.${compiler-nix-name} or haskell-nix.sources."hls-2.9";
     cabalProject = builtins.readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
@@ -97,7 +106,7 @@ in with final;
 
   profiteur = haskell-nix.tool compiler-nix-name "profiteur" {
     cabalProjectLocal = ''
-      allow-newer: pofiteur:base, ghc-prof:base
+      allow-newer: profiteur:base, ghc-prof:base
     '';
   };
 
@@ -147,7 +156,7 @@ in with final;
   all-profiles-json = workbench.profile-names-json;
 
   # Disable failing python uvloop tests
-  python38 = prev.python38.override {
+  python39 = prev.python39.override {
     packageOverrides = pythonFinal: pythonPrev: {
       uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
         disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" "tests/test_dns.py" ];
