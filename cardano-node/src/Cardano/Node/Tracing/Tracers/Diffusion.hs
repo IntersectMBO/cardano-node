@@ -21,7 +21,7 @@ import           Data.Text (pack)
 import           Formatting
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import           Network.Mux.Types
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (..))
 
 import qualified Data.List as List
 import qualified Ouroboros.Network.Diffusion as ND
@@ -527,16 +527,16 @@ instance (Show adr, Show ver) => LogFormatting (NtN.HandshakeTr adr ver) where
     forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
                                         <> ". " <> showT ev
 
-instance MetaTrace (AnyMessageAndAgency (HS.Handshake nt term)) where
-    namespaceFor (AnyMessageAndAgency _stok HS.MsgProposeVersions {}) =
+instance MetaTrace (AnyMessage (HS.Handshake nt term)) where
+    namespaceFor (AnyMessage HS.MsgProposeVersions {}) =
       Namespace [] ["ProposeVersions"]
-    namespaceFor (AnyMessageAndAgency _stok HS.MsgReplyVersions {})   =
+    namespaceFor (AnyMessage HS.MsgReplyVersions {})   =
       Namespace [] ["ReplyVersions"]
-    namespaceFor (AnyMessageAndAgency _stok HS.MsgQueryReply {})   =
+    namespaceFor (AnyMessage HS.MsgQueryReply {})   =
       Namespace [] ["MsgQueryReply"]
-    namespaceFor (AnyMessageAndAgency _stok HS.MsgAcceptVersion {})   =
+    namespaceFor (AnyMessage HS.MsgAcceptVersion {})   =
       Namespace [] ["AcceptVersion"]
-    namespaceFor (AnyMessageAndAgency _stok HS.MsgRefuse {})          =
+    namespaceFor (AnyMessage HS.MsgRefuse {})          =
       Namespace [] ["Refuse"]
 
     severityFor (Namespace _ ["ProposeVersions"]) _ = Just Info

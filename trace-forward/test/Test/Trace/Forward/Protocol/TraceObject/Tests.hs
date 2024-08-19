@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 
@@ -42,7 +43,7 @@ tests = testGroup "Trace.Forward.Protocol.TraceObject"
   , testProperty "channel IO"     prop_channel_IO_TraceObjectForward
   ]
 
-prop_codec_TraceObjectForward :: AnyMessageAndAgency (TraceObjectForward TraceItem) -> Bool
+prop_codec_TraceObjectForward :: AnyMessage (TraceObjectForward TraceItem) -> Bool
 prop_codec_TraceObjectForward msg = runST $
   prop_codecM
     (codecTraceObjectForward CBOR.encode CBOR.decode
@@ -50,7 +51,7 @@ prop_codec_TraceObjectForward msg = runST $
     msg
 
 prop_codec_splits2_TraceObjectForward
-  :: AnyMessageAndAgency (TraceObjectForward TraceItem)
+  :: AnyMessage (TraceObjectForward TraceItem)
   -> Bool
 prop_codec_splits2_TraceObjectForward msg = runST $
   prop_codec_splitsM
@@ -60,7 +61,7 @@ prop_codec_splits2_TraceObjectForward msg = runST $
     msg
 
 prop_codec_splits3_TraceObjectForward
-  :: AnyMessageAndAgency (TraceObjectForward TraceItem)
+  :: AnyMessage (TraceObjectForward TraceItem)
   -> Bool
 prop_codec_splits3_TraceObjectForward msg = runST $
   prop_codec_splitsM
@@ -90,7 +91,7 @@ prop_connect_TraceObjectForward f (NonNegative n) =
          (connect
             (traceObjectForwarderPeer   traceObjectForwarderCount)
             (traceObjectAcceptorPeer  $ traceObjectAcceptorApply f 0 n)) of
-    (s, c, TerminalStates TokDone TokDone) -> (s, c) == (n, foldr ($) 0 (replicate n f))
+    (s, c, TerminalStates SingDone SingDone) -> (s, c) == (n, foldr ($) 0 (replicate n f))
 
 prop_channel
   :: ( MonadST    m
