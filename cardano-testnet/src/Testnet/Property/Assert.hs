@@ -40,6 +40,7 @@ import           Data.Type.Equality
 import           Data.Word (Word8)
 import           GHC.Stack as GHC
 
+import           Testnet.Components.Configuration (NumPools(..), numPools)
 import           Testnet.Process.Run
 import           Testnet.Start.Types
 
@@ -87,7 +88,7 @@ assertExpectedSposInLedgerState
   -> ExecConfig
   -> m ()
 assertExpectedSposInLedgerState output tNetOptions execConfig = withFrozenCallStack $ do
-  let numExpectedPools = length $ cardanoNodes tNetOptions
+  let NumPools numExpectedPools = numPools tNetOptions
 
   void $ execCli' execConfig
       [ "query", "stake-pools"

@@ -14,7 +14,7 @@ module Testnet.Components.Configuration
   , getByronGenesisHash
   , getShelleyGenesisHash
 
-  , NumPools
+  , NumPools(..)
   , numPools
   , NumDReps
   , numDReps
