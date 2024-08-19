@@ -102,7 +102,6 @@ import           Cardano.Api.Shelley
                    , Script (..)
                    , ScriptInAnyLang (..)
                    , ScriptValidity (..)
-                   , ScriptWitness (..)
                    , ScriptWitnessInCtx (..)
                    , ShelleyAddr
                    , ShelleyLedgerEra
@@ -116,10 +115,7 @@ import           Cardano.Api.Shelley
                    , TextEnvelopeType (..)
                    , Value
                    , Vote (..)
-                   , VotingProcedures (..)
-                   , WitCtxMint
-                   , WitCtxStake
-                   , WitCtxTxIn)
+                   , VotingProcedures (..))
 import qualified Cardano.Api.Shelley as Api
                    ( BabbageEraOnwards (..)
                    , BuildTx
@@ -130,6 +126,7 @@ import qualified Cardano.Api.Shelley as Api
                    , IsShelleyBasedEra (..)
                    , KeyWitness (..)
                    , ReferenceScript (..)
+                   , ScriptWitness (..)
                    , ShelleyBasedEra (..)
                    , Tx (..)
                    , TxAuxScripts (..)
@@ -154,6 +151,9 @@ import qualified Cardano.Api.Shelley as Api
                    , TxValidityLowerBound (..)
                    , TxValidityUpperBound (..)
                    , TxWithdrawals (..)
+                   , WitCtxMint
+                   , WitCtxStake
+                   , WitCtxTxIn
                    , Witness (..)
                    , alonzoEraOnwardsConstraints
                    , anyAddressInEra
@@ -629,7 +629,7 @@ mkTxBodyContent
 getTxIn :: forall shelleyBasedEra . ()
   => Api.IsCardanoEra shelleyBasedEra
   => Fund
-  -> (Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness WitCtxTxIn shelleyBasedEra))
+  -> (Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn shelleyBasedEra))
 getTxIn = FundQueue.getFundTxIn &&& Api.BuildTxWith . FundQueue.getFundWitness
 
 localSourceToStoreTransaction :: forall monad era split . ()
@@ -1153,7 +1153,7 @@ runTransactionBuildEstimateCmd -- TODO change type
         pScriptExecUnits =
           Map.fromList
             [ (sWitIndex, execUnits)
-            | (sWitIndex, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ execUnits)) <-
+            | (sWitIndex, AnyScriptWitness (Api.PlutusScriptWitness _ _ _ _ _ execUnits)) <-
                 Api.collectTxBodyScriptWitnesses sbe txBodyContent
             ]
 
@@ -1394,7 +1394,7 @@ runTxBuildRaw
   => Api.ShelleyBasedEra era
   -> Maybe ScriptValidity
   -- ^ Mark script as expected to pass or fail validation
-  -> [(Api.TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
+  -> [(Api.TxIn, Maybe (Api.ScriptWitness Api.WitCtxTxIn era))]
   -- ^ TxIn with potential script witness
   -> [Api.TxIn]
   -- ^ Read only reference inputs
@@ -1411,19 +1411,19 @@ runTxBuildRaw
   -- ^ Tx upper bound
   -> Coin
   -- ^ Tx fee
-  -> (Value, [ScriptWitness WitCtxMint era])
+  -> (Value, [Api.ScriptWitness Api.WitCtxMint era])
   -- ^ Multi-Asset value(s)
-  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(Certificate era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -- ^ Certificate with potential script witness
-  -> [(StakeAddress, Coin, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(StakeAddress, Coin, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -> [Hash PaymentKey]
   -- ^ Required signers
   -> Api.TxAuxScripts era
   -> Api.TxMetadataInEra era
   -> Maybe (LedgerProtocolParameters era)
   -> Api.TxUpdateProposal era
-  -> [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
-  -> [(Proposal era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(VotingProcedures era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
+  -> [(Proposal era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -> Maybe (Api.TxCurrentTreasuryValue, CLI.TxTreasuryDonation)
   -> Either CLI.TxCmdError (Api.TxBody era)
 runTxBuildRaw
@@ -1480,7 +1480,7 @@ constructTxBodyContent
   :: Api.ShelleyBasedEra era
   -> Maybe ScriptValidity
   -> Maybe (Ledger.PParams (ShelleyLedgerEra era))
-  -> [(Api.TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
+  -> [(Api.TxIn, Maybe (Api.ScriptWitness Api.WitCtxTxIn era))]
   -- ^ TxIn with potential script witness
   -> [Api.TxIn]
   -- ^ Read only reference inputs
@@ -1496,11 +1496,11 @@ constructTxBodyContent
   -- ^ Tx lower bound
   -> Api.TxValidityUpperBound era
   -- ^ Tx upper bound
-  -> (Value, [ScriptWitness WitCtxMint era])
+  -> (Value, [Api.ScriptWitness Api.WitCtxMint era])
   -- ^ Multi-Asset value(s)
-  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(Certificate era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -- ^ Certificate with potential script witness
-  -> [(StakeAddress, Coin, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(StakeAddress, Coin, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -- ^ Withdrawals
   -> [Hash PaymentKey]
   -- ^ Required signers
@@ -1509,8 +1509,8 @@ constructTxBodyContent
   -> Api.TxAuxScripts era
   -> Api.TxMetadataInEra era
   -> Api.TxUpdateProposal era
-  -> [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
-  -> [(Proposal era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(VotingProcedures era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
+  -> [(Proposal era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -> Maybe (Api.TxCurrentTreasuryValue, CLI.TxTreasuryDonation)
   -- ^ The current treasury value and the donation. This is a stop gap as the
   -- semantics of the donation and treasury value depend on the script languages
@@ -1605,8 +1605,8 @@ constructTxBodyContent
             & Api.setTxTreasuryDonation validatedTreasuryDonation
    where
     convertWithdrawals
-      :: (StakeAddress, Coin, Maybe (ScriptWitness WitCtxStake era)) -- (StakeAddress, Coin, Maybe (Api.ScriptWitness WitCtxStake era))
-      -> (StakeAddress, Coin, Api.BuildTxWith Api.BuildTx (Api.Witness WitCtxStake era)) -- (StakeAddress, Coin, Api.BuildTxWith Api.BuildTx (Api.Witness WitCtxStake era))
+      :: (StakeAddress, Coin, Maybe (Api.ScriptWitness Api.WitCtxStake era))
+      -> (StakeAddress, Coin, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxStake era))
     convertWithdrawals (sAddr, ll, mScriptWitnessFiles) =
       case mScriptWitnessFiles of
         Just sWit -> (sAddr, ll, Api.BuildTxWith $ Api.ScriptWitness ScriptWitnessForStakeAddr sWit)
@@ -1619,7 +1619,7 @@ runTxBuild
   -> Api.NetworkId
   -> Maybe ScriptValidity
   -- ^ Mark script as expected to pass or fail validation
-  -> [(Api.TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
+  -> [(Api.TxIn, Maybe (Api.ScriptWitness Api.WitCtxTxIn era))]
   -- ^ Read only reference inputs
   -> [Api.TxIn]
   -- ^ TxIn with potential script witness
@@ -1633,23 +1633,23 @@ runTxBuild
   -- ^ Normal outputs
   -> CLI.TxOutChangeAddress
   -- ^ A change output
-  -> (Value, [ScriptWitness WitCtxMint era])
+  -> (Value, [Api.ScriptWitness Api.WitCtxMint era])
   -- ^ Multi-Asset value(s)
   -> Maybe SlotNo
   -- ^ Tx lower bound
   -> Api.TxValidityUpperBound era
   -- ^ Tx upper bound
-  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(Certificate era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -- ^ Certificate with potential script witness
-  -> [(StakeAddress, Coin, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(StakeAddress, Coin, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -> [Hash PaymentKey]
   -- ^ Required signers
   -> Api.TxAuxScripts era
   -> Api.TxMetadataInEra era
   -> Api.TxUpdateProposal era
   -> Maybe Word
-  -> [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
-  -> [(Proposal era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(VotingProcedures era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
+  -> [(Proposal era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -> Maybe (Api.TxCurrentTreasuryValue, CLI.TxTreasuryDonation)
   -- ^ The current treasury value and the donation.
   -> ExceptT CLI.TxCmdError IO (BalancedTxBody era)
@@ -1785,7 +1785,7 @@ runTxBuild
 convertCertificates
   :: ()
   => Api.ShelleyBasedEra era
-  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(Certificate era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -> Api.TxCertificates Api.BuildTx era
 convertCertificates sbe certsAndScriptWitnesses =
   Api.TxCertificates sbe certs $ Api.BuildTxWith reqWits
@@ -1793,8 +1793,8 @@ convertCertificates sbe certsAndScriptWitnesses =
   certs = map fst certsAndScriptWitnesses
   reqWits = Map.fromList $ Maybe.mapMaybe convert certsAndScriptWitnesses
   convert
-    :: (Certificate era, Maybe (ScriptWitness WitCtxStake era))
-    -> Maybe (StakeCredential, Api.Witness WitCtxStake era)
+    :: (Certificate era, Maybe (Api.ScriptWitness Api.WitCtxStake era))
+    -> Maybe (StakeCredential, Api.Witness Api.WitCtxStake era)
   convert (cert, mScriptWitnessFiles) = do
     sCred <- Api.selectStakeCredentialWitness cert
     Just $ case mScriptWitnessFiles of
@@ -1822,13 +1822,13 @@ txFeatureMismatchPure era feature =
   Left (CLI.TxCmdTxFeatureMismatch (Api.anyCardanoEra era) feature)
 
 validateTxIns
-  :: [(Api.TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
-  -> [(Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness WitCtxTxIn era))]
+  :: [(Api.TxIn, Maybe (Api.ScriptWitness Api.WitCtxTxIn era))]
+  -> [(Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn era))]
 validateTxIns = map convert
  where
   convert
-    :: (Api.TxIn, Maybe (ScriptWitness WitCtxTxIn era))
-    -> (Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness WitCtxTxIn era))
+    :: (Api.TxIn, Maybe (Api.ScriptWitness Api.WitCtxTxIn era))
+    -> (Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn era))
   convert (txin, mScriptWitness) =
     case mScriptWitness of
       Just sWit ->
@@ -1855,12 +1855,12 @@ validateTxInsReference sbe allRefIns = do
     & maybe (txFeatureMismatchPure (Api.toCardanoEra sbe) CLI.TxFeatureReferenceInputs) Right
 
 getAllReferenceInputs
-  :: [(Api.TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
-  -> [ScriptWitness WitCtxMint era]
-  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
-  -> [(StakeAddress, Coin, Maybe (ScriptWitness WitCtxStake era))]
-  -> [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
-  -> [(Proposal era, Maybe (ScriptWitness WitCtxStake era))]
+  :: [(Api.TxIn, Maybe (Api.ScriptWitness Api.WitCtxTxIn era))]
+  -> [Api.ScriptWitness Api.WitCtxMint era]
+  -> [(Certificate era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
+  -> [(StakeAddress, Coin, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
+  -> [(VotingProcedures era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
+  -> [(Proposal era, Maybe (Api.ScriptWitness Api.WitCtxStake era))]
   -> [Api.TxIn]
   -- ^ Read only reference inputs
   -> [Api.TxIn]
@@ -1891,14 +1891,14 @@ getAllReferenceInputs
         ]
    where
     getReferenceInput
-      :: ScriptWitness witctx era
+      :: Api.ScriptWitness witctx era
       -> Maybe Api.TxIn
     getReferenceInput sWit =
       case sWit of
-        PlutusScriptWitness _ _ (PReferenceScript refIn _) _ _ _ -> Just refIn
-        PlutusScriptWitness _ _ PScript{} _ _ _ -> Nothing
-        SimpleScriptWitness _ (SReferenceScript refIn _) -> Just refIn
-        SimpleScriptWitness _ SScript{} -> Nothing
+        Api.PlutusScriptWitness _ _ (PReferenceScript refIn _) _ _ _ -> Just refIn
+        Api.PlutusScriptWitness _ _ PScript{} _ _ _ -> Nothing
+        Api.SimpleScriptWitness _ (SReferenceScript refIn _) -> Just refIn
+        Api.SimpleScriptWitness _ SScript{} -> Nothing
 
 toAddressInAnyEra
   :: CardanoEra era
@@ -2041,7 +2041,7 @@ toTxAlonzoDatum supp cliDatum =
 createTxMintValue
   :: forall era
    . Api.ShelleyBasedEra era
-  -> (Value, [ScriptWitness WitCtxMint era])
+  -> (Value, [Api.ScriptWitness Api.WitCtxMint era])
   -> Either CLI.TxCmdError (Api.TxMintValue Api.BuildTx era)
 createTxMintValue era (val, scriptWitnesses) =
   if List.null (Api.valueToList val) && List.null scriptWitnesses
@@ -2055,7 +2055,7 @@ createTxMintValue era (val, scriptWitnesses) =
                 witnessesNeededSet =
                   Set.fromList [pid | (AssetId pid _, _) <- Api.valueToList val]
 
-            let witnessesProvidedMap :: Map PolicyId (ScriptWitness WitCtxMint era)
+            let witnessesProvidedMap :: Map PolicyId (Api.ScriptWitness Api.WitCtxMint era)
                 witnessesProvidedMap =  Map.fromList $ gatherMintingWitnesses scriptWitnesses
                 witnessesProvidedSet =  Map.keysSet witnessesProvidedMap
 
@@ -2067,8 +2067,8 @@ createTxMintValue era (val, scriptWitnesses) =
         era
  where
   gatherMintingWitnesses
-    :: [ScriptWitness WitCtxMint era]
-    -> [(PolicyId, ScriptWitness WitCtxMint era)]
+    :: [Api.ScriptWitness Api.WitCtxMint era]
+    -> [(PolicyId, Api.ScriptWitness Api.WitCtxMint era)]
   gatherMintingWitnesses [] = []
   gatherMintingWitnesses (sWit : rest) =
     case scriptWitnessPolicyId sWit of
@@ -2088,20 +2088,20 @@ createTxMintValue era (val, scriptWitnesses) =
     witnessesExtra = Set.elems (witnessesProvided Set.\\ witnessesNeeded)
 
 scriptWitnessPolicyId :: forall witctx era . ()
-  => ScriptWitness witctx era -> Maybe PolicyId
-scriptWitnessPolicyId (SimpleScriptWitness _ (SScript script)) =
+  => Api.ScriptWitness witctx era -> Maybe PolicyId
+scriptWitnessPolicyId (Api.SimpleScriptWitness _ (SScript script)) =
   Just . Api.scriptPolicyId $ SimpleScript script
-scriptWitnessPolicyId (SimpleScriptWitness _ (SReferenceScript _ mPid)) =
+scriptWitnessPolicyId (Api.SimpleScriptWitness _ (SReferenceScript _ mPid)) =
   PolicyId <$> mPid
-scriptWitnessPolicyId (PlutusScriptWitness _ plutusVersion (PScript script) _ _ _) =
+scriptWitnessPolicyId (Api.PlutusScriptWitness _ plutusVersion (PScript script) _ _ _) =
   Just . Api.scriptPolicyId $ PlutusScript plutusVersion script
-scriptWitnessPolicyId (PlutusScriptWitness _ _ (PReferenceScript _ mPid) _ _ _) =
+scriptWitnessPolicyId (Api.PlutusScriptWitness _ _ (PReferenceScript _ mPid) _ _ _) =
   PolicyId <$> mPid
 
 readValueScriptWitnesses
   :: Api.ShelleyBasedEra era
-  -> (Value, [ScriptWitnessFiles WitCtxMint])
-  -> ExceptT CLI.TxCmdError IO (Value, [ScriptWitness WitCtxMint era])
+  -> (Value, [ScriptWitnessFiles Api.WitCtxMint])
+  -> ExceptT CLI.TxCmdError IO (Value, [Api.ScriptWitness Api.WitCtxMint era])
 readValueScriptWitnesses era (v, sWitFiles) = do
   sWits <- mapM (Api.firstExceptT CLI.TxCmdScriptWitnessError . CLI.readScriptWitness era) sWitFiles
   return (v, sWits)
