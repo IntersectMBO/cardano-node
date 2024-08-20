@@ -61,7 +61,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       anyEra = AnyCardanoEra era
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           , cardanoActiveSlotsCoeff = 0.1
                           }
 
@@ -144,7 +144,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   -- Test stake address deleg  cert
   createStakeDelegationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    sbe
     testDelegatorVkeyFp
     stakePoolId
     testDelegatorDelegCert
@@ -165,7 +165,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraString = anyEraToString $ cardanoNodeEra cTestnetOptions
+  let eraString = eraToString sbe
       delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
@@ -246,7 +246,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
+  jsonBS <- createConfigJson tempAbsPath sbe
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePortNumber <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $

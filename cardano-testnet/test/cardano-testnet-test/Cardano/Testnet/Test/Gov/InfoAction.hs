@@ -55,11 +55,10 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      era = toCardanoEra sbe
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyCardanoEra era
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         }
 
   TestnetRuntime

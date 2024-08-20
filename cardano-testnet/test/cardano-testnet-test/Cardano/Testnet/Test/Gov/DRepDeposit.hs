@@ -44,7 +44,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 0
         }
 

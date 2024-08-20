@@ -93,7 +93,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         -- We change slotCoeff because epochLength must be equal to:
         -- securityParam * 10 / slotCoeff
         , cardanoActiveSlotsCoeff = 0.5

@@ -55,7 +55,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         }
 
   TestnetRuntime

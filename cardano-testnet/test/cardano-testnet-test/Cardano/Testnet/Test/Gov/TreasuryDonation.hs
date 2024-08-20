@@ -44,12 +44,10 @@ hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation"
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         }
 
   TestnetRuntime

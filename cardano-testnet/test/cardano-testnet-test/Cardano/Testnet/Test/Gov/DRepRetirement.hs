@@ -45,8 +45,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = toCardanoEra sbe
-      cardanoNodeEra = AnyCardanoEra era
+  let cardanoNodeEra = AnyShelleyBasedEra sbe
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 50 -- 50 * (1/10s) length, i.e. 5 seconds
         , cardanoSlotLength = 0.1  -- 1/10s slot (100ms)

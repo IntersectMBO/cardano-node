@@ -42,11 +42,11 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
   conf <- mkConf tempAbsBasePath'
 
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
-      era = BabbageEra
+      sbe = ShelleyBasedEraBabbage
       options = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
                           , cardanoSlotLength = 0.1
-                          , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           }
 
   tr@TestnetRuntime

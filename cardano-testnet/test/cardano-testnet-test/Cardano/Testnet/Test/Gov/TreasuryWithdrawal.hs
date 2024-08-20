@@ -59,11 +59,10 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       eraName = eraToString era
-      cEra = AnyCardanoEra era
 
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoActiveSlotsCoeff = 0.3
         }
 
