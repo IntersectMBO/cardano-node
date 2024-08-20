@@ -1,3 +1,5 @@
+## Changelog
+
 Changelogs for components can be found as follows:
 
 ./trace-resources/CHANGELOG.md <br> 
