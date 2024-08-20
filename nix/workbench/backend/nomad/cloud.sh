@@ -11,7 +11,6 @@ backend_nomadcloud() {
 
     name )
       # Can be:
-      # nomadpodman       (Using podman Task Driver in the cloud is not planned)
       # nomadexec  (Starts Nomad Agents supporting the "nix_installable" stanza)
       # nomadcloud    (SRE managed Nomad Agents on Amazon S3 (dedicated or not))
       echo 'nomadcloud'
@@ -24,7 +23,6 @@ backend_nomadcloud() {
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
       # Repeated code / envars set by all sub-backends
-      setenvjqstr 'nomad_task_driver'    "exec"
       setenvjqstr 'nomad_environment'    "cloud"
       setenvjqstr 'one_tracer_per_node'  "true"
       # Cloud runs always run the generator inside Nomad Task "explorer"

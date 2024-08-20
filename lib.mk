@@ -42,8 +42,6 @@ $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nix,              $$(prof)
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonix,          $$(prof), true,false, true,false, false, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec,        $$(prof), true,false,false,false, false, nomadexec)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec-auto,   $$(prof), true,false, true,false, false, nomadexec)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadpodman,      $$(prof), true,false,false,false, false, nomadpodman)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadpodman-auto, $$(prof), true,false, true,false, false, nomadpodman)))
 endef
 
 define define_profile_targets_nomadcloud

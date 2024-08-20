@@ -7,9 +7,9 @@
 }:
 let
 
-  # The exec (non podman) task driver can run in a local environment were it
-  # starts a Nomad Server and Nomad Agents instances and used webfs to
-  # distribute the genesis folder.
+  # The exec task driver can run in a local environment were it starts a Nomad
+  # Server and Nomad Agents instances and used webfs to distribute the genesis
+  # folder.
   name = "nomadexec";
 
   # Unlike the supervisor backend `useCabalRun` is always false here.

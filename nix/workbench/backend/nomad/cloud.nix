@@ -7,9 +7,9 @@
 }:
 let
 
-  # The exec (non podman) task driver can run in a cloud environment using SRE's
-  # Nomad servers with the "nix_installable" patch and Amazon S3 to distribute
-  # ther genesis files. All credentials are obtained using Vault.
+  # The exec task driver can run in a cloud environment using SRE's Nomad
+  # servers with the "nix_installable" patch and Amazon S3 to distribute the
+  # genesis files. All credentials are obtained using Vault.
   name = "nomadcloud";
 
   # Unlike the supervisor backend `useCabalRun` is always false here.

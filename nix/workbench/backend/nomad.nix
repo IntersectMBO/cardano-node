@@ -160,39 +160,8 @@ let
               [ diretories.run "supervisor" "supervisord.conf"]
             ;
           };
-          ociImage = import ./oci-images.nix
-            { inherit pkgs lib;
-              inherit containerPkgs;
-            }
-          ;
           nomadJob =
             { inherit generatorTaskName; }
-            //
-            lib.attrsets.optionalAttrs (subBackendName == "podman") {
-              podman = {
-                # TODO: oneTracerPerGroup
-                oneTracerPerCluster = import ./nomad-job.nix
-                  { inherit pkgs lib stateDir;
-                    inherit profileData;
-                    inherit containerSpecs;
-                    # May evolve to a "cloud" flag!
-                    execTaskDriver = false;
-                    inherit generatorTaskName;
-                    oneTracerPerNode = false;
-                    withSsh = false;
-                  };
-                oneTracerPerNode = import ./nomad-job.nix
-                  { inherit pkgs lib stateDir;
-                    inherit profileData;
-                    inherit containerSpecs;
-                    # May evolve to a "cloud" flag!
-                    execTaskDriver = false;
-                    inherit generatorTaskName;
-                    oneTracerPerNode = true;
-                    withSsh = false;
-                  };
-              };
-            }
             //
             lib.attrsets.optionalAttrs (subBackendName == "exec") {
               exec = {
@@ -201,8 +170,6 @@ let
                   { inherit pkgs lib stateDir;
                     inherit profileData;
                     inherit containerSpecs;
-                    # May evolve to a "cloud" flag!
-                    execTaskDriver = true;
                     inherit generatorTaskName;
                     oneTracerPerNode = false;
                     withSsh = false;
@@ -211,8 +178,6 @@ let
                   { inherit pkgs lib stateDir;
                     inherit profileData;
                     inherit containerSpecs;
-                    # May evolve to a "cloud" flag!
-                    execTaskDriver = true;
                     inherit generatorTaskName;
                     oneTracerPerNode = true;
                     withSsh = false;
@@ -228,8 +193,6 @@ let
                   { inherit pkgs lib stateDir;
                     inherit profileData;
                     inherit containerSpecs;
-                    # May evolve to a "cloud" flag!
-                    execTaskDriver = true;
                     inherit generatorTaskName;
                     oneTracerPerNode = true;
                     withSsh = false;
@@ -238,8 +201,6 @@ let
                   { inherit pkgs lib stateDir;
                     inherit profileData;
                     inherit containerSpecs;
-                    # May evolve to a "cloud" flag!
-                    execTaskDriver = true;
                     inherit generatorTaskName;
                     oneTracerPerNode = true;
                     withSsh = true;
