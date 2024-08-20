@@ -23,8 +23,6 @@ let
           import ./workbench/backend/nomad/cloud.nix  params;
         nomadexec       = params:
           import ./workbench/backend/nomad/exec.nix   params;
-        nomadpodman     = params:
-          import ./workbench/backend/nomad/podman.nix params;
         supervisor      = params:
           import ./workbench/backend/supervisor.nix   params;
       }
