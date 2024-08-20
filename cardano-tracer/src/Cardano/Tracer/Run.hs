@@ -28,7 +28,6 @@ import           Cardano.Tracer.Utils
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async, link)
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO)
@@ -154,7 +153,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
     traceWith tr TracerShutdownComplete
 
   traceWith tr TracerInitDone
-  void . sequenceConcurrently $
+  sequenceConcurrently_
     [ runLogsRotator    tracerEnv
     , runMetricsServers tracerEnv
     , runAcceptors      tracerEnv tracerEnvRTView

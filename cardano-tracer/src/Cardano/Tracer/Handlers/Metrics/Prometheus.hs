@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,32 +9,26 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
 
 import           Prelude hiding (head)
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forever)
-import           Control.Monad.IO.Class (liftIO)
-import qualified Data.Bimap as BM
-import           Data.Function ((&))
+import           Data.ByteString.Builder (stringUtf8)
 import           Data.Functor ((<&>))
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map.Strict as M
-import           Data.String (IsString (..))
+import           Data.Map.Strict (Map)
 import           Data.Text (Text)
-import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Network.HTTP.Types
+import           Network.Wai hiding (responseHeaders)
+import           Network.Wai.Handler.Warp (runSettings, defaultSettings)
 import           System.Metrics (Sample, Value (..), sampleAll)
 import           System.Time.Extra (sleep)
-import           Text.Blaze.Html5 hiding (map)
-import           Text.Blaze.Html5.Attributes hiding (title)
-
-import           Snap.Blaze (blaze)
-import           Snap.Core (Snap, getRequest, route, rqParams, writeText)
-import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog, setBind,
-                   setErrorLog, setPort, simpleHttpServe)
+import qualified Cardano.Tracer.Handlers.Metrics.Utils as Utils
+import qualified Data.ByteString as ByteString
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as Lazy.Text
+import qualified Data.Text.Lazy.Encoding as Lazy.Text
+import qualified System.Metrics as EKG
 
 -- | Runs simple HTTP server that listens host and port and returns
 --   the list of currently connected nodes in such a format:
@@ -59,84 +52,77 @@ import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAcc
 runPrometheusServer
   :: TracerEnv
   -> Endpoint
+  -> IO Utils.RouteDictionary
   -> IO ()
-runPrometheusServer tracerEnv endpoint@(Endpoint host port) = forever do
+runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.1
   -- If everything is okay, the function 'simpleHttpServe' never returns.
   -- But if there is some problem, it never throws an exception, but just stops.
   -- So if it stopped - it will be re-started.
-  traceWith (teTracer tracerEnv) TracerStartedPrometheus
+  traceWith teTracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
-  simpleHttpServe config do
-    route
-      [ ("/",          renderListOfConnectedNodes)
-      , ("/:nodename", renderMetricsFromNode)
-      ]
-  sleep 1.0
- where
-  TracerEnv{teConnectedNodesNames, teAcceptedMetrics} = tracerEnv
+  runSettings (setEndpoint endpoint defaultSettings) do
+    renderPrometheus computeRoutes_autoUpdate metricsComp where
 
-  config :: Config Snap ()
-  config = defaultConfig
-    & setErrorLog ConfigNoLog
-    & setAccessLog ConfigNoLog
-    & setBind (encodeUtf8 (T.pack host))
-    & setPort (fromIntegral port)
+  TracerEnv
+    { teTracer
+    , teConfig = TracerConfig { metricsComp }
+    } = tracerEnv
 
-  renderListOfConnectedNodes :: Snap ()
-  renderListOfConnectedNodes = do
-    nIdsWithNames <- liftIO $ readTVarIO teConnectedNodesNames
-    if BM.null nIdsWithNames
-      then writeText "There are no connected nodes yet."
-      else blaze . mkPage . map mkHref $ BM.toList nIdsWithNames
+renderPrometheus :: IO Utils.RouteDictionary -> Maybe (Map Text Text) -> Application
+renderPrometheus computeRoutes_autoUpdate metricsComp request send = do
+  routeDictionary :: Utils.RouteDictionary <-
+    computeRoutes_autoUpdate
 
-  mkHref (_, nodeName) =
-    a ! href (fromString $ "http://" <> host <> ":" <> show port <> "/" <> nodeName')
-      $ toHtml nodeName'
-   where
-    nodeName' = T.unpack nodeName
+  let header :: RequestHeaders
+      header = requestHeaders request
 
-  mkPage hrefs = html $ do
-    head . title $ "Prometheus metrics"
-    body . ul $ mapM_ li hrefs
+  let wantsJson :: Bool
+      wantsJson = all @Maybe ("application/json" `ByteString.isInfixOf`) (lookup hAccept header)
 
-  renderMetricsFromNode :: Snap ()
-  renderMetricsFromNode = do
-    reqParams <- rqParams <$> getRequest
-    case M.lookup "nodename" reqParams of
-      Just [nodeName] -> do
-        liftIO (askNodeId tracerEnv $ decodeUtf8 nodeName) >>= \case
-          Nothing -> writeText "No such a node!"
-          Just anId -> writeText =<< liftIO (getMetricsFromNode tracerEnv anId teAcceptedMetrics)
-      _ -> writeText "No such a node!"
+  let responseHeaders :: ResponseHeaders
+      responseHeaders = [(hContentType, if wantsJson then "application/json" else "text/html")]
+
+  case pathInfo request of
+
+    [] ->
+      send $ responseLBS status200 responseHeaders if wantsJson
+        then Utils.renderJson routeDictionary
+        else Utils.renderListOfConnectedNodes "Prometheus metrics" (Utils.nodeNames routeDictionary)
+
+    route:_
+      | Just (store :: EKG.Store, _) <- lookup route (Utils.getRouteDictionary routeDictionary)
+     -> do metrics <- getMetricsFromNode metricsComp store
+           send $ responseLBS status200 [(hContentType, "text/plain")] (Lazy.Text.encodeUtf8 (Lazy.Text.fromStrict metrics))
+
+      -- all endings in ekg-wai's asset/ folder
+      | otherwise
+     -> send $ responseBuilder status404 [(hContentType, "text/plain")] do
+        "Not found: "
+          <> stringUtf8 (show route)
 
 type MetricName  = Text
 type MetricValue = Text
 type MetricsList = [(MetricName, MetricValue)]
 
 getMetricsFromNode
-  :: TracerEnv
-  -> NodeId
-  -> AcceptedMetrics
+  :: Maybe (Map Text Text)
+  -> EKG.Store
   -> IO Text
-getMetricsFromNode tracerEnv nodeId acceptedMetrics =
-  readTVarIO acceptedMetrics >>=
-    (\case
-        Nothing ->
-          return "No such a node!"
-        Just (ekgStore, _) ->
-          sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
-    ) . M.lookup nodeId
+getMetricsFromNode metricsComp ekgStore =
+  sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
  where
+
   getListOfMetrics :: Sample -> MetricsList
   getListOfMetrics =
-      metricsCompatibility
-      . filter (not . T.null . fst)
-      . map metricsWeNeed
-      . HM.toList
+    metricsCompatibility
+    . filter (not . T.null . fst)
+    . map metricsWeNeed
+    . HM.toList
 
+  metricsWeNeed :: (Text, Value) -> (Text, Text)
   metricsWeNeed (mName, mValue) =
     case mValue of
       Counter c -> (mName, T.pack $ show c)
@@ -144,23 +130,24 @@ getMetricsFromNode tracerEnv nodeId acceptedMetrics =
       Label l   -> (mName, l)
       _         -> ("",    "") -- 'ekg-forward' doesn't support 'Distribution' yet.
 
+  metricsCompatibility :: MetricsList -> MetricsList
+  metricsCompatibility metricsList =
+    case metricsComp of
+      Nothing -> metricsList
+      Just mmap -> foldl (\ accu p'@(mn,mv) -> case Map.lookup mn mmap of
+                                             Nothing -> p' : accu
+                                             Just rep -> p' : (rep,mv) : accu)
+                         []
+                         metricsList
+
   renderListOfMetrics :: MetricsList -> Text
   renderListOfMetrics [] = "No metrics were received from this node."
   renderListOfMetrics mList = T.intercalate "\n" $
     map (\(mName, mValue) -> prepareName mName <> " " <> mValue) mList
 
+  prepareName :: Text -> Text
   prepareName =
       T.filter (`elem` (['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']))
     . T.replace " " "_"
     . T.replace "-" "_"
     . T.replace "." "_"
-
-  metricsCompatibility :: MetricsList -> MetricsList
-  metricsCompatibility metricsList =
-      case metricsComp (teConfig tracerEnv) of
-        Nothing -> metricsList
-        Just mmap -> foldl  (\ accu p'@(mn,mv) -> case M.lookup mn mmap of
-                                                Nothing -> p' : accu
-                                                Just rep -> p' : (rep,mv) : accu)
-                            []
-                            metricsList

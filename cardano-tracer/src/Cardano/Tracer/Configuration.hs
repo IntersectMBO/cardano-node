@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,6 +10,7 @@
 module Cardano.Tracer.Configuration
   ( Address (..)
   , Endpoint (..)
+  , setEndpoint
   , LogFormat (..)
   , LogMode (..)
   , LoggingParams (..)
@@ -24,18 +26,22 @@ import qualified Cardano.Logging.Types as Log
 import           Control.Applicative ((<|>))
 import           Data.Aeson (FromJSON (..), ToJSON, withObject, (.:))
 import           Data.Fixed (Pico)
+import           Data.Function ((&))
 import           Data.Functor ((<&>))
-import           Data.List (intercalate)
+import           Data.List (intercalate, nub)
 import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.Map.Strict (Map)
 import           Data.Maybe (catMaybes)
+import           Data.String (fromString)
 import           Data.Text (Text)
 import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           System.Exit (die)
+
+import Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 
 -- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath
@@ -45,10 +51,16 @@ newtype Address = LocalSocket FilePath
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
   { epHost :: !String
-  , epPort :: !Word16
+  , epPort :: !Port
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
+
+-- | Endpoint {host, port} acting on Settings: setting host and port.
+setEndpoint :: Endpoint -> (Settings -> Settings)
+setEndpoint Endpoint{epHost, epPort} settings = settings
+  & setPort            (epPort :: Port)
+  & setHost (fromString epHost :: HostPreference)
 
 -- | Parameters of rotation mechanism for logs.
 data RotationParams = RotationParams
@@ -113,7 +125,7 @@ data TracerConfig = TracerConfig
   , network        :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
   , loRequestNum   :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
   , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
-  , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
+  , hasEKG         :: !(Maybe Endpoint)             -- ^ Endpoint for EKG web-page.
   , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
   , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
     -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
@@ -137,8 +149,8 @@ readTracerConfig pathToConfig =
   decodeFileEither pathToConfig >>= \case
     Left e -> die $ "Invalid tracer's configuration: " <> show e
     Right (config :: TracerConfig) ->
-      case checkMeaninglessValues config of
-        Left problems -> die $ "Tracer's configuration is meaningless: " <> problems
+      case wellFormed config of
+        Left problems -> die $ "Tracer's configuration is ill-formed: " <> problems
         Right{} -> return (nubLogging config)
 
   where
@@ -148,8 +160,8 @@ readTracerConfig pathToConfig =
     { logging = NE.nub logging
     }
 
-checkMeaninglessValues :: TracerConfig -> Either String ()
-checkMeaninglessValues TracerConfig
+wellFormed :: TracerConfig -> Either String ()
+wellFormed TracerConfig
   { network
   , hasEKG
   , hasPrometheus
@@ -160,23 +172,35 @@ checkMeaninglessValues TracerConfig
     then Right ()
     else Left $ intercalate ", " problems
  where
+  problems :: [String]
   problems = catMaybes
     [ case network of
         AcceptAt addr -> check "AcceptAt is empty" $ nullAddress addr
-        ConnectTo addrs -> check "ConnectTo are empty" $ null . NE.filter (not . nullAddress) $ addrs
-    , check "empty logRoot(s)" $ notNull . NE.filter invalidFileMode $ logging
-    , (check "no host(s) in hasEKG" . nullEndpoints) =<< hasEKG
-    , (check "no host in hasPrometheus" . nullEndpoint) =<< hasPrometheus
-    , (check "no host in hasRTView" . nullEndpoint) =<< hasRTView
+        ConnectTo addrs -> check "ConnectTo are empty" $ null (NE.filter (not . nullAddress) addrs)
+    , check "empty logRoot(s)" $ notNull (NE.filter invalidFileMode logging)
+    , check "duplicate ports in config" $ hasDuplicates ports
+    , check "no host(s) in hasEKG"     . nullEndpoint =<< hasEKG
+    , check "no host in hasPrometheus" . nullEndpoint =<< hasPrometheus
+    , check "no host in hasRTView"     . nullEndpoint =<< hasRTView
     ]
 
-  check msg cond = if cond then Just msg else Nothing
+  ports :: [Port]
+  ports = epPort <$> catMaybes [hasEKG, hasPrometheus, hasRTView]
 
-  nullAddress (LocalSocket p) = null p
+  check :: String -> Bool -> Maybe String
+  check msg True  = Just msg
+  check _   False = Nothing
 
-  nullEndpoint (Endpoint h _) = null h
+  nullAddress :: Address -> Bool
+  nullAddress (LocalSocket address) = null address
 
-  nullEndpoints (ep1, ep2) = nullEndpoint ep1 || nullEndpoint ep2
+  nullEndpoint :: Endpoint -> Bool
+  nullEndpoint (Endpoint host _port) = null host
 
+  invalidFileMode :: LoggingParams -> Bool
   invalidFileMode (LoggingParams root FileMode    _) = null root
   invalidFileMode (LoggingParams _    JournalMode _) = False
+
+-- | Checks if a list contains duplicate elements.
+hasDuplicates :: Ord a => [a] -> Bool
+hasDuplicates xs = nub xs /= xs
