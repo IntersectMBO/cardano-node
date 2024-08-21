@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -7,7 +6,6 @@
 {- HLINT ignore "Use list literal pattern" -}
 module Cardano.Util
   ( module Prelude
-  , module Util
   , module Data.Aeson
   , module Data.IntervalMap.FingerTree
   , module Data.SOP
@@ -29,20 +27,6 @@ where
 import Prelude                          (String, error, head, last)
 import Text.Show qualified as Show      (Show(..))
 import Cardano.Prelude
-
-#if __GLASGOW_HASKELL__ < 902
--- This is a GHC module ...
-import Util                      hiding (fst3, snd3)
-#elif __GLASGOW_HASKELL__ < 906
--- that moved for the ghc-9.2 release.
-import GHC.Utils.Misc                   as Util
-                                 hiding (fst3, snd3, third3, uncurry3, firstM, secondM)
-#else
--- that moved again for the ghc-9.6 release.
--- Taking an internal module of GHC and re-exporting it is an incredibly dumb idea.
-import GHC.Utils.Misc                   as Util
-                                 hiding (fst3, snd3, third3, uncurry3)
-#endif
 
 import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), (.!=), withObject, object)
 import Data.Aeson                       qualified as AE
@@ -254,3 +238,26 @@ toRUTCTime =  RUTCTime . unsafeUTCToNominal
 
 fromRUTCTime :: RUTCTime -> UTCTime
 fromRUTCTime =  unsafeNominalToUTC . unRUTCTime
+
+-- -------------------------------------------------------------------------------------------------
+-- Importing from GHC.* is a bad idea, because that library changes from compiler release to
+-- compiler release and adds dependency constraints that are too tight.
+-- Both of these issues makes supporting multiple GHC versions significantly more difficult
+-- than it should be.
+-- Cargo cult these two functions instead.
+
+-- Stolen from GHC.Utils.Misc
+count :: (a -> Bool) -> [a] -> Int
+count p = go 0
+  where go !n [] = n
+        go !n (x:xs) | p x       = go (n+1) xs
+                     | otherwise = go n xs
+
+-- Stolen from GHC.Utils.Misc
+mapAndUnzip :: (a -> (b, c)) -> [a] -> ([b], [c])
+mapAndUnzip _ [] = ([], [])
+mapAndUnzip f (x:xs)
+  = let (r1,  r2)  = f x
+        (rs1, rs2) = mapAndUnzip f xs
+    in
+    (r1:rs1, r2:rs2)
