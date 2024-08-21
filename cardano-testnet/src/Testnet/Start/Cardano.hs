@@ -70,7 +70,7 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 -- a valid node cluster.
 testnetMinimumConfigurationRequirements :: MonadTest m => CardanoTestnetOptions a -> m ()
 testnetMinimumConfigurationRequirements cTestnetOpts = do
-  let actualLength = length (cardanoNodes cTestnetOpts)
+  let actualLength = length (cardanoNodesOptions cTestnetOpts)
   when (actualLength < 2) $ do
      H.noteShow_ ("Need at least two nodes to run a cluster, but got: " <> show actualLength)
      H.noteShow_ cTestnetOpts
@@ -92,7 +92,7 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 cardanoTestnetDefault
   :: ()
   => HasCallStack
-  => CardanoTestnetOptions a
+  => CardanoTestnetOptions PerNodeConfiguration
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault opts conf = do
@@ -186,10 +186,10 @@ cardanoTestnet
       shelleyTestnetMagic = sgNetworkMagic shelleyGenesis
       optionsMagic :: Word32 = fromIntegral $ cardanoTestnetMagic testnetOptions
       testnetMagic = cardanoTestnetMagic testnetOptions
-      numPoolNodes = length $ cardanoNodes testnetOptions
+      perNodesOptions = cardanoNodesOptions testnetOptions
+      numPoolNodes = length perNodesOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
-      perNodesOptions = cardanoNodesOptions testnetOptions
       era = cardanoNodeEra testnetOptions
 
    -- Sanity checks
@@ -326,10 +326,9 @@ cardanoTestnet
     let nodeName = mkNodeName i
         keyDir = tmpAbsPath </> poolKeyDir i
         execName =
-          case perNodeOptions !! (i - 1) of
-            Nothing -> Nothing
-            Just (PerNodeConfiguration Nothing _nodeArgs) -> Nothing
-            Just (PerNodeConfiguration (Just execName') _nodeArgs) -> Just execName'
+          case perNodesOptions !! (i - 1) of
+            PerNodeConfiguration Nothing _nodeArgs -> Nothing
+            PerNodeConfiguration (Just execName') _nodeArgs -> Just execName'
     H.note_ $ "Node name: " <> nodeName
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) execName nodeName testnetDefaultIpv4Address port testnetMagic

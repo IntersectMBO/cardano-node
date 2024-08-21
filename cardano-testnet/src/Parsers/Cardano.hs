@@ -23,13 +23,13 @@ import           Testnet.Start.Cardano
 import           Testnet.Types (readNodeLoggingFormat)
 
 
-optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
+optsTestnet :: EnvCli -> Parser (CardanoTestnetOptions FilePath)
 optsTestnet = pCardanoTestnetOptions pNumSpoNodes
 
-optsNodes :: EnvCli -> Parser CardanoTestnetOptions
+optsNodes :: EnvCli -> Parser (CardanoTestnetOptions FilePath)
 optsNodes = pCardanoTestnetOptions pPerNodeOptions
 
-pCardanoTestnetOptions :: Parser [TestnetNodeOptions] -> EnvCli -> Parser CardanoTestnetOptions
+pCardanoTestnetOptions :: Parser [TestnetNodeOptions] -> EnvCli -> Parser (CardanoTestnetOptions FilePath)
 pCardanoTestnetOptions pTestnetNodeOptions envCli = CardanoTestnetOptions
   <$> pTestnetNodeOptions
   <*> pCardanoEra
