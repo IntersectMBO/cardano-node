@@ -312,7 +312,11 @@ data ExecutableError
   = CannotDecodePlanJSON FilePath String
   | RetrievePlanJsonFailure IOException
   | ReadFileFailure IOException
-  | MissingExecutable FilePath String
+  | ExecutableMissingInComponent FilePath String
+    -- ^ Component with key @component-name@ is found, but it is missing
+    -- the @bin-file@ key.
+  | ExecutableNotFoundInPlan String
+    -- ^ Component with key @component-name@ cannot be found
   deriving Show
 
 
@@ -333,8 +337,8 @@ binDist pkg = do
     Right plan -> case List.filter matching (plan & installPlan) of
       (component:_) -> case component & binFile of
         Just bin -> return $ addExeSuffix (Text.unpack bin)
-        Nothing -> left $ MissingExecutable pJsonFp $ "missing bin-file in: " <> show component
-      [] -> error $ "Cannot find exe:" <> pkg <> " in plan"
+        Nothing -> left $ ExecutableMissingInComponent pJsonFp $ "missing \"bin-file\" key in plan component: " <> show component
+      [] -> left $ ExecutableNotFoundInPlan $ "Cannot find \"component-name\" key with value \"exe:" <> pkg <> "\""
     Left message -> left $ CannotDecodePlanJSON pJsonFp $ "Cannot decode plan: " <> message
   where matching :: Component -> Bool
         matching component = case componentName component of
