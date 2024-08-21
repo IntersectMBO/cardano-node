@@ -22,14 +22,7 @@ data Cli = Names | All | ByName String | LibMK | ToJson String | FromJson String
 
 main :: IO ()
 main = do
-  cli <- OA.execParser
-    (OA.info
-      cliParser
-      (   OA.fullDesc
-       <> OA.progDesc "Cardano benchmarking profile generator"
-       <> OA.header "names | all | make PROFILE_NAME | from-json FILE.json | to-json FILE.hs"
-      )
-    )
+  cli <- getOpts
   case cli of
     -- Print all profile names.
     Names -> BSL8.putStrLn $ Aeson.encode Profiles.names
@@ -67,6 +60,12 @@ lookupOverlay = do
     (Just str) -> case Aeson.decode (BSL8.pack str) of
                     (Just (Aeson.Object keyMap)) -> return keyMap
                     _ -> error ""
+
+getOpts :: IO Cli
+getOpts = OA.execParser $
+  OA.info
+    (cliParser OA.<**> OA.helper)
+    (OA.fullDesc <> OA.progDesc "Cardano benchmarking profile generator (-h for help)")
 
 --------------------------------------------------------------------------------
 

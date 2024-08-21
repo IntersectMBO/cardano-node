@@ -10,7 +10,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleCompressed, timescaleSmall, timescaleModel
 , timescaleMainnet, timescaleDevops
 
-, genesisVariant300, genesisVariantLast
+, genesisVariant300, genesisVariantLatest, genesisVariantLast
 , fundsDefault, fundsDouble
 
 , hosts
@@ -98,10 +98,14 @@ timescaleDevops =
 genesisVariant300 :: Types.Profile -> Types.Profile
 genesisVariant300 = P.pparamsEpoch 300
 
+-- should always reference the latest entry in data/genesis/epoch-timeline.json
+genesisVariantLatest :: Types.Profile -> Types.Profile
+genesisVariantLatest = P.pparamsEpoch 492
+
 -- See: data/genesis/epoch-timeline.json
--- All uses of the last epoch include the "v8-preview" overlay.
+-- All uses of the latest epoch, including the "v8-preview" overlay.
 genesisVariantLast :: Types.Profile -> Types.Profile
-genesisVariantLast = P.pparamsEpoch 492 . P.v8Preview
+genesisVariantLast = genesisVariantLatest . P.v8Preview
 
 -- Definition vocabulary: funds.
 --------------------------------

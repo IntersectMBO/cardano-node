@@ -192,6 +192,20 @@ profilesNoEraEmpty = map baseNoDataset
   , plutus & P.name "plutus-secp-schnorr" . schnorr      . P.traceForwardingOn  . P.newTracing . P.p2pOff
   ]
   ++
+  -------------------------------------------------------------------------------------
+  -- 6 nodes in dense topology, reduced blocksize, miniature dataset and 30mins runtime
+  -------------------------------------------------------------------------------------
+  let defDense =
+          P.empty & V.timescaleCompressed . P.shutdownOnSlot 1800 . P.generatorEpochs 3
+        . P.torusDense . V.hosts 6 . P.loopback
+        . V.datasetMiniature . P.dreps 0
+        . V.clusterDefault -- TODO: "cluster" should be "null" here.
+      valueDense  = defDense & V.genesisVariantLatest . P.blocksize64k . P.v9Preview . P.v8Preview
+  in [
+    valueDense  & P.name "6-dense"         . V.valueCloud . P.traceForwardingOn  . P.newTracing . P.p2pOn . P.analysisSizeFull . P.analysisUnitary
+  , valueDense  & P.name "6-dense-rtsprof" . V.valueCloud . P.traceForwardingOn  . P.newTracing . P.p2pOn . P.analysisSizeFull . P.analysisUnitary . P.rtsEventlogged . P.rtsHeapProf
+  ]
+  ++
   ------------------------------------------------------------------------------
   -- epoch transition: FixedLoaded and "--shutdown-on-slot-synced 900" with 2 nodes.
   ------------------------------------------------------------------------------

@@ -1,0 +1,5 @@
+{
+  "shelley": {
+    "maxBlockBodySize": 65536
+  }
+}
