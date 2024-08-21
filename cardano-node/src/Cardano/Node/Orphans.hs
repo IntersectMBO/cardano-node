@@ -46,7 +46,7 @@ instance FromJSON GenesisConfigFlags where
       <$> v .:? "EnableCSJ"       .!= True
       <*> v .:? "EnableLoEAndGDD" .!= True
       <*> v .:? "EnableLoP"       .!= True
-      <*> v .:? "BulkSyncGracePeriod"
+      <*> v .:? "BlockFetchGracePeriod"
       <*> v .:? "BucketCapacity"
       <*> v .:? "BucketRate"
       <*> v .:? "CSJJumpSize"

@@ -296,7 +296,7 @@ hasPrometheus:
 #   EnableCSJ:        True
 #   EnableLoEAndGDD:  True
 #   EnableLoP:        True
-#   BulkSyncGracePeriod: 10 # seconds
+#   BlockFetchGracePeriod: 10 # seconds
 #   BucketCapacity:  100000 # tokens
 #   BucketRate:         500 # tokens per second
 #   CSJJumpSize:       4320 # slots. This value is 2*k

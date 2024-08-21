@@ -513,7 +513,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }
             StdRunNodeArgs
-              { srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+              , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
               , srnDiskPolicyArgs               = diskPolicyArgs
               , srnDatabasePath                 = dbPath
@@ -586,7 +587,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }
             StdRunNodeArgs
-              { srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+              , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
               , srnDiskPolicyArgs              = diskPolicyArgs
               , srnDatabasePath                = dbPath
