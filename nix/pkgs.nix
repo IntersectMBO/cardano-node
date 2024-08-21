@@ -111,6 +111,9 @@ in with final;
   };
 
   cabal-plan = haskell-nix.tool compiler-nix-name "cabal-plan" {
+    cabalProjectLocal = ''
+      flags: +exe
+    '';
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };
