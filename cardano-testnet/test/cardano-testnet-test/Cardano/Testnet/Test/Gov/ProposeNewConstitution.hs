@@ -70,7 +70,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = numVotes
         }
 
@@ -125,7 +125,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   -- only useful for minting scripts
   constitutionScriptHash <- filter (/= '\n') <$>
     execCli' execConfig
-      [ anyEraToString cEra, "transaction"
+      [ eraToString sbe, "transaction"
       , "policyid"
       , "--script-file", guardRailScriptFp
       ]

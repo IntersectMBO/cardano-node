@@ -52,7 +52,7 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     options = cardanoDefaultTestnetOptions
-      { cardanoNodeEra = cEra -- TODO: We should only support the latest era and the upcoming era
+      { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
       }
 
   TestnetRuntime

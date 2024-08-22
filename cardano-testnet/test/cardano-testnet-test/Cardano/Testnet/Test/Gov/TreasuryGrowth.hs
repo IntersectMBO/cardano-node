@@ -40,9 +40,10 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
   let tempBaseAbsPath = makeTmpBaseAbsPath $ tempAbsPath conf
 
   let era = ConwayEra
+      sbe = ShelleyBasedEraConway
       options = cardanoDefaultTestnetOptions
                   { cardanoEpochLength = 100
-                  , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                  , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                   , cardanoActiveSlotsCoeff = 0.3
                   }
 

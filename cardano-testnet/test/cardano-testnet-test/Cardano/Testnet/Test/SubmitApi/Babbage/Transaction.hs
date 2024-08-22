@@ -56,12 +56,11 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
 
   let
     sbe = ShelleyBasedEraBabbage
-    era = toCardanoEra sbe
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     options = cardanoDefaultTestnetOptions
       { cardanoNodes = cardanoDefaultTestnetNodeOptions
       , cardanoSlotLength = 0.1
-      , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+      , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
       }
 
   TestnetRuntime

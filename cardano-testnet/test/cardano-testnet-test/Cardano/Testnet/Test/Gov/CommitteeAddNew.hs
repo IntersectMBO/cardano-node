@@ -73,7 +73,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
       eraName = eraToString era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = nDrepVotes
         }
 
@@ -157,7 +157,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   txbodyFp <- H.note $ work </> "tx.body"
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
   void $ execCli' execConfig
-    [ eraToString era, "transaction", "build"
+    [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000

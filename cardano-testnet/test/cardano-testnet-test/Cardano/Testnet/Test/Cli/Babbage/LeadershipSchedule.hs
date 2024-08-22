@@ -60,10 +60,10 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let era = BabbageEra
+  let sbe = shelleyBasedEra @BabbageEra
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           , cardanoActiveSlotsCoeff = 0.1
                           }
 
@@ -76,8 +76,6 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
 
   node1sprocket <- H.headM $ poolSprockets tr
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
-
-  let sbe = shelleyBasedEra @BabbageEra
 
   ----------------Need to register an SPO------------------
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
@@ -148,7 +146,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   -- Test stake address deleg  cert
   createStakeDelegationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
+    sbe
     testDelegatorVkeyFp
     stakePoolIdNewSpo
     testDelegatorDelegCert
@@ -169,7 +167,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraString = anyEraToString $ cardanoNodeEra cTestnetOptions
+  let eraString = eraToString sbe
       delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
@@ -247,7 +245,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
+  jsonBS <- createConfigJson tempAbsPath sbe
   H.lbsWriteFile (unFile configurationFile) jsonBS
   newNodePort <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $

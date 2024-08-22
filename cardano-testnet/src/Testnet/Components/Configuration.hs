@@ -61,7 +61,7 @@ import           System.FilePath.Posix (takeDirectory, (</>))
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
-import           Testnet.Start.Types (CardanoTestnetOptions (..), anyEraToString, eraToString)
+import           Testnet.Start.Types (CardanoTestnetOptions (..), anyEraToString, anyShelleyBasedEraToString, eraToString)
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -73,9 +73,9 @@ import qualified Hedgehog.Extras.Test.File as H
 createConfigJson :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
-  -> AnyCardanoEra -- ^ The era used for generating the hard fork configuration toggle
+  -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
   -> m LBS.ByteString
-createConfigJson (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ do
+createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
@@ -86,7 +86,7 @@ createConfigJson (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ d
               , shelleyGenesisHash
               , alonzoGenesisHash
               , conwayGenesisHash
-              , defaultYamlHardforkViaConfig era
+              , defaultYamlHardforkViaConfig sbe
               ]
    where
     getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
@@ -132,13 +132,13 @@ createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => NumPools -- ^ The number of pools to make
   -> NumDReps -- ^ The number of pools to make
-  -> AnyCardanoEra -- ^ The era to use
+  -> AnyShelleyBasedEra -- ^ The era to use
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use.
   -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shelleyGenesis
+createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) sbe shelleyGenesis
                          alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
@@ -175,7 +175,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shell
   H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
 
   execCli_
-    [ anyEraToString era, "genesis", "create-testnet-data"
+    [ anyShelleyBasedEraToString sbe, "genesis", "create-testnet-data"
     , "--spec-shelley", inputGenesisShelleyFp
     , "--spec-alonzo",  inputGenesisAlonzoFp
     , "--spec-conway",  inputGenesisConwayFp

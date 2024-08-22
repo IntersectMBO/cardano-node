@@ -54,7 +54,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
     options = cardanoDefaultTestnetOptions
-                { cardanoNodeEra = anyEra -- TODO: We should only support the latest era and the upcoming era
+                { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                 }
 
   TestnetRuntime

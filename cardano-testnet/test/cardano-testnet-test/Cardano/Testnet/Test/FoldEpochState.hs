@@ -28,9 +28,9 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
   conf <- TN.mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
-      era = BabbageEra
+      sbe = ShelleyBasedEraBabbage
       options = cardanoDefaultTestnetOptions
-        { cardanoNodeEra = AnyCardanoEra era
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         }
 
   runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf

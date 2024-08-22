@@ -67,7 +67,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
+        , cardanoNodeEra = AnyShelleyBasedEra sbe
         }
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
 
@@ -77,7 +77,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   H.createDirectoryIfMissing_ $ tempAbsPath' </> work </> "committee-keys"
   H.forConcurrently_ [1] $ \n -> do
     H.execCli' execConfigOffline
-      [ anyEraToString cEra, "governance", "committee"
+      [ eraToString sbe, "governance", "committee"
       , "key-gen-cold"
       , "--cold-verification-key-file", work </> defaultCommitteeVkeyFp n
       , "--cold-signing-key-file", work </> defaultCommitteeSkeyFp n
@@ -88,7 +88,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   -- Read committee cold keys from disk to put into conway genesis
 
   comKeyHash1Str <- filter (/= '\n') <$> H.execCli' execConfigOffline
-      [ anyEraToString cEra, "governance", "committee"
+      [ eraToString sbe, "governance", "committee"
       , "key-hash"
       , "--verification-key-file", committeeVkey1Fp
       ]
@@ -102,7 +102,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
-  alonzoGenesis <- getDefaultAlonzoGenesis era
+  alonzoGenesis <- getDefaultAlonzoGenesis sbe
   (startTime, shelleyGenesis') <- getDefaultShelleyGenesis fastTestnetOptions
   let conwayGenesisWithCommittee =
         defaultConwayGenesis { L.cgCommittee = committee }

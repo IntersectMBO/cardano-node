@@ -36,10 +36,10 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tem
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    era = BabbageEra
+    sbe = ShelleyBasedEraBabbage
     options = cardanoDefaultTestnetOptions
                         { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                        , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                        , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                         }
 
   TestnetRuntime
