@@ -955,6 +955,20 @@ def all_profile_variants:
   , $default_dense_local_template *
     { name: "default-dense"
     }
+  , $default_dense_local_template *
+    { name: "default-dense-1h"
+    ,  node:
+      { shutdown_on_slot_synced: 3600 }
+    , generator:
+      { epochs:                  6 }
+    }
+  , $default_dense_local_template *
+    { name: "default-dense-4h"
+    ,  node:
+      { shutdown_on_slot_synced: 14400 }
+    , generator:
+      { epochs:                  24 }
+    }
   , $default_dense_local_template * $rts_prof *
     { name: "default-dense-rtsprof"
     }
