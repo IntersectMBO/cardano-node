@@ -114,7 +114,6 @@ library
                       , filepath
                       , fingertree
                       , hashable
-                      , ghc
                       , gnuplot
                       , iohk-monitoring
                       , optparse-applicative-fork
