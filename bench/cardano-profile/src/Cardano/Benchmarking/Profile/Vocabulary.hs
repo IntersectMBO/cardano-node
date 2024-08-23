@@ -11,7 +11,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleMainnet, timescaleDevops
 
 , genesisVariant300, genesisVariantLast
-, fundsDefault, fundsDouble
+, fundsDefault, fundsDouble, fundsDoubleXL
 
 , hosts
 
@@ -114,6 +114,9 @@ fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000
 fundsDouble :: Types.Profile -> Types.Profile
 fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000
 
+fundsDoubleXL :: Types.Profile -> Types.Profile
+fundsDoubleXL =  P.poolBalance 2000000000000000 . P.funds 40000000000000
+
 -- Definition vocabulary: composition.
 --------------------------------------
 
@@ -121,7 +124,6 @@ fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000
 hosts :: Integer -> Types.Profile -> Types.Profile
 hosts i =
     P.hosts i
-  . P.cBlockMinimumAdoptions (i -1)
 
 -- Definition vocabulary: workload (value / full blocks).
 ---------------------------------------------------------

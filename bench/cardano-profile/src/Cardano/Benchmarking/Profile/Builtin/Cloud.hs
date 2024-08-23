@@ -33,7 +33,6 @@ base =
   -- All cloud profiles use trace forwarding.
   . P.traceForwardingOn
   . P.initCooldown 45
-  . P.analysisStandard
 
 --------------------------------------------------------------------------------
 
@@ -49,6 +48,14 @@ valueDuration =
     -- Eight epochs.
   . P.shutdownOnSlot 64000 . P.generatorEpochs 8
   . P.analysisSizeFull . P.analysisEpoch3Plus
+
+-- Value / full blocks, 14 epochs.
+valueDurationXL :: Types.Profile -> Types.Profile
+valueDurationXL =
+    V.timescaleModel
+    -- Sixteen epochs.
+  . P.shutdownOnSlot 128000 . P.generatorEpochs 16
+  . P.analysisOff
 
 -- Plutus / small blocks, 9 epochs.
 plutusDuration :: Types.Profile -> Types.Profile
@@ -86,9 +93,11 @@ profilesNoEraCloud =
   ----------------------
   -- Release benchmarks.
   ----------------------
-  let value    = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
+  let value    = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDouble   . valueDuration   . nomadPerf
                . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
-      plutus   = P.empty & base . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
+      valueXL  = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDoubleXL . valueDurationXL . nomadPerf
+               . P.desc "AWS c5-2xlarge cluster dataset, 14 epochs"
+      plutus   = P.empty & base . V.plutusBase . V.datasetOct2021 . V.fundsDouble   . plutusDuration  . nomadPerf
                . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
       -- Loop.
       loop     = plutus & plutusLoopBase . V.plutusTypeLoop
@@ -100,6 +109,7 @@ profilesNoEraCloud =
   in [
   -- Value
     value    & P.name "value-nomadperf"                                 . P.dreps      0 . P.newTracing . P.p2pOn
+  , valueXL  & P.name "value-xl-nomadperf"                              . P.dreps      0 . P.newTracing . P.p2pOn
   , value    & P.name "value-nomadperf-nop2p"                           . P.dreps      0 . P.newTracing . P.p2pOff
   , value    & P.name "value-drep1k-nomadperf"                          . P.dreps   1000 . P.newTracing . P.p2pOn
   , value    & P.name "value-drep2k-nomadperf"                          . P.dreps   2000 . P.newTracing . P.p2pOn

@@ -97,7 +97,7 @@ PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
 # The dedicated P&T Nomad cluster on AWS
 # Cloud version of "default", "ci-test" and "ci-bench" plus value (52+explorer)
 # Not all local profiles are compatible or tested (yet) with a cloud runs
-PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
+PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf value-xl-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
 PROFILES_NOMAD_PERF       += plutus-nomadperf plutus24-nomadperf fast-nomadperf latency-nomadperf
 PROFILES_NOMAD_PERF       += plutusv3-blst-nomadperf plutusv3-blst-half-nomadperf plutusv3-blst-double-nomadperf
 PROFILES_NOMAD_PERF       += plutus-secp-ecdsa-nomadperf plutus-secp-schnorr-nomadperf
