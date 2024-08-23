@@ -175,8 +175,9 @@ run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
       (files cliOpts)
     mapM_
       (\(logName,ans) -> do
-        print logName
+        putStrLn $ "# " ++ logName
         Reducer.printAns r ans
+        putStrLn ""
       )
       ansParallel
   t1 <- getCurrentTime

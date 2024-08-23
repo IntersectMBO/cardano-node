@@ -129,27 +129,36 @@ instance Reducer MissedSlots where
 
 instance Reducer (Changes t) where
   type instance Elem  (Changes t) = (UTCTime, t)
-  type instance Accum (Changes t) = (Maybe Integer, Seq.Seq (UTCTime, Integer))
+  type instance Accum (Changes t) = (Maybe (UTCTime, Integer), Seq.Seq (UTCTime, Integer))
   initialOf _ = (Nothing, Seq.empty)
-  reducerOf (Changes f) ans@(maybePrev, sq) (at, eason) = do
+  reducerOf (Changes f) (maybePrev, sq) (at, eason) =
     let actual = f eason
-    case maybePrev of
-      Nothing -> (Just actual, Seq.singleton (at, actual))
-      (Just prev) ->
-        if actual == prev
-        then ans
-        else (Just actual, sq Seq.|> (at, actual))
+        sq' = case maybePrev of
+                Nothing -> Seq.singleton (at, actual)
+                (Just (_,prev)) ->
+                  if actual == prev
+                  then sq
+                  else sq Seq.|> (at, actual)
+    in (Just (at, actual), sq')
   showAns _ = show
-  printAns _ (_, sq) = mapM_
-    (\(t,h) ->
-      let showT = show t
-          size  = length showT
-          extra = if size < 33 -- "2024-04-06 05:55:39.600335766 UTC"
-                  then replicate (33 - size) ' '
-                  else ""
-      in putStrLn $ showT ++ "; " ++ extra ++ show h
-    )
-    (toList sq)
+  printAns _ (maybeLast, sq) = do
+    let (t0, _) = Seq.index sq 0
+    let sq' = case maybeLast of
+                Nothing -> sq
+                (Just (t,h)) -> sq Seq.|> (t, h)
+    putStrLn "# X Y"
+    mapM_
+      (\(t,h) ->
+        --let showT = show t
+        --    size  = length showT
+        --    extra = if size < 33 -- "2024-04-06 05:55:39.600335766 UTC"
+        --            then replicate (33 - size) ' '
+        --            else ""
+        --in putStrLn $ showT ++ "; " ++ extra ++ show h
+        let diffTime = diffUTCTime t t0
+        in putStrLn $ show (realToFrac diffTime :: Double) ++ " " ++ show h
+      )
+      (toList sq')
 
 instance Reducer CpuTicks where
   type instance Elem  CpuTicks = (UTCTime, Trace.Remainder Trace.DataResources)
