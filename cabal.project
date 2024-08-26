@@ -22,7 +22,6 @@ packages:
   cardano-node-chairman
   cardano-submit-api
   cardano-testnet
-  cardano-tracer
   bench/cardano-profile
   bench/cardano-topology
   bench/locli
@@ -60,8 +59,25 @@ package plutus-scripts-bench
 constraints:
   wai-extra < 3.1.15,
 
-allow-newer: katip:Win32
+allow-newer:
+  , katip:Win32
+  , ekg-wai:time
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  tag: 248a13b3cc17102e7b5876394524232cbdee9aa0
+  subdir:
+    iohk-monitoring
+    plugins/backend-aggregation
+    plugins/backend-editor
+    plugins/backend-ekg
+    plugins/backend-graylog
+    plugins/backend-monitoring
+    plugins/backend-trace-acceptor
+    plugins/backend-trace-forwarder
+    plugins/scribe-systemd
