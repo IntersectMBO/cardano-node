@@ -729,13 +729,13 @@ plutusScript s = plutus (\p -> p {Types.plutusScript = Just s})
 redeemerInt :: Integer -> Types.Profile -> Types.Profile
 redeemerInt i = plutus
   (\p -> p {Types.redeemer = Just (
-    Types.Redeemer (Just i) Nothing Nothing
+    Types.RedeemerInt i
   )})
 
 redeemerFields :: [Aeson.Object] -> Types.Profile -> Types.Profile
 redeemerFields objs = plutus
   (\p -> p {Types.redeemer = Just (
-    Types.Redeemer Nothing (Just 0) (Just objs)
+    Types.RedeemerFields 0 objs
   )})
 
 generatorEpochs :: HasCallStack => Integer -> Types.Profile -> Types.Profile
