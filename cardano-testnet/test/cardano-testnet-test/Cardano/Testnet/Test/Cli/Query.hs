@@ -17,6 +17,7 @@ import           Cardano.Api
 import qualified Cardano.Api.Genesis as Api
 import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), StandardCrypto,
                    extractHash, unboundRational)
+import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
 
 import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
@@ -385,9 +386,18 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
           drepStateRedactedOutFile
           "test/cardano-testnet-test/files/golden/queries/drepStateOut.json"
 
-    TestQueryDRepStakeDistributionCmd ->
+    TestQueryDRepStakeDistributionCmd -> do
       -- drep-stake-distribution
-      H.noteM_ $ execCli' execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
+      -- to stdout
+      drepStakeDistribution :: [(L.DRep StandardCrypto, L.Coin)] <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
+
+      -- TODO: we could check that the Coin amount below is the one reported
+      -- by query stake-address-info
+
+      H.assertWith drepStakeDistribution $ \dreps ->
+        length dreps == 3 -- Because, by default, 3 DReps are created
+
+      forM_ drepStakeDistribution $ \(_drep, coin) -> Coin 15_000_003_000_000 H.=== coin
 
     TestQueryCommitteeMembersStateCmd ->
       -- committee-state
