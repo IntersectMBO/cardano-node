@@ -135,7 +135,7 @@ import           GHC.TypeLits (KnownNat, Nat, natVal)
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
-import qualified System.Remote.Monitoring as EKG
+import qualified System.Remote.Monitoring.Wai as EKG
 
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}

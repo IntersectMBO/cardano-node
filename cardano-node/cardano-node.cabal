@@ -168,8 +168,8 @@ library
                       , deepseq
                       , directory
                       , dns
-                      , ekg
                       , ekg-core
+                      , ekg-wai
                       , filepath
                       , formatting
                       , generic-data

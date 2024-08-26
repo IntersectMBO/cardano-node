@@ -70,11 +70,10 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 248a13b3cc17102e7b5876394524232cbdee9aa0
+  tag: 2250d54cfe61595024862d550578963594326af0
   subdir:
     iohk-monitoring
     plugins/backend-aggregation
-    plugins/backend-editor
     plugins/backend-ekg
     plugins/backend-graylog
     plugins/backend-monitoring
