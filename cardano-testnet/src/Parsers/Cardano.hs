@@ -1,5 +1,3 @@
-{-# LANGUAGE NumericUnderscores #-}
-
 module Parsers.Cardano
   ( cmdCardano
   ) where
@@ -134,6 +132,6 @@ pMaxLovelaceSupply =
       <>  help "Max lovelace supply that your testnet starts with."
       <>  metavar "WORD64"
       <>  showDefault
-      <>  value 10_020_000_000
+      <>  value (cardanoMaxSupply cardanoDefaultTestnetOptions)
       )
 
