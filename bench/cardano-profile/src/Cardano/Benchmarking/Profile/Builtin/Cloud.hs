@@ -65,13 +65,20 @@ plutusDuration =
   . P.shutdownOnSlot 72000 . P.generatorEpochs 9
   . P.analysisEpoch3Plus
 
+-- Plutus / small blocks, 18 epochs.
+plutusDurationXL :: Types.Profile -> Types.Profile
+plutusDurationXL =
+    V.timescaleModel
+    -- Nine epochs.
+  . P.shutdownOnSlot 144000 . P.generatorEpochs 18
+  . P.analysisOff
+
 --------------------------------------------------------------------------------
 
 -- Replaces "nomad_perf_plutus_base".
 plutusLoopBase :: Types.Profile -> Types.Profile
 plutusLoopBase =
     P.tps 0.85
-  . P.analysisSizeSmall
 
 -- Replaces "nomad_perf_plutussecp_base".
 plutusSecpBase :: Types.Profile -> Types.Profile
@@ -93,19 +100,22 @@ profilesNoEraCloud =
   ----------------------
   -- Release benchmarks.
   ----------------------
-  let value    = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDouble   . valueDuration   . nomadPerf
+  let value    = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDouble   . valueDuration    . nomadPerf
                . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
-      valueXL  = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDoubleXL . valueDurationXL . nomadPerf
+      valueXL  = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDoubleXL . valueDurationXL  . nomadPerf
                . P.desc "AWS c5-2xlarge cluster dataset, 14 epochs"
-      plutus   = P.empty & base . V.plutusBase . V.datasetOct2021 . V.fundsDouble   . plutusDuration  . nomadPerf
+      plutus   = P.empty & base . V.plutusBase . V.datasetOct2021 . V.fundsDouble   . plutusDuration   . nomadPerf
+               . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
+      plutusXL = P.empty & base . V.plutusBase . V.datasetOct2021 . V.fundsDoubleXL . plutusDurationXL . nomadPerf
                . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
       -- Loop.
-      loop     = plutus & plutusLoopBase . V.plutusTypeLoop
-      loop2024 = plutus & plutusLoopBase . V.plutusTypeLoop2024
+      loop     = plutus   & plutusLoopBase . V.plutusTypeLoop
+      loopXL   = plutusXL & plutusLoopBase . V.plutusTypeLoop
+      loop2024 = plutus   & plutusLoopBase . V.plutusTypeLoop2024
       -- Secp.
-      ecdsa    = plutus & plutusSecpBase . V.plutusTypeECDSA
-      schnorr  = plutus & plutusSecpBase . V.plutusTypeSchnorr
-      blst     = plutus & plutusBlstBase . V.plutusTypeBLST
+      ecdsa    = plutus   & plutusSecpBase . V.plutusTypeECDSA
+      schnorr  = plutus   & plutusSecpBase . V.plutusTypeSchnorr
+      blst     = plutus   & plutusBlstBase . V.plutusTypeBLST
   in [
   -- Value
     value    & P.name "value-nomadperf"                                 . P.dreps      0 . P.newTracing . P.p2pOn
@@ -119,6 +129,7 @@ profilesNoEraCloud =
   , value    & P.name "value-oldtracing-nomadperf-nop2p"                . P.dreps      0 . P.oldTracing . P.p2pOff
   -- Plutus
   , loop     & P.name "plutus-nomadperf"                                . P.dreps      0 . P.newTracing . P.p2pOn
+  , loopXL   & P.name "plutus-xl-nomadperf"                             . P.dreps      0 . P.newTracing . P.p2pOn
   , loop     & P.name "plutus-nomadperf-nop2p"                          . P.dreps      0 . P.newTracing . P.p2pOff
   , loop     & P.name "plutus-drep1k-nomadperf"                         . P.dreps   1000 . P.newTracing . P.p2pOn
   , loop     & P.name "plutus-drep2k-nomadperf"                         . P.dreps   2000 . P.newTracing . P.p2pOn
