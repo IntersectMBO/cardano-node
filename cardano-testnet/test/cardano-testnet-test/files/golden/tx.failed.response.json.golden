@@ -6,7 +6,7 @@
                 "error": [
                     {
                         "contents": {
-                            "contents": "AlonzoInBabbageUtxoPredFailure (ValueNotConservedUTxO (MaryValue (Coin 0) (MultiAsset (fromList []))) (MaryValue (Coin 300000000000) (MultiAsset (fromList []))))",
+                            "contents": "AlonzoInBabbageUtxoPredFailure (ValueNotConservedUTxO (MaryValue (Coin 0) (MultiAsset (fromList []))) (MaryValue (Coin 15000003000000) (MultiAsset (fromList []))))",
                             "tag": "UtxoFailure"
                         },
                         "tag": "UtxowFailure"

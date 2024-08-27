@@ -7,7 +7,7 @@
             "anchor": null,
             "deposit": 1000000,
             "expiry": 1002,
-            "stake": 300000000000
+            "stake": 15000003000000
         }
     ],
     [
@@ -18,7 +18,7 @@
             "anchor": null,
             "deposit": 1000000,
             "expiry": 1002,
-            "stake": 300000000000
+            "stake": 15000003000000
         }
     ],
     [
@@ -29,7 +29,7 @@
             "anchor": null,
             "deposit": 1000000,
             "expiry": 1002,
-            "stake": 300000000000
+            "stake": 15000003000000
         }
     ]
 ]

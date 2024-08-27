@@ -35,7 +35,7 @@ Available options:
                            Active slots co-efficient (default: 5.0e-2)
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
-                           (default: 10020000000)
+                           (default: 100000020000000)
   --enable-p2p BOOL        Enable P2P (default: False)
   --nodeLoggingFormat LOGGING_FORMAT
                            Node logging format (json|text)
