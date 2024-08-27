@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -52,6 +51,7 @@ import qualified Data.List as List
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
@@ -132,13 +132,14 @@ createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => NumPools -- ^ The number of pools to make
   -> NumDReps -- ^ The number of pools to make
+  -> Word64 -- ^ The maximum supply
   -> AnyShelleyBasedEra -- ^ The era to use
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use.
   -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) sbe shelleyGenesis
+createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply sbe shelleyGenesis
                          alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
@@ -181,8 +182,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) sbe shell
     , "--spec-conway",  inputGenesisConwayFp
     , "--testnet-magic", show testnetMagic
     , "--pools", show numPoolNodes
-    , "--total-supply",     show @Int 2_000_000_000_000 -- 2 trillions
-    , "--delegated-supply", show @Int 1_000_000_000_000 -- 1 trillion
+    , "--total-supply",     show maxSupply
+    , "--delegated-supply", show (maxSupply `div` 2) -- Required until https://github.com/IntersectMBO/cardano-cli/pull/874 is integrated
     , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
     , "--drep-keys", show numDelReps
