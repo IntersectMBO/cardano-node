@@ -5,8 +5,6 @@
 -- This section of extensions is mostly short syntax, and they're just
 -- very helpful for putting code together in various ways.
 {-# LANGUAGE BlockArguments        #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TupleSections         #-}
 
@@ -30,13 +28,10 @@
 
 -- These more advanced features are large for interoperability with
 -- imported code. While they don't seem so far out as standalone concepts,
--- Other People's Code (TM) that uses them is 
+-- Other People's Code (TM) that uses them is a bit trickier.
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE PatternSynonyms       #-}
-{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
 
 
 -- PartialTypeSignatures was extremely useful during the development
@@ -352,15 +347,18 @@ mkTxBody
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
 
 
+type CryptoEra crypto = Ledger.ConwayEra crypto
+type EraUpgradePParams era = Ledger.UpgradePParams Identity era
+type CryptoUpgradePParams crypto = EraUpgradePParams (CryptoEra crypto)
 -- There is likely something wrong with the approach of trying to coerce
 -- this to a Conway era's PParams.
 upgradeLedgerPParams :: forall crypto . ()
   => Crypto.Crypto crypto
-  => Default.Default (Ledger.UpgradePParams Identity (Ledger.ConwayEra crypto))
+  => Default.Default (CryptoUpgradePParams crypto)
   => Ledger.PParams (Ledger.BabbageEra crypto)
   -> Ledger.PParams (Ledger.ConwayEra crypto)
-upgradeLedgerPParams ledgerParams =
-  Ledger.upgradePParams (Default.def :: Ledger.UpgradePParams Identity (Ledger.ConwayEra crypto)) ledgerParams
+upgradeLedgerPParams = Ledger.upgradePParams def where
+  def :: CryptoUpgradePParams crypto = Default.def
 
 
 -- There are missing fields here, never mind that nothing is really done
@@ -431,6 +429,8 @@ localSourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore
 
 
 -- This wrapper is largely to reorder arguments.
+-- hlint absolutely hates this because it's not eta-reduced.
+{-# ANN mkSignedTx' ("HLint: ignore Eta reduce" :: String) #-}
 mkSignedTx' :: forall era . ()
   => Api.IsShelleyBasedEra era
   => Api.LedgerProtocolParameters era
@@ -443,6 +443,14 @@ mkSignedTx' :: forall era . ()
 mkSignedTx' ledgerParameters collateralFunds fee metadata inFunds outputs =
   mkSignedTx ledgerParameters inFunds collateralFunds fee metadata outputs
 
+-- hlint doesn't just hate eta reduction, it also won't let you embed
+-- pragmas within function bodies to allow them to be near to the local
+-- definition being flagged. That's how this ended up here and making the
+-- declaration for the containing function instead of the local definition.
+-- In an ideal world, we could put this right by the definition of the
+-- local function within:
+{-  ANN mkSignedTx'' ("HLint: ignore Eta reduce" :: String)  -}
+{-# ANN generateTx ("HLint: ignore Eta reduce" :: String) #-}
 generateTx :: forall era . ()
   => Api.IsShelleyBasedEra era
   => TxEnvironment era
