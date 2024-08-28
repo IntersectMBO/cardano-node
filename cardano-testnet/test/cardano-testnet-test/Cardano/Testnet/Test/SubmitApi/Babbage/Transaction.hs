@@ -52,16 +52,13 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
-  work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
+      sbe = ShelleyBasedEraBabbage
+      tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
+      options = cardanoDefaultTestnetOptions
+        { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
+        }
 
-  let
-    sbe = ShelleyBasedEraBabbage
-    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = cardanoDefaultTestnetOptions
-      { cardanoNodes = cardanoDefaultTestnetNodeOptions
-      , cardanoSlotLength = 0.1
-      , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-      }
+  work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   TestnetRuntime
     { configurationFile

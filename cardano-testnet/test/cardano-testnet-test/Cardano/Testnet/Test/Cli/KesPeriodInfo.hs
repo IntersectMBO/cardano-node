@@ -59,9 +59,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       sbe = ShelleyBasedEraBabbage
       eraString = eraToString sbe
       cTestnetOptions = cardanoDefaultTestnetOptions
-                          { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                          , cardanoActiveSlotsCoeff = 0.1
+                          { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           }
 
   runTime@TestnetRuntime
