@@ -54,303 +54,76 @@ import qualified Cardano.Api as Api
                    , IsCardanoEra (..)
                    , NetworkId (..)
                    , TxMetadataInEra (..))
-import qualified Cardano.Api.Byron as Byron (WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Ledger as Ledger
-                   ( ConwayEraTxCert (..)
-                   , ConwayTxCert (..)
-                   , Credential (..)
-                   , EraCrypto
-                   , KeyRole (..)
-                   , PParams (..)
-                   , Prices (..)
-                   , ShelleyEraTxCert (..)
-                   , ShelleyTxCert (..)
-                   , TxCert
-                   , pattern UnRegDepositTxCert
-                   , pattern UnRegTxCert
-                   , ppPricesL)
+                   (PParams (..))
 import           Cardano.Api.Shelley
-                   ( Address (..)
-                   , AddressAny (..)
-                   , AddressInEra (..)
-                   , AddressTypeInEra (..)
-                   , AlonzoEraOnwards (..)
-                   , AnyCardanoEra (..)
-                   , AnyScriptWitness (..)
-                   , AssetId (..)
-                   , AsType (..)
-                   , BalancedTxBody (..)
-                   , ByronEra
-                   , CardanoEra (..)
-                   , Certificate (..)
-                   , ConsensusModeParams (..)
-                   , EpochSlots (..)
-                   , ExceptT (..)
-                   , Featured (..)
-                   , File (..)
-                   , Hash (..)
-                   , InAnyCardanoEra (..)
-                   , InAnyShelleyBasedEra (..)
+                   ( InAnyCardanoEra (..)
                    , KeyWitnessInCtx (..)
                    , LedgerProtocolParameters (..)
-                   , LocalNodeConnectInfo (..)
-                   , PlutusScriptOrReferenceInput (..)
-                   , PolicyId (..)
-                   , PoolId
-                   , Proposal (..)
-                   , QueryConvenienceError (..)
-                   , Script (..)
-                   , ScriptInAnyLang (..)
-                   , ScriptValidity (..)
-                   , ScriptWitnessInCtx (..)
-                   , ShelleyAddr
-                   , ShelleyLedgerEra
                    , ShelleyWitnessSigningKey (..)
-                   , SimpleScriptOrReferenceInput (..)
-                   , SlotNo (..)
-                   , SocketPath
-                   , StakeAddress (..)
-                   , StakeCredential (..)
                    , TextEnvelope (..)
                    , TextEnvelopeType (..)
-                   , Value
-                   , Vote (..)
-                   , VotingProcedures (..))
+                   , Vote (..))
 import qualified Cardano.Api.Shelley as Api
-                   ( BabbageEraOnwards (..)
-                   , BuildTx
+                   ( BuildTx
                    , BuildTxWith (..)
                    , ConwayEra
                    , ConwayEraOnwards (..)
                    , CtxTx
                    , IsShelleyBasedEra (..)
-                   , KeyWitness (..)
-                   , ReferenceScript (..)
-                   , ScriptWitness (..)
                    , ShelleyBasedEra (..)
                    , Tx (..)
-                   , TxAuxScripts (..)
                    , TxBody (..)
                    , TxBodyContent (..)
                    , TxBodyError (..)
-                   , TxCertificates (..)
-                   , TxCurrentTreasuryValue (..)
                    , TxFee (..)
                    , TxId (..)
                    , TxIn (..)
-                   , TxInMode (..)
-                   , TxInsReference (..)
                    , TxInsCollateral (..)
                    , TxIx (..)
-                   , TxMintValue (..)
                    , TxOut (..)
-                   , TxOutDatum (..)
                    , TxOutValue (..)
-                   , TxUpdateProposal (..)
-                   , TxValidationErrorInCardanoMode (..)
                    , TxValidityLowerBound (..)
-                   , TxValidityUpperBound (..)
-                   , TxWithdrawals (..)
-                   , WitCtxMint
-                   , WitCtxStake
                    , WitCtxTxIn
                    , Witness (..)
-                   , alonzoEraOnwardsConstraints
-                   , anyAddressInEra
-                   , anyAddressInShelleyBasedEra
-                   , anyCardanoEra
-                   , calculateMinimumUTxO
-                   , cardanoEraConstraints
-                   , caseShelleyToAllegraOrMaryEraOnwards
-                   , caseShelleyToAlonzoOrBabbageEraOnwards
-                   , caseShelleyToMaryOrAlonzoEraOnwards
-                   , collectTxBodyScriptWitnesses
                    , convertToLedgerProtocolParameters
-                   , conwayEraOnwardsConstraints
                    , conwayEraOnwardsToShelleyBasedEra
                    , createAndValidateTransactionBody
                    , createVotingProcedure
                    , defaultTxBodyContent
                    , defaultTxValidityUpperBound
-                   , estimateBalancedTxBody
-                   , evaluateTransactionExecutionUnits
-                   , evaluateTransactionFee
-                   , executeLocalStateQueryExpr
-                   , firstExceptT
-                   , forEraInEon
-                   , forEraInEonMaybe
-                   , forShelleyBasedEraInEonMaybe
-                   , fromShelleyStakeCredential
-                   , getTxBody
-                   , getTxBodyAndWitnesses
                    , getTxId
-                   , hashScript
-                   , hashScriptDataBytes
-                   , hoistEither
-                   , hoistMaybe
                    , inEonForEra
-                   , inEonForShelleyBasedEra
-                   , left
-                   , lift
-                   , liftIO
                    , lovelaceToTxOutValue
-                   , makeShelleyBootstrapWitness
-                   , makeShelleyKeyWitness
-                   , makeSignedTransaction
-                   , makeTransactionBodyAutoBalance
-                   , maryEraOnwardsToShelleyBasedEra
-                   , newExceptT
-                   , notScriptLockedTxIns
-                   , onLeft
-                   , onNothing
-                   , queryCurrentEra
-                   , queryStateForBalancedTx
-                   , readFileTextEnvelope
-                   , requireShelleyBasedEra
-                   , runExcept
-                   , scriptPolicyId
-                   , selectLovelace
-                   , selectStakeCredentialWitness
-                   , serialiseToRawBytesHex
-                   , serialiseToRawBytesHexText
-                   , setTxAuxScripts
-                   , setTxCertificates
-                   , setTxCurrentTreasuryValue
-                   , setTxExtraKeyWits
                    , setTxFee
                    , setTxIns
                    , setTxInsCollateral
-                   , setTxInsReference
                    , setTxMetadata
-                   , setTxMintValue
                    , setTxOuts
                    , setTxProtocolParams
-                   , setTxScriptValidity
-                   , setTxReturnCollateral
-                   , setTxTotalCollateral
-                   , setTxTreasuryDonation
-                   , setTxUpdateProposal
                    , setTxValidityLowerBound
                    , setTxValidityUpperBound
-                   , setTxWithdrawals
                    , shelleyBasedEra
                    , shelleyBasedEraConstraints
-                   , shelleyToBabbageEraConstraints
                    , signShelleyTransaction
-                   , submitTxToNodeLocal
-                   , toCardanoEra
-                   , toLedgerEpochInfo
-                   , toLedgerValue
-                   , txInsExistInUTxO
-                   , unFeatured
-                   , valueToList
-                   , valueToLovelace
-                   , writeLazyByteStringFile
-                   , writeTextFile
-                   , writeTxFileTextEnvelopeCddl
-                   , writeTxWitnessFileTextEnvelopeCddl)
+                   , toCardanoEra)
 
-import qualified Cardano.Binary as CBOR (serialize')
-import qualified Cardano.Chain.Common as Byron (AddrAttributes (..)
-                   , NetworkMagic (..), mkAttributes)
-import qualified Cardano.CLI.EraBased.Commands.Transaction as Cmd
-                   ( TransactionBuildCmdArgs (..)
-                   , TransactionBuildEstimateCmdArgs (..)
-                   , TransactionBuildRawCmdArgs (..)
-                   , TransactionCalculateMinFeeCmdArgs (..)
-                   , TransactionCalculateMinValueCmdArgs (..)
-                   , TransactionCmds (..)
-                   , TransactionHashScriptDataCmdArgs (..)
-                   , TransactionPolicyIdCmdArgs (..)
-                   , TransactionSignCmdArgs (..)
-                   , TransactionSignWitnessCmdArgs (..)
-                   , TransactionSubmitCmdArgs (..)
-                   , TransactionTxIdCmdArgs (..)
-                   , TransactionViewCmdArgs (..)
-                   , TransactionWitnessCmdArgs (..))
+
 -- Unqualified imports of types need to be re-qualified before a PR.
 -- Adjust line break to stylish-haskell/fourmolu/etc.
-import           Cardano.CLI.Json.Friendly
-                   (FriendlyFormat (..))
-import qualified Cardano.CLI.Json.Friendly as CLI
-                   ( friendlyTx
-                   , friendlyTxBody)
-import           Cardano.CLI.Read (ByronOrShelleyWitness (..)
-                   , IncompleteCddlTxBody (..)
-                   , ShelleyBootstrapWitnessSigningKeyData (..))
-import qualified Cardano.CLI.Read as CLI (categoriseSomeSigningWitness
-                   , fileOrPipe
-                   , readFileScriptInAnyLang
-                   , readFileTx
-                   , readFileTxBody
-                   , readFileTxKeyWitness
-                   , readScriptDataOrFile
-                   , readScriptWitness
-                   , readScriptWitnessFiles
-                   , readScriptWitnessFilesTuple
-                   , readRequiredSigner
-                   , readTxGovernanceActions
-                   , readTxMetadata
-                   , readTxUpdateProposal
-                   , readVotingProceduresFiles
-                   , readWitnessSigningData)
-import qualified Cardano.CLI.EraBased.Run.Genesis.Common as CLI
-                    (readProtocolParameters)
-import qualified Cardano.CLI.EraBased.Run.Query as CLI
-                    (newOutputFormat)
-import qualified Cardano.CLI.Types.Common as CLI
-                   ( TxBuildOutputOptions (..)
-                   , TxByronWitnessCount (..)
-                   , TxOutAnyEra (..)
-                   , TxOutChangeAddress (..)
-                   , TxOutDatumAnyEra (..)
-                   , TxOutShelleyBasedEra (..)
-                   , TxShelleyWitnessCount (..)
-                   , TxTreasuryDonation (..))
-import           Cardano.CLI.Types.Common
-                   ( CertificateFile (..)
-                   , InputTxBodyOrTxFile (..)
-                   , OutputFormatJsonOrText (..)
-                   , ReferenceScriptAnyEra (..)
-                   , ReferenceScriptSize (..)
-                   , ScriptWitnessFiles (..)
-                   , ViewOutputFormat (..)
-                   , WitnessFile (..))
-import           Cardano.CLI.Types.Errors.BootstrapWitnessError
-                    (BootstrapWitnessError (..))
-import           Cardano.CLI.Types.Errors.NodeEraMismatchError
-                    (NodeEraMismatchError (..))
-import qualified Cardano.CLI.Types.Errors.TxCmdError as CLI
-                    (TxCmdError (..))
-import           Cardano.CLI.Types.Errors.TxCmdError
-                   ( AnyTxCmdTxExecUnitsErr (..)
-                   , AnyTxBodyErrorAutoBalance (..))
-import qualified Cardano.CLI.Types.Errors.TxValidationError as CLI
-                   ( validateRequiredSigners
-                   , validateTxAuxScripts
-                   , validateTxCurrentTreasuryValue
-                   , validateTxReturnCollateral
-                   , validateTxScriptValidity
-                   , validateTxTotalCollateral
-                   , validateTxTreasuryDonation
-                   , validateTxValidityLowerBound)
 import           Cardano.CLI.Types.Governance
                    (AnyVotingStakeVerificationKeyOrHashOrFile (..))
-import qualified Cardano.CLI.Types.Output as CLI (renderScriptCosts)
-import qualified Cardano.CLI.Types.TxFeature as CLI (TxFeature (..))
 import qualified Cardano.Ledger.Api.PParams as Ledger
                    (EraPParams (..))
 import           Cardano.Ledger.BaseTypes (Url)
 import           Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Ledger
-                   ( pattern RetirePoolTxCert
-                   , ppMinFeeAL
-                   , upgradePParams)
+                   (upgradePParams)
 import qualified Cardano.Ledger.Api.Era as Ledger
                    ( BabbageEra
                    , ConwayEra)
 import qualified Cardano.Ledger.Crypto as Crypto
-                 (Crypto (..), StandardCrypto)
+                 (Crypto (..))
 import           Cardano.TxGenerator.FundQueue (Fund (..), FundInEra (..), FundQueue)
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
                    ( emptyFundQueue
@@ -374,48 +147,22 @@ import           Cardano.TxGenerator.UTxO (ToUTxO, ToUTxOList, makeToUTxOList, m
 
 import           Control.Arrow ((&&&))
 import qualified Control.Arrow as Arrow (left, right)
-import qualified Control.Monad as Monad (foldM, forM)
+import qualified Control.Monad as Monad (foldM)
 import           Control.Monad.Trans.State.Strict
-import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
-                   ( eitherDecodeFileStrict'
-                   , object)
-import qualified Data.Aeson.Encode.Pretty as Aeson
-                   (encodePretty)
-import qualified Data.ByteString as ByteString
-                   (length)
-import qualified Data.ByteString.Char8 as BS8
-                   (putStrLn)
-import qualified Data.ByteString.Lazy.Char8 as LBS8
-                   ( putStrLn
-                   , writeFile)
+                   (eitherDecodeFileStrict')
 import qualified Data.Default.Class as Default
                    (Default (..))
 import           Data.Either (fromRight)
 import           Data.Function ((&))
 import           Data.Functor.Identity (Identity (..))
-import qualified Data.List as List (foldl', null)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (fromList, keysSet)
-import qualified Data.Maybe as Maybe (catMaybes, fromMaybe, mapMaybe)
-import           Data.Set (Set)
-import qualified Data.Set as Set (elems, fromList, toList, (\\))
+import qualified Data.List as List (foldl')
+import qualified Data.Maybe as Maybe (mapMaybe)
 import           Data.String (fromString)
 import           Data.Text (Text)
-import qualified Data.Text as Text (pack)
-import qualified Data.Text.IO as Text (putStrLn)
 import qualified Data.Tuple.Extra as Extra (uncurry3)
-import qualified Data.Type.Equality as Equality ((:~:)(..), testEquality)
 
-import           Lens.Micro ((^.))
-
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as
-         Consensus (Target (..))
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as
-            Net.Tx (SubmitResult (..))
-
-import           System.Exit (die)
-import qualified System.IO as IO (print)
+import qualified System.Exit as Exit (die)
 
 import           Paths_tx_generator
 
@@ -427,7 +174,7 @@ demo = getDataFileName "data/protocol-parameters.json" >>= demo'
 
 demo' :: FilePath -> IO ()
 demo' parametersFile = do
-  protocolParameters <- either die pure =<< Aeson.eitherDecodeFileStrict' parametersFile
+  protocolParameters <- either Exit.die pure =<< Aeson.eitherDecodeFileStrict' parametersFile
   let
       demoEnv :: TxEnvironment Api.ConwayEra
       demoEnv = TxEnvironment
