@@ -1,24 +1,61 @@
+-- The extensions may have been overly liberally used, though they did
+-- help speed up development, as far as it got.
+
+
+-- This section of extensions is mostly short syntax, and they're just
+-- very helpful for putting code together in various ways.
 {-# LANGUAGE BlockArguments        #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PatternSynonyms       #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
+
+
+-- These two go together, and are extremely useful for constraining the
+-- types of local variables or otherwise expressing them in terms of the
+-- types appearing in the type signature of the top-level CAF or function
+-- even apart from where they aid more advanced type-level programming.
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+
+
+-- The precise implications of this may not be fully understood; however,
+-- avoiding relying on it inadvertently seems tricky.
+{-# LANGUAGE FlexibleContexts      #-}
+
+
+-- This is very likely redundant. I believe RankNTypes implies it.
+{-# LANGUAGE QuantifiedConstraints #-}
+
+
+-- These more advanced features are large for interoperability with
+-- imported code. While they don't seem so far out as standalone concepts,
+-- Other People's Code (TM) that uses them is 
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE PatternSynonyms       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
+
+-- PartialTypeSignatures was extremely useful during the development
+-- process, even if it didn't make enough progress.
+-- It appears to allow one to ask the type inferencer a question of what
+-- type is inferred in the place that an underscore appears, or possibly
+-- a type variable whose name begins with an underscore, which may depend
+-- on an extension vs. just a single underscore alone.
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
+
+
+-- Which record fields conflicted should have been logged.
+-- It's not clear that the conflict was intentional, and it was from code
+-- outside the direct influence of the project.
+{-# LANGUAGE DuplicateRecordFields #-}
+
+
 {- These are all pretty reasonable warning options.
- - Maybe all but unused-imports should be suppressed in the cabal
- - configuration higher up in the codebase?
  - These disablings of warnings and makings of warnings not errors
  - ("softenings") aren't needed anymore as the code now stands.
  - It could still be useful to keep these ready to reactivate in
@@ -28,10 +65,9 @@
  -* OPTIONS_GHC -Wno-unrecognised-pragmas          *-
  -}
 
--- Okay, this one is too useful to leave unset while coding.
-{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
-
--- To get by for the moment.
+-- Switching these warnings on intermittently seemed to speed development
+-- up slightly because compiles are still slow enough even on a
+-- decent-capacity laptop that it helps to batch warning fixes.
 {-# OPTIONS_GHC -Wno-error=unused-imports          #-}
 {-# OPTIONS_GHC -Wno-error=unused-matches          #-}
 {-# OPTIONS_GHC -Wno-error=unused-local-binds      #-}
@@ -50,28 +86,28 @@ module  Cardano.TxGenerator.GovExample where
 
 import qualified Cardano.Api as Api
                    ( CardanoEra (..)
-                   -- export not in CHaP yet? , IsConwayBasedEra (..)
+                   -- There was a point where IsConwayBasedEra wasn't in
+                   -- CHaP that was awkward. It seemed like it would be
+                   -- an appropriate type constraint for governance tasks.
+                   , InAnyCardanoEra (..)
                    , IsCardanoEra (..)
                    , NetworkId (..)
-                   , TxMetadataInEra (..))
-import qualified Cardano.Api.Ledger as Ledger
-                   (PParams (..))
-import           Cardano.Api.Shelley
-                   ( InAnyCardanoEra (..)
-                   , KeyWitnessInCtx (..)
-                   , LedgerProtocolParameters (..)
-                   , ShelleyWitnessSigningKey (..)
+                   , PaymentKey
+                   , SigningKey (..)
                    , TextEnvelope (..)
                    , TextEnvelopeType (..)
-                   , Vote (..))
+                   , TxMetadataInEra (..))
+import qualified Cardano.Api.Ledger as Ledger (PParams (..))
 import qualified Cardano.Api.Shelley as Api
                    ( BuildTx
                    , BuildTxWith (..)
                    , ConwayEra
-                   , ConwayEraOnwards (..)
                    , CtxTx
                    , IsShelleyBasedEra (..)
+                   , KeyWitnessInCtx (..)
+                   , LedgerProtocolParameters (..)
                    , ShelleyBasedEra (..)
+                   , ShelleyWitnessSigningKey (..)
                    , Tx (..)
                    , TxBody (..)
                    , TxBodyContent (..)
@@ -87,9 +123,12 @@ import qualified Cardano.Api.Shelley as Api
                    , WitCtxTxIn
                    , Witness (..)
                    , convertToLedgerProtocolParameters
-                   , conwayEraOnwardsToShelleyBasedEra
                    , createAndValidateTransactionBody
-                   , createVotingProcedure
+                   -- There was a point where there was an attempt to use
+                   -- this. Enough issues were happening at once that it
+                   -- ended up falling by the wayside. Clearly, the task
+                   -- absolutely requires it.
+                   -- , createVotingProcedure
                    , defaultTxBodyContent
                    , defaultTxValidityUpperBound
                    , getTxId
@@ -104,62 +143,53 @@ import qualified Cardano.Api.Shelley as Api
                    , setTxValidityLowerBound
                    , setTxValidityUpperBound
                    , shelleyBasedEra
-                   , shelleyBasedEraConstraints
                    , signShelleyTransaction
                    , toCardanoEra)
 
 
 -- Unqualified imports of types need to be re-qualified before a PR.
 -- Adjust line break to stylish-haskell/fourmolu/etc.
-import           Cardano.CLI.Types.Governance
-                   (AnyVotingStakeVerificationKeyOrHashOrFile (..))
-import qualified Cardano.Ledger.Api.PParams as Ledger
-                   (EraPParams (..))
-import           Cardano.Ledger.BaseTypes (Url)
+import qualified Cardano.Ledger.Api.PParams as Ledger (EraPParams (..))
 import           Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Ledger
-                   (upgradePParams)
-import qualified Cardano.Ledger.Api.Era as Ledger
-                   ( BabbageEra
-                   , ConwayEra)
-import qualified Cardano.Ledger.Crypto as Crypto
-                 (Crypto (..))
-import           Cardano.TxGenerator.FundQueue (Fund (..), FundInEra (..), FundQueue)
+import qualified Cardano.Ledger.Core as Ledger (upgradePParams)
+import qualified Cardano.Ledger.Api.Era as Ledger (BabbageEra, ConwayEra)
+import qualified Cardano.Ledger.Crypto as Crypto (Crypto (..))
+import           Cardano.TxGenerator.FundQueue
+                   (Fund (..), FundInEra (..), FundQueue)
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
                    ( emptyFundQueue
+                   , fromList
                    , getFundCoin
                    , getFundKey
                    , getFundTxIn
                    , getFundWitness
                    , insertFund
                    , toList)
-import           Cardano.TxGenerator.Setup.SigningKey
-                   ( PaymentKey
-                   , SigningKey)
 import qualified Cardano.TxGenerator.Setup.SigningKey as TxGen
-                    (parseSigningKeyTE)
-import           Cardano.TxGenerator.Types (FundSource
-                   , FundToStoreList, TxEnvironment (..)
-                   , TxGenError (..), TxGenerator)
+                   (parseSigningKeyTE)
+import           Cardano.TxGenerator.Types
+                   ( FundSource
+                   , FundToStoreList
+                   , TxEnvironment (..)
+                   , TxGenError (..)
+                   , TxGenerator)
 import qualified Cardano.TxGenerator.Utils as TxGen
-                    (inputsToOutputsWithFee)
-import           Cardano.TxGenerator.UTxO (ToUTxO, ToUTxOList, makeToUTxOList, mkUTxOVariant)
+                   (inputsToOutputsWithFee)
+import qualified Cardano.TxGenerator.UTxO as UTxO
+                   (ToUTxO, ToUTxOList, makeToUTxOList, mkUTxOVariant)
 
 import           Control.Arrow ((&&&))
 import qualified Control.Arrow as Arrow (left, right)
 import qualified Control.Monad as Monad (foldM)
 import           Control.Monad.Trans.State.Strict
-import qualified Data.Aeson as Aeson
-                   (eitherDecodeFileStrict')
-import qualified Data.Default.Class as Default
-                   (Default (..))
+import qualified Data.Aeson as Aeson (eitherDecodeFileStrict')
+import qualified Data.Default.Class as Default (Default (..))
 import           Data.Either (fromRight)
 import           Data.Function ((&))
 import           Data.Functor.Identity (Identity (..))
 import qualified Data.List as List (foldl')
 import qualified Data.Maybe as Maybe (mapMaybe)
 import           Data.String (fromString)
-import           Data.Text (Text)
 import qualified Data.Tuple.Extra as Extra (uncurry3)
 
 import qualified System.Exit as Exit (die)
@@ -189,15 +219,22 @@ demo' parametersFile = do
     FundQueue.toList run1 == FundQueue.toList run2
   where
     mkRun :: Generator (Either TxGenError (Api.Tx era)) -> IO FundQueue
-    mkRun = Extra.uncurry3 Monad.foldM . (, fundQueue, [1..10]) . worker
+    mkRun = Extra.uncurry3 Monad.foldM . (, fundQueue, [1..10]) . work
     fundQueue :: FundQueue
     fundQueue = FundQueue.emptyFundQueue `FundQueue.insertFund` genesisFund
-    worker ::
-         Generator (Either TxGenError (Api.Tx era))
-      -> FundQueue
-      -> Int
-      -> IO FundQueue
-    worker pureGenerator generatorState counter = do
+    genesisFund :: Fund = Fund $ Api.InAnyCardanoEra Api.ConwayEra fundInEra
+      where
+        fundInEra :: FundInEra Api.ConwayEra
+        fundInEra  = FundInEra
+          { _fundTxIn = genesisTxIn
+          , _fundVal = genesisValue
+          , _fundWitness = Api.KeyWitness Api.KeyWitnessForSpending
+          , _fundSigningKey = Just signingKey }
+    work :: Generator (Either TxGenError (Api.Tx era))
+         -> FundQueue
+         -> Int
+         -> IO FundQueue
+    work pureGenerator generatorState counter = do
       putStrLn $ "running tx-generator. Iteration : " ++ show counter
       let (res, newState) = runState pureGenerator generatorState
       case res of
@@ -205,17 +242,17 @@ demo' parametersFile = do
         Left err -> print err
       return newState
 
-signingKey :: SigningKey PaymentKey
+signingKey :: Api.SigningKey Api.PaymentKey
 signingKey = fromRight (error "signingKey: parseError") $ TxGen.parseSigningKeyTE keyData
   where
-    keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
+    keyData = Api.TextEnvelope { teType = Api.TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
               , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
 
-drepSigningKey :: SigningKey PaymentKey
+drepSigningKey :: Api.SigningKey Api.PaymentKey
 drepSigningKey = fromRight (error "drepSigningKey: parseError") $ TxGen.parseSigningKeyTE keyData
   where
-    keyData = TextEnvelope { teType = TextEnvelopeType "DRepSigningKey_ed25519"
+    keyData = Api.TextEnvelope { teType = Api.TextEnvelopeType "DRepSigningKey_ed25519"
                            , teDescription = fromString "Delegate Representative Signing Key"
                            -- This is actually the CBOR as it appeared
                            -- in the JSON file and needs conversion to raw CBOR.
@@ -229,19 +266,9 @@ genesisValue :: Api.TxOutValue Api.ConwayEra
   , Api.lovelaceToTxOutValue Api.ShelleyBasedEraConway $ Coin 90000000000000
   )
 
-genesisFund :: Fund
-genesisFund
-  = Fund $ InAnyCardanoEra Api.ConwayEra fundInEra
-  where
-    fundInEra :: FundInEra Api.ConwayEra
-    fundInEra  = FundInEra {
-        _fundTxIn = genesisTxIn
-      , _fundVal = genesisValue
-      , _fundWitness = Api.KeyWitness KeyWitnessForSpending
-      , _fundSigningKey = Just signingKey
-      }
 
 type Generator = State FundQueue
+
 
 -- Need to ask Carlos or Aniket what anchors are about.
 -- The particular issue is what could be substituted for the URL if it
@@ -250,27 +277,15 @@ type Generator = State FundQueue
 --         :: Url -> ByteString -> Anchor StandardCrypto
 -- There's a lingering undefined here, but it's worth keeping because
 -- this is at least meant to push directly towards issuing votes.
-localGenVote :: forall era .
-  {- ConwayEraOnwardsConstraints era => -}
-     Api.ConwayEraOnwards era
-  -> Vote
-  -> IO ()
-localGenVote era vote = do
-  let _procedure = Api.createVotingProcedure
-                             (era {- eon -} :: Api.ConwayEraOnwards era)
-                             (vote {- votingChoice -} :: Vote)
-                             (Nothing :: Maybe (Url, Text))
-  _ <- Api.shelleyBasedEraConstraints localShelleyBasedEra do
-    _ <- pure (undefined :: AnyVotingStakeVerificationKeyOrHashOrFile)
-    pure undefined
-  pure ()
-  where
-    localShelleyBasedEra = Api.conwayEraOnwardsToShelleyBasedEra era
+-- There was a not usefully developed stub function here:
+-- localGenVote :: forall era .  Api.ConwayEraOnwards era -> Vote -> IO ()
+-- {- ConwayEraOnwardsConstraints era => -}
+-- Its contents weren't meaningful enough to preserve, but this comment
+-- may be informative about the direction development ended up going afoul in.
 
-mkSignedTx :: forall era
-                     . ()
+mkSignedTx :: forall era . ()
   => Api.IsShelleyBasedEra era
-  => LedgerProtocolParameters era
+  => Api.LedgerProtocolParameters era
   -> [Fund]
   -> (Api.TxInsCollateral era, [Fund])
   -> Api.TxFee era
@@ -283,6 +298,7 @@ mkSignedTx
      (collateral, collFunds)
      fee
      metadata
+     -- Erroring like this may not be the most graceful no function to pass.
      outputs = flip (Api.inEonForEra $ eraErr "Unsupported era")
        (Api.toCardanoEra (Api.shelleyBasedEra :: Api.ShelleyBasedEra era))
        \eonEra ->
@@ -296,15 +312,15 @@ mkSignedTx
                          outputs)
   where
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
-    signingKeys :: [ShelleyWitnessSigningKey]
-    signingKeys = map WitnessPaymentKey allKeys
-    allKeys :: [SigningKey PaymentKey]
+    signingKeys :: [Api.ShelleyWitnessSigningKey]
+    signingKeys = map Api.WitnessPaymentKey allKeys
+    allKeys :: [Api.SigningKey Api.PaymentKey]
     allKeys = Maybe.mapMaybe FundQueue.getFundKey $ inFunds ++ collFunds
 
-mkTxBody :: forall era
-                   .  ()
+
+mkTxBody :: forall era .  ()
   => Api.IsShelleyBasedEra era
-  => LedgerProtocolParameters era
+  => Api.LedgerProtocolParameters era
   -> [Fund]
   -> (Api.TxInsCollateral era, [Fund])
   -> Api.TxFee era
@@ -318,6 +334,7 @@ mkTxBody
      fee
      metadata
      outputs
+  -- The graceless method was re-applied until it no longer enabled progress.
   = flip (Api.inEonForEra $ eraErr "Unsupported era") cardanoEra $
        flip Api.createAndValidateTransactionBody bodyContent
   where
@@ -334,8 +351,10 @@ mkTxBody
     shelleyBasedEra = Api.shelleyBasedEra
     eraErr eraStr = error $ "mkTxBody: unexpected era " <> eraStr
 
-upgradeLedgerPParams :: forall crypto {- functor -} . ()
-  -- => Functor functor
+
+-- There is likely something wrong with the approach of trying to coerce
+-- this to a Conway era's PParams.
+upgradeLedgerPParams :: forall crypto . ()
   => Crypto.Crypto crypto
   => Default.Default (Ledger.UpgradePParams Identity (Ledger.ConwayEra crypto))
   => Ledger.PParams (Ledger.BabbageEra crypto)
@@ -343,9 +362,13 @@ upgradeLedgerPParams :: forall crypto {- functor -} . ()
 upgradeLedgerPParams ledgerParams =
   Ledger.upgradePParams (Default.def :: Ledger.UpgradePParams Identity (Ledger.ConwayEra crypto)) ledgerParams
 
+
+-- There are missing fields here, never mind that nothing is really done
+-- to set up any sorts of governance actions. Api.inEonForEra seemed to
+-- run out of steam here.
 mkTxBodyContent :: forall era . ()
   => Api.IsShelleyBasedEra era
-  => LedgerProtocolParameters era
+  => Api.LedgerProtocolParameters era
   -> [Fund]
   -> (Api.TxInsCollateral era, [Fund])
   -> Api.TxFee era
@@ -370,19 +393,23 @@ mkTxBodyContent
     & Api.setTxProtocolParams (Api.BuildTxWith $ Just ledgerParameters)
   where
     shelleyBasedEra :: Api.ShelleyBasedEra era = Api.shelleyBasedEra
+    getTxIn :: forall shelleyBasedEra . ()
+      => Api.IsCardanoEra shelleyBasedEra
+      => Fund
+      -> (Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn shelleyBasedEra))
+    getTxIn = FundQueue.getFundTxIn &&& Api.BuildTxWith . FundQueue.getFundWitness
 
-getTxIn :: forall shelleyBasedEra . ()
-  => Api.IsCardanoEra shelleyBasedEra
-  => Fund
-  -> (Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn shelleyBasedEra))
-getTxIn = FundQueue.getFundTxIn &&& Api.BuildTxWith . FundQueue.getFundWitness
 
+-- This in itself is somewhat immune to the missing pieces, though it'll
+-- end up being in a failure's callstack, as the txGenerator argument
+-- comes from generateTx, which in turn invokes the functions missing the
+-- transaction setup of fields and logic surrounding governance actions.
 localSourceToStoreTransaction :: forall monad era split . ()
   => Monad monad
   => TxGenerator era
   -> FundSource monad
   -> ([Coin] -> split)
-  -> ToUTxOList era split
+  -> UTxO.ToUTxOList era split
   -> FundToStoreList monad
   -> monad (Either TxGenError (Api.Tx era))
 localSourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
@@ -402,9 +429,11 @@ localSourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore
           fundToStore $ toFunds txId
           return $ Right tx
 
+
+-- This wrapper is largely to reorder arguments.
 mkSignedTx' :: forall era . ()
   => Api.IsShelleyBasedEra era
-  => LedgerProtocolParameters era
+  => Api.LedgerProtocolParameters era
   -> (Api.TxInsCollateral era, [Fund])
   -> Api.TxFee era
   -> Api.TxMetadataInEra era
@@ -432,6 +461,7 @@ generateTx TxEnvironment{..}
     generator =
         case Api.convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
           Right ledgerParameters ->
+            -- While it could be golfed, it could end up being hard to read:
             -- (Arrow.left ApiError .) . mkSignedTx'' ledgerParameters
             \inFunds outputs -> Arrow.left ApiError $
                     mkSignedTx'' ledgerParameters inFunds outputs
@@ -440,7 +470,7 @@ generateTx TxEnvironment{..}
         -- This is just useful for the comment attached to mkSignedTx''
         -- uncurry6 :: (t -> u -> v -> w -> x -> y -> z) -> (t, u, v, w, x, y) -> z
         -- uncurry6 f (t, u, v, w, x, y) = f t u v w x y
-        mkSignedTx'' :: LedgerProtocolParameters era
+        mkSignedTx'' :: Api.LedgerProtocolParameters era
                      -> [Fund]
                      -> [Api.TxOut Api.CtxTx era]
                      -> Either Api.TxBodyError (Api.Tx era, Api.TxId)
@@ -476,11 +506,11 @@ generateTx TxEnvironment{..}
     computeOutputValues = TxGen.inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO :: ToUTxO era
-    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
+    computeUTxO :: UTxO.ToUTxO era
+    computeUTxO = UTxO.mkUTxOVariant txEnvNetworkId signingKey
 
-    utxoList :: ToUTxOList era [Coin]
-    utxoList = makeToUTxOList $ repeat computeUTxO
+    utxoList :: UTxO.ToUTxOList era [Coin]
+    utxoList = UTxO.makeToUTxOList $ repeat computeUTxO
 
 
 generateTxM :: forall era . ()
@@ -499,11 +529,9 @@ generateTxPure :: forall era . ()
   => TxEnvironment era
   -> FundQueue
   -> Either TxGenError (Api.Tx era, FundQueue)
-generateTxPure TxEnvironment{..} inQueue
-  = do
-      (tx :: Api.Tx era, txId :: Api.TxId) <- generator inputs outputs
-      let outQueue = List.foldl' FundQueue.insertFund FundQueue.emptyFundQueue (toFunds txId)
-      pure (tx, outQueue)
+generateTxPure TxEnvironment{..} inQueue = do
+  (tx, txId) <- generator inputs outputs
+  pure (tx, FundQueue.fromList $ toFunds txId)
   where
     inputs = FundQueue.toList inQueue
     Api.TxFeeExplicit _ fee = txEnvFee
@@ -523,14 +551,17 @@ generateTxPure TxEnvironment{..} inQueue
 
     outValues :: [Coin]
     outValues = computeOutputValues $ map FundQueue.getFundCoin inputs
-    -- [Coin] -> ([Api.TxOut Ctx era], TxId -> [Fund])
+
+    -- toFunds' type comes from this:
+    -- type ToUTxOEra era [Coin] =  [Coin]
+    --                           -> ([Api.TxOut Ctx era], TxId -> [Fund])
+    toFunds :: Api.TxId -> [Fund]
     outputs :: [Api.TxOut Api.CtxTx era]
-    toFunds :: Api.TxId -> [Fund] -- ToUTxOList era [Coin]
-    (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
+    (outputs, toFunds) = UTxO.makeToUTxOList (repeat computeUTxO) outValues
 
     computeOutputValues :: [Coin] -> [Coin]
     computeOutputValues = TxGen.inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO :: ToUTxO era
-    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
+    computeUTxO :: UTxO.ToUTxO era
+    computeUTxO = UTxO.mkUTxOVariant txEnvNetworkId signingKey

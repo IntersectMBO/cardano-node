@@ -11,6 +11,8 @@ module Cardano.TxGenerator.FundQueue
 import           Cardano.TxGenerator.Fund
 import qualified Cardano.TxGenerator.Internal.Fifo as Fifo
 
+import qualified Data.List as List (foldl')
+
 
 -- | A type alias for the specialized queue type.
 type FundQueue = Fifo.Fifo Fund
@@ -23,6 +25,12 @@ emptyFundQueue = Fifo.emptyFifo
 -- | Converting to a list provides a different, non-FIFO access order.
 toList :: FundQueue -> [Fund]
 toList =  Fifo.toList
+
+-- | While this may conflict with many symbols exported as `fromList`,
+--   it's what makes the most sense. Also, fromList and toList are the
+--   minimal methods needed for an IsList instance.
+fromList :: [Fund] -> FundQueue
+fromList = List.foldl' insertFund emptyFundQueue
 
 -- | This just restricts the type of the generic `Fifo.insert` function.
 insertFund :: FundQueue -> Fund -> FundQueue

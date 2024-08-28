@@ -177,6 +177,7 @@ executable tx-generator
                         "-with-rtsopts=-T"
 
   build-depends:        base
+                      , cardano-api ^>= 9.2
                       , tx-generator
 
 test-suite tx-generator-apitest
