@@ -972,6 +972,20 @@ def all_profile_variants:
   , $default_dense_local_template * $rts_prof *
     { name: "default-dense-rtsprof"
     }
+  , $default_dense_local_template * $rts_prof *
+    { name: "default-dense-1h-rtsprof"
+    ,  node:
+      { shutdown_on_slot_synced: 3600 }
+    , generator:
+      { epochs:                  6 }
+    }
+  , $default_dense_local_template * $rts_prof *
+    { name: "default-dense-4h-rtsprof"
+    ,  node:
+      { shutdown_on_slot_synced: 14400 }
+    , generator:
+      { epochs:                  24 }
+    }
   , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
     , desc: "Default on P&T exclusive cluster"
