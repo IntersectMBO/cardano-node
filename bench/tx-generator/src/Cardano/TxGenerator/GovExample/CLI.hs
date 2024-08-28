@@ -1,24 +1,63 @@
+-- At the risk of duplicating the language extension pragmas and comments
+-- thereon from GovExample.hs:
+-- The extensions may have been overly liberally used, though they did
+-- help speed up development, as far as it got.
+
+
+-- This section of extensions is mostly short syntax, and they're just
+-- very helpful for putting code together in various ways.
 {-# LANGUAGE BlockArguments        #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PatternSynonyms       #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
+
+
+-- These two go together, and are extremely useful for constraining the
+-- types of local variables or otherwise expressing them in terms of the
+-- types appearing in the type signature of the top-level CAF or function
+-- even apart from where they aid more advanced type-level programming.
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+
+
+-- The precise implications of this may not be fully understood; however,
+-- avoiding relying on it inadvertently seems tricky.
+{-# LANGUAGE FlexibleContexts      #-}
+
+
+-- This is very likely redundant. I believe RankNTypes implies it.
+{-# LANGUAGE QuantifiedConstraints #-}
+
+
+-- These more advanced features are large for interoperability with
+-- imported code. While they don't seem so far out as standalone concepts,
+-- Other People's Code (TM) that uses them is
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE PatternSynonyms       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
+
+-- PartialTypeSignatures was extremely useful during the development
+-- process, even if it didn't make enough progress.
+-- It appears to allow one to ask the type inferencer a question of what
+-- type is inferred in the place that an underscore appears, or possibly
+-- a type variable whose name begins with an underscore, which may depend
+-- on an extension vs. just a single underscore alone.
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
+
+
+-- Which record fields conflicted should have been logged.
+-- It's not clear that the conflict was intentional, and it was from code
+-- outside the direct influence of the project.
+{-# LANGUAGE DuplicateRecordFields #-}
+
+
 {- These are all pretty reasonable warning options.
- - Maybe all but unused-imports should be suppressed in the cabal
- - configuration higher up in the codebase?
  - These disablings of warnings and makings of warnings not errors
  - ("softenings") aren't needed anymore as the code now stands.
  - It could still be useful to keep these ready to reactivate in
@@ -28,10 +67,9 @@
  -* OPTIONS_GHC -Wno-unrecognised-pragmas          *-
  -}
 
--- Okay, this one is too useful to leave unset while coding.
-{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
-
--- To get by for the moment.
+-- Switching these warnings on intermittently seemed to speed development
+-- up slightly because compiles are still slow enough even on a
+-- decent-capacity laptop that it helps to batch warning fixes.
 {-# OPTIONS_GHC -Wno-error=unused-imports          #-}
 {-# OPTIONS_GHC -Wno-error=unused-matches          #-}
 {-# OPTIONS_GHC -Wno-error=unused-local-binds      #-}
@@ -45,6 +83,7 @@
  -* HLINT ignore "Unused LANGUAGE pragma"          *-
  -* HLINT ignore "Avoid lambda using `infix`"      *-
  -}
+
 
 module  Cardano.TxGenerator.GovExample.CLI where
 
@@ -257,10 +296,11 @@ import qualified Cardano.CLI.EraBased.Commands.Transaction as Cmd
 -- Adjust line break to stylish-haskell/fourmolu/etc.
 -- import qualified Cardano.CLI.Commands.Debug.TransactionView as Cmd
 -- Intentionally trigger rebuild to trigger warnings to clean up.
-import           Cardano.CLI.Read (ByronOrShelleyWitness (..)
+import qualified Cardano.CLI.Read as CLI
+                   ( ByronOrShelleyWitness (..)
                    , IncompleteCddlTxBody (..)
-                   , ShelleyBootstrapWitnessSigningKeyData (..))
-import qualified Cardano.CLI.Read as CLI (categoriseSomeSigningWitness
+                   , ShelleyBootstrapWitnessSigningKeyData (..)
+                   , categoriseSomeSigningWitness
                    , fileOrPipe
                    , readFileScriptInAnyLang
                    , readFileTx
@@ -278,24 +318,22 @@ import qualified Cardano.CLI.Read as CLI (categoriseSomeSigningWitness
                    , readWitnessSigningData)
 import qualified Cardano.CLI.EraBased.Run.Genesis.Common as CLI
                     (readProtocolParameters)
-import qualified Cardano.CLI.EraBased.Run.Query as CLI
-                    (newOutputFormat)
+import qualified Cardano.CLI.EraBased.Run.Query as CLI (newOutputFormat)
 import qualified Cardano.CLI.Types.Common as CLI
-                   ( TxBuildOutputOptions (..)
-                   , TxByronWitnessCount (..)
-                   , TxOutAnyEra (..)
-                   , TxOutChangeAddress (..)
-                   , TxOutDatumAnyEra (..)
-                   , TxOutShelleyBasedEra (..)
-                   , TxShelleyWitnessCount (..)
-                   , TxTreasuryDonation (..))
-import           Cardano.CLI.Types.Common
                    ( CertificateFile (..)
                    , InputTxBodyOrTxFile (..)
                    , OutputFormatJsonOrText (..)
                    , ReferenceScriptAnyEra (..)
                    , ReferenceScriptSize (..)
                    , ScriptWitnessFiles (..)
+                   , TxBuildOutputOptions (..)
+                   , TxByronWitnessCount (..)
+                   , TxOutAnyEra (..)
+                   , TxOutChangeAddress (..)
+                   , TxOutDatumAnyEra (..)
+                   , TxOutShelleyBasedEra (..)
+                   , TxShelleyWitnessCount (..)
+                   , TxTreasuryDonation (..)
                    , WitnessFile (..))
 import           Cardano.CLI.Types.Errors.BootstrapWitnessError
                     (BootstrapWitnessError (..))
@@ -320,24 +358,17 @@ import qualified Cardano.CLI.Types.Output as CLI (renderScriptCosts)
 import qualified Cardano.CLI.Types.TxFeature as CLI (TxFeature (..))
 import           Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Ledger
-                   ( pattern RetirePoolTxCert
-                   , ppMinFeeAL)
+                   (pattern RetirePoolTxCert , ppMinFeeAL)
 import qualified Cardano.Ledger.Crypto as Crypto (StandardCrypto)
 
 import qualified Control.Arrow as Arrow (first, left)
 import qualified Control.Monad as Monad (forM)
 import           Data.Aeson ((.=))
-import qualified Data.Aeson as Aeson
-                   (object)
-import qualified Data.Aeson.Encode.Pretty as Aeson
-                   (encodePretty)
-import qualified Data.ByteString as ByteString
-                   (length)
-import qualified Data.ByteString.Char8 as BS8
-                   (putStrLn)
-import qualified Data.ByteString.Lazy.Char8 as LBS8
-                   ( putStrLn
-                   , writeFile)
+import qualified Data.Aeson as Aeson (object)
+import qualified Data.Aeson.Encode.Pretty as Aeson (encodePretty)
+import qualified Data.ByteString as ByteString (length)
+import qualified Data.ByteString.Char8 as BS8 (putStrLn)
+import qualified Data.ByteString.Lazy.Char8 as LBS8 (putStrLn, writeFile)
 import           Data.Function ((&))
 import qualified Data.List as List (foldl', null)
 import           Data.Map.Strict (Map)
@@ -439,7 +470,7 @@ runTransactionBuildCmd
             ( Api.firstExceptT CLI.TxCmdReadTextViewFileError . Api.newExceptT $
                 Api.readFileTextEnvelope Api.AsCertificate (Api.File certFile)
             )
-        | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
+        | (CLI.CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
         ]
     withdrawalsAndMaybeScriptWits <-
       Api.firstExceptT CLI.TxCmdScriptWitnessError $
@@ -687,7 +718,7 @@ runTransactionBuildEstimateCmd -- TODO change type
               ( Api.firstExceptT CLI.TxCmdReadTextViewFileError . Api.newExceptT $
                   Api.readFileTextEnvelope Api.AsCertificate (Api.File certFile)
               )
-          | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
+          | (CLI.CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
           ]
 
     txBodyContent <-
@@ -740,7 +771,7 @@ runTransactionBuildEstimateCmd -- TODO change type
             totCol
             shelleyWitnesses
             (Maybe.fromMaybe 0 mByronWitnesses)
-            (maybe 0 unReferenceScriptSize totalReferenceScriptSize)
+            (maybe 0 CLI.unReferenceScriptSize totalReferenceScriptSize)
             (Api.anyAddressInShelleyBasedEra sbe changeAddr)
             totalUTxOValue
 
@@ -926,7 +957,7 @@ runTransactionBuildRawCmd
               ( Api.firstExceptT CLI.TxCmdReadTextViewFileError . Api.newExceptT $
                   Api.readFileTextEnvelope Api.AsCertificate (Api.File certFile)
               )
-          | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
+          | (CLI.CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
           ]
     txBody <-
       Api.hoistEither $
@@ -1581,11 +1612,11 @@ toTxOutInAnyEra era (CLI.TxOutAnyEra addr' val' mDatumHash refScriptFp) = do
 getReferenceScript
   :: ()
   => Api.BabbageEraOnwards era
-  -> ReferenceScriptAnyEra
+  -> CLI.ReferenceScriptAnyEra
   -> Api.ExceptT CLI.TxCmdError IO (Api.ReferenceScript era)
 getReferenceScript w = \case
-  ReferenceScriptAnyEraNone -> return Api.ReferenceScriptNone
-  ReferenceScriptAnyEra fp -> Api.ReferenceScript w <$> Api.firstExceptT CLI.TxCmdScriptFileError (CLI.readFileScriptInAnyLang fp)
+  CLI.ReferenceScriptAnyEraNone -> return Api.ReferenceScriptNone
+  CLI.ReferenceScriptAnyEra fp -> Api.ReferenceScript w <$> Api.firstExceptT CLI.TxCmdScriptFileError (CLI.readFileScriptInAnyLang fp)
 
 toTxAlonzoDatum
   :: ()
@@ -1675,7 +1706,7 @@ scriptWitnessPolicyId (Api.PlutusScriptWitness _ _ (Api.PReferenceScript _ mPid)
 
 readValueScriptWitnesses
   :: Api.ShelleyBasedEra era
-  -> (Api.Value, [ScriptWitnessFiles Api.WitCtxMint])
+  -> (Api.Value, [CLI.ScriptWitnessFiles Api.WitCtxMint])
   -> Api.ExceptT CLI.TxCmdError IO (Api.Value, [Api.ScriptWitness Api.WitCtxMint era])
 readValueScriptWitnesses era (v, sWitFiles) = do
   sWits <- mapM (Api.firstExceptT CLI.TxCmdScriptWitnessError . CLI.readScriptWitness era) sWitFiles
@@ -1703,7 +1734,7 @@ runTransactionSignCmd
     let (sksByron, sksShelley) = partitionSomeWitnesses $ map CLI.categoriseSomeSigningWitness sks
 
     case txOrTxBody of
-      InputTxFile (Api.File inputTxFilePath) -> do
+      CLI.InputTxFile (Api.File inputTxFilePath) -> do
         inputTxFile <- Api.liftIO $ CLI.fileOrPipe inputTxFilePath
         anyTx <- Api.lift (CLI.readFileTx inputTxFile) & Api.onLeft (Api.left . CLI.TxCmdTextEnvCddlError)
 
@@ -1721,9 +1752,9 @@ runTransactionSignCmd
 
         Api.lift (Api.writeTxFileTextEnvelopeCddl sbe outTxFile signedTx)
           & Api.onLeft (Api.left . CLI.TxCmdWriteFileError)
-      InputTxBodyFile (Api.File txbodyFilePath) -> do
+      CLI.InputTxBodyFile (Api.File txbodyFilePath) -> do
         txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
-        IncompleteCddlTxBody { .. } <-
+        CLI.IncompleteCddlTxBody { .. } <-
           Api.firstExceptT CLI.TxCmdTextEnvCddlError . Api.newExceptT $
             CLI.readFileTxBody txbodyFile
 
@@ -1791,12 +1822,12 @@ runTransactionCalculateMinFeeCmd
     , protocolParamsFile = protocolParamsFile
     , txShelleyWitnessCount = CLI.TxShelleyWitnessCount nShelleyKeyWitnesses
     , txByronWitnessCount = CLI.TxByronWitnessCount nByronKeyWitnesses
-    , referenceScriptSize = ReferenceScriptSize sReferenceScript
+    , referenceScriptSize = CLI.ReferenceScriptSize sReferenceScript
     , outputFormat
     , outFile
     } = do
     txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
-    IncompleteCddlTxBody { .. } <-
+    CLI.IncompleteCddlTxBody { .. } <-
       Api.firstExceptT CLI.TxCmdTextEnvCddlError . Api.newExceptT $
         CLI.readFileTxBody txbodyFile
 
@@ -1824,13 +1855,13 @@ runTransactionCalculateMinFeeCmd
     -- What used to be there before the above was:
     Api.liftIO $ Text.putStrLn textToWrite
     case (CLI.newOutputFormat outputFormat outFile, outFile) of
-      (OutputFormatText, Nothing) ->
+      (CLI.OutputFormatText, Nothing) ->
         Api.liftIO $ Text.putStrLn textToWrite
-      (OutputFormatText, Just file) ->
+      (CLI.OutputFormatText, Just file) ->
         Api.firstExceptT CLI.TxCmdWriteFileError . Api.newExceptT $ Api.writeTextFile file textToWrite
-      (OutputFormatJson, Nothing) ->
+      (CLI.OutputFormatJson, Nothing) ->
         Api.liftIO $ LBS8.putStrLn jsonToWrite
-      (OutputFormatJson, Just file) ->
+      (CLI.OutputFormatJson, Just file) ->
         Api.firstExceptT CLI.TxCmdWriteFileError . Api.newExceptT $ Api.writeLazyByteStringFile file jsonToWrite
 
 -- Extra logic to handle byron witnesses.
@@ -1910,8 +1941,8 @@ runTransactionPolicyIdCmd
     Api.liftIO . Text.putStrLn . Api.serialiseToRawBytesHexText $ Api.hashScript script
 
 partitionSomeWitnesses
-  :: [ByronOrShelleyWitness]
-  -> ( [ShelleyBootstrapWitnessSigningKeyData]
+  :: [CLI.ByronOrShelleyWitness]
+  -> ( [CLI.ShelleyBootstrapWitnessSigningKeyData]
      , [Api.ShelleyWitnessSigningKey]
      )
 partitionSomeWitnesses = reversePartitionedWits . List.foldl' go mempty
@@ -1921,9 +1952,9 @@ partitionSomeWitnesses = reversePartitionedWits . List.foldl' go mempty
 
   go (byronAcc, shelleyKeyAcc) byronOrShelleyWit =
     case byronOrShelleyWit of
-      AByronWitness byronWit ->
+      CLI.AByronWitness byronWit ->
         (byronWit : byronAcc, shelleyKeyAcc)
-      AShelleyKeyWitness shelleyKeyWit ->
+      CLI.AShelleyKeyWitness shelleyKeyWit ->
         (byronAcc, shelleyKeyWit : shelleyKeyAcc)
 
 -- | Construct a Shelley bootstrap witness (i.e. a Byron key witness in the
@@ -1933,13 +1964,13 @@ mkShelleyBootstrapWitness
   => Api.ShelleyBasedEra era
   -> Maybe Api.NetworkId
   -> Api.TxBody era
-  -> ShelleyBootstrapWitnessSigningKeyData
+  -> CLI.ShelleyBootstrapWitnessSigningKeyData
   -> Either BootstrapWitnessError (Api.KeyWitness era)
-mkShelleyBootstrapWitness _ Nothing _ (ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
+mkShelleyBootstrapWitness _ Nothing _ (CLI.ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
   Left MissingNetworkIdOrByronAddressError
-mkShelleyBootstrapWitness sbe (Just nw) txBody (ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
+mkShelleyBootstrapWitness sbe (Just nw) txBody (CLI.ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
   Right $ Api.makeShelleyBootstrapWitness sbe (Byron.WitnessNetworkId nw) txBody skey
-mkShelleyBootstrapWitness sbe _ txBody (ShelleyBootstrapWitnessSigningKeyData skey (Just addr)) =
+mkShelleyBootstrapWitness sbe _ txBody (CLI.ShelleyBootstrapWitnessSigningKeyData skey (Just addr)) =
   Right $ Api.makeShelleyBootstrapWitness sbe (Byron.WitnessByronAddress addr) txBody skey
 
 -- | Attempt to construct Shelley bootstrap witnesses until an error is
@@ -1949,7 +1980,7 @@ mkShelleyBootstrapWitnesses
   => Api.ShelleyBasedEra era
   -> Maybe Api.NetworkId
   -> Api.TxBody era
-  -> [ShelleyBootstrapWitnessSigningKeyData]
+  -> [CLI.ShelleyBootstrapWitnessSigningKeyData]
   -> Either BootstrapWitnessError [Api.KeyWitness era]
 mkShelleyBootstrapWitnesses sbe mnw txBody =
   mapM (mkShelleyBootstrapWitness sbe mnw txBody)
@@ -1979,13 +2010,13 @@ runTransactionTxIdCmd
     } = do
     Api.InAnyShelleyBasedEra _era txbody <-
       case inputTxBodyOrTxFile of
-        InputTxBodyFile (Api.File txbodyFilePath) -> do
+        CLI.InputTxBodyFile (Api.File txbodyFilePath) -> do
           txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
-          IncompleteCddlTxBody { .. } <-
+          CLI.IncompleteCddlTxBody { .. } <-
             Api.firstExceptT CLI.TxCmdTextEnvCddlError . Api.newExceptT $
               CLI.readFileTxBody txbodyFile
           pure unIncompleteCddlTxBody
-        InputTxFile (Api.File txFilePath) -> do
+        CLI.InputTxFile (Api.File txFilePath) -> do
           txFile <- Api.liftIO $ CLI.fileOrPipe txFilePath
           Api.InAnyShelleyBasedEra era tx <- Api.lift (CLI.readFileTx txFile) & Api.onLeft (Api.left . CLI.TxCmdTextEnvCddlError)
           return . Api.InAnyShelleyBasedEra era $ Api.getTxBody tx
@@ -2020,7 +2051,7 @@ runTransactionWitnessCmd
     , outFile
     } = do
     txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
-    IncompleteCddlTxBody { unIncompleteCddlTxBody = Api.InAnyShelleyBasedEra sbe txbody } <-
+    CLI.IncompleteCddlTxBody { unIncompleteCddlTxBody = Api.InAnyShelleyBasedEra sbe txbody } <-
       Api.firstExceptT CLI.TxCmdTextEnvCddlError . Api.newExceptT $
         CLI.readFileTxBody txbodyFile
     someWit <-
@@ -2028,14 +2059,14 @@ runTransactionWitnessCmd
         . Api.newExceptT
         $ CLI.readWitnessSigningData witnessSigningData
     witness <-
-      case CLI.categoriseSomeSigningWitness someWit :: ByronOrShelleyWitness of
+      case CLI.categoriseSomeSigningWitness someWit :: CLI.ByronOrShelleyWitness of
         -- Byron witnesses require the network ID. This can either be provided
         -- directly or derived from a provided Byron address.
-        AByronWitness bootstrapWitData ->
+        CLI.AByronWitness bootstrapWitData ->
           Api.firstExceptT CLI.TxCmdBootstrapWitnessError
             . Api.hoistEither
             $ mkShelleyBootstrapWitness sbe mNetworkId txbody bootstrapWitData
-        AShelleyKeyWitness skShelley ->
+        CLI.AShelleyKeyWitness skShelley ->
           pure $ Api.makeShelleyKeyWitness sbe txbody skShelley
 
     Api.firstExceptT CLI.TxCmdWriteFileError . Api.newExceptT $
@@ -2052,7 +2083,7 @@ runTransactionSignWitnessCmd
     , outFile = outFile
     } = do
     txbodyFile <- Api.liftIO $ CLI.fileOrPipe txbodyFilePath
-    IncompleteCddlTxBody { unIncompleteCddlTxBody = Api.InAnyShelleyBasedEra era txbody } <- Api.lift (CLI.readFileTxBody txbodyFile) & Api.onLeft (Api.left . CLI.TxCmdTextEnvCddlError)
+    CLI.IncompleteCddlTxBody { unIncompleteCddlTxBody = Api.InAnyShelleyBasedEra era txbody } <- Api.lift (CLI.readFileTxBody txbodyFile) & Api.onLeft (Api.left . CLI.TxCmdTextEnvCddlError)
     -- TODO: Left off here. Remember we were never reading byron key witnesses anyways!
     witnesses <-
       sequence
@@ -2068,7 +2099,7 @@ runTransactionSignWitnessCmd
                     (Api.AnyCardanoEra $ Api.toCardanoEra era')
                     witnessFile
               Just Equality.Refl -> return witness
-        | witnessFile@(WitnessFile file) <- witnessFiles
+        | witnessFile@(CLI.WitnessFile file) <- witnessFiles
         ]
 
     let tx = Api.makeSignedTransaction witnesses txbody
