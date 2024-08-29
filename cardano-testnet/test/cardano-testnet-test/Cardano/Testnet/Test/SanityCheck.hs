@@ -21,6 +21,7 @@ import           GHC.IO.Exception (IOException)
 import           GHC.Stack
 
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -45,8 +46,10 @@ hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-ch
   conf <- mkConf tempAbsBasePath'
 
   let fastTestnetOptions = def
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
+        { cardanoShelleyOptions = def {
+            shelleyEpochLength = 100
+          , shelleySlotLength = 0.1
+          }
         }
 
   TestnetRuntime{configurationFile, poolNodes}

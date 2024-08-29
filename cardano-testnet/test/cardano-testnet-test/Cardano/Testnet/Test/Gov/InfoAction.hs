@@ -38,6 +38,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -58,8 +59,10 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          }
         }
 
   TestnetRuntime

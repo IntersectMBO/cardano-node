@@ -35,6 +35,7 @@ import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
+import           Testnet.Start.Types
 
 import           Hedgehog (MonadTest, Property, annotateShow)
 import qualified Hedgehog.Extras as H
@@ -55,9 +56,11 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 1
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          }
         }
 
   TestnetRuntime

@@ -41,6 +41,7 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import qualified Testnet.Process.Run as H
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -64,11 +65,14 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = asbe
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          }
         }
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
 
@@ -104,7 +108,11 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
-  (startTime, shelleyGenesis') <- getDefaultShelleyGenesis fastTestnetOptions
+  (startTime, shelleyGenesis') <-
+    getDefaultShelleyGenesis
+      asbe
+      (cardanoMaxSupply      fastTestnetOptions)
+      (cardanoShelleyOptions fastTestnetOptions)
   let conwayGenesisWithCommittee =
         defaultConwayGenesis { L.cgCommittee = committee }
 

@@ -40,6 +40,7 @@ import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -70,9 +71,11 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = numVotes
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          }
         }
 
   TestnetRuntime

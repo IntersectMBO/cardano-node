@@ -40,6 +40,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, initiateProcess, procNode)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Byron
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (Property, (===))
@@ -194,8 +195,10 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
   let maxSlot = 150
       slotLen = 0.01
   let fastTestnetOptions = def
-        { cardanoEpochLength = 300
-        , cardanoSlotLength = slotLen
+        { cardanoShelleyOptions = def {
+            shelleyEpochLength = 300
+          , shelleySlotLength = slotLen
+          }
         , cardanoNodes =
           [ SpoTestnetNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
           , SpoTestnetNodeOptions Nothing []
@@ -241,7 +244,9 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
   conf <- mkConf tempAbsBasePath'
 
   let fastTestnetOptions = def
-        { cardanoEpochLength = 300
+        { cardanoShelleyOptions = def {
+            shelleyEpochLength = 300
+          }
         }
   testnetRuntime
     <- cardanoTestnetDefault fastTestnetOptions conf

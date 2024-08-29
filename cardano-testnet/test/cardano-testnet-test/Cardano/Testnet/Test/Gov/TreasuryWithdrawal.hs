@@ -42,7 +42,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (eraToString)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -62,9 +62,11 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
       eraName = eraToString era
 
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoActiveSlotsCoeff = 0.3
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          , shelleyActiveSlotsCoeff = 0.3
+          }
         }
 
   TestnetRuntime

@@ -24,6 +24,7 @@ import           Testnet.Components.Query
 import           Testnet.Process.Cli.DRep (makeActivityChangeProposal)
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -47,8 +48,10 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          }
         }
 
   TestnetRuntime

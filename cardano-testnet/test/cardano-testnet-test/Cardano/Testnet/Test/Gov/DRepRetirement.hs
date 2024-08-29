@@ -25,6 +25,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -48,9 +49,10 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
 
   let cardanoNodeEra = AnyShelleyBasedEra sbe
       fastTestnetOptions = def
-        { cardanoEpochLength = 50 -- 50 * (1/10s) length, i.e. 5 seconds
-        , cardanoSlotLength = 0.1  -- 1/10s slot (100ms)
-        , cardanoNodeEra
+        { cardanoNodeEra
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 50 -- 50 * (1/10s) length, i.e. 5 seconds
+          }
         }
 
   TestnetRuntime

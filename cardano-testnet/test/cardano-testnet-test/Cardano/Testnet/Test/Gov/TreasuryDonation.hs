@@ -28,6 +28,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -46,9 +47,10 @@ hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation"
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = def
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 100
+          }
         }
 
   TestnetRuntime

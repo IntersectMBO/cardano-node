@@ -22,6 +22,7 @@ import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
+import           Testnet.Start.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras as H
@@ -44,9 +45,11 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def
-        { cardanoEpochLength = 100
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 0
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 100
+          }
         }
 
   TestnetRuntime

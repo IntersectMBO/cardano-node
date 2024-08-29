@@ -32,7 +32,6 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Configuration (anyEraToString)
 import           Testnet.Components.Query
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
@@ -41,6 +40,7 @@ import qualified Testnet.Process.Cli.Keys as P
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
+import           Testnet.Start.Types
 import           Testnet.Types (KeyPair (..),
                    PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), PoolNode (..),
                    SomeKeyPair (SomeKeyPair), StakingKey, TestnetRuntime (..), nodeSocketPath)
@@ -76,9 +76,11 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 3
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          }
         }
 
   TestnetRuntime

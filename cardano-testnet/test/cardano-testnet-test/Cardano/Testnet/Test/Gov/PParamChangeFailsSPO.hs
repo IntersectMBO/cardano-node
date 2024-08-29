@@ -28,6 +28,7 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction (failToSubmitTx, signTx)
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (Property, annotateShow)
@@ -52,8 +53,10 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = def
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoShelleyOptions = def {
+            shelleyEpochLength = 200
+          }
         }
 
   TestnetRuntime
