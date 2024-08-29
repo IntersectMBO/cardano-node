@@ -44,7 +44,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoSlotLength :: Double -- ^ Slot length, in seconds
   , cardanoTestnetMagic :: Int
   , cardanoActiveSlotsCoeff :: Double
-  , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with (forwarded to shelley genesis)
+  , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
@@ -59,7 +59,7 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoSlotLength = 0.1
   , cardanoTestnetMagic = 42
   , cardanoActiveSlotsCoeff = 0.05
-  , cardanoMaxSupply = 100_020_000_000 -- 100 billions. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
+  , cardanoMaxSupply = 100_000_020_000_000 -- 100 000 billions Lovelace, so 100 millions ADA. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
   , cardanoNumDReps = 3

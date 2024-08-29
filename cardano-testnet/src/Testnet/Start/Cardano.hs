@@ -192,6 +192,7 @@ cardanoTestnet
       numPoolNodes = length $ cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
+      maxSupply = cardanoMaxSupply testnetOptions
       asbe = cardanoNodeEra testnetOptions
   AnyShelleyBasedEra sbe <- pure asbe
 
@@ -237,7 +238,7 @@ cardanoTestnet
 
     configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
 
-    _ <- createSPOGenesisAndFiles nPools nDReps asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+    _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
     -- TODO: This should come from the configuration!
     let poolKeyDir :: Int -> FilePath
