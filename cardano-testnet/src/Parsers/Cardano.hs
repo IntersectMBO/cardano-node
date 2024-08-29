@@ -9,6 +9,7 @@ import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
 
 import           Prelude
 
+import           Data.Default.Class
 import           Data.Functor
 import qualified Data.List as L
 import           Data.Word (Word64)
@@ -29,14 +30,14 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.help "Epoch length, in number of slots"
       <>  OA.metavar "SLOTS"
       <>  OA.showDefault
-      <>  OA.value (cardanoEpochLength cardanoDefaultTestnetOptions)
+      <>  OA.value (cardanoEpochLength def)
       )
   <*> OA.option auto
       (   OA.long "slot-length"
       <>  OA.help "Slot length"
       <>  OA.metavar "SECONDS"
       <>  OA.showDefault
-      <>  OA.value (cardanoSlotLength cardanoDefaultTestnetOptions)
+      <>  OA.value (cardanoSlotLength def)
       )
   <*> pNetworkId
   <*> OA.option auto
@@ -44,7 +45,7 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.help "Active slots co-efficient"
       <>  OA.metavar "DOUBLE"
       <>  OA.showDefault
-      <>  OA.value (cardanoActiveSlotsCoeff cardanoDefaultTestnetOptions)
+      <>  OA.value (cardanoActiveSlotsCoeff def)
       )
   <*> pMaxLovelaceSupply
   <*> OA.option auto
@@ -59,7 +60,7 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
       <>  OA.showDefault
-      <>  OA.value (cardanoNodeLoggingFormat cardanoDefaultTestnetOptions)
+      <>  OA.value (cardanoNodeLoggingFormat def)
       )
   <*> OA.option auto
       (   OA.long "num-dreps"
@@ -86,7 +87,7 @@ pNumSpoNodes =
      <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
      <>  OA.metavar "COUNT"
      <>  OA.showDefault
-     <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
+     <>  OA.value (cardanoNodes def)
      )
 
 
@@ -132,6 +133,6 @@ pMaxLovelaceSupply =
       <>  help "Max lovelace supply that your testnet starts with."
       <>  metavar "WORD64"
       <>  showDefault
-      <>  value (cardanoMaxSupply cardanoDefaultTestnetOptions)
+      <>  value (cardanoMaxSupply def)
       )
 

@@ -4,7 +4,6 @@
 
 module Testnet.Start.Types
   ( CardanoTestnetOptions(..)
-  , cardanoDefaultTestnetOptions
 
   , anyEraToString
   , anyShelleyBasedEraToString
@@ -25,6 +24,7 @@ import           Cardano.Api hiding (cardanoEra)
 import           Prelude
 
 import           Data.Char (toLower)
+import           Data.Default.Class
 import           Data.Word
 import           GHC.Stack
 import           System.FilePath (addTrailingPathSeparator)
@@ -51,20 +51,20 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   } deriving (Eq, Show)
 
-cardanoDefaultTestnetOptions :: CardanoTestnetOptions
-cardanoDefaultTestnetOptions = CardanoTestnetOptions
-  { cardanoNodes = cardanoDefaultTestnetNodeOptions
-  , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraBabbage
-  , cardanoEpochLength = 500
-  , cardanoSlotLength = 0.1
-  , cardanoTestnetMagic = 42
-  , cardanoActiveSlotsCoeff = 0.05
-  , cardanoMaxSupply = 100_000_020_000_000 -- 100 000 billions Lovelace, so 100 millions ADA. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
-  , cardanoEnableP2P = False
-  , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
-  , cardanoNumDReps = 3
-  , cardanoEnableNewEpochStateLogging = True
-  }
+instance Default CardanoTestnetOptions where
+  def = CardanoTestnetOptions
+    { cardanoNodes = cardanoDefaultTestnetNodeOptions
+    , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraBabbage
+    , cardanoEpochLength = 500
+    , cardanoSlotLength = 0.1
+    , cardanoTestnetMagic = 42
+    , cardanoActiveSlotsCoeff = 0.05
+    , cardanoMaxSupply = 100_000_020_000_000 -- 100 000 billions Lovelace, so 100 millions ADA. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
+    , cardanoEnableP2P = False
+    , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
+    , cardanoNumDReps = 3
+    , cardanoEnableNewEpochStateLogging = True
+    }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
 data TestnetNodeOptions

@@ -11,7 +11,6 @@ module Testnet.Start.Cardano
   , CardanoTestnetOptions(..)
   , extraSpoNodeCliArgs
   , TestnetNodeOptions(..)
-  , cardanoDefaultTestnetOptions
   , cardanoDefaultTestnetNodeOptions
 
   , TestnetRuntime (..)
@@ -39,6 +38,7 @@ import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Default.Class
 import           Data.Either
 import qualified Data.List as L
 import           Data.Maybe
@@ -99,7 +99,7 @@ cardanoTestnetDefault
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault opts conf = do
-  AnyShelleyBasedEra sbe <- pure $ cardanoNodeEra cardanoDefaultTestnetOptions
+  AnyShelleyBasedEra sbe <- pure $ cardanoNodeEra def
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
   (startTime, shelleyGenesis) <- getDefaultShelleyGenesis opts
   cardanoTestnet opts conf startTime shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
