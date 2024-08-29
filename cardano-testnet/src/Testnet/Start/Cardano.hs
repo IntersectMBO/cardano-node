@@ -38,7 +38,6 @@ import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Default.Class
 import           Data.Either
 import qualified Data.List as L
 import           Data.Maybe
@@ -46,7 +45,7 @@ import qualified Data.Text as Text
 import           Data.Time (UTCTime, diffUTCTime)
 import           Data.Time.Clock (NominalDiffTime)
 import qualified Data.Time.Clock as DTC
-import           Data.Word (Word32)
+import           Data.Word (Word32, Word64)
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
@@ -98,10 +97,10 @@ cardanoTestnetDefault
   => CardanoTestnetOptions
   -> Conf
   -> H.Integration TestnetRuntime
-cardanoTestnetDefault opts conf = do
-  AnyShelleyBasedEra sbe <- pure $ cardanoNodeEra def
+cardanoTestnetDefault opts@CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply, cardanoShelleyOptions} conf = do
+  AnyShelleyBasedEra sbe <- pure cardanoNodeEra
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
-  (startTime, shelleyGenesis) <- getDefaultShelleyGenesis opts
+  (startTime, shelleyGenesis) <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply cardanoShelleyOptions
   cardanoTestnet opts conf startTime shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
 
 -- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
@@ -117,12 +116,14 @@ getDefaultShelleyGenesis :: ()
   => HasCallStack
   => MonadIO m
   => MonadTest m
-  => CardanoTestnetOptions
+  => AnyShelleyBasedEra
+  -> Word64 -- ^ The max supply
+  -> ShelleyTestnetOptions
   -> m (UTCTime, ShelleyGenesis StandardCrypto)
-getDefaultShelleyGenesis opts = do
+getDefaultShelleyGenesis asbe maxSupply opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-  return (startTime, Defaults.defaultShelleyGenesis startTime opts)
+  return (startTime, Defaults.defaultShelleyGenesis asbe startTime maxSupply opts)
 
 -- | Setup a number of credentials and pools, like this:
 --
@@ -186,9 +187,9 @@ cardanoTestnet
   testnetOptions Conf {tempAbsPath=TmpAbsolutePath tmpAbsPath} startTime
   shelleyGenesis alonzoGenesis conwayGenesis = do
   let shelleyStartTime = sgSystemStart shelleyGenesis
-      shelleyTestnetMagic = sgNetworkMagic shelleyGenesis
-      optionsMagic :: Word32 = fromIntegral $ cardanoTestnetMagic testnetOptions
-      testnetMagic = cardanoTestnetMagic testnetOptions
+      genesisTestnetMagic = sgNetworkMagic shelleyGenesis
+      testnetMagic = shelleyTestnetMagic $ cardanoShelleyOptions testnetOptions
+      optionsMagic :: Word32 = fromIntegral testnetMagic
       numPoolNodes = length $ cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
@@ -201,8 +202,8 @@ cardanoTestnet
   when (shelleyStartTime /= startTime) $ do
     H.note_ $ "Expected same system start in shelley genesis and parameter, but got " <> show shelleyStartTime <> " and " <> show startTime
     H.failure
-  when (shelleyTestnetMagic /= optionsMagic) $ do
-    H.note_ $ "Expected same network magic in shelley genesis and parameter, but got " <> show shelleyTestnetMagic <> " and " <> show optionsMagic
+  when (genesisTestnetMagic /= optionsMagic) $ do
+    H.note_ $ "Expected same network magic in shelley genesis and parameter, but got " <> show genesisTestnetMagic <> " and " <> show optionsMagic
     H.failure
   -- Done with sanity checks
 

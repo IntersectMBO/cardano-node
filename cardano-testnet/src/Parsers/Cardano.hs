@@ -17,7 +17,7 @@ import           Options.Applicative
 import qualified Options.Applicative as OA
 
 import           Testnet.Start.Cardano
-import           Testnet.Start.Types
+import           Testnet.Start.Types (NodeConfigurationYaml(..), ShelleyTestnetOptions(..))
 import           Testnet.Types (readNodeLoggingFormat)
 
 
@@ -25,35 +25,13 @@ optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
 optsTestnet envCli = CardanoTestnetOptions
   <$> pNumSpoNodes
   <*> pAnyShelleyBasedEra'
-  <*> OA.option auto
-      (   OA.long "epoch-length"
-      <>  OA.help "Epoch length, in number of slots"
-      <>  OA.metavar "SLOTS"
-      <>  OA.showDefault
-      <>  OA.value (cardanoEpochLength def)
-      )
-  <*> OA.option auto
-      (   OA.long "slot-length"
-      <>  OA.help "Slot length"
-      <>  OA.metavar "SECONDS"
-      <>  OA.showDefault
-      <>  OA.value (cardanoSlotLength def)
-      )
-  <*> pNetworkId
-  <*> OA.option auto
-      (   OA.long "active-slots-coeff"
-      <>  OA.help "Active slots co-efficient"
-      <>  OA.metavar "DOUBLE"
-      <>  OA.showDefault
-      <>  OA.value (cardanoActiveSlotsCoeff def)
-      )
   <*> pMaxLovelaceSupply
   <*> OA.option auto
       (   OA.long "enable-p2p"
       <>  OA.help "Enable P2P"
       <>  OA.metavar "BOOL"
       <>  OA.showDefault
-      <>  OA.value (cardanoEnableP2P cardanoDefaultTestnetOptions)
+      <>  OA.value (cardanoEnableP2P def)
       )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
@@ -74,6 +52,7 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
+  <*> pShelleyTestnetOptions
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
@@ -89,7 +68,6 @@ pNumSpoNodes =
      <>  OA.showDefault
      <>  OA.value (cardanoNodes def)
      )
-
 
 _pSpo :: Parser TestnetNodeOptions
 _pSpo =
@@ -114,6 +92,39 @@ parseNodeConfigFile = NodeConfigurationYaml <$>
                , "Or use num-pool-nodes to use cardano-testnet's default configuration."
                ]
 
+pShelleyTestnetOptions :: Parser ShelleyTestnetOptions
+pShelleyTestnetOptions =
+  ShelleyTestnetOptions
+    <$> pNetworkId
+    <*> pEpochLength
+    <*> pSlotLength
+    <*> pActiveSlotCoeffs
+  where
+    lift f = f . cardanoShelleyOptions $ def
+    pEpochLength =
+      OA.option auto
+        (   OA.long "epoch-length"
+        <>  OA.help "Epoch length, in number of slots"
+        <>  OA.metavar "SLOTS"
+        <>  OA.showDefault
+        <>  OA.value (lift shelleyEpochLength)
+        )
+    pSlotLength =
+      OA.option auto
+        (   OA.long "slot-length"
+        <>  OA.help "Slot length"
+        <>  OA.metavar "SECONDS"
+        <>  OA.showDefault
+        <>  OA.value (lift shelleySlotLength)
+        )
+    pActiveSlotCoeffs =
+      OA.option auto
+        (   OA.long "active-slots-coeff"
+        <>  OA.help "Active slots co-efficient"
+        <>  OA.metavar "DOUBLE"
+        <>  OA.showDefault
+        <>  OA.value (lift shelleyActiveSlotsCoeff)
+        )
 
 cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetOptions
 cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)

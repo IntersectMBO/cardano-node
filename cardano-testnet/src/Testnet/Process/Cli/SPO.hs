@@ -262,7 +262,7 @@ registerSingleSpo
          --   5. FilePath: Stake pool VRF verification key
 registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch cTestnetOptions execConfig
                   (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
-  let testnetMag = cardanoTestnetMagic cTestnetOptions
+  let testnetMag = shelleyTestnetMagic $ cardanoShelleyOptions cTestnetOptions
 
   workDir <- H.note tempAbsPath'
 
