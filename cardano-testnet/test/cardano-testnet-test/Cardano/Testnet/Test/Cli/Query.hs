@@ -45,6 +45,7 @@ import qualified Data.Aeson.Lens as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (type (:~:) (Refl))
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
@@ -93,7 +94,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         , cardanoNodeEra = AnyShelleyBasedEra sbe

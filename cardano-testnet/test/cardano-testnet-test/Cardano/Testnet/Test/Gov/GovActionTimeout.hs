@@ -16,6 +16,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import           Data.String (fromString)
 import           System.FilePath ((</>))
 
@@ -45,7 +46,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         }

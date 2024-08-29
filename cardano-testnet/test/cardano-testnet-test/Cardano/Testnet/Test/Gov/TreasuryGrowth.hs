@@ -15,6 +15,7 @@ import           Cardano.Testnet as TN
 import           Prelude
 
 import           Control.Monad.Trans.State.Strict
+import           Data.Default.Class
 import           Data.List (sortOn)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -41,7 +42,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
 
   let era = ConwayEra
       sbe = ShelleyBasedEraConway
-      options = cardanoDefaultTestnetOptions
+      options = def
                   { cardanoEpochLength = 100
                   , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                   , cardanoActiveSlotsCoeff = 0.3

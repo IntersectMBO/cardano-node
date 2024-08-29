@@ -12,6 +12,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
@@ -42,7 +43,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 100
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 0

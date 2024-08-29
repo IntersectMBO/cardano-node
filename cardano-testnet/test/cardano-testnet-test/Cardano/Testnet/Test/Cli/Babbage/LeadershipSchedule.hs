@@ -25,6 +25,7 @@ import           Control.Monad (void)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
+import           Data.Default.Class
 import           Data.List ((\\))
 import qualified Data.List as L
 import qualified Data.Map.Strict as Map
@@ -60,7 +61,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       sbe = shelleyBasedEra @BabbageEra
-      cTestnetOptions = cardanoDefaultTestnetOptions
+      cTestnetOptions = def
                           { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           }
 

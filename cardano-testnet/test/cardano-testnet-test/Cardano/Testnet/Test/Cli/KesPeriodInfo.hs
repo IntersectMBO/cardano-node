@@ -23,6 +23,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import           Data.Default.Class
 import           Data.Function
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -58,7 +59,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       sbe = ShelleyBasedEraBabbage
       eraString = eraToString sbe
-      cTestnetOptions = cardanoDefaultTestnetOptions
+      cTestnetOptions = def
                           { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           }
 

@@ -22,6 +22,7 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
@@ -53,7 +54,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 1

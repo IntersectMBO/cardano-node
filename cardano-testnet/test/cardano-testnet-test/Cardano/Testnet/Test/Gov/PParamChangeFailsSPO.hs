@@ -16,6 +16,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad.Catch (MonadCatch)
+import           Data.Default.Class
 import           Data.Typeable (Typeable)
 import           Data.Word (Word16)
 import           System.FilePath ((</>))
@@ -50,7 +51,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         }

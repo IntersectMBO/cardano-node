@@ -29,6 +29,7 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.State.Class
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Default.Class
 import           Data.Map (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as Text
@@ -60,7 +61,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
       era = toCardanoEra sbe
       eraName = eraToString era
 
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoActiveSlotsCoeff = 0.3

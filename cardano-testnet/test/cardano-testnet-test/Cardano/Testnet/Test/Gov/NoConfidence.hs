@@ -22,6 +22,7 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Default.Class
 import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
 import           Data.String
@@ -65,7 +66,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         }

@@ -23,6 +23,7 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.Char as C
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.Maybe.Strict
 import           Data.Set (Set)
@@ -71,7 +72,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = nDrepVotes

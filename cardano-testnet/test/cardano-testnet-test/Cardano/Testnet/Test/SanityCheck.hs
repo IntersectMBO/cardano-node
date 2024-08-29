@@ -14,6 +14,7 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
 
+import           Data.Default.Class
 import           Prelude
 
 import           GHC.IO.Exception (IOException)
@@ -43,7 +44,7 @@ hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-ch
   -- Start a local test net
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = cardanoDefaultTestnetOptions
+  let fastTestnetOptions = def
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         }

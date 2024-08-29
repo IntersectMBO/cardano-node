@@ -17,6 +17,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
@@ -53,7 +54,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     sbe = ShelleyBasedEraConway
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = cardanoDefaultTestnetOptions
+    options = def
                 { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                 }
 

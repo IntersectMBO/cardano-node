@@ -19,6 +19,7 @@ import           Prelude
 
 import           Control.Monad (unless, void)
 import           Control.Monad.Catch (MonadCatch)
+import           Data.Default.Class
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import           System.Exit
@@ -44,7 +45,7 @@ hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation"
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         , cardanoNodeEra = AnyShelleyBasedEra sbe

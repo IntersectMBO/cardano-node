@@ -22,6 +22,7 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
+import           Data.Default.Class
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
@@ -68,7 +69,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = numVotes

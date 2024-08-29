@@ -22,6 +22,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import qualified Data.List as List
+import           Data.Default.Class
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Lens.Micro
@@ -51,7 +52,7 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = cardanoDefaultTestnetOptions
+    options = def
       { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
       }
 

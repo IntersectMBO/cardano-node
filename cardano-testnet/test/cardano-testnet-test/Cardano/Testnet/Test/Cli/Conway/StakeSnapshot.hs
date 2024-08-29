@@ -16,6 +16,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KM
+import           Data.Default.Class
 import qualified System.Info as SYS
 
 import           Testnet.Process.Run (execCliStdoutToJson, mkExecConfig)
@@ -39,7 +40,7 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tem
     { testnetMagic
     , poolNodes
     , configurationFile
-    } <- cardanoTestnetDefault cardanoDefaultTestnetOptions conf
+    } <- cardanoTestnetDefault def conf
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1

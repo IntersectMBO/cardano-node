@@ -24,6 +24,7 @@ import           Prelude
 
 import           Control.Monad
 import           Data.Bifunctor (first)
+import           Data.Default.Class
 import           Data.Foldable
 import qualified Data.Map.Strict as Map
 import           Data.String
@@ -56,7 +57,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 200
         , cardanoNodeEra = AnyShelleyBasedEra sbe
         }

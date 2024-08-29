@@ -19,6 +19,7 @@ import           Prelude
 
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Default.Class
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
@@ -52,7 +53,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+      fastTestnetOptions = def
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         , cardanoNodeEra = AnyShelleyBasedEra sbe

@@ -21,6 +21,7 @@ import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Default.Class
 import           Data.Either (isRight)
 import qualified Data.List as L
 import           Data.Maybe
@@ -192,7 +193,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
 
   let maxSlot = 150
       slotLen = 0.01
-  let fastTestnetOptions = cardanoDefaultTestnetOptions
+  let fastTestnetOptions = def
         { cardanoEpochLength = 300
         , cardanoSlotLength = slotLen
         , cardanoNodes =
@@ -239,7 +240,7 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = cardanoDefaultTestnetOptions
+  let fastTestnetOptions = def
         { cardanoEpochLength = 300
         }
   testnetRuntime
