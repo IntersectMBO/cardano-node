@@ -25,41 +25,31 @@ base =
     P.fixedLoaded
   . V.datasetMiniature
   . V.fundsDefault
-  . V.timescaleCompressed
   . P.initCooldown 5
   . P.analysisStandard
-  . P.desc "Miniature dataset, CI-friendly duration, bench scale"
 
 benchDuration :: Types.Profile -> Types.Profile
 benchDuration =
-    P.shutdownOnBlock 15
-  -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
-  --       Create a "time.epochs" or "time.blocks" or similar, IDK!
-  -- This applies to all profiles!
+    V.timescaleCompressed
+  . P.shutdownOnBlock 15
   . P.generatorEpochs 3
 
 duration30 :: Types.Profile -> Types.Profile
 duration30 =
-    P.shutdownOnSlot 1800
-  -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
-  --       Create a "time.epochs" or "time.blocks" or similar, IDK!
-  -- This applies to all profiles!
+    V.timescaleCompressed
+  . P.shutdownOnSlot 1800
   . P.generatorEpochs 3
 
 duration60 :: Types.Profile -> Types.Profile
 duration60 =
-    P.shutdownOnSlot 3600
-  -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
-  --       Create a "time.epochs" or "time.blocks" or similar, IDK!
-  -- This applies to all profiles!
+    V.timescaleCompressed
+  . P.shutdownOnSlot 3600
   . P.generatorEpochs 6
 
 duration240 :: Types.Profile -> Types.Profile
 duration240 =
-    P.shutdownOnSlot 14400
-  -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
-  --       Create a "time.epochs" or "time.blocks" or similar, IDK!
-  -- This applies to all profiles!
+    V.timescaleCompressed
+  . P.shutdownOnSlot 14400
   . P.generatorEpochs 24
 
 --------------------------------------------------------------------------------
@@ -71,6 +61,7 @@ profilesNoEraMiniature =
   ------------------------------------------------------------------------------
   let ciBench =
           P.empty & base
+        . P.desc "Miniature dataset, CI-friendly duration, bench scale"
         . P.uniCircle . P.loopback
         . benchDuration
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
@@ -107,11 +98,12 @@ profilesNoEraMiniature =
   , ciBench10Plutus & P.name "10-plutus"                     . loop         . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
   ]
   ++
-  -------------------------------------------------------------------------------------
-  -- 6 nodes in dense topology, reduced blocksize, miniature dataset and 30mins runtime
-  -------------------------------------------------------------------------------------
+  ---------------------------------------------------------------------------------------
+  -- 6 nodes in dense topology, reduced blocksize, miniature dataset and varying runtimes
+  ---------------------------------------------------------------------------------------
   let dense =
           P.empty & base
+        . P.desc "Miniature dataset, dense topology on local cluster, 64k blocks"
         . P.torusDense . V.hosts 6 . P.loopback
         . V.genesisVariantLatest . P.blocksize64k . P.v9Preview . P.v8Preview
         . P.dreps 0

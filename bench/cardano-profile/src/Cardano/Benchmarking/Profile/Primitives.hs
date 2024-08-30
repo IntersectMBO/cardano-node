@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- HLINT ignore "Use camelCase" -}
+
 --------------------------------------------------------------------------------
 {-
 

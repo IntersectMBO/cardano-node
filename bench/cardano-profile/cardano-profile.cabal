@@ -17,10 +17,7 @@ extra-source-files:     README.md
 data-files:             data/all-profiles.json
                         data/ci-test-bage.json
                         data/genesis/epoch-timeline.json
-                        data/genesis/overlays/v8-preview.json
-                        data/genesis/overlays/v9-preview.json
-                        data/genesis/overlays/stepshalf.json
-                        data/genesis/overlays/doublebudget.json
+                        data/genesis/overlays/*.json
 
 common project-config
   build-depends:        base >= 4.14 && < 5
