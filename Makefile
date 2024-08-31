@@ -88,6 +88,7 @@ PROFILES_PLUTUSCALL       += plutuscall-loop-double plutuscall-secp-ecdsa-double
 PROFILES_MODEL            := model-value model-secp-ecdsa-plain model-secp-ecdsa-half model-secp-ecdsa-double
 PROFILES_MODEL            += model-value-test
 PROFILES_10               := 10 10-p2p 10-plutus 10-notracer
+PROFILES_6                := 6-dense 6-dense-rtsprof 6-dense-1h 6-dense-1h-rtsprof 6-dense-4h 6-dense-4h-rtsprof
 PROFILES_FORGE_STRESS     := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-solo forge-stress-notracer forge-stress-large forge-stress-solo forge-stress-solo-xs
 PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stress-pre-notracer forge-stress-pre-solo forge-stress-pre-solo-xl forge-stress-pre-solo-xs
 PROFILES_FORGE_STRESS_RTS := forge-stress-pre-rtsA4m forge-stress-pre-rtsA64m forge-stress-pre-rtsN3 forge-stress-pre-rtsA4mN3 forge-stress-pre-rtsA64mN3 forge-stress-pre-rtsxn

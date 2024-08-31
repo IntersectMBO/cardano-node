@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- HLINT ignore "Use camelCase" -}
+
 --------------------------------------------------------------------------------
 {-
 
@@ -39,7 +41,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Set the epoch number from the "epoch-timeline".
   , pparamsEpoch
   -- Overlays to use.
-  , v8Preview, v9Preview, stepHalf, doubleBudget
+  , v8Preview, v9Preview, stepHalf, doubleBudget, blocksize64k
  -- Customize the "shelley", "alonzo" or "conway" properties.
   , shelley, alonzo, conway
   -- Time and block params.
@@ -66,7 +68,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Node's --shutdown-on-*-sync.
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
   -- Node's RTS params.
-  , rtsGcNonMoving, rtsGcAllocSize, rtsThreads, rtsHeapLimit
+  , rtsGcNonMoving, rtsGcAllocSize, rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
   , heapLimit
 
   -- Generator params.
@@ -406,36 +408,34 @@ pparamsEpoch epochNumber = genesis (\g -> g {Types.pparamsEpoch = toEnum epochNu
 -- Overlays.
 ------------
 
-v8Preview :: HasCallStack => Types.Profile -> Types.Profile
-v8Preview = genesis
-  (\g ->
-    if "v8-preview" `elem` Types.pparamsOverlays g
-    then error "v8Preview: `pparamsOverlays` already has \"v8-preview\"."
-    else g {Types.pparamsOverlays = Types.pparamsOverlays g ++ ["v8-preview"]}
-  )
+-- NB. these primitives should correspond to filenames data/genesis/overlays/*.json
 
+v8Preview :: HasCallStack => Types.Profile -> Types.Profile
+v8Preview = helper_addOverlayOrDie "v8-preview"
+
+-- TODO: refactor definitions so that v9-preview always implies v8-preview,
+--       meaning this can be defined as
+--       v9Preview = helper_addOverlayOrDie "v9-preview" . v8Preview
 v9Preview :: HasCallStack => Types.Profile -> Types.Profile
-v9Preview = genesis
-  (\g ->
-    if "v9-preview" `elem` Types.pparamsOverlays g
-    then error "v9Preview: `pparamsOverlays` already has \"v9-preview\"."
-    else g {Types.pparamsOverlays = Types.pparamsOverlays g ++ ["v9-preview"]}
-  )
+v9Preview = helper_addOverlayOrDie "v9-preview"
 
 stepHalf :: HasCallStack => Types.Profile -> Types.Profile
-stepHalf = genesis
-  (\g ->
-    if "stepshalf" `elem` Types.pparamsOverlays g
-    then error "stepHalf: `pparamsOverlays` already has \"stepshalf\"."
-    else g {Types.pparamsOverlays = Types.pparamsOverlays g ++ ["stepshalf"]}
-  )
+stepHalf = helper_addOverlayOrDie "stepshalf"
 
 doubleBudget :: HasCallStack => Types.Profile -> Types.Profile
-doubleBudget = genesis
+doubleBudget = helper_addOverlayOrDie "doublebudget"
+
+-- used to manually reduce block size for e.g. Conway; has to be applied *AFTER* any v?-preview overlay.
+blocksize64k :: HasCallStack => Types.Profile -> Types.Profile
+blocksize64k = helper_addOverlayOrDie "blocksize64k"
+
+-- ensures a specific overlay is added only once to the list; redudancies point to ill-formed profile specification and thus error out
+helper_addOverlayOrDie :: HasCallStack => String -> Types.Profile -> Types.Profile
+helper_addOverlayOrDie overlayName = genesis
   (\g ->
-    if "doublebudget" `elem` Types.pparamsOverlays g
-    then error "doubleBudget: `pparamsOverlays` already has \"doublebudget\"."
-    else g {Types.pparamsOverlays = Types.pparamsOverlays g ++ ["doublebudget"]}
+    if overlayName `elem` Types.pparamsOverlays g
+    then error $ overlayName ++ ": `pparamsOverlays` already has \"" ++ overlayName ++ "\"."
+    else g {Types.pparamsOverlays = Types.pparamsOverlays g ++ [overlayName]}
   )
 
 -- Customize genesis.
@@ -658,6 +658,13 @@ rtsThreads n = rtsAppend $ "-N" ++ show n
 rtsHeapLimit :: Integer -> Types.Profile -> Types.Profile
 rtsHeapLimit n = rtsAppend $ "-M" ++ show n ++ "m"
 
+rtsEventlogged :: Types.Profile -> Types.Profile
+rtsEventlogged = rtsAppend "-l"
+
+-- turns on heap profiling via workbench profile, as this does not require a -profiled build
+rtsHeapProf :: Types.Profile -> Types.Profile
+rtsHeapProf = rtsAppend "-hT"
+
 heapLimit :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 heapLimit l = node
   (\n ->
@@ -724,13 +731,13 @@ plutusScript s = plutus (\p -> p {Types.plutusScript = Just s})
 redeemerInt :: Integer -> Types.Profile -> Types.Profile
 redeemerInt i = plutus
   (\p -> p {Types.redeemer = Just (
-    Types.Redeemer (Just i) Nothing Nothing
+    Types.RedeemerInt i
   )})
 
 redeemerFields :: [Aeson.Object] -> Types.Profile -> Types.Profile
 redeemerFields objs = plutus
   (\p -> p {Types.redeemer = Just (
-    Types.Redeemer Nothing (Just 0) (Just objs)
+    Types.RedeemerFields 0 objs
   )})
 
 generatorEpochs :: HasCallStack => Integer -> Types.Profile -> Types.Profile
