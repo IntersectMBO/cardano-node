@@ -141,7 +141,7 @@ library
                       , ouroboros-network-framework
                       , ouroboros-network-protocols
                       , plutus-ledger-api
-                      , plutus-tx
+                      , plutus-tx ^>= 1.30
                       , random
                       , serialise
                       , streaming
