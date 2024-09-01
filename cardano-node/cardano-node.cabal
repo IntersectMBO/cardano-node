@@ -175,10 +175,10 @@ library
                       , generic-data
                       , hostname
                       , io-classes >= 1.4
-                      , iohk-monitoring
+                      , iohk-monitoring ^>= 0.1
                       , iproute
                       , lobemo-backend-aggregation
-                      , lobemo-backend-ekg
+                      , lobemo-backend-ekg ^>= 0.1
                       , lobemo-backend-monitoring
                       , lobemo-backend-trace-forwarder
                       , mtl
