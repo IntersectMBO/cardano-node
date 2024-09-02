@@ -38,7 +38,7 @@ in project.shellFor {
 
     export WB_BACKEND=${backend.name}
     export WB_BACKEND_DATA=${backendData}
-    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-0}
+    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
     export WB_SHELL_PROFILE=${profileName}
