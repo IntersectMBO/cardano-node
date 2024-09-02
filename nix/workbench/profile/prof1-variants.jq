@@ -523,7 +523,7 @@ def all_profile_variants:
   ##
   |
     ({}
-      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsEpoch         = timeline::lastKnownBabbageEpoch
       | .genesis.pparamsOverlays      = ["v8-preview"]
     ) as $costmodel_v8_preview
   |
@@ -536,7 +536,7 @@ def all_profile_variants:
     ) as $costmodel_v8_preview_doubleb
   |
     ({}
-      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsEpoch         = timeline::lastKnownBabbageEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview"]
     ) as $costmodel_v9_preview
   |
@@ -552,6 +552,10 @@ def all_profile_variants:
       | .genesis.pparamsOverlays      as $ovls
       | .genesis.pparamsOverlays      = $ovls + ["blocksize64k"]
     ) as $ovl_conway64kblocksize
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+    ) as $genesis_voltaire
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -898,8 +902,16 @@ def all_profile_variants:
     ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
     ) as $plutus_nomadperf_template
   |
+  # P&T Nomad cluster: 52 nodes, P2P by default - value-only workload
+    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire
+    ) as $valuevolt_nomadperf_template
+  |
+  # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
+    ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $genesis_voltaire
+    ) as $plutusvolt_nomadperf_template
+  |
   # P&T Nomad cluster: 52 nodes, P2P by default - PlutusV3 BLST workload
-    ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $costmodel_v9_preview
+    ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $plutusv3blst_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus SECP workload
@@ -1108,7 +1120,7 @@ def all_profile_variants:
     , analysis:
       { filters:        ["size-moderate"] }
     }
-  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $costmodel_v9_preview * $plutus_loop_blst *
+  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $plutus_loop_blst *
     { name: "ci-bench-plutusv3-blst"
     , analysis:
       { filters:        ["size-moderate-2"] }
@@ -1222,6 +1234,14 @@ def all_profile_variants:
     }
   , $nomad_perfssd_latency_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperfssd"
+    }
+
+## P&T Nomad cluster: same, but new Voltaire era baseline with 10k DReps, updated cost models and protocol version 9
+  , $valuevolt_nomadperf_template * $dreps_large *
+    { name: "value-volt-nomadperf"
+    }
+  , $plutusvolt_nomadperf_template * $dreps_large *
+    { name: "plutus-volt-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, PlutusV3 BLST and Plutus SECP workloads
