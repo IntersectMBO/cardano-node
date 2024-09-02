@@ -140,7 +140,7 @@ in project.shellFor {
       # Publish
       bench-data-publish
       # Publish tunnel
-      yq nomad vault-bin norouter socat
+      yq vault-bin norouter socat
       # Debugging
       postgresql
       # Performance report generation

@@ -15,9 +15,15 @@ let
   # Unlike the supervisor backend `useCabalRun` is always false here.
   useCabalRun = false;
 
-  # No override of the Nomad and Vault binaries in "workbench/shell.nix"
   extraShellPkgs =
     [
+      # SRE's patched Nomad 1.6.3 that enables `nix_installables` as artifacts.
+      (
+        # Only x86_64-linux is supported.
+        if builtins.currentSystem != "x86_64-linux"
+        then builtins.abort "Nomad backends only available for x86_64-linux"
+        else (import ./patch.nix {})
+      )
       # Amazon S3 HTTP to upload/download the genesis tar file.
       pkgs.awscli
     ]
