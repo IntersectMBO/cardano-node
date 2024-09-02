@@ -265,7 +265,7 @@ Metrics are seamlessly incorporated into the system through regular trace messag
 
 It is essential to implement the metricsDoc function of the MetaTrace typeclass, as this information is utilized to optimize system performance.
 
-The configuration option TraceOptionMetricsPrefix can be used to prepend a prefix to any trace message. For example, the prefix could be "cardano.node".
+The configuration option TraceOptionMetricsPrefix can be used to prepend a prefix to any metrics name. For example, the prefix could be "cardano.node".
 
 ## Frequency Limiting in Trace Filtering
 
