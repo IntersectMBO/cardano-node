@@ -43,7 +43,7 @@ sumFieldsReport =
   , "ghc_version"
   ] ++ (FieldName <$> manifestPackages) ++
   [ "era"
-  , "delegators", "utxo"
+  , "delegators", "utxo", "dreps"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
   , "plutusScript"
   , "sumHosts", "sumLogObjectsTotal"
@@ -97,6 +97,10 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
    <> fScalar "utxo"                   W12 Cnt (IWord64 $           utxo.sumGenesisSpec)
       "Starting UTxO set size"
       "Extra UTxO set size at the beginning of the benchmark"
+
+   <> fScalar "dreps"                  W12 Cnt (IWord64 $          dreps.sumGenesisSpec)
+      "DRep count"
+      "Amount of DReps in ledger, number of DRep delegations equals number of stake delegations"
 
    <> fScalar "add_tx_size"            W6  B   (IWord64 $      add_tx_size.sumWorkload
                                                                )
