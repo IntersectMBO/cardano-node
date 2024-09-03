@@ -33,7 +33,7 @@ data GenesisSpec
 
 -- support legacy profile content that does not specify DRep count
 instance FromJSON GenesisSpec where
-  parseJSON = withObject "profile gensis" $ \o ->
+  parseJSON = withObject "profile genesis" $ \o ->
     GenesisSpec
       <$> o .:  "delegators"
       <*> o .:  "utxo"

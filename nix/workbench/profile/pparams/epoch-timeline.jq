@@ -1233,7 +1233,7 @@ def epochs:
 };
 
 def lastKnownBabbageEpoch:
-  "492";
+    492;
 
 def lastKnownEpoch:
     epochs
