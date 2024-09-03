@@ -24,11 +24,11 @@ import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFi
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
 import           Cardano.Crypto.Hash (hashToStringAsHex)
 import qualified Cardano.Ledger.BaseTypes as L
-import           Cardano.Ledger.Shelley.LedgerState (nesEpochStateL, esLStateL, lsUTxOStateL, utxosUtxoL, esLStateL,
-                                                     lsUTxOStateL, nesEpochStateL, utxosUtxoL)
-import qualified Cardano.Ledger.UTxO as L
 import           Cardano.Ledger.Core (valueTxOutL)
+import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
+                   utxosUtxoL)
 import qualified Cardano.Ledger.TxIn as L
+import qualified Cardano.Ledger.UTxO as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -38,9 +38,9 @@ import           Control.Monad (forM_)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as Aeson
-import qualified Data.Aeson.Lens as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
+import qualified Data.Aeson.Lens as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (type (:~:) (Refl))
@@ -58,14 +58,13 @@ import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (watchEpochStateUpdate, checkDRepsNumber, getEpochStateView, EpochStateView,
-                   checkDRepsNumber, getEpochStateView, watchEpochStateUpdate, checkDRepsNumber, getEpochStateView,
-                   watchEpochStateUpdate )
 import           Testnet.Components.Configuration (eraToString)
+import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
+                   watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
-import           Testnet.Process.Cli.Transaction (signTx, submitTx, retrieveTransactionId, TxOutAddress(ReferenceScriptAddress),
-                   TxOutAddress(ReferenceScriptAddress), signTx, submitTx, retrieveTransactionId, retrieveTransactionId,
-                   signTx, submitTx, mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx )
+import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptAddress),
+                   mkSimpleSpendOutputsOnlyTx, mkSpendOutputsOnlyTx, retrieveTransactionId, signTx,
+                   submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
