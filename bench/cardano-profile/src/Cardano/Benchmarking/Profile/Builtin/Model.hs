@@ -45,9 +45,10 @@ profilesNoEraModel =
       secp  = V.plutusDoubleSaturation . V.plutusTypeECDSA
       value = V.valueBase . P.tps 9 -- "value" with the Plutus `txFee`.
   in [
-    model & P.name "model-secp-ecdsa-double" . secp  . V.genesisVariant300  . P.doubleBudget . P.v8Preview . V.datasetCurrent
-  , model & P.name "model-secp-ecdsa-half"   . secp  . V.genesisVariant300  . P.stepHalf     . P.v8Preview . V.datasetCurrent
-  , model & P.name "model-secp-ecdsa-plain"  . secp  . V.genesisVariantLast                                . V.datasetCurrent
-  , model & P.name "model-value"             . value . V.genesisVariantLast                                . V.datasetCurrent . P.analysisSizeFull
-  , model & P.name "model-value-test"        . value . V.genesisVariantLast                                . V.datasetSmall   . P.analysisSizeFull
+  -- TODO: after dropping jq profiles, bump all to genesisVariantVoltaire
+    model & P.name "model-secp-ecdsa-double" . secp  . V.genesisVariant300          . P.doubleBudget . P.v8Preview . V.datasetCurrent
+  , model & P.name "model-secp-ecdsa-half"   . secp  . V.genesisVariant300          . P.stepHalf     . P.v8Preview . V.datasetCurrent
+  , model & P.name "model-secp-ecdsa-plain"  . secp  . V.genesisVariantPreVoltaire                                 . V.datasetCurrent
+  , model & P.name "model-value"             . value . V.genesisVariantPreVoltaire                                 . V.datasetCurrent . P.analysisSizeFull
+  , model & P.name "model-value-test"        . value . V.genesisVariantPreVoltaire                                 . V.datasetSmall   . P.analysisSizeFull
   ]

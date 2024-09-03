@@ -49,14 +49,14 @@ profilesNoEraPlutuscall =
       ecdsa   = plutusCall & V.plutusTypeECDSA
       schnorr = plutusCall & V.plutusTypeSchnorr
   in [
-  -- TODO: Different pparamsEpoch introduced in last changes!
-    loop    & P.name "plutuscall-loop-plain"          . V.genesisVariantLast
+  -- TODO: after dropping jq profiles, bump all to genesisVariantVoltaire
+    loop    & P.name "plutuscall-loop-plain"          . V.genesisVariantPreVoltaire
   , loop    & P.name "plutuscall-loop-half"           . V.genesisVariant300  . P.stepHalf     . P.v8Preview
   , loop    & P.name "plutuscall-loop-double"         . V.genesisVariant300  . P.doubleBudget . P.v8Preview
-  , ecdsa   & P.name "plutuscall-secp-ecdsa-plain"    . V.genesisVariantLast
+  , ecdsa   & P.name "plutuscall-secp-ecdsa-plain"    . V.genesisVariantPreVoltaire
   , ecdsa   & P.name "plutuscall-secp-ecdsa-half"     . V.genesisVariant300  . P.stepHalf     . P.v8Preview
   , ecdsa   & P.name "plutuscall-secp-ecdsa-double"   . V.genesisVariant300  . P.doubleBudget . P.v8Preview
-  , schnorr & P.name "plutuscall-secp-schnorr-plain"  . V.genesisVariantLast
+  , schnorr & P.name "plutuscall-secp-schnorr-plain"  . V.genesisVariantPreVoltaire
   , schnorr & P.name "plutuscall-secp-schnorr-half"   . V.genesisVariant300  . P.stepHalf     . P.v8Preview
   , schnorr & P.name "plutuscall-secp-schnorr-double" . V.genesisVariant300  . P.doubleBudget . P.v8Preview
   ]

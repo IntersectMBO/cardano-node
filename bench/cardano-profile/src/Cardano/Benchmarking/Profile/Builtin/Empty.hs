@@ -178,7 +178,7 @@ profilesNoEraEmpty = map baseNoDataset
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
       value  = noCliStop & V.genesisVariant300
       -- TODO: "fast-plutus" and "ci-test-plutus" are using `genesisVariant300`.
-      plutus = noCliStop & V.genesisVariantLast
+      plutus = noCliStop & V.genesisVariantPreVoltaire
       loop    = V.plutusLoop
       ecdsa   = V.plutusSaturation . V.plutusTypeECDSA
       schnorr = V.plutusSaturation . V.plutusTypeSchnorr
