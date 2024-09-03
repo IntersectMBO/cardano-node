@@ -24,8 +24,11 @@ let
         then builtins.abort "Nomad backends only available for x86_64-linux"
         else (import ./patch.nix {})
       )
+
       # Amazon S3 HTTP to upload/download the genesis tar file.
       pkgs.awscli
+      # Use to obtain the AWS credentials.
+      pkgs.vault-bin
     ]
   ;
 
