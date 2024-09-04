@@ -57,11 +57,10 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     <- mkConf tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = ShelleyBasedEraBabbage
+      sbe = ShelleyBasedEraBabbage -- TODO: We should only support the latest era and the upcoming era
+      asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
-      cTestnetOptions = def
-                          { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                          }
+      cTestnetOptions = def { cardanoNodeEra = asbe }
 
   runTime@TestnetRuntime
     { configurationFile
@@ -89,11 +88,11 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 3
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
-    <- registerSingleSpo 1 tempAbsPath
+    <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
          node1SocketPath
          termEpoch
-         cTestnetOptions
+         testnetMagic
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)
 
