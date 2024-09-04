@@ -17,12 +17,17 @@ import           Options.Applicative
 import qualified Options.Applicative as OA
 
 import           Testnet.Start.Cardano
-import           Testnet.Start.Types (NodeConfigurationYaml(..), ShelleyTestnetOptions(..))
+import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
 
 
-optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
-optsTestnet envCli = CardanoTestnetOptions
+optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
+optsTestnet envCli = CardanoTestnetCliOptions
+  <$> pCardanoTestnetCliOptions envCli
+  <*> pShelleyTestnetOptions
+
+pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
+pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   <$> pNumSpoNodes
   <*> pAnyShelleyBasedEra'
   <*> pMaxLovelaceSupply
@@ -52,7 +57,6 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
-  <*> pShelleyTestnetOptions
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
@@ -100,14 +104,13 @@ pShelleyTestnetOptions =
     <*> pSlotLength
     <*> pActiveSlotCoeffs
   where
-    lift f = f . cardanoShelleyOptions $ def
     pEpochLength =
       OA.option auto
         (   OA.long "epoch-length"
         <>  OA.help "Epoch length, in number of slots"
         <>  OA.metavar "SLOTS"
         <>  OA.showDefault
-        <>  OA.value (lift shelleyEpochLength)
+        <>  OA.value (shelleyEpochLength def)
         )
     pSlotLength =
       OA.option auto
@@ -115,7 +118,7 @@ pShelleyTestnetOptions =
         <>  OA.help "Slot length"
         <>  OA.metavar "SECONDS"
         <>  OA.showDefault
-        <>  OA.value (lift shelleySlotLength)
+        <>  OA.value (shelleySlotLength def)
         )
     pActiveSlotCoeffs =
       OA.option auto
@@ -123,10 +126,10 @@ pShelleyTestnetOptions =
         <>  OA.help "Active slots co-efficient"
         <>  OA.metavar "DOUBLE"
         <>  OA.showDefault
-        <>  OA.value (lift shelleyActiveSlotsCoeff)
+        <>  OA.value (shelleyActiveSlotsCoeff def)
         )
 
-cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetOptions
+cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetCliOptions
 cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)
 
 pNetworkId :: Parser Int

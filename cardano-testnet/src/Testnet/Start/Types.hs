@@ -3,7 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
-  ( CardanoTestnetOptions(..)
+  ( CardanoTestnetCliOptions(..)
+  , CardanoTestnetOptions(..)
 
   , anyEraToString
   , anyShelleyBasedEraToString
@@ -35,7 +36,22 @@ import           Testnet.Filepath
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
 
+-- | Command line options for the @cardano-testnet@ executable. They are used
+-- in the parser, and then get split into 'CardanoTestnetOptions' and
+-- 'ShelleyTestnetOptions'
+data CardanoTestnetCliOptions = CardanoTestnetCliOptions
+  { cliTestnetOptions :: CardanoTestnetOptions
+  , cliShelleyOptions :: ShelleyTestnetOptions
+  } deriving (Eq, Show)
 
+instance Default CardanoTestnetCliOptions where
+  def = CardanoTestnetCliOptions
+    { cliTestnetOptions = def
+    , cliShelleyOptions = def
+    }
+
+-- | Options which, contrary to 'ShelleyTestnetOptions' are not implemented
+-- by tuning the genesis files.
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
@@ -47,7 +63,6 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
-  , cardanoShelleyOptions :: ShelleyTestnetOptions
   } deriving (Eq, Show)
 
 instance Default CardanoTestnetOptions where
@@ -59,7 +74,6 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
-    , cardanoShelleyOptions = def
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
