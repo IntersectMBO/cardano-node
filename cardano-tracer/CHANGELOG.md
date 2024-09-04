@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.3.0 (September 4, 2024)
+
+* OpenSSL (which was disabled by default) support removed. OpenSSL is likely to break in early
+  2025: https://github.com/haskell-cryptography/HsOpenSSL/issues/95
+
 ## 0.2.4 (August 13, 2024)
 
 * `systemd` is enabled by default. To disable it use the cabal

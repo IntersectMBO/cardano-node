@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-08-20T21:35:22Z
-  , cardano-haskell-packages 2024-08-18T22:35:14Z
+  , hackage.haskell.org 2024-09-03T20:51:13Z
+  , cardano-haskell-packages 2024-08-29T06:10:21Z
 
 packages:
   cardano-node
@@ -48,7 +48,9 @@ package cryptonite
   flags: -support_rdrand
 
 package snap-server
-  flags: +openssl
+  -- OpenSSL support requires HsOpenSSL which will cause problems in the near future
+  -- https://github.com/haskell-cryptography/HsOpenSSL/issues/95
+  flags: -openssl
 
 package bitvec
   flags: -simd
