@@ -33,17 +33,19 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Lens ((^?))
 import           Control.Monad (forM_)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
+import qualified Data.Aeson.Lens as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (type (:~:) (Refl))
 import qualified Data.Map as Map
-import           Data.String
+import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -56,6 +58,7 @@ import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
                    watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
@@ -65,7 +68,6 @@ import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptA
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Start.Types (eraToString)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 
@@ -230,6 +232,39 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-distribution"
                                        , "--out-file", stakePoolsOutFile ]
 
+    TestQuerySPOStakeDistributionCmd ->
+      -- spo-stake-distribution
+      do
+        -- Query all SPOs
+        aesonSpoDist :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution", "--all-spos" ]
+        secondHash <- H.evalMaybe $ T.unpack <$> aesonSpoDist ^? Aeson.nth 1 . Aeson.nth 0 . Aeson._String
+        secondAmount <- H.evalMaybe $ aesonSpoDist ^? Aeson.nth 1 . Aeson.nth 1 . Aeson._Number
+
+        -- Query individual SPO using result and ensure result is the same
+        secondSpoInfo :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution", "--spo-key-hash", secondHash ]
+        individualHash <- H.evalMaybe $ T.unpack <$> secondSpoInfo ^? Aeson.nth 0 . Aeson.nth 0 . Aeson._String
+        individualAmount <- H.evalMaybe $ secondSpoInfo ^? Aeson.nth 0 . Aeson.nth 1 . Aeson._Number
+        secondHash === individualHash
+        secondAmount === individualAmount
+
+        -- Query individual SPO using SPOs verification file
+        let spoKey = verificationKey . poolNodeKeysCold $ Defaults.defaultSpoKeys 1
+        fileQueryResult :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution"
+                                                                         , "--spo-verification-key-file", unFile spoKey
+                                                                         ]
+        fileQueryHash <- H.evalMaybe $ T.unpack <$> fileQueryResult ^? Aeson.nth 0 . Aeson.nth 0 . Aeson._String
+        fileQueryAmount <- H.evalMaybe $ fileQueryResult ^? Aeson.nth 0 . Aeson.nth 1 . Aeson._Number
+
+        -- Query individual SPO using SPOs bech32 of key and compare to previous result
+        delegatorVKey :: VerificationKey StakePoolKey <- readVerificationKeyFromFile AsStakePoolKey work spoKey
+        keyQueryResult :: Aeson.Value <- execCliStdoutToJson execConfig [ eraName, "query", "spo-stake-distribution"
+                                                                        , "--spo-verification-key", T.unpack $ serialiseToBech32 delegatorVKey
+                                                                        ]
+        keyQueryHash <- H.evalMaybe $ T.unpack <$> keyQueryResult ^? Aeson.nth 0 . Aeson.nth 0 . Aeson._String
+        keyQueryAmount <- H.evalMaybe $ keyQueryResult ^? Aeson.nth 0 . Aeson.nth 1 . Aeson._Number
+        fileQueryHash === keyQueryHash
+        fileQueryAmount === keyQueryAmount
+
     TestQueryStakeAddressInfoCmd ->
       -- stake-address-info
       do
@@ -361,9 +396,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryTreasuryValueCmd -> do
       -- treasury
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
-
-    TestQuerySPOStakeDistributionCmd -> do
-      pure () -- FIXME: https://github.com/IntersectMBO/cardano-node/pull/5932
 
   where
   -- | Wait for the part of the epoch when futurePParams are known
