@@ -45,7 +45,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
   tr@TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- cardanoTestnetDefault def conf
+    } <- cardanoTestnetDefault def def conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
   startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
 

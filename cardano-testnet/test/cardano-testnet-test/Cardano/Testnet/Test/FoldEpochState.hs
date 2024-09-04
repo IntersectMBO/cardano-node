@@ -30,11 +30,9 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       sbe = ShelleyBasedEraBabbage
-      options = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        }
+      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
 
-  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
+  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options def conf
 
   socketPathAbs <- do
     socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)

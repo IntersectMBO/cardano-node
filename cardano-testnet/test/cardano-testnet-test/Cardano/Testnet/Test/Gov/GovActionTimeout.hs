@@ -47,12 +47,9 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoShelleyOptions = def {
-            shelleyEpochLength = 200
-          }
-        }
+      asbe = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def { shelleyEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -60,7 +57,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

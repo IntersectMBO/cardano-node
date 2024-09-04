@@ -52,12 +52,9 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoShelleyOptions = def {
-            shelleyEpochLength = 200
-          }
-        }
+      asbe = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def { shelleyEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -65,7 +62,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
     , wallets=wallet0:wallet1:_wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

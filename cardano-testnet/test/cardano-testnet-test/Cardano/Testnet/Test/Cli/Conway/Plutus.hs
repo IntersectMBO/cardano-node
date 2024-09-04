@@ -51,19 +51,17 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    sbe = ShelleyBasedEraConway
+    sbe = ShelleyBasedEraConway -- TODO: We should only support the latest era and the upcoming era
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = def
-                { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                }
+    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
     , poolNodes
     , wallets=wallet0:wallet1:_
-    } <- cardanoTestnetDefault options conf
+    } <- cardanoTestnetDefault options def conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

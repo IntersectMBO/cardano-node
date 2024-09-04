@@ -42,15 +42,12 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
 
   let era = ConwayEra
       sbe = ShelleyBasedEraConway
-      options = def
-                  { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                  , cardanoShelleyOptions = def {
-                      shelleyEpochLength = 100
-                    , shelleyActiveSlotsCoeff = 0.3
-                  }
-                  }
+      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe } -- TODO: We should only support the latest era and the upcoming era
+      shelleyOptions = def { shelleyEpochLength = 100
+                           , shelleyActiveSlotsCoeff = 0.3
+                           }
 
-  TestnetRuntime{testnetMagic, configurationFile, poolNodes} <- cardanoTestnetDefault options conf
+  TestnetRuntime{testnetMagic, configurationFile, poolNodes} <- cardanoTestnetDefault options shelleyOptions conf
 
   (execConfig, socketPathAbs) <- do
     PoolNode{poolRuntime} <- H.headM poolNodes

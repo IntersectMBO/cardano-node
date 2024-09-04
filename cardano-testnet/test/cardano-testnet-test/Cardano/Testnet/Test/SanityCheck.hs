@@ -46,14 +46,13 @@ hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-ch
   conf <- mkConf tempAbsBasePath'
 
   let fastTestnetOptions = def
-        { cardanoShelleyOptions = def {
-            shelleyEpochLength = 100
-          , shelleySlotLength = 0.1
-          }
+      shelleyOptions = def
+        { shelleyEpochLength = 100
+        , shelleySlotLength = 0.1
         }
 
   TestnetRuntime{configurationFile, poolNodes}
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
   nr@NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes
   let socketPath = nodeSocketPath nr
 

@@ -62,18 +62,14 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def
-        { cardanoNodeEra = asbe
-        , cardanoShelleyOptions = def {
-            shelleyEpochLength = 200
-          }
-        }
+      fastTestnetOptions = def { cardanoNodeEra = asbe  }
+      shelleyOptions = def { shelleyEpochLength = 200 }
+
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
 
   -- Step 1. Define generate and define a committee in the genesis file
@@ -108,11 +104,11 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
-  (startTime, shelleyGenesis') <-
+  shelleyGenesis' <-
     getDefaultShelleyGenesis
       asbe
-      (cardanoMaxSupply      fastTestnetOptions)
-      (cardanoShelleyOptions fastTestnetOptions)
+      (cardanoMaxSupply fastTestnetOptions)
+      shelleyOptions
   let conwayGenesisWithCommittee =
         defaultConwayGenesis { L.cgCommittee = committee }
 
@@ -123,7 +119,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
     , configurationFile
     } <- cardanoTestnet
            fastTestnetOptions
-           conf startTime shelleyGenesis'
+           conf shelleyGenesis'
            alonzoGenesis conwayGenesisWithCommittee
 
   poolNode1 <- H.headM poolNodes

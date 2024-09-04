@@ -69,7 +69,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
     , wallets=wallet0:_
     , configurationFile
     , poolNodes
-    } <- cardanoTestnetDefault cTestnetOptions conf
+    } <- cardanoTestnetDefault cTestnetOptions def conf
 
   node1sprocket <- H.headM $ poolSprockets tr
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic

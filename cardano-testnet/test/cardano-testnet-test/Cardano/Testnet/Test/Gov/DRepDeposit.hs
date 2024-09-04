@@ -47,10 +47,8 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 0
-        , cardanoShelleyOptions = def {
-            shelleyEpochLength = 100
-          }
         }
+      shelleyOptions = def { shelleyEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
@@ -58,7 +56,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

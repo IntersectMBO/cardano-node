@@ -58,10 +58,8 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 1
-        , cardanoShelleyOptions = def {
-            shelleyEpochLength = 200
-          }
         }
+      shelleyOptions = def { shelleyEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -69,7 +67,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

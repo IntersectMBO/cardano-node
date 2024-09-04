@@ -76,10 +76,8 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = nDrepVotes
-        , cardanoShelleyOptions = def {
-            shelleyEpochLength = 200
-          }
         }
+      shelleyOptions = def { shelleyEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -87,7 +85,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime, poolKeys} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

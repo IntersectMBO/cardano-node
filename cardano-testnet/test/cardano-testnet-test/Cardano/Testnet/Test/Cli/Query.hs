@@ -92,17 +92,16 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let sbe = ShelleyBasedEraConway
+      asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = def
-        { cardanoNodeEra = AnyShelleyBasedEra sbe,
-          cardanoShelleyOptions = def
-            { shelleyEpochLength = 100
-            -- We change slotCoeff because epochLength must be equal to:
-            -- securityParam * 10 / slotCoeff
-            , shelleyActiveSlotsCoeff = 0.5
-            }
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def
+        { shelleyEpochLength = 100
+        -- We change slotCoeff because epochLength must be equal to:
+        -- securityParam * 10 / slotCoeff
+        , shelleyActiveSlotsCoeff = 0.5
         }
 
   TestnetRuntime
@@ -111,7 +110,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     , configurationFile
     , wallets=wallet0:wallet1:_
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 
