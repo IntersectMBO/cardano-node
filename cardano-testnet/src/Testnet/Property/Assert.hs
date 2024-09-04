@@ -40,7 +40,7 @@ import           Data.Type.Equality
 import           Data.Word (Word8)
 import           GHC.Stack as GHC
 
-import           Testnet.Components.Configuration (NumPools(..), numPools)
+import           Testnet.Components.Configuration (NumPools(..))
 import           Testnet.Process.Run
 import           Testnet.Start.Types
 
@@ -84,12 +84,10 @@ assertByDeadlineIOCustom str deadline f = withFrozenCallStack $ do
 assertExpectedSposInLedgerState
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => FilePath -- ^ Stake pools query output filepath
-  -> CardanoTestnetOptions
+  -> NumPools
   -> ExecConfig
   -> m ()
-assertExpectedSposInLedgerState output tNetOptions execConfig = withFrozenCallStack $ do
-  let NumPools numExpectedPools = numPools tNetOptions
-
+assertExpectedSposInLedgerState output (NumPools numExpectedPools) execConfig = withFrozenCallStack $ do
   void $ execCli' execConfig
       [ "query", "stake-pools"
       , "--out-file", output

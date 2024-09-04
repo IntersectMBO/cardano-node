@@ -241,12 +241,13 @@ createStakeKeyDeregistrationCertificate tempAbsP sbe stakeVerKey deposit outputF
 -- | Related documentation: https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/stake-pool-operations/8_register_stakepool.md
 registerSingleSpo
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => Int -- ^ Identifier for stake pool
+  => AnyShelleyBasedEra
+  -> Int -- ^ Identifier for stake pool
   -> TmpAbsolutePath
   -> NodeConfigFile 'In
   -> SocketPath
   -> EpochNo -- ^ Termination epoch
-  -> CardanoTestnetOptions
+  -> Int -- ^ Testnet magic
   -> ExecConfig
   -> (TxIn, FilePath, String)
   -> m ( String
@@ -260,10 +261,8 @@ registerSingleSpo
          --   3. FilePath: Stake pool cold verification key
          --   4. FilePath: Stake pool VRF signing key
          --   5. FilePath: Stake pool VRF verification key
-registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch cTestnetOptions execConfig
+registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch testnetMag execConfig
                   (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
-  let testnetMag = shelleyTestnetMagic $ cardanoShelleyOptions cTestnetOptions
-
   workDir <- H.note tempAbsPath'
 
   -- In order to register a stake pool we need two certificates:
@@ -322,7 +321,6 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
 
   -- 5. Create registration certificate
   let poolRegCertFp = spoReqDir </> "registration.cert"
-  let asbe = cardanoNodeEra cTestnetOptions
 
   -- The pledge, pool cost and pool margin can all be 0
   execCli_

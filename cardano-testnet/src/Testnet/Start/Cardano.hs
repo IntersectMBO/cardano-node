@@ -70,12 +70,10 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
-testnetMinimumConfigurationRequirements :: MonadTest m => CardanoTestnetOptions -> m ()
-testnetMinimumConfigurationRequirements cTestnetOpts = do
-  let actualLength = length (cardanoNodes cTestnetOpts)
-  when (actualLength < 2) $ do
-     H.noteShow_ ("Need at least two nodes to run a cluster, but got: " <> show actualLength)
-     H.noteShow_ cTestnetOpts
+testnetMinimumConfigurationRequirements :: MonadTest m => NumPools -> m ()
+testnetMinimumConfigurationRequirements (NumPools n) =
+  when (n < 2) $ do
+     H.noteShow_ ("Need at least two nodes to run a cluster, but got: " <> show n)
      H.failure
 
 data ForkPoint
@@ -186,19 +184,18 @@ cardanoTestnet :: ()
 cardanoTestnet
   testnetOptions Conf {tempAbsPath=TmpAbsolutePath tmpAbsPath} startTime
   shelleyGenesis alonzoGenesis conwayGenesis = do
-  let shelleyStartTime = sgSystemStart shelleyGenesis
+  let (CardanoTestnetOptions _ asbe maxSupply _p2p nodeLoggingFormat _ newEpochStateLogging shelleyOptions) = testnetOptions
+      shelleyStartTime = sgSystemStart shelleyGenesis
       genesisTestnetMagic = sgNetworkMagic shelleyGenesis
-      testnetMagic = shelleyTestnetMagic $ cardanoShelleyOptions testnetOptions
+      testnetMagic = shelleyTestnetMagic shelleyOptions
       optionsMagic :: Word32 = fromIntegral testnetMagic
       numPoolNodes = length $ cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
-      maxSupply = cardanoMaxSupply testnetOptions
-      asbe = cardanoNodeEra testnetOptions
   AnyShelleyBasedEra sbe <- pure asbe
 
    -- Sanity checks
-  testnetMinimumConfigurationRequirements testnetOptions
+  testnetMinimumConfigurationRequirements nPools
   when (shelleyStartTime /= startTime) $ do
     H.note_ $ "Expected same system start in shelley genesis and parameter, but got " <> show shelleyStartTime <> " and " <> show startTime
     H.failure
@@ -360,7 +357,7 @@ cardanoTestnet
     now <- H.noteShowIO DTC.getCurrentTime
     deadline <- H.noteShow $ DTC.addUTCTime 45 now
     forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
-      assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+      assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
     H.noteShowIO_ DTC.getCurrentTime
 
@@ -396,9 +393,9 @@ cardanoTestnet
 
     stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
-    assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
+    assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
-    when (cardanoEnableNewEpochStateLogging testnetOptions) $
+    when newEpochStateLogging $
       TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
 
     pure runtime
