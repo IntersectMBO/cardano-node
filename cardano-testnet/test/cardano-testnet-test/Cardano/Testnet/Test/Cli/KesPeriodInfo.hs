@@ -57,12 +57,9 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       sbe = ShelleyBasedEraBabbage
-      era = toCardanoEra sbe
-      anyEra = AnyCardanoEra era
+      eraString = eraToString sbe
       cTestnetOptions = cardanoDefaultTestnetOptions
-                          { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                          , cardanoActiveSlotsCoeff = 0.1
+                          { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           }
 
   runTime@TestnetRuntime
@@ -78,7 +75,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
   void $ execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
+    [ eraString, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -153,7 +150,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.note_  "Get updated UTxO"
 
   void $ execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
+    [ eraString, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-2.json"
@@ -165,8 +162,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraString = eraToString sbe
-      delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
+  let delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
     [ eraString

@@ -33,20 +33,13 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tem
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
-
-  let
-    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    sbe = ShelleyBasedEraBabbage
-    options = cardanoDefaultTestnetOptions
-                        { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                        , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                        }
+      tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
     , configurationFile
-    } <- cardanoTestnetDefault options conf
+    } <- cardanoTestnetDefault cardanoDefaultTestnetOptions conf
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1

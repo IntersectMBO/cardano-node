@@ -59,12 +59,9 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-
-  let sbe = shelleyBasedEra @BabbageEra
+      sbe = shelleyBasedEra @BabbageEra
       cTestnetOptions = cardanoDefaultTestnetOptions
-                          { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                          , cardanoActiveSlotsCoeff = 0.1
+                          { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           }
 
   tr@TestnetRuntime
