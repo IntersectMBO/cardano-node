@@ -6,18 +6,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Cardano.Analysis.API.Context (module Cardano.Analysis.API.Context) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Control.Monad (fail)
-
-import Data.Aeson ( FromJSON (..), ToJSON (..), Value
-                  , withObject, object, (.:), (.:?), (.=), (.!=))
-import Data.Aeson.Key qualified as AE
-import Data.Aeson.KeyMap qualified as AE
-import Data.Aeson.Types qualified as AE
-import Data.Map.Strict qualified as Map
-import Data.Text qualified as T
-import Data.Time.Clock (UTCTime, NominalDiffTime)
+import           Control.Monad (fail)
+import           Data.Aeson (FromJSON (..), ToJSON (..), Value, object, withObject, (.!=), (.:),
+                   (.:?), (.=))
+import qualified Data.Aeson.Key as AE
+import qualified Data.Aeson.KeyMap as AE
+import qualified Data.Aeson.Types as AE
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
 
 
 -- This is difficult: we have two different genesis-related structures:
@@ -28,8 +27,17 @@ data GenesisSpec
   = GenesisSpec
   { delegators          :: Word64
   , utxo                :: Word64
+  , dreps               :: Word64
   }
-  deriving (Eq, Generic, Show, ToJSON, FromJSON, NFData)
+  deriving (Eq, Generic, Show, ToJSON, NFData)
+
+-- support legacy profile content that does not specify DRep count
+instance FromJSON GenesisSpec where
+  parseJSON = withObject "profile genesis" $ \o ->
+    GenesisSpec
+      <$> o .:  "delegators"
+      <*> o .:  "utxo"
+      <*> o .:? "dreps"       .!= 0
 
 -- | Partial 'Cardano.Ledger.Shelley.Genesis.ShelleyGenesis'
 data Genesis

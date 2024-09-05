@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-profile
-version:                8.5.0
+version:                8.6.0
 synopsis:               A Cardano benchmarking profile generator
 description:            A Cardano benchmarking profile generator.
 category:               Cardano,
@@ -70,9 +70,6 @@ executable cardano-profile
   import:               project-config
   hs-source-dirs:       app/
   main-is:              cardano-profile.hs
-  ghc-options:          -threaded
-                        -rtsopts
-                        "-with-rtsopts=-T"
   build-depends:        aeson
                       , vector
                       , bytestring
@@ -93,6 +90,3 @@ test-suite cardano-profile-test
                       , tasty
                       , tasty-hunit
                       , cardano-profile
-  ghc-options:          -threaded
-                        -rtsopts
-                        "-with-rtsopts=-T"
