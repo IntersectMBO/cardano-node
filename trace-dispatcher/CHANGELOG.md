@@ -1,5 +1,10 @@
 # Revision history for trace-dispatcher
 
+## 2.6.0
+
+* With a metrics prefix that can be set in the configuration (tcMetricsPrefix)
+  Metrics gets a type postfix (_int,_real, _counter)
+
 ## 2.5.7
 
 * With a prometheus metric with key label pairs. The value will always be "1"

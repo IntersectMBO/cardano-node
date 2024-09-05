@@ -119,21 +119,21 @@ instance LogFormatting ResourceStats where
       ]
 
     asMetrics rs =
-      [ IntM "Resources.Stat.Cputicks"    (fromIntegral $ rCentiCpu rs)
-      , IntM "Resources.RTS.Gcticks"      (fromIntegral $ rCentiGC rs)
-      , IntM "Resources.RTS.Mutticks"     (fromIntegral $ rCentiMut rs)
-      , IntM "Resources.RTS.GcMajorNum"   (fromIntegral $ rGcsMajor rs)
-      , IntM "Resources.RTS.GcMinorNum"   (fromIntegral $ rGcsMinor rs)
-      , IntM "Resources.RTS.Alloc"        (fromIntegral $ rAlloc rs)
-      , IntM "Resources.RTS.GcLiveBytes"  (fromIntegral $ rLive rs)
-      , IntM "Resources.RTS.Heap"         (fromIntegral $ rHeap rs)
-      , IntM "Resources.Mem.Resident"     (fromIntegral $ rRSS rs)
-      , IntM "Resources.Stat.BlkIOticks"  (fromIntegral $ rCentiBlkIO rs)
-      , IntM "Resources.State.NetRd"      (fromIntegral $ rNetRd rs)
-      , IntM "Resources.State.NetWr"      (fromIntegral $ rNetWr rs)
-      , IntM "Resources.State.FsRd"       (fromIntegral $ rFsRd rs)
-      , IntM "Resources.State.FsWr"       (fromIntegral $ rFsWr rs)
-      , IntM "Resources.RTS.Stat.Threads" (fromIntegral $ rThreads rs)
+      [ IntM "Stat.cputicks"    (fromIntegral $ rCentiCpu rs)
+      , IntM "RTS.gcticks"      (fromIntegral $ rCentiGC rs)
+      , IntM "RTS.mutticks"     (fromIntegral $ rCentiMut rs)
+      , IntM "RTS.gcMajorNum"   (fromIntegral $ rGcsMajor rs)
+      , IntM "RTS.gcMinorNum"   (fromIntegral $ rGcsMinor rs)
+      , IntM "RTS.alloc"        (fromIntegral $ rAlloc rs)
+      , IntM "RTS.gcLiveBytes"            (fromIntegral $ rLive rs)
+      , IntM "RTS.gcHeapBytes"         (fromIntegral $ rHeap rs)
+      , IntM "Mem.resident"              (fromIntegral $ rRSS rs)
+      , IntM "Stat.blkIOticks"  (fromIntegral $ rCentiBlkIO rs)
+      , IntM "Stat.netRd"      (fromIntegral $ rNetRd rs)
+      , IntM "Stat.netWr"      (fromIntegral $ rNetWr rs)
+      , IntM "Stat.fsRd"       (fromIntegral $ rFsRd rs)
+      , IntM "Stat.fsWr"       (fromIntegral $ rFsWr rs)
+      , IntM "RTS.threads" (fromIntegral $ rThreads rs)
       ]
 
 instance MetaTrace ResourceStats where
@@ -144,19 +144,20 @@ instance MetaTrace ResourceStats where
   documentFor  (Namespace _ ["Resources"]) = Just ""
   documentFor _ns = Nothing
   metricsDocFor  (Namespace _ ["Resources"]) =
-    [("Resources.Stat.Cputicks", "Kernel-reported CPU ticks (1/100th of a second), since process start")
-    ,("Resources.Mem.Resident", "Kernel-reported RSS (resident set size)")
-    ,("Resources.RTS.GcLiveBytes", "RTS-reported live bytes")
-    ,("Resources.RTS.GcMajorNum", "Major GCs")
-    ,("Resources.RTS.GcMinorNum", "Minor GCs")
-    ,("Resources.RTS.Gcticks", "RTS-reported CPU ticks spent on GC")
-    ,("Resources.RTS.Mutticks", "RTS-reported CPU ticks spent on mutator")
-    ,("Resources.State.NetRd", "IP packet bytes read")
-    ,("Resources.State.NetWr", "IP packet bytes written")
-    ,("Resources.State.FsRd", "FS bytes read")
-    ,("Resources.State.FsWr", "FS bytes written")
-    ,("Resources.RTS.Threads","RTS green thread count")
-    ]
+    [("Stat.cputicks", "Kernel-reported CPU ticks (1/100th of a second), since process start")
+    ,("RTS.gcticks", "RTS-reported CPU ticks spent on GC")
+    ,("RTS.mutticks", "RTS-reported CPU ticks spent on mutator")
+    ,("RTS.gcMajorNum", "Major GCs")
+    ,("RTS.gcMinorNum", "Minor GCs")
+    ,("RTS.alloc", "RTS-reported bytes allocated")
+    ,("RTS.gcLiveBytes", "RTS-reported live bytes")
+    ,("RTS.gcHeapBytes", "RTS-reported heap bytes")
+    ,("Mem.resident", "Kernel-reported RSS (resident set size)")
+    ,("Stat.netRd", "IP packet bytes read")
+    ,("Stat.netWr", "IP packet bytes written")
+    ,("Stat.fsRd", "FS bytes read")
+    ,("Stat.fsWr", "FS bytes written")
+    ,("RTS.threads","RTS green thread count")]
   metricsDocFor _ns = []
   allNamespaces = [ Namespace [] ["Resources"]]
 

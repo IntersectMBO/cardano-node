@@ -463,7 +463,9 @@ instance ConvertRawHash blk
                <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
   asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking FallingEdge) =
-      [CounterM "ChainSync.HeadersServed.Falling" Nothing]
+      [CounterM "headersServed.falling" Nothing]
+  asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking _) =
+      [CounterM "headersServed" Nothing]
   asMetrics _ = []
 
 instance MetaTrace (TraceChainSyncServerEvent blk) where
@@ -478,8 +480,8 @@ instance MetaTrace (TraceChainSyncServerEvent blk) where
   severityFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["Update"]) =
-    [ ("ChainSync.HeadersServed", "A counter triggered on any header event")
-    , ("ChainSync.HeadersServed.Falling",
+    [ ("headersServed", "A counter triggered on any header event")
+    , ("headersServed.falling",
         "A counter triggered only on header event with falling edge")]
   metricsDocFor _ = []
 
@@ -527,22 +529,20 @@ instance LogFormatting ClientMetrics where
       then
         let  size = Pq.size cmSlotMap
              msgs =
-               [ DoubleM
-                    "Blockfetch.Client.Blockdelay"
+               [ DoubleM "blockfetchclient.blockdelay"
                     cmDelay
-               , IntM
-                    "Blockfetch.Client.Blocksize"
+               , IntM "blockfetchclient.blocksize"
                     (fromIntegral cmBlockSize)
-               , DoubleM "Blockfetch.Client.Blockdelay.cdfOne"
+               , DoubleM "blockfetchclient.blockdelay.cdfOne"
                     (fromIntegral (counter cmCdf1sVar) / fromIntegral size)
-               , DoubleM "Blockfetch.Client.Blockdelay.cdfThree"
+               , DoubleM "blockfetchclient.blockdelay.cdfThree"
                     (fromIntegral (counter cmCdf3sVar) / fromIntegral size)
-               , DoubleM "Blockfetch.Client.Blockdelay.cdfFive"
+               , DoubleM "blockfetchclient.blockdelay.cdfFive"
                     (fromIntegral (counter cmCdf5sVar) / fromIntegral size)
                ]
         in if cmDelay > 5
              then
-               CounterM "Blockfetch.Client.Lateblocks" Nothing
+               CounterM "blockfetchclient.lateblocks" Nothing
                  : msgs
              else msgs
       else []
@@ -553,10 +553,12 @@ instance MetaTrace ClientMetrics where
   documentFor _ = Just ""
 
   metricsDocFor (Namespace _ ["ClientMetrics"]) =
-      [ ("Blockfetch.Client.Blockdelay", "")
-      , ("Blockfetch.Client.Blockdelay.cdfOne", "")
-      , ("Blockfetch.Client.Blockdelay.cdfThree", "")
-      , ("Blockfetch.Client.Blockdelay.cdfFive", "")
+      [ ("blockfetchclient.blockdelay", "")
+      , ("blockfetchclient.blocksize", "")
+      , ("blockfetchclient.lateblocks", "")
+      , ("blockfetchclient.blockdelay.cdfOne", "")
+      , ("blockfetchclient.blockdelay.cdfThree", "")
+      , ("blockfetchclient.blockdelay.cdfFive", "")
       ]
   metricsDocFor _ = []
 
@@ -650,7 +652,7 @@ instance (LogFormatting peer, Show peer) =>
     , "peers" .= toJSON
       (List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
-  asMetrics peers = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
+  asMetrics peers = [IntM "connectedPeers" (fromIntegral (length peers))]
 
 instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
   namespaceFor (a : _tl) = (nsCast . namespaceFor) a
@@ -703,9 +705,9 @@ instance MetaTrace (FetchDecision [Point header]) where
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["Decline"]) =
-      [("Blockfetch.ConnectedPeers", "Number of connected peers")]
+      [("connectedPeers", "Number of connected peers")]
     metricsDocFor (Namespace _ ["Accept"]) =
-      [("Blockfetch.ConnectedPeers", "Number of connected peers")]
+      [("connectedPeers", "Number of connected peers")]
     metricsDocFor _ = []
 
     documentFor _ =  Just $ mconcat
@@ -847,7 +849,7 @@ instance ConvertRawHash blk => LogFormatting (TraceBlockFetchServerEvent blk) wh
                                     (renderHeaderHash (Proxy @blk))
                                     $ pointHash blk)]
   asMetrics (TraceBlockFetchServerSendBlock _p) =
-    [CounterM "BlockFetch.BlocksServed" Nothing]
+    [CounterM "served.block" Nothing]
 
 instance MetaTrace (TraceBlockFetchServerEvent blk) where
     namespaceFor TraceBlockFetchServerSendBlock {} =
@@ -858,7 +860,7 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace [] ["SendBlock"]) =
-      [("Blockfetch.BlocksServed", "")]
+      [("served.block", "")]
     metricsDocFor _ = []
 
     documentFor (Namespace [] ["SendBlock"]) = Just
@@ -899,11 +901,11 @@ instance LogFormatting (TraceTxSubmissionInbound txid tx) where
       ]
 
   asMetrics (TraceTxSubmissionCollected count)=
-    [CounterM "TxSubmission.Submitted" (Just count)]
+    [CounterM "submissions.submitted" (Just count)]
   asMetrics (TraceTxSubmissionProcessed processed) =
-    [ CounterM "TxSubmission.Accepted"
+    [ CounterM "submissions.accepted"
         (Just (ptxcAccepted processed))
-    , CounterM "TxSubmission.Rejected"
+    , CounterM "submissions.rejected"
         (Just (ptxcRejected processed))
     ]
   asMetrics _ = []
@@ -923,10 +925,10 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["Collected"]) =
-      [ ("TxSubmission.Submitted", "")]
+      [ ("submissions.submitted", "")]
     metricsDocFor (Namespace _ ["Processed"]) =
-      [ ("TxSubmission.Accepted", "")
-      , ("TxSubmission.Rejected", "")
+      [ ("submissions.accepted", "")
+      , ("submissions.rejected", "")
       ]
     metricsDocFor _ = []
 
@@ -1092,25 +1094,25 @@ instance
       ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
-    [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz) =
-    [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolRemoveTxs _txs mpSz) =
-    [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
-    [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
-    [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
-    , CounterM "Mempool.TxsProcessedNum" (Just (fromIntegral $ length txs))
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
     ]
 
 instance LogFormatting MempoolSize where
@@ -1134,21 +1136,21 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
-      [ ("Mempool.TxsInMempool","Transactions in mempool")
-      , ("Mempool.MempoolBytes", "Byte size of the mempool")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
       ]
     metricsDocFor (Namespace _ ["RejectedTx"]) =
-      [ ("Mempool.TxsInMempool","Transactions in mempool")
-      , ("Mempool.MempoolBytes", "Byte size of the mempool")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
       ]
     metricsDocFor (Namespace _ ["RemoveTxs"]) =
-      [ ("Mempool.TxsInMempool","Transactions in mempool")
-      , ("Mempool.MempoolBytes", "Byte size of the mempool")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
       ]
     metricsDocFor (Namespace _ ["ManuallyRemovedTxs"]) =
-      [ ("Mempool.TxsInMempool","Transactions in mempool")
-      , ("Mempool.MempoolBytes", "Byte size of the mempool")
-      , ("Mempool.TxsProcessedNum", "")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
+      , ("txsProcessedNum", "")
       ]
     metricsDocFor _ = []
 
@@ -1266,8 +1268,8 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
       <> " delegMapSize " <> showT tsDelegMapSize
       <> " chainDensity " <> showT tsChainDensity
   asMetrics TraceStartLeadershipCheckPlus {..} =
-    [IntM "Forge.UtxoSize"     (fromIntegral tsUtxoSize),
-     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize)]
+    [IntM "utxoSize"     (fromIntegral tsUtxoSize),
+     IntM "delegMapSize" (fromIntegral tsDelegMapSize)]
 
 
 --------------------------------------------------------------------------------
@@ -1506,54 +1508,54 @@ instance ( tx ~ GenTx blk
         Nothing -> []
         Just kesInfo ->
           [ IntM
-              "Forge.OperationalCertificateStartKESPeriod"
+              "operationalCertificateStartKESPeriod"
               (fromIntegral . unKESPeriod . HotKey.kesStartPeriod $ kesInfo)
           , IntM
-              "Forge.OperationalCertificateExpiryKESPeriod"
+              "operationalCertificateExpiryKESPeriod"
               (fromIntegral . unKESPeriod . HotKey.kesEndPeriod $ kesInfo)
           , IntM
-              "Forge.CurrentKESPeriod"
+              "currentKESPeriod"
               0
           , IntM
-              "Forge.RemainingKESPeriods"
+              "remainingKESPeriods"
               0
           ])
 
   asMetrics (TraceStartLeadershipCheck slot) =
-    [IntM "Forge.AboutToLeadSlotLast" (fromIntegral $ unSlotNo slot)]
+    [IntM "aboutToLeadSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceSlotIsImmutable slot _tipPoint _tipBlkNo) =
-    [IntM "Forge.SlotIsImmutable" (fromIntegral $ unSlotNo slot)]
+    [IntM "slotIsImmutable" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceBlockFromFuture slot _slotNo) =
-    [IntM "Forge.BlockFromFuture" (fromIntegral $ unSlotNo slot)]
+    [IntM "blockFromFuture" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceBlockContext slot _tipBlkNo _tipPoint) =
-    [IntM "Forge.BlockContext" (fromIntegral $ unSlotNo slot)]
+    [IntM "blockContext" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNoLedgerState slot _) =
-    [IntM "Forge.CouldNotForgeSlotLast" (fromIntegral $ unSlotNo slot)]
+    [IntM "couldNotForgeSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceLedgerState slot _) =
-    [IntM "Forge.LedgerState" (fromIntegral $ unSlotNo slot)]
+    [IntM "ledgerState" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNoLedgerView slot _) =
-    [IntM "Forge.CouldNotForgeSlotLast" (fromIntegral $ unSlotNo slot)]
+    [IntM "couldNotForgeSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceLedgerView slot) =
-    [IntM "Forge.LedgerView" (fromIntegral $ unSlotNo slot)]
+    [IntM "ledgerView" (fromIntegral $ unSlotNo slot)]
   -- see above
   asMetrics (TraceNodeCannotForge slot _reason) =
-    [IntM "Forge.NodeCannotForge" (fromIntegral $ unSlotNo slot)]
+    [IntM "nodeCannotForge" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNodeNotLeader slot) =
-    [IntM "Forge.NodeNotLeader" (fromIntegral $ unSlotNo slot)]
+    [IntM "nodeNotLeader" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNodeIsLeader slot) =
-    [IntM "Forge.NodeIsLeader" (fromIntegral $ unSlotNo slot)]
+    [IntM "nodeIsLeader" (fromIntegral $ unSlotNo slot)]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
   asMetrics (TraceForgedBlock slot _ _ _) =
-    [IntM "Forge.ForgedSlotLast" (fromIntegral $ unSlotNo slot)]
+    [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceDidntAdoptBlock slot _) =
-    [IntM "Forge.NotAdoptedSlotLast" (fromIntegral $ unSlotNo slot)]
+    [IntM "notAdoptedSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceForgedInvalidBlock slot _ _) =
-    [IntM "Forge.ForgedInvalidSlotLast" (fromIntegral $ unSlotNo slot)]
+    [IntM "forgedInvalidSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceAdoptedBlock slot _ _) =
-    [IntM "Forge.AdoptedOwnBlockSlotLast" (fromIntegral $ unSlotNo slot)]
+    [IntM "adoptedOwnBlockSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceAdoptionThreadDied slot _) =
-    [IntM "Forge.AdoptionThreadDied" (fromIntegral $ unSlotNo slot)]
+    [IntM "adoptionThreadDied" (fromIntegral $ unSlotNo slot)]
 
 instance MetaTrace (TraceForgeEvent blk) where
   namespaceFor TraceStartLeadershipCheck {} =
@@ -1617,45 +1619,45 @@ instance MetaTrace (TraceForgeEvent blk) where
   severityFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["StartLeadershipCheck"]) =
-    [("Forge.AboutToLeadSlotLast", "")]
+    [("aboutToLeadSlotLast", "")]
   metricsDocFor (Namespace _ ["SlotIsImmutable"]) =
-    [("Forge.SlotIsImmutable", "")]
+    [("slotIsImmutable", "")]
   metricsDocFor (Namespace _ ["BlockFromFuture"]) =
-    [("Forge.BlockFromFuture", "")]
+    [("blockFromFuture", "")]
   metricsDocFor (Namespace _ ["BlockContext"]) =
-    [("Forge.BlockContext", "")]
+    [("blockContext", "")]
   metricsDocFor (Namespace _ ["NoLedgerState"]) =
-    [("Forge.CouldNotForgeSlotLast", "")]
+    [("couldNotForgeSlotLast", "")]
   metricsDocFor (Namespace _ ["LedgerState"]) =
-    [("Forge.LedgerState", "")]
+    [("ledgerState", "")]
   metricsDocFor (Namespace _ ["NoLedgerView"]) =
-    [("Forge.CouldNotForgeSlotLast", "")]
+    [("couldNotForgeSlotLast", "")]
   metricsDocFor (Namespace _ ["LedgerView"]) =
-    [("Forge.LedgerView", "")]
+    [("ledgerView", "")]
   metricsDocFor (Namespace _ ["ForgeStateUpdateError"]) =
-    [ ("Forge.OperationalCertificateStartKESPeriod", "")
-    , ("Forge.OperationalCertificateExpiryKESPeriod", "")
-    , ("Forge.CurrentKESPeriod", "")
-    , ("Forge.RemainingKESPeriods", "")
+    [ ("operationalCertificateStartKESPeriod", "")
+    , ("operationalCertificateExpiryKESPeriod", "")
+    , ("currentKESPeriod", "")
+    , ("remainingKESPeriods", "")
     ]
   metricsDocFor (Namespace _ ["NodeCannotForge"]) =
-    [("Forge.NodeCannotForge", "")]
+    [("nodeCannotForge", "")]
   metricsDocFor (Namespace _ ["NodeNotLeader"]) =
-    [("Forge.NodeNotLeader", "")]
+    [("nodeNotLeader", "")]
   metricsDocFor (Namespace _ ["NodeIsLeader"]) =
-    [("Forge.NodeIsLeader", "")]
+    [("nodeIsLeader", "")]
   metricsDocFor (Namespace _ ["ForgeTickedLedgerState"]) = []
   metricsDocFor (Namespace _ ["ForgingMempoolSnapshot"]) = []
   metricsDocFor (Namespace _ ["ForgedBlock"]) =
-    [("Forge.ForgedSlotLast", "")]
+    [("forgedSlotLast", "")]
   metricsDocFor (Namespace _ ["DidntAdoptBlock"]) =
-    [("Forge.NotAdoptedSlotLast", "")]
+    [("notAdoptedSlotLast", "")]
   metricsDocFor (Namespace _ ["ForgedInvalidBlock"]) =
-    [("Forge.ForgedInvalidSlotLast", "")]
+    [("forgedInvalidSlotLast", "")]
   metricsDocFor (Namespace _ ["AdoptedBlock"]) =
-    [("Forge.AdoptedOwnBlockSlotLast", "")]
+    [("adoptedOwnBlockSlotLast", "")]
   metricsDocFor (Namespace _ ["AdoptionThreadDied"]) =
-    [("Forge.AdoptionThreadDied", "")]
+    [("adoptionThreadDied", "")]
   metricsDocFor _ = []
 
   documentFor (Namespace _ ["StartLeadershipCheck"]) = Just

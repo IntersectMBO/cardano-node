@@ -474,6 +474,8 @@ data TraceConfig = TraceConfig {
   , tcForwarder :: Maybe TraceOptionForwarder
     -- | Optional human-readable name of the node.
   , tcNodeName  :: Maybe Text
+    -- | Optional prefix for metrics.
+  , tcMetricsPrefix :: Maybe Text
     -- | Optional peer trace frequency in milliseconds.
   , tcPeerFrequency  :: Maybe Int
     -- | Optional resource trace frequency in milliseconds.
@@ -487,6 +489,7 @@ emptyTraceConfig = TraceConfig {
     tcOptions = Map.empty
   , tcForwarder = Nothing
   , tcNodeName = Nothing
+  , tcMetricsPrefix = Nothing
   , tcPeerFrequency = Just 2000 -- Every 2 seconds
   , tcResourceFrequency = Just 5000 -- Every five seconds
   }
