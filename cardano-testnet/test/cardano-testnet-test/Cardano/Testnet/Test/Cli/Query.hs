@@ -269,12 +269,28 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryStakeAddressInfoCmd ->
       -- stake-address-info
       do
+        -- to stdout
         let delegatorKeys = Defaults.defaultDelegatorStakeKeyPair 1
         delegatorVKey :: VerificationKey StakeKey <- readVerificationKeyFromFile AsStakeKey work $ verificationKey delegatorKeys
         let stakeAddress :: StakeAddress = verificationStakeKeyToStakeAddress testnetMagic delegatorVKey
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-address-info"
                                        , "--address", T.unpack $ serialiseAddress stakeAddress
                                        ]
+        -- to a file
+        let stakeAddressInfoOutFile = work </> "stake-address-info-out.json"
+            redactedStakeAddressInfoOutFile = work </> "stake-address-info-out-redacted.json"
+        H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-address-info"
+                                       , "--address", T.unpack $ serialiseAddress stakeAddress
+                                       , "--out-file", stakeAddressInfoOutFile
+                                       ]
+
+        redactJsonFieldsInFile
+          (fromList (map (, "<redacted>") ["address", "stakeDelegation", "voteDelegation"]))
+          stakeAddressInfoOutFile
+          redactedStakeAddressInfoOutFile
+        H.diffFileVsGoldenFile
+          redactedStakeAddressInfoOutFile
+          "test/cardano-testnet-test/files/golden/queries/stakeAddressInfoOut.json"
 
     TestQueryUTxOCmd ->
       -- utxo
