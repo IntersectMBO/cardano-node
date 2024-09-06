@@ -27,92 +27,17 @@ module Cardano.Node.Run
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
 
-import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
-
-import           Data.Bits
-import           Data.IP (toSockAddr)
-
-import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
-import           Control.Concurrent.Class.MonadSTM.Strict
-import           Control.Exception (try)
-import qualified Control.Exception as Exception
-import           Control.Monad (forM_, unless, void, when)
-import           Control.Monad.Class.MonadThrow (MonadThrow (..))
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except (ExceptT, runExceptT)
-import           Control.Monad.Trans.Except.Extra (left)
-import           "contra-tracer" Control.Tracer
-import           Data.Either (partitionEithers)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
-import           Data.Monoid (Last (..))
-import           Data.Proxy (Proxy (..))
-import           Data.Text (Text, breakOn, pack)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.IO as Text
-import           Data.Time.Clock (getCurrentTime)
-import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import           Data.Version (showVersion)
-import           Network.HostName (getHostName)
-import           Network.Socket (Socket)
-import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.Environment (lookupEnv)
-#ifdef UNIX
-import           GHC.Weak (deRefWeak)
-import           System.Posix.Files
-import qualified System.Posix.Signals as Signals
-import           System.Posix.Types (FileMode)
-#else
-import           System.Win32.File
-#endif
-
 import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
-import           Paths_cardano_node (version)
-
 import qualified Cardano.Crypto.Init as Crypto
-
-import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
-
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
                    nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..), TimeoutOverride (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
-import           Cardano.Node.Startup
-import           Cardano.Node.Tracing.API
-import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
-import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
-import           Cardano.Node.Types
-import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
-
-import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
-                   RunNodeArgs (..), StdRunNodeArgs (..))
-import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.Util.Orphans ()
-import qualified Ouroboros.Network.Diffusion as Diffusion
-import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
-import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
-import qualified Ouroboros.Network.Diffusion.P2P as P2P
-import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
-                   PeerSelectionTargets (..), RemoteAddress)
-import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
-
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           Ouroboros.Network.Protocol.ChainSync.Codec
-import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
-                   IPSubscriptionTarget (..))
-
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
@@ -126,15 +51,77 @@ import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..)
                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
+import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
+import           Cardano.Node.Tracing.API
+import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
+import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
+import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
+import           Cardano.Node.Types
+import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
+import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
-import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers)
+import qualified Ouroboros.Consensus.Config as Consensus
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
+import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
+                   NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
+import qualified Ouroboros.Consensus.Node as Node (NodeDatabasePaths (..), getChainDB, run)
+import           Ouroboros.Consensus.Node.Genesis
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Util.Orphans ()
+import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
+import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
+import qualified Ouroboros.Network.Diffusion.P2P as P2P
+import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
+                   PeerSelectionTargets (..), RemoteAddress)
+import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
-
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
-
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+import           Ouroboros.Network.Protocol.ChainSync.Codec
+import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
+                   IPSubscriptionTarget (..))
+
+import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
+import           Control.Concurrent.Class.MonadSTM.Strict
+import           Control.Exception (try)
+import qualified Control.Exception as Exception
+import           Control.Monad (forM_, unless, void, when)
+import           Control.Monad.Class.MonadThrow (MonadThrow (..))
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT, runExceptT)
+import           Control.Monad.Trans.Except.Extra (left)
+import           "contra-tracer" Control.Tracer
+import           Data.Bits
+import           Data.Either (partitionEithers)
+import           Data.IP (toSockAddr)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import           Data.Monoid (Last (..))
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text, breakOn, pack)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as Text
+import           Data.Time.Clock (getCurrentTime)
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import           Data.Version (showVersion)
+import           GHC.Weak (deRefWeak)
+import           Network.HostName (getHostName)
+import           Network.Socket (Socket)
+import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
+import           System.Environment (lookupEnv)
+import           System.Posix.Files
+import qualified System.Posix.Signals as Signals
+import           System.Posix.Types (FileMode)
+
+import           Paths_cardano_node (version)
 
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -456,7 +443,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         useLedgerVar   <- newTVarIO ntUseLedgerPeers
         useBootstrapVar <- newTVarIO ntUseBootstrapPeers
         let nodeArgs = RunNodeArgs
-              { rnTraceConsensus = consensusTracers tracers
+              { rnGenesisConfig  = disableGenesisConfig
+              , rnTraceConsensus = consensusTracers tracers
               , rnTraceNTN       = nodeToNodeTracers tracers
               , rnTraceNTC       = nodeToClientTracers tracers
               , rnProtocolInfo   = pInfo
@@ -539,7 +527,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            (length ipProducerAddrs)
 
             nodeArgs = RunNodeArgs
-                { rnTraceConsensus = consensusTracers tracers
+                { rnGenesisConfig  = disableGenesisConfig
+                , rnTraceConsensus = consensusTracers tracers
                 , rnTraceNTN       = nodeToNodeTracers tracers
                 , rnTraceNTC       = nodeToClientTracers tracers
                 , rnProtocolInfo   = pInfo
@@ -795,11 +784,20 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
 -- Helper functions
 --------------------------------------------------------------------------------
 
-canonDbPath :: NodeConfiguration -> IO FilePath
-canonDbPath NodeConfiguration{ncDatabaseFile = DbFile dbFp} = do
-  fp <- canonicalizePath =<< makeAbsolute dbFp
-  createDirectoryIfMissing True fp
-  return fp
+canonDbPath :: NodeConfiguration -> IO NodeDatabasePaths
+canonDbPath NodeConfiguration{ncDatabaseFile = nodeDatabaseFps} =
+  case nodeDatabaseFps of
+    OnePathForAllDbs dbFp -> do
+      fp <- canonicalizePath =<< makeAbsolute dbFp
+      createDirectoryIfMissing True fp
+      return $ OnePathForAllDbs fp
+
+    MultipleDbPaths immutable volatile -> do
+      canonImmutable <- canonicalizePath =<< makeAbsolute immutable
+      canonVolatile  <- canonicalizePath =<< makeAbsolute volatile
+      createDirectoryIfMissing True canonImmutable
+      createDirectoryIfMissing True canonVolatile
+      return $ MultipleDbPaths canonImmutable canonVolatile
 
 
 -- | Make sure the VRF private key file is readable only
