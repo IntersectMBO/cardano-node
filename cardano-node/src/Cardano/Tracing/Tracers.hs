@@ -496,11 +496,13 @@ mkTracers _ _ _ _ _ enableP2P =
       { Consensus.chainSyncClientTracer = nullTracer
       , Consensus.chainSyncServerHeaderTracer = nullTracer
       , Consensus.chainSyncServerBlockTracer = nullTracer
+      , Consensus.consensusSanityCheckTracer = nullTracer
       , Consensus.blockFetchDecisionTracer = nullTracer
       , Consensus.blockFetchClientTracer = nullTracer
       , Consensus.blockFetchServerTracer = nullTracer
       , Consensus.keepAliveClientTracer = nullTracer
       , Consensus.forgeStateInfoTracer = nullTracer
+      , Consensus.gddTracer = nullTracer
       , Consensus.txInboundTracer = nullTracer
       , Consensus.txOutboundTracer = nullTracer
       , Consensus.localTxSubmissionServerTracer = nullTracer
@@ -757,7 +759,6 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   tBlockDelayCDF1s <- STM.newTVarIO $ CdfCounter 0
   tBlockDelayCDF3s <- STM.newTVarIO $ CdfCounter 0
   tBlockDelayCDF5s <- STM.newTVarIO $ CdfCounter 0
-
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
     , Consensus.chainSyncServerHeaderTracer =
@@ -765,6 +766,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
                         (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr)
         <> (\(TraceLabelPeer _ ev) -> ev) `contramap` Tracer (traceServedCount mbEKGDirect)
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
+    , Consensus.consensusSanityCheckTracer = tracerOnOff (traceSanityCheckIssue trSel) verb "ConsensusSanityCheck" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
     , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
@@ -772,6 +774,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
         tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
+    , Consensus.gddTracer = tracerOnOff (traceGDD trSel) verb "GDD" tr
     , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @blk) trSel tr

@@ -10,6 +10,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Cardano.Node.Tracing.Tracers.Consensus
   (
@@ -36,6 +37,7 @@ import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), TraceGDDEvent (..))
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId, HasTxId,
                    LedgerSupportsMempool, txForgetValidated, txId)
@@ -68,6 +70,7 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
+import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
@@ -735,13 +738,13 @@ instance (HasHeader header, ConvertRawHash header) =>
               , "head" .= String (renderChainHash
                                   (renderHeaderHash (Proxy @header))
                                   (AF.headHash af))
-              , "length" .= toJSON (fragmentLength af)]
+              , "length" .= toJSON (fragmentLength' af)]
         where
           -- NOTE: this ignores the Byron era with its EBB complication:
           -- the length would be underestimated by 1, if the AF is anchored
           -- at the epoch boundary.
-          fragmentLength :: AF.AnchoredFragment header -> Int
-          fragmentLength f = fromIntegral . unBlockNo $
+          fragmentLength' :: AF.AnchoredFragment header -> Int
+          fragmentLength' f = fromIntegral . unBlockNo $
               case (f, f) of
                 (AS.Empty{}, AS.Empty{}) -> 0
                 (firstHdr AS.:< _, _ AS.:> lastHdr) ->
@@ -868,6 +871,109 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
     documentFor _ = Nothing
 
     allNamespaces = [Namespace [] ["SendBlock"]]
+
+--------------------------------------------------------------------------------
+-- Gdd Tracer
+--------------------------------------------------------------------------------
+
+instance ( LogFormatting peer
+         , HasHeader blk
+         , HasHeader (Header blk)
+         , ConvertRawHash (Header blk)
+         ) => LogFormatting (TraceGDDEvent peer blk) where
+  forMachine dtal TraceGDDEvent {..} = mconcat $
+    [ "kind" .= String "TraceGDDEvent"
+    , "losingPeers".= toJSON (map (forMachine dtal) losingPeers)
+    , "loeHead" .= forMachine dtal loeHead
+    , "sgen" .= toJSON (unGenesisWindow sgen)
+    ] <> do
+      guard $ dtal >= DMaximum
+      [ "bounds" .= toJSON (
+           map
+           ( \(peer, density) -> Aeson.object
+             [ "kind" .= String "PeerDensityBound"
+             , "peer" .= forMachine dtal peer
+             , "densityBounds" .= forMachine dtal density
+             ]
+           )
+           bounds
+         )
+       , "curChain" .= forMachine dtal curChain
+       , "candidates" .= toJSON (
+           map
+           ( \(peer, frag) -> Aeson.object
+             [ "kind" .= String "PeerCandidateFragment"
+             , "peer" .= forMachine dtal peer
+             , "candidateFragment" .= forMachine dtal frag
+             ]
+           )
+           candidates
+         )
+       , "candidateSuffixes" .= toJSON (
+           map
+           ( \(peer, frag) -> Aeson.object
+             [ "kind" .= String "PeerCandidateSuffix"
+             , "peer" .= forMachine dtal peer
+             , "candidateSuffix" .= forMachine dtal frag
+             ]
+           )
+           candidateSuffixes
+         )
+       ]
+
+  forHuman = forHumanOrMachine
+
+instance MetaTrace (TraceGDDEvent peer blk) where
+  namespaceFor _ = Namespace [] ["TraceGDDEvent"]
+
+  severityFor _ _ = Just Debug
+
+  documentFor _ = Just "The Genesis Density Disconnection governor has updated its state"
+
+  allNamespaces = [Namespace [] ["TraceGDDEvent"]]
+
+instance ( HasHeader blk
+         , HasHeader (Header blk)
+         , ConvertRawHash (Header blk)
+         ) => LogFormatting (DensityBounds blk) where
+  forMachine dtal DensityBounds {..} = mconcat
+    [ "kind" .= String "DensityBounds"
+    , "clippedFragment" .= forMachine dtal clippedFragment
+    , "offersMoreThanK" .= toJSON offersMoreThanK
+    , "lowerBound" .= toJSON lowerBound
+    , "upperBound" .= toJSON upperBound
+    , "hasBlockAfter" .= toJSON hasBlockAfter
+    , "latestSlot" .= toJSON (unSlotNo <$> withOriginToMaybe latestSlot)
+    , "idling" .= toJSON idling
+    ]
+
+  forHuman = forHumanOrMachine
+
+
+--------------------------------------------------------------------------------
+-- SanityCheckIssue Tracer
+--------------------------------------------------------------------------------
+
+instance MetaTrace SanityCheckIssue where
+
+  namespaceFor InconsistentSecurityParam {} = Namespace [] ["SanityCheckIssue"]
+
+  severityFor (Namespace _ ["SanityCheckIssue"]) _ = Just Error
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["SanityCheckIssue"]) = Nothing
+  documentFor _ = Nothing
+
+  allNamespaces = [Namespace [] ["SanityCheckIssue"]]
+
+instance LogFormatting SanityCheckIssue where
+  forMachine _dtal (InconsistentSecurityParam e) =
+    mconcat [ "kind" .= String "InconsistentSecurityParam"
+            , "error" .= String (Text.pack $ show e)
+            ]
+  forHuman (InconsistentSecurityParam e) =
+    "Configuration contains multiple security parameters: " <> Text.pack (show e)
+
 
 --------------------------------------------------------------------------------
 -- TxInbound Tracer
@@ -2011,6 +2117,10 @@ instance MetaTrace (TraceGsmEvent selection) where
     , Namespace [] ["GsmEventPreSyncingToSyncing"]
     , Namespace [] ["GsmEventSyncingToPreSyncing"]
     ]
+
+--------------------------------------------------------------------------------
+-- Chain tip tracer
+--------------------------------------------------------------------------------
 
 instance ( StandardHash blk
          , ConvertRawHash blk

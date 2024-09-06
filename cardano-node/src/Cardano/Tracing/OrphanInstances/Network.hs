@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -61,9 +62,8 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters,
-                   PeerSelectionView (..), PeerSelectionState (..),
-                   PeerSelectionTargets (..), TracePeerSelection (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
+                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
@@ -98,7 +98,6 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import qualified Ouroboros.Network.Server2 as Server
-import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
@@ -1170,6 +1169,25 @@ instance ToObject SlotNo where
     mconcat [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
 
+instance (ConvertRawHash blk) => ToObject (AF.Anchor blk) where
+  toObject verb = \case
+    AF.AnchorGenesis -> mconcat
+      [ "kind" .= String "AnchorGenesis" ]
+    AF.Anchor slot hash bno -> mconcat
+      [ "kind" .= String "Anchor"
+      , "slot" .= toJSON (unSlotNo slot)
+      , "headerHash" .= renderHeaderHashForVerbosity (Proxy @blk) verb hash
+      , "blockNo" .= toJSON (unBlockNo bno)
+      ]
+
+instance (ConvertRawHash blk, HasHeader blk) => ToObject (AF.AnchoredFragment blk) where
+  toObject verb frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchor" .= toObject verb (AF.anchor frag)
+    , "headPoint" .= toObject verb (AF.headPoint frag)
+    , "length" .= toJSON (AF.length frag)
+    ]
+
 instance ToJSON PeerGSV where
   toJSON PeerGSV { outboundGSV = GSV outboundG _ _
                  , inboundGSV = GSV inboundG _ _
@@ -2179,6 +2197,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_14 = Number 14
   toJSON NodeToClientV_15 = Number 15
   toJSON NodeToClientV_16 = Number 16
+  toJSON NodeToClientV_17 = Number 17
 
 instance FromJSON NodeToClientVersion where
   parseJSON (Number 9) = return NodeToClientV_9
