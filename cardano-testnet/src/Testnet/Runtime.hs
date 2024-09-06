@@ -190,10 +190,10 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
         NodeExecutableError . hsep $
           ["Socket", pretty socketAbsPath, "was not created after 30 seconds. There was no output on stderr. Exception:", prettyException ioex])
       $ hoistEither eSprocketError
-
+      
     -- Ping node and fail on error
     Ping.pingNode (fromIntegral testnetMagic) sprocket
-      >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
+       >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
 
     pure $ NodeRuntime node ipv4 port sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
   where

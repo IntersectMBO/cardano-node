@@ -50,6 +50,8 @@ import           Testnet.Start.Types (ShelleyTestnetOptions(..))
 import           Hedgehog
 import qualified Hedgehog.Extras as H
 
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Committee Add New/"'@
 hprop_constitutional_committee_add_new :: Property
 hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
