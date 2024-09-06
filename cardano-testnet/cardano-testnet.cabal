@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 9.2
-                      , cardano-cli ^>= 9.3
+                      , cardano-api ^>= 9.3
+                      , cardano-cli ^>= 9.4
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -69,7 +69,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.16.1
+                      , ouroboros-network ^>= 0.17
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -182,9 +182,9 @@ test-suite cardano-testnet-test
 
   main-is:              cardano-testnet-test.hs
 
-  other-modules:        Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
-                        Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
-                        Cardano.Testnet.Test.Cli.Babbage.Transaction
+  other-modules:        Cardano.Testnet.Test.Cli.LeadershipSchedule
+                        Cardano.Testnet.Test.Cli.StakeSnapshot
+                        Cardano.Testnet.Test.Cli.Transaction
                         Cardano.Testnet.Test.Cli.Conway.Plutus
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
@@ -208,7 +208,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SanityCheck
-                        Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
+                        Cardano.Testnet.Test.SubmitApi.Transaction
 
   type:                 exitcode-stdio-1.0
 
