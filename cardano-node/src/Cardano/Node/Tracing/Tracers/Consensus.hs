@@ -10,6 +10,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Cardano.Node.Tracing.Tracers.Consensus
   (
@@ -44,6 +45,7 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
+import Ouroboros.Consensus.Genesis.Governor
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
                    JumpInstruction (..), JumpResult (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
@@ -149,6 +151,37 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
   forMachine dtal = \case
     LedgerUpdate  update  -> forMachine dtal update
     LedgerWarning warning -> forMachine dtal warning
+
+--------------------------------------------------------------------------------
+-- AnchoredFragment tracer
+--------------------------------------------------------------------------------
+
+instance (HasHeader blk, ConvertRawHash (Header blk)) =>
+  LogFormatting (AF.AnchoredFragment blk) where
+  forMachine _dtal frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchorPoint" .= ( Aeson.Object $ mconcat
+          [ "kind"    .= String "AnchoredFragmentAnchorPoint"
+          , "hash"    .= String (renderChainHash
+              (renderHeaderHash (Proxy @(Header blk)))
+              (AF.anchorToHash $ AF.anchor frag))
+          , "slotNo"  .= String (showT $ AF.anchorToSlotNo $ AF.anchor frag)
+          , "blockNo" .= String (showT $ AF.anchorToBlockNo $ AF.anchor frag)
+          ]
+      )
+    , "headPoint"   .= ( Aeson.Object $ mconcat
+          [ "kind"    .= String "AnchoredFragmentHeadPoint"
+          , "hash"    .= String (renderChainHash
+              (renderHeaderHash (Proxy @(Header blk)))
+              (AF.headHash frag))
+          , "slotNo"  .= String (showT $ AF.headSlot frag)
+          , "blockNo" .= String (showT $ AF.headBlockNo frag)
+          ]
+      )
+    , "length" .= toJSON (fragmentLength frag)
+    ]
+
+  forHuman = forHumanOrMachine
 
 
 --------------------------------------------------------------------------------
@@ -735,13 +768,13 @@ instance (HasHeader header, ConvertRawHash header) =>
               , "head" .= String (renderChainHash
                                   (renderHeaderHash (Proxy @header))
                                   (AF.headHash af))
-              , "length" .= toJSON (fragmentLength af)]
+              , "length" .= toJSON (fragmentLength' af)]
         where
           -- NOTE: this ignores the Byron era with its EBB complication:
           -- the length would be underestimated by 1, if the AF is anchored
           -- at the epoch boundary.
-          fragmentLength :: AF.AnchoredFragment header -> Int
-          fragmentLength f = fromIntegral . unBlockNo $
+          fragmentLength' :: AF.AnchoredFragment header -> Int
+          fragmentLength' f = fromIntegral . unBlockNo $
               case (f, f) of
                 (AS.Empty{}, AS.Empty{}) -> 0
                 (firstHdr AS.:< _, _ AS.:> lastHdr) ->
@@ -868,6 +901,108 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
     documentFor _ = Nothing
 
     allNamespaces = [Namespace [] ["SendBlock"]]
+
+--------------------------------------------------------------------------------
+-- Gdd Tracer
+--------------------------------------------------------------------------------
+
+instance ( Show peer
+         , HasHeader blk
+         , HasHeader (Header blk)
+         , ConvertRawHash (Header blk)
+         ) => LogFormatting (TraceGDDEvent peer blk) where
+  forMachine dtal TraceGDDEvent {..} = mconcat
+    [ "kind" .= String "TraceGDDEvent"
+    , "bounds" .= toJSON (
+        map
+        ( \(peer, density) -> Aeson.Object $ mconcat
+          [ "kind" .= String "PeerDensityBound"
+          , "peer" .= (String $ showT peer)
+          , "densityBounds" .= forMachine dtal density
+          ]
+        )
+        bounds
+      )
+    , "curChain" .= forMachine dtal curChain
+    , "candidates" .= toJSON (
+        map
+        ( \(peer, frag) -> Aeson.Object $ mconcat
+          [ "kind" .= String "PeerCandidateFragment"
+          , "peer" .= (String $ showT peer)
+          , "candidateFragment" .= forMachine dtal frag
+          ]
+        )
+        candidates
+      )
+    , "candidateSuffixes" .= toJSON (
+        map
+        ( \(peer, frag) -> Aeson.Object $ mconcat
+          [ "kind" .= String "PeerCandidateSuffix"
+          , "peer" .= (String $ showT peer)
+          , "candidateSuffix" .= forMachine dtal frag
+          ]
+        )
+        candidateSuffixes
+      )
+    , "losingPeers".= (toJSON $ map (String . showT) losingPeers)
+    , "loeHead" .= (String $ showT loeHead)
+    , "sgen" .= (String $ showT $ unGenesisWindow sgen)
+    ]
+
+  forHuman = forHumanOrMachine
+
+instance MetaTrace (TraceGDDEvent peer blk) where
+  namespaceFor _ = Namespace [] ["TraceGDDEvent"]
+
+  severityFor _ _ = Just Debug
+
+  documentFor _ = Just "The Genesis Density Disconnection governor has updated its state"
+
+  allNamespaces = [Namespace [] ["TraceGDDEvent"]]
+
+
+instance ( HasHeader blk
+         , HasHeader (Header blk)
+         , ConvertRawHash (Header blk)
+         ) => LogFormatting (DensityBounds blk) where
+  forMachine dtal DensityBounds {..} = mconcat
+    [ "kind" .= String "DensityBounds"
+    , "clippedFragment" .= forMachine dtal clippedFragment
+    , "offersMoreThanK" .= toJSON offersMoreThanK
+    , "lowerBound" .= toJSON lowerBound
+    , "upperBound" .= toJSON upperBound
+    , "hasBlockAfter" .= toJSON hasBlockAfter
+    , "latestSlot" .= String (showT latestSlot)
+    , "idling" .= toJSON idling
+    ]
+
+  forHuman = forHumanOrMachine
+
+
+--------------------------------------------------------------------------------
+-- SanityCheckIssue Tracer
+--------------------------------------------------------------------------------
+
+instance MetaTrace SanityCheckIssue where
+
+  namespaceFor InconsistentSecurityParam {} = Namespace [] ["SanityCheckIssue"]
+
+  severityFor (Namespace _ ["SanityCheckIssue"]) _ = Just Error
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["SanityCheckIssue"]) = Nothing 
+  documentFor _ = Nothing
+
+  allNamespaces = [Namespace [] ["SanityCheckIssue"]]
+
+instance LogFormatting SanityCheckIssue where 
+  forMachine _dtal (InconsistentSecurityParam e) = 
+    mconcat [ "kind" .= String "InconsistentSecurityParam"
+            , "error" .= String (Text.pack $ show e)
+            ]
+  forHuman (InconsistentSecurityParam e) = 
+    "Configuration contains multiple security parameters: " <> Text.pack (show e)
+
 
 --------------------------------------------------------------------------------
 -- TxInbound Tracer
@@ -2025,3 +2160,18 @@ instance ( StandardHash blk
             ]
 
   forHuman = showT
+
+
+--------------------------------------------------------------------------------
+-- Utils
+--------------------------------------------------------------------------------
+
+-- NOTE: this ignores the Byron era with its EBB complication:
+-- the length would be underestimated by 1, if the AF is anchored
+-- at the epoch boundary.
+fragmentLength :: HasHeader header => AF.AnchoredFragment header -> Int
+fragmentLength f = fromIntegral . unBlockNo $
+    case (f, f) of
+      (AS.Empty{}, AS.Empty{}) -> 0
+      (firstHdr AS.:< _, _ AS.:> lastHdr) ->
+        blockNo lastHdr - blockNo firstHdr + 1

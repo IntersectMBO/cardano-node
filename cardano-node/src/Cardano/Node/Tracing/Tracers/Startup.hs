@@ -25,9 +25,7 @@ import           Cardano.Logging
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
-
 import           Cardano.Node.Startup
-
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
@@ -56,7 +54,6 @@ import           Data.Text (Text, pack)
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
-
 import           Network.Socket (SockAddr)
 
 import           Paths_cardano_node (version)
@@ -440,7 +437,6 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["Network"]
     ]
 
-
 nodeToClientVersionToInt :: NodeToClientVersion -> Int
 nodeToClientVersionToInt = \case
   NodeToClientV_9 -> 9
@@ -451,6 +447,7 @@ nodeToClientVersionToInt = \case
   NodeToClientV_14 -> 14
   NodeToClientV_15 -> 15
   NodeToClientV_16 -> 16
+  NodeToClientV_17 -> 17
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case
