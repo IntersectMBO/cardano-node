@@ -33,6 +33,7 @@ import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
@@ -91,7 +92,7 @@ data NodeConfiguration
           -- (logging, tracing, protocol, slot length etc)
        , ncConfigFile      :: !ConfigYamlFilePath
        , ncTopologyFile    :: !TopologyFile
-       , ncDatabaseFile    :: !DbFile
+       , ncDatabaseFile    :: !NodeDatabasePaths
        , ncProtocolFiles   :: !ProtocolFilepaths
        , ncValidateDB      :: !Bool
        , ncShutdownConfig  :: !ShutdownConfig
@@ -173,7 +174,7 @@ data PartialNodeConfiguration
          -- (logging, tracing, protocol, slot length etc)
        , pncConfigFile      :: !(Last ConfigYamlFilePath)
        , pncTopologyFile    :: !(Last TopologyFile)
-       , pncDatabaseFile    :: !(Last DbFile)
+       , pncDatabaseFile    :: !(Last NodeDatabasePaths)
        , pncProtocolFiles   :: !(Last ProtocolFilepaths)
        , pncValidateDB      :: !(Last Bool)
        , pncShutdownConfig  :: !(Last ShutdownConfig)
@@ -492,7 +493,7 @@ defaultPartialNodeConfiguration :: PartialNodeConfiguration
 defaultPartialNodeConfiguration =
   PartialNodeConfiguration
     { pncConfigFile = Last . Just $ ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
-    , pncDatabaseFile = Last . Just $ DbFile "mainnet/db/"
+    , pncDatabaseFile = Last . Just $ OnePathForAllDbs "mainnet/db/"
     , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
