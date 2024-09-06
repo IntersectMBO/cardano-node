@@ -221,7 +221,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   submitTx execConfig cEra voteTxFp
 
   -- Tally votes
-  waitForGovActionVotes epochStateView (EpochInterval 2)
+  waitForGovActionVotes epochStateView (EpochInterval 1)
 
   govState <- getGovState epochStateView ceo
   govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList

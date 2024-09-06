@@ -414,7 +414,7 @@ checkDRepState
   -> m a
 checkDRepState epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe f = withFrozenCallStack $ do
   currentEpoch <- getCurrentEpochNo epochStateView
-  let terminationEpoch = succ . succ . succ $ currentEpoch
+  let terminationEpoch = succ . succ $ currentEpoch
   result <- H.evalIO . runExceptT $ foldEpochState nodeConfigPath socketPath QuickValidation terminationEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNumber _blockNumber -> do
         Refl <- either error pure $ assertErasEqual sbe actualEra

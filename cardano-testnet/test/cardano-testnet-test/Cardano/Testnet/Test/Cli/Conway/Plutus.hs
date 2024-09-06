@@ -141,7 +141,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   -- 2. Successfully spend conway spending script
   txinCollateral <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
-  plutusScriptTxIn <- fmap fst . retryUntilJustM epochStateView (WaitForBlocks 10) $
+  plutusScriptTxIn <- fmap fst . retryUntilJustM epochStateView (WaitForBlocks 3) $
     findLargestUtxoWithAddress epochStateView sbe $ Text.pack plutusSpendingScriptAddr
 
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"

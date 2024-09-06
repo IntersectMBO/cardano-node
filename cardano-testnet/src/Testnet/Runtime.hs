@@ -191,9 +191,9 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
         NodeExecutableError . hsep $
           ["Socket", pretty socketAbsPath, "was not created after 30 seconds. There was no output on stderr. Exception:", prettyException ioex])
       $ hoistEither eSprocketError
-    H.threadDelay 5_000_000
     -- Ping node and fail on error
     -- TODO: Need to update cardano-ping with N2C version 17
+    H.threadDelay 5_000_000 -- Uncomment below and remove me once cardano-ping has been updated with N2C version 17
     -- Ping.pingNode (fromIntegral testnetMagic) sprocket
     --   >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
 

@@ -341,7 +341,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         submitTx execConfig cEra signedTx
         -- Wait until transaction is on chain and obtain transaction identifier
         txId <- retrieveTransactionId execConfig signedTx
-        txIx <- H.evalMaybeM $ watchEpochStateUpdate epochStateView (EpochInterval 3) (getTxIx sbe txId transferAmount)
+        txIx <- H.evalMaybeM $ watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txId transferAmount)
         -- Query the reference script size
         let protocolParametersOutFile = refScriptSizeWork </> "ref-script-size-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "ref-script-size"

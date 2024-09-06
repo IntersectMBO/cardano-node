@@ -178,7 +178,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIx <-
-    H.nothingFailM . watchEpochStateUpdate epochStateView (L.EpochInterval 2) $ \(anyNewEpochState, _, _) ->
+    H.nothingFailM . watchEpochStateUpdate epochStateView (L.EpochInterval 1) $ \(anyNewEpochState, _, _) ->
       pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
 
   dRepVoteFiles <-
