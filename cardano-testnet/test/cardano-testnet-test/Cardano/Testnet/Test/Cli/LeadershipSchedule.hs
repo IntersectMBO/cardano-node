@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {- HLINT ignore "Redundant id" -}
 
-module Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
+module Cardano.Testnet.Test.Cli.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
@@ -55,11 +55,12 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = shelleyBasedEra @BabbageEra
+      sbe = shelleyBasedEra @ConwayEra
+      eraString = eraToString sbe
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
                           }
@@ -78,7 +79,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
   void $ execCli' execConfig
-    [ "conway", "query", "utxo"
+    [ eraString, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -137,7 +138,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
-    2_000_000
+    0
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
@@ -164,8 +165,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraString = eraToString sbe
-      delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
+  let delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
     [ eraString

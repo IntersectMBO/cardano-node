@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.Cli.Babbage.Transaction
+module Cardano.Testnet.Test.Cli.Transaction
   ( hprop_transaction
   ) where
 
@@ -39,15 +39,19 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/simple transaction build/"'@
 hprop_transaction :: Property
-hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraBabbage
+    sbe = ShelleyBasedEraConway
+    txEra = AsConwayEra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
@@ -95,14 +99,15 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
     , "--out-file", txbodyFp
     ]
   cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
-  apiTx <- H.evalEither $ deserialiseFromTextEnvelope (AsTx AsBabbageEra) cddlUnwitnessedTx
+  apiTx <- H.evalEither $ deserialiseFromTextEnvelope (AsTx txEra) cddlUnwitnessedTx
   let txFee = L.unCoin $ extractTxFee apiTx
 
   -- This is the current calculated fee.
   -- It's a sanity check to see if anything has
   -- changed regarding fee calculation.
   -- 8.10 changed fee from 228 -> 330
-  330 H.=== txFee
+  -- 9.2  changed fee from 330 -> 336
+  336 H.=== txFee
 
   void $ execCli' execConfig
     [ anyEraToString cEra, "transaction", "sign"

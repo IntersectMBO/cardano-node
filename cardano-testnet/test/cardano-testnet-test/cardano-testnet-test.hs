@@ -5,9 +5,9 @@ module Main
   ) where
 
 import qualified Cardano.Crypto.Init as Crypto
-import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
-import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
-import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
+import qualified Cardano.Testnet.Test.Cli.LeadershipSchedule
+import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
+import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.Query
@@ -26,7 +26,7 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
-import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
+import qualified Cardano.Testnet.Test.SubmitApi.Transaction
 
 import           Prelude
 
@@ -78,11 +78,10 @@ tests = do
           , ignoreOnMacAndWindows "Shutdown On Sigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
           -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
           -- , ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
-          , T.testGroup "Babbage"
-              [ ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
-              , ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
-              , ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
-              ]
+          , ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
+          , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
+          , ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.LeadershipSchedule.hprop_leadershipSchedule
+
           -- TODO: Conway -  Re-enable when create-staked is working in conway again
           --, T.testGroup "Conway"
           --  [ ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
@@ -96,10 +95,9 @@ tests = do
           ]
         ]
     , T.testGroup "SubmitApi"
-        [ T.testGroup "Babbage"
-            [ ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
+            [ ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
             ]
-        ]
+        
     ]
 
 defaultMainWithIngredientsAndOptions :: [T.Ingredient] -> T.OptionSet -> T.TestTree -> IO ()
