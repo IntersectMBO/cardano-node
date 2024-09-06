@@ -112,15 +112,18 @@ import qualified Data.Text.IO as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
-import           GHC.Weak (deRefWeak)
 import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+#ifdef UNIX
+import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
 import           System.Posix.Types (FileMode)
-
+#else 
+import           System.Win32.File
+#endif
 import           Paths_cardano_node (version)
 
 

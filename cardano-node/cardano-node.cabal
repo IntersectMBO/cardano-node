@@ -38,6 +38,9 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
+common maybe-Win32 
+  if os(windows) 
+    build-depends:      Win32 
 
 common maybe-unix
   if !os(windows)
@@ -52,6 +55,7 @@ common text
 library
   import:               project-config
                       , maybe-unix
+                      , maybe-Win32  
                       , text
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS
