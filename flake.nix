@@ -56,8 +56,6 @@
 
     std.url = "github:divnix/std";
 
-    nix2container.url = "github:nlewo/nix2container";
-
     cardano-automation = {
       url = "github:input-output-hk/cardano-automation";
       inputs = {
@@ -78,7 +76,6 @@
     , ops-lib
     , cardano-mainnet-mirror
     , std
-    , nix2container
     , cardano-automation
     , em
     , ...
@@ -106,7 +103,7 @@
         iohkNix.overlays.cardano-lib
         iohkNix.overlays.utils
         (final: prev: {
-          inherit customConfig nix2container;
+          inherit customConfig;
           bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
           em = import em { inherit (final) system;
                            nixpkgsSrcs = nixpkgs.outPath;
