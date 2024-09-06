@@ -70,7 +70,7 @@ source-repository-package
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
-  --sha256: sha256-wGLslIZaIhmxoemNIB0LqSSu3Y7HaC7tU4NRxeaqRdc=
+  --sha256: sha256-eKIultUPvFOrhgUDGNf2d77V9wS1Awcr46WbOv7qtCg=
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
