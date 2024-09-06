@@ -31,7 +31,6 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
@@ -80,9 +79,7 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
             npcByronSupportedProtocolVersionAlt,
         byronSoftwareVersion = softwareVersion,
         byronLeaderCredentials =
-          optionalLeaderCredentials,
-        byronMaxTxCapacityOverrides =
-          TxLimits.mkOverrides TxLimits.noOverridesMeasure
+          optionalLeaderCredentials
         }
 
 readGenesis :: GenesisFile
