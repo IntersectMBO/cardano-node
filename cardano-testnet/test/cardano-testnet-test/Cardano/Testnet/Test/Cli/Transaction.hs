@@ -133,7 +133,7 @@ hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \te
     utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
     UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
     txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
-    H.assert $ 5_000_001 `List.elem` txouts2
+    H.assert $ 15_000_003_000_000 `List.elem` txouts2
 
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v
