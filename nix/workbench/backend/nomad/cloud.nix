@@ -9,7 +9,7 @@ let
 
   # The exec task driver can run in a cloud environment using SRE's Nomad
   # servers with the "nix_installable" patch and Amazon S3 to distribute the
-  # genesis files. All credentials are obtained using Vault.
+  # genesis files (Buckets needs write permissions for the deployer machine).
   name = "nomadcloud";
 
   # Unlike the supervisor backend `useCabalRun` is always false here.
@@ -24,11 +24,8 @@ let
         then builtins.abort "Nomad backends only available for x86_64-linux"
         else (import ./patch.nix {})
       )
-
       # Amazon S3 HTTP to upload/download the genesis tar file.
       pkgs.awscli
-      # Use to obtain the AWS credentials.
-      pkgs.vault-bin
     ]
   ;
 

@@ -205,6 +205,13 @@ let
                     oneTracerPerNode = true;
                     withSsh = true;
                   };
+                # AWS S3 bucket that will be used to deploy the genesis files.
+                s3 = rec {
+                  bucket = "cardano-perf-deploy";
+                  region = "eu-central-1";
+                  host   = "s3.${region}.amazonaws.com";
+                  uri    = "https://${bucket}.${host}";
+                };
               };
             }
           ;
