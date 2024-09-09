@@ -16,8 +16,11 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad (void)
+import           Control.Monad
+import           Data.List (sortOn)
+import           Data.Maybe
 import qualified Data.Text as Text
+import           GHC.Exts (IsList (..))
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
@@ -121,7 +124,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     [ anyEraToString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
+    , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 50_000_000
     , "--tx-out-datum-hash", scriptdatumhash
     , "--out-file", sendAdaToScriptAddressTxBody
     ]
@@ -141,13 +144,13 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   -- 2. Successfully spend conway spending script
   txinCollateral <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
-  plutusScriptTxIn <- fmap fst . retryUntilJustM epochStateView (WaitForBlocks 3) $
+  plutusScriptTxIn <- fmap fst . retryUntilJustM epochStateView (WaitForBlocks 20) $
     findLargestUtxoWithAddress epochStateView sbe $ Text.pack plutusSpendingScriptAddr
 
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
       spendScriptUTxOTx = work </> "spend-script-utxo-tx"
       mintValue = mconcat ["5 ", mintingPolicyId, ".", assetName]
-      txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
+      txout = mconcat [ utxoAddr, "+", show @Int 20_000_000
                       , "+", mintValue
                       ]
 
@@ -180,5 +183,57 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     [ "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
     ]
-  H.success
+
+  _ <- waitForBlocks epochStateView 5
+  utxos <- sortOn fst . toList <$> findUtxosWithAddress epochStateView sbe (paymentKeyInfoAddr wallet0)
+  utxoWithAsset <- H.headM $ flip mapMaybe utxos $ \(txin, TxOut _ txoutv _ _) ->
+        case txoutv of
+          TxOutValueByron{} -> Nothing
+          txov@TxOutValueShelleyBased{} -> do
+            let assets = [ a | a@(AssetId _ _, _)<- toList $ txOutValueToValue txov ]
+            if null assets
+               then Nothing
+               else Just txin
+
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  H.noteM_ $ execCli' execConfig
+    [ "query", "utxo", "--whole-utxo" ]
+
+  void $ execCli' execConfig
+    [ anyEraToString anyEra, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in-collateral", Text.unpack $ renderTxIn utxoWithAsset
+    , "--tx-out-return-collateral", utxoAddr <> "+" <> show @Int 2_000_000 <> "+" <> "5 " <> mintingPolicyId <> "." <> assetName
+    , "--tx-in", Text.unpack $ renderTxIn txin2
+    -- , "--tx-in-script-file", plutusScript
+    -- , "--tx-in-datum-value", "0"
+    -- , "--tx-in-redeemer-value", "0"
+    , "--mint", mintValue
+    , "--mint-script-file", plutusScript
+    , "--mint-redeemer-value", "0"
+    -- , "--certificate-file", scriptStakeRegistrationCertificate
+    -- , "--certificate-script-file", plutusScript
+    -- , "--certificate-redeemer-value", "0"
+    , "--tx-out", utxoAddr <> "+1000000"
+    , "--out-file", spendScriptUTxOTxBody
+    ]
+
+  H.noteM_ $ execCli' execConfig
+    [ "debug", "transaction", "view", "--tx-file", spendScriptUTxOTxBody ]
+
+  void $ execCli' execConfig
+    [ "transaction", "sign"
+    , "--tx-body-file", spendScriptUTxOTxBody
+    , "--signing-key-file", utxoSKeyFile
+    , "--signing-key-file", utxoSKeyFile2
+    , "--out-file", spendScriptUTxOTx
+    ]
+
+  void $ execCli' execConfig
+    [ "transaction", "submit"
+    , "--tx-file", spendScriptUTxOTx
+    ]
+
+  H.failure
 
