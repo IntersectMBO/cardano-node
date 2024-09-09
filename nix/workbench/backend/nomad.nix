@@ -140,7 +140,7 @@ let
             //
             lib.attrsets.optionalAttrs (subBackendName == "cloud") {
               openssh_hacks = rec {
-                commit = "01076c7118939c90cb5c9d6320e9813740ec3534"; # Branch "9.3p1";
+                commit = "5d8c5913c70723318acf47496e2abf7d2c99384f"; # OpenSSH version 9.8 (Branch "9.8");
                 nix-store-path  = (__getFlake "github:fmaste/openssh-portable-hacks/${commit}").packages.x86_64-linux.openssh_hacks;
                 flake-reference = "github:fmaste/openssh-portable-hacks";
                 flake-output = "packages.x86_64-linux.openssh_hacks";
