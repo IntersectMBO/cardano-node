@@ -209,7 +209,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   submitTx execConfig cEra voteTxFp
 
-  waitForGovActionVotes epochStateView (L.EpochInterval 1)
+  waitForGovActionVotes epochStateView (L.EpochInterval 2)
 
   govState <- getGovState epochStateView ceo
   govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
