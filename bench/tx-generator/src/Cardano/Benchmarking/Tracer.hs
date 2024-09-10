@@ -69,10 +69,10 @@ generatorTracer ::
 generatorTracer tracerName mbTrStdout mbTrForward = do
   forwardTrace <- case mbTrForward of
                         Nothing -> mempty
-                        Just trForward -> forwardFormatter Nothing trForward
+                        Just trForward -> forwardFormatter trForward
   stdoutTrace  <- case mbTrStdout of
                         Nothing -> mempty
-                        Just trForward -> machineFormatter Nothing trForward
+                        Just trForward -> machineFormatter trForward
   let tr = forwardTrace <> stdoutTrace
   tr'  <- withDetailsFromConfig tr
   pure $ withInnerNames $ appendPrefixName tracerName tr'
@@ -175,7 +175,7 @@ initialTraceConfig = TraceConfig {
           , setMaxDetail TracerNameConnect
           , setMaxDetail TracerNameSubmit
           ]
-    , tcForwarder = Just defaultForwarder
+    , tcForwarder = Just defaultForwarder {tofConnQueueSize = 2048, tofDisconnQueueSize = 4096}
     , tcNodeName = Nothing
     , tcPeerFrequency = Just 2000 -- Every 2 seconds
     , tcResourceFrequency = Just 1000 -- Every second
