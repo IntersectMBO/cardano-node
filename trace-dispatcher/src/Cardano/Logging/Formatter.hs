@@ -17,7 +17,6 @@ module Cardano.Logging.Formatter (
 
 import           Cardano.Logging.Trace (contramapM)
 import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (showT)
 
 import           Control.Concurrent (myThreadId)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -27,7 +26,7 @@ import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
 import           Data.Functor.Contravariant
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text, intercalate, pack, stripPrefix)
+import           Data.Text as T (Text, intercalate, null, pack)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
 import           Data.Text.Lazy.Encoding (decodeUtf8)
@@ -59,33 +58,25 @@ metricsFormatter (Trace tr) = Trace $
 preFormatted ::
   (  LogFormatting a
   ,  MonadIO m)
-  => [BackendConfig]
+  => Bool
+  -> HostName
   -> Trace m (PreFormatted a)
   -> m (Trace m a)
-preFormatted backends' (Trace tr) = do
-  hostname <- liftIO getHostName
-  contramapM (Trace tr)
+preFormatted withForHuman hostname tr =
+  contramapM tr
     (\case
       (lc, Right msg) -> do
         time     <- liftIO getCurrentTime
         threadId <- liftIO myThreadId
         let ns' = lcNSPrefix lc ++ lcNSInner lc
-            threadText = showT threadId
-            threadTextShortened =
-              fromMaybe threadText (stripPrefix "ThreadId " threadText)
+            threadTextShortened = T.pack $ drop 9 $ show threadId       -- drop "ThreadId " prefix
             details = fromMaybe DNormal (lcDetails lc)
-            condForHuman = if elem (Stdout HumanFormatUncoloured) backends'
-                          || elem (Stdout HumanFormatColoured) backends'
-                          || elem Forwarder backends'
-                          then case forHuman msg of
-                                  "" -> Nothing
-                                  txt -> Just txt
-                          else Nothing
+            condForHuman = let txt = forHuman msg in if T.null txt then Nothing else Just txt
             machineFormatted = forMachine details msg
 
         pure (lc, Right (PreFormatted
                           { pfMessage = msg
-                          , pfForHuman = condForHuman
+                          , pfForHuman = if withForHuman then condForHuman else Nothing
                           , pfForMachine = machineFormatted
                           , pfTimestamp = timeFormatted time
                           , pfTime = time
@@ -237,9 +228,8 @@ humanFormatter
   -> m (Trace m a)
 humanFormatter withColor condPrefix tr = do
     let tr' = humanFormatter' withColor condPrefix tr
-    preFormatted [Stdout (if withColor
-                            then HumanFormatColoured
-                            else HumanFormatUncoloured)] tr'
+    hostname <- liftIO getHostName
+    preFormatted True hostname tr'
 
 machineFormatter
   :: forall a m .
@@ -250,7 +240,8 @@ machineFormatter
   -> m (Trace m a)
 machineFormatter condPrefix tr = do
     let tr' = machineFormatter' condPrefix tr
-    preFormatted [Stdout MachineFormat] tr'
+    hostname <- liftIO getHostName
+    preFormatted False hostname tr'
 
 forwardFormatter
   :: forall a m .
@@ -261,4 +252,5 @@ forwardFormatter
   -> m (Trace m a)
 forwardFormatter condPrefix tr = do
     let tr' = forwardFormatter' condPrefix tr
-    preFormatted [Stdout MachineFormat, Stdout HumanFormatColoured] tr'
+    hostname <- liftIO getHostName
+    preFormatted True hostname tr'
