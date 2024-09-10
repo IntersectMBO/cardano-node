@@ -37,7 +37,7 @@ instance MetaTrace TestMessage where
 tracers :: MonadIO m => IORef [FormattedMessage] -> m (Trace m TestMessage, Trace m TestMessage, Trace m TestMessage)
 tracers testTracerRef = do
   t <- testTracer testTracerRef
-  t0 <- machineFormatter Nothing t
+  t0 <- machineFormatter t
   t1 <- withInnerNames . appendPrefixName "tracer1" <$> filterSeverityFromConfig t0
   t2 <- withInnerNames . appendPrefixName "tracer2" <$> filterSeverityFromConfig t0
   t3 <- withInnerNames . appendPrefixName "tracer3" <$> filterSeverityFromConfig t0

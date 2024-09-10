@@ -297,7 +297,7 @@ mkTracerTracer :: SeverityF -> IO (Trace IO TracerTrace)
 mkTracerTracer defSeverity = do
   base     :: Trace IO FormattedMessage <- standardTracer
   metaBase :: Trace IO TracerTrace      <-
-    machineFormatter Nothing base
+    machineFormatter base
     >>= withDetailsFromConfig
   let tr = metaBase
            & withInnerNames

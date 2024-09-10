@@ -61,7 +61,6 @@ import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
-import qualified Data.Aeson.KeyMap as AE
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map.Strict (Map)
@@ -354,14 +353,12 @@ data FormattedMessage =
   deriving (Eq, Show)
 
 
-data PreFormatted a = PreFormatted {
-    pfMessage    :: !a
-  , pfForHuman   :: !(Maybe Text)
-  , pfForMachine :: !(AE.KeyMap AE.Value)
+data PreFormatted = PreFormatted {
+    pfForHuman   :: !(Maybe Text)
+  , pfForMachine :: !AE.Encoding
   , pfNamespace  :: ![Text]
   , pfTimestamp  :: !Text
   , pfTime       :: !UTCTime
-  , pfHostname   :: !HostName
   , pfThreadId   :: !Text
 }
 
@@ -373,7 +370,7 @@ data TraceObject = TraceObject {
   , toSeverity  :: !SeverityS
   , toDetails   :: !DetailLevel
   , toTimestamp :: !UTCTime
-  , toHostname  :: !HostName
+  , toHostname  :: !Text
   , toThreadId  :: !Text
 } deriving (Eq, Show)
 

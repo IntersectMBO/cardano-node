@@ -21,7 +21,7 @@ test1 :: IO [Text]
 test1 = do
     testTracerRef <- newIORef []
     testTracer' <- testTracer testTracerRef
-    simpleTracer <- machineFormatter Nothing testTracer'
+    simpleTracer <- machineFormatter testTracer'
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [simpleTracer]
     let simpleTracer1  = filterTraceBySeverity
@@ -53,7 +53,7 @@ test2 :: IO [Text]
 test2 = do
     stdoutTracerRef <- newIORef []
     stdoutTracer' <- testTracer stdoutTracerRef
-    simpleTracer <- machineFormatter Nothing stdoutTracer'
+    simpleTracer <- machineFormatter stdoutTracer'
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [simpleTracer]
     let simpleTracer1  = filterTraceBySeverity
