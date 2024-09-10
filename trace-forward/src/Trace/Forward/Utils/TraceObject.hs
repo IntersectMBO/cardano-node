@@ -11,10 +11,10 @@ module Trace.Forward.Utils.TraceObject
   , getTraceObjectsFromReply
   ) where
 
-import           Control.Concurrent.STM (STM, atomically)
+import           Control.Concurrent.STM (STM, atomically, check)
 import           Control.Concurrent.STM.TBQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad (forM_, unless, when, (<$!>))
+import           Control.Monad (forM_, replicateM, unless, when, (<$!>))
 import           Control.Monad.Extra (whenM)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
@@ -127,7 +127,8 @@ readFromSink sink@ForwardSink{forwardQueue, wasUsed} =
             TokBlocking -> do
               objs <- atomically $ do
                 queue <- readTVar forwardQueue
-                res <- getNTraceObjectsBlocking n queue >>= \case
+                check . not =<< isEmptyTBQueue queue
+                res <- getNTraceObjectsNonBlocking n queue >>= \case
                   []     -> error "impossible"
                   (x:xs) -> return $ x NE.:| xs
                 modifyTVar' wasUsed . const $ True
@@ -145,27 +146,16 @@ readFromSink sink@ForwardSink{forwardQueue, wasUsed} =
     , Forwarder.recvMsgDone = return ()
     }
 
--- | Returns at most N 'TraceObject's from the queue.
 getNTraceObjectsNonBlocking
   :: Word16
   -> TBQueue lo
   -> STM [lo]
 getNTraceObjectsNonBlocking 0 _ = return []
-getNTraceObjectsNonBlocking n q =
-  tryReadTBQueue q >>=
-    \case
-      Just lo -> (lo :) <$> getNTraceObjectsNonBlocking (n - 1) q
-      Nothing  -> return []
-
--- | Returns at most N 'TraceObject's from the queue.
-getNTraceObjectsBlocking
-  :: Word16
-  -> TBQueue lo
-  -> STM [lo]
-getNTraceObjectsBlocking 0 _ = return []
-getNTraceObjectsBlocking n q = do
-    lo <- readTBQueue q
-    (lo :) <$> getNTraceObjectsNonBlocking (n - 1) q
+getNTraceObjectsNonBlocking n q = do
+  len <- lengthTBQueue q
+  if len <= fromIntegral n
+    then flushTBQueue q
+    else replicateM (fromIntegral n) (readTBQueue q)
 
 getTraceObjectsFromReply
   :: BlockingReplyList blocking lo -- ^ The reply with list of 'TraceObject's.
