@@ -22,7 +22,7 @@ let
     chap = project.args.inputMap."https://chap.intersectmbo.org/";
 
     # build plan as computed by nix
-    nixPlanJson = project.plan-nix.json;
+    nixPlanJson = project.plan-nix + "/plan.json";
 
 in project.shellFor {
   name = "workbench-shell";
