@@ -7,6 +7,8 @@ module Test.Trace.Forward.Protocol.TraceObject.Examples
   , traceObjectForwarderCount
   ) where
 
+import           Control.Concurrent.Class.MonadSTM.TVar
+import           Control.Monad.Class.MonadSTM
 import qualified Data.List.NonEmpty as NE
 
 import           Trace.Forward.Protocol.TraceObject.Acceptor
@@ -32,21 +34,19 @@ traceObjectAcceptorApply f = go
           $ \_reply -> return $ go (f acc) (pred n)
 
 -- | A server which counts number received of 'MsgTraceObjectsRequest'.
---
 traceObjectForwarderCount
-  :: forall m. Monad m
-  => TraceObjectForwarder Int m Int
-traceObjectForwarderCount = go 0
- where
-  go :: Int -> TraceObjectForwarder Int m Int
-  go n =
+  :: MonadSTM m
+  => m (TraceObjectForwarder Int m Int)
+traceObjectForwarderCount = do
+  n <- newTVarIO 0
+  return $
     TraceObjectForwarder
-      { recvMsgDone = return n
+      { recvMsgDone = readTVarIO n
       , recvMsgTraceObjectsRequest =
-          \blocking _numOfTO ->
+          \blocking _numOfTO -> do
+            atomically $ modifyTVar' n succ
             return ( case blocking of
                        TokBlocking    -> BlockingReply (NE.fromList [1, 2, 3])
                        TokNonBlocking -> NonBlockingReply [1, 2]
-                   , go (succ n)
                    )
       }

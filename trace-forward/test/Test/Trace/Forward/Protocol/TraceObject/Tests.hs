@@ -11,6 +11,7 @@ import           Ouroboros.Network.Driver.Simple (runConnectedPeers)
 import qualified Codec.Serialise as CBOR
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
+import           Control.Monad.Class.MonadSTM
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
@@ -74,23 +75,38 @@ prop_direct_TraceObjectForward
   -> NonNegative Int
   -> Property
 prop_direct_TraceObjectForward f (NonNegative n) =
-    runSimOrThrow
-      (direct
-         traceObjectForwarderCount
-         (traceObjectAcceptorApply f 0 n))
-  ===
-    (n, foldr ($) 0 (replicate n f))
+  runSimOrThrow (prop_direct f n)
+
+prop_direct
+  :: MonadSTM m
+  => (Int -> Int)
+  -> Int
+  -> m Property
+prop_direct f n = do
+  fwcount <- traceObjectForwarderCount
+  result <- direct fwcount (traceObjectAcceptorApply f 0 n)
+  return $ result === (n, foldr ($) 0 (replicate n f))
 
 prop_connect_TraceObjectForward
   :: (Int -> Int)
   -> NonNegative Int
   -> Bool
 prop_connect_TraceObjectForward f (NonNegative n) =
-  case runSimOrThrow
-         (connect
-            (traceObjectForwarderPeer   traceObjectForwarderCount)
-            (traceObjectAcceptorPeer  $ traceObjectAcceptorApply f 0 n)) of
-    (s, c, TerminalStates TokDone TokDone) -> (s, c) == (n, foldr ($) 0 (replicate n f))
+  runSimOrThrow (prop_connect f n)
+
+prop_connect
+  :: ( MonadST   m
+     , MonadAsync m
+     )
+  => (Int -> Int)
+  -> Int
+  -> m Bool
+prop_connect f n = do
+  forwarder <- traceObjectForwarderPeer <$> traceObjectForwarderCount
+  result <- connect forwarder (traceObjectAcceptorPeer $ traceObjectAcceptorApply f 0 n)
+  case result of
+    (s, c, TerminalStates TokDone TokDone) ->
+      pure $ (s, c) == (n, foldr ($) 0 (replicate n f))
 
 prop_channel
   :: ( MonadST    m
@@ -101,6 +117,7 @@ prop_channel
   -> Int
   -> m Property
 prop_channel f n = do
+  forwarder <- traceObjectForwarderPeer <$> traceObjectForwarderCount
   (s, c) <- runConnectedPeers createConnectedChannels
                               nullTracer
                               (codecTraceObjectForward CBOR.encode CBOR.decode
@@ -108,8 +125,7 @@ prop_channel f n = do
                               forwarder acceptor
   return $ (s, c) === (n, foldr ($) 0 (replicate n f))
  where
-  forwarder = traceObjectForwarderPeer   traceObjectForwarderCount
-  acceptor  = traceObjectAcceptorPeer  $ traceObjectAcceptorApply f 0 n
+  acceptor = traceObjectAcceptorPeer $ traceObjectAcceptorApply f 0 n
 
 prop_channel_ST_TraceObjectForward
   :: (Int -> Int)
