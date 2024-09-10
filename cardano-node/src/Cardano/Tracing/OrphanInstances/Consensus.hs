@@ -77,6 +77,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
+import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Data (Proxy (..))
@@ -1690,49 +1691,51 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
 instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
 instance HasSeverityAnnotation (TraceGDDEvent peer blk) where
   getSeverityAnnotation _ = Debug
-instance (Show peer, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
+instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
   trTransformer = trStructured
 
-instance (Show peer, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
-  toObject verb TraceGDDEvent {..} = mconcat
+instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
+  toObject verb TraceGDDEvent {..} = mconcat $
     [ "kind" .= String "TraceGDDEvent"
-    , "bounds" .= toJSON (
-        map
-        ( \(peer, density) -> Object $ mconcat
-          [ "kind" .= String "PeerDensityBound"
-          , "peer" .= (String $ showT peer)
-          , "densityBounds" .= toObject verb density
-          ]
-        )
-        bounds
-      )
-    , "curChain" .= toObject verb curChain
-    , "candidates" .= toJSON (
-        map
-        ( \(peer, frag) -> Object $ mconcat
-          [ "kind" .= String "PeerCandidateFragment"
-          , "peer" .= (String $ showT peer)
-          , "candidateFragment" .= toObject verb frag
-          ]
-        )
-        candidates
-      )
-    , "candidateSuffixes" .= toJSON (
-        map
-        ( \(peer, frag) -> Object $ mconcat
-          [ "kind" .= String "PeerCandidateSuffix"
-          , "peer" .= (String $ showT peer)
-          , "candidateSuffix" .= toObject verb frag
-          ]
-        )
-        candidateSuffixes
-      )
-    , "losingPeers".= (toJSON $ map (String . showT) losingPeers)
-    , "loeHead" .= (String $ showT loeHead)
-    , "sgen" .= (String $ showT $ unGenesisWindow sgen)
-    ]
+    , "losingPeers".= toJSON (map (toObject verb) losingPeers)
+    , "loeHead" .= toObject verb loeHead
+    , "sgen" .= toJSON (unGenesisWindow sgen)
+    ] <> do
+      guard $ verb >= MaximalVerbosity
+      [ "bounds" .= toJSON (
+           map
+           ( \(peer, density) -> Object $ mconcat
+             [ "kind" .= String "PeerDensityBound"
+             , "peer" .= toObject verb peer
+             , "densityBounds" .= toObject verb density
+             ]
+           )
+           bounds
+         )
+       , "curChain" .= toObject verb curChain
+       , "candidates" .= toJSON (
+           map
+           ( \(peer, frag) -> Object $ mconcat
+             [ "kind" .= String "PeerCandidateFragment"
+             , "peer" .= toObject verb peer
+             , "candidateFragment" .= toObject verb frag
+             ]
+           )
+           candidates
+         )
+       , "candidateSuffixes" .= toJSON (
+           map
+           ( \(peer, frag) -> Object $ mconcat
+             [ "kind" .= String "PeerCandidateSuffix"
+             , "peer" .= toObject verb peer
+             , "candidateSuffix" .= toObject verb frag
+             ]
+           )
+           candidateSuffixes
+         )
+       ]
 
-instance (GetHeader blk) => ToObject (DensityBounds blk) where
+instance (ConvertRawHash blk, GetHeader blk) => ToObject (DensityBounds blk) where
   toObject verb DensityBounds {..} = mconcat
     [ "kind" .= String "DensityBounds"
     , "clippedFragment" .= toObject verb clippedFragment
@@ -1742,13 +1745,6 @@ instance (GetHeader blk) => ToObject (DensityBounds blk) where
     , "hasBlockAfter" .= toJSON hasBlockAfter
     , "latestSlot" .= String (showT latestSlot)
     , "idling" .= toJSON idling
-    ]
-
-instance (GetHeader blk) => ToObject (AF.AnchoredFragment (Header blk)) where
-  toObject _ frag = mconcat
-    [ "kind" .= String "AnchoredFragment"
-    , "anchorPoint" .= (String $ showT $ AF.anchorPoint frag)
-    , "headPoint" .= (String $ showT $ AF.headPoint frag)
     ]
 
 instance ConvertRawHash blk => ToObject (Tip blk) where

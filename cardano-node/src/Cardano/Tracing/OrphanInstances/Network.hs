@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -62,9 +63,8 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters,
-                   PeerSelectionView (..), PeerSelectionState (..),
-                   PeerSelectionTargets (..), TracePeerSelection (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
+                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
@@ -1170,6 +1170,25 @@ instance ToObject SlotNo where
   toObject _verb slot =
     mconcat [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
+
+instance (ConvertRawHash blk) => ToObject (AF.Anchor blk) where
+  toObject verb = \case
+    AF.AnchorGenesis -> mconcat
+      [ "kind" .= String "AnchorGenesis" ]
+    AF.Anchor slot hash bno -> mconcat
+      [ "kind" .= String "Anchor"
+      , "slot" .= toJSON (unSlotNo slot)
+      , "headerHash" .= renderHeaderHashForVerbosity (Proxy @blk) verb hash
+      , "blockNo" .= toJSON (unBlockNo bno)
+      ]
+
+instance (ConvertRawHash blk, HasHeader blk) => ToObject (AF.AnchoredFragment blk) where
+  toObject verb frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchor" .= toObject verb (AF.anchor frag)
+    , "headPoint" .= toObject verb (AF.headPoint frag)
+    , "length" .= toJSON (AF.length frag)
+    ]
 
 instance ToJSON PeerGSV where
   toJSON PeerGSV { outboundGSV = GSV outboundG _ _

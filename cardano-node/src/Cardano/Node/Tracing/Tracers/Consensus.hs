@@ -36,6 +36,7 @@ import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Genesis.Governor
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId, HasTxId,
                    LedgerSupportsMempool, txForgetValidated, txId)
@@ -45,19 +46,17 @@ import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
-                   JumpInstruction (..), JumpResult (..), TraceEvent(..))
+                   JumpInstruction (..), JumpResult (..), TraceEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.Genesis.Governor
 import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -70,6 +69,7 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
+import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, Object, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
@@ -2069,48 +2069,50 @@ instance MetaTrace (TraceEvent peer) where
 -- GDD Tracer
 --------------------------------------------------------------------------------
 
-instance ( Show peer
+instance ( LogFormatting peer
          , HasHeader blk
          , HasHeader (Header blk)
          , ConvertRawHash (Header blk)
          ) => LogFormatting (TraceGDDEvent peer blk) where
-  forMachine dtal TraceGDDEvent {..} = mconcat
+  forMachine dtal TraceGDDEvent {..} = mconcat $
     [ "kind" .= String "TraceGDDEvent"
-    , "bounds" .= toJSON (
-        map
-        ( \(peer, density) -> Object $ mconcat
-          [ "kind" .= String "PeerDensityBound"
-          , "peer" .= (String $ showT peer)
-          , "densityBounds" .= forMachine dtal density
-          ]
-        )
-        bounds
-      )
-    , "curChain" .= forMachine dtal curChain
-    , "candidates" .= toJSON (
-        map
-        ( \(peer, frag) -> Object $ mconcat
-          [ "kind" .= String "PeerCandidateFragment"
-          , "peer" .= (String $ showT peer)
-          , "candidateFragment" .= forMachine dtal frag
-          ]
-        )
-        candidates
-      )
-    , "candidateSuffixes" .= toJSON (
-        map
-        ( \(peer, frag) -> Object $ mconcat
-          [ "kind" .= String "PeerCandidateSuffix"
-          , "peer" .= (String $ showT peer)
-          , "candidateSuffix" .= forMachine dtal frag
-          ]
-        )
-        candidateSuffixes
-      )
-    , "losingPeers".= (toJSON $ map (String . showT) losingPeers)
-    , "loeHead" .= (String $ showT loeHead)
-    , "sgen" .= (String $ showT $ unGenesisWindow sgen)
-    ]
+    , "losingPeers".= toJSON (map (forMachine dtal) losingPeers)
+    , "loeHead" .= forMachine dtal loeHead
+    , "sgen" .= toJSON (unGenesisWindow sgen)
+    ] <> do
+      guard $ dtal >= DMaximum
+      [ "bounds" .= toJSON (
+           map
+           ( \(peer, density) -> Object $ mconcat
+             [ "kind" .= String "PeerDensityBound"
+             , "peer" .= forMachine dtal peer
+             , "densityBounds" .= forMachine dtal density
+             ]
+           )
+           bounds
+         )
+       , "curChain" .= forMachine dtal curChain
+       , "candidates" .= toJSON (
+           map
+           ( \(peer, frag) -> Object $ mconcat
+             [ "kind" .= String "PeerCandidateFragment"
+             , "peer" .= forMachine dtal peer
+             , "candidateFragment" .= forMachine dtal frag
+             ]
+           )
+           candidates
+         )
+       , "candidateSuffixes" .= toJSON (
+           map
+           ( \(peer, frag) -> Object $ mconcat
+             [ "kind" .= String "PeerCandidateSuffix"
+             , "peer" .= forMachine dtal peer
+             , "candidateSuffix" .= forMachine dtal frag
+             ]
+           )
+           candidateSuffixes
+         )
+       ]
 
   forHuman = forHumanOrMachine
 
@@ -2141,37 +2143,6 @@ instance ( HasHeader blk
   forHuman = forHumanOrMachine
 
 --------------------------------------------------------------------------------
--- AnchoredFragment tracer
---------------------------------------------------------------------------------
-
-instance (HasHeader blk, ConvertRawHash (Header blk)) =>
-  LogFormatting (AF.AnchoredFragment blk) where
-  forMachine _dtal frag = mconcat
-    [ "kind" .= String "AnchoredFragment"
-    , "anchorPoint" .= ( Object $ mconcat
-          [ "kind"    .= String "AnchoredFragmentAnchorPoint"
-          , "hash"    .= String (renderChainHash
-              (renderHeaderHash (Proxy @(Header blk)))
-              (AF.anchorToHash $ AF.anchor frag))
-          , "slotNo"  .= String (showT $ AF.anchorToSlotNo $ AF.anchor frag)
-          , "blockNo" .= String (showT $ AF.anchorToBlockNo $ AF.anchor frag)
-          ]
-      )
-    , "headPoint"   .= ( Object $ mconcat
-          [ "kind"    .= String "AnchoredFragmentHeadPoint"
-          , "hash"    .= String (renderChainHash
-              (renderHeaderHash (Proxy @(Header blk)))
-              (AF.headHash frag))
-          , "slotNo"  .= String (showT $ AF.headSlot frag)
-          , "blockNo" .= String (showT $ AF.headBlockNo frag)
-          ]
-      )
-    , "length" .= toJSON (fragmentLength frag)
-    ]
-
-  forHuman = forHumanOrMachine
-
---------------------------------------------------------------------------------
 -- Chain tip tracer
 --------------------------------------------------------------------------------
 
@@ -2188,17 +2159,3 @@ instance ( StandardHash blk
             ]
 
   forHuman = showT
-
---------------------------------------------------------------------------------
--- Utils
---------------------------------------------------------------------------------
-
--- NOTE: this ignores the Byron era with its EBB complication:
--- the length would be underestimated by 1, if the AF is anchored
--- at the epoch boundary.
-fragmentLength :: HasHeader header => AF.AnchoredFragment header -> Int
-fragmentLength f = fromIntegral . unBlockNo $
-    case (f, f) of
-      (AS.Empty{}, AS.Empty{}) -> 0
-      (firstHdr AS.:< _, _ AS.:> lastHdr) ->
-        blockNo lastHdr - blockNo firstHdr + 1

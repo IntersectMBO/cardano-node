@@ -34,7 +34,6 @@ import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
-
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer ()
@@ -324,6 +323,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "GSM"]
     configureTracers configReflection trConfig [consensusGsmTr]
 
+    !consensusGddTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "GDD"]
+    configureTracers configReflection trConfig [consensusGddTr]
+
     !consensusCsjTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "CSJ"]
@@ -366,7 +370,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusStartupErrorTr . ConsensusStartupException
       , Consensus.gsmTracer = Tracer $
           traceWith consensusGsmTr
-      , Consensus.gddTracer = Tracer $ \_ -> pure () -- TODO
+      , Consensus.gddTracer = Tracer $ traceWith consensusGddTr
       , Consensus.csjTracer = Tracer $ traceWith consensusCsjTr
       }
 
