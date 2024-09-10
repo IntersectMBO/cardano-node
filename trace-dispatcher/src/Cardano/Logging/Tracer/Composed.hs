@@ -30,7 +30,6 @@ import qualified Data.Set as Set
 import           Data.Text hiding (map)
 
 
-
 -- | Construct a tracer according to the requirements for cardano node.
 -- The tracer gets a 'name', which is appended to its namespace.
 -- The tracer has to be an instance of LogFormatting for the display of
@@ -137,25 +136,29 @@ backendsAndFormat ::
   -> Maybe [BackendConfig]
   -> Trace IO x
   -> IO (Trace IO a)
-backendsAndFormat trStdout trForward mbBackends _ =
-  let backends' = fromMaybe
-                    [Forwarder, Stdout MachineFormat]
-                    mbBackends
-  in do
-    let mbForwardTrace  = if Forwarder `L.elem` backends'
+backendsAndFormat trStdout trForward mbBackends _ = do
+    let mbForwardTrace  = if forwarder
                             then Just $ filterTraceByPrivacy (Just Public)
-                                (forwardFormatter' Nothing trForward)
+                                (forwardFormatter' trForward)
                             else Nothing
-        mbStdoutTrace   | Stdout HumanFormatColoured `L.elem` backends'
-                        = Just (humanFormatter' True Nothing trStdout)
-                        | Stdout HumanFormatUncoloured `L.elem` backends'
-                        = Just (humanFormatter' False Nothing trStdout)
+        mbStdoutTrace   | humColoured
+                        = Just (humanFormatter' True trStdout)
+                        | humUncoloured
+                        = Just (humanFormatter' False trStdout)
                         | Stdout MachineFormat `L.elem` backends'
-                        = Just (machineFormatter' Nothing trStdout)
+                        = Just (machineFormatter' trStdout)
                         | otherwise = Nothing
     case mbForwardTrace <> mbStdoutTrace of
       Nothing -> pure $ Trace T.nullTracer
-      Just tr -> preFormatted backends' tr
+      Just tr -> preFormatted (humColoured || humUncoloured || forwarder) tr
+  where
+    backends'     = fromMaybe
+                    [Forwarder, Stdout MachineFormat]
+                    mbBackends
+
+    humColoured   = Stdout HumanFormatColoured   `L.elem` backends'
+    humUncoloured = Stdout HumanFormatUncoloured `L.elem` backends'
+    forwarder     = Forwarder `L.elem` backends'
 
 traceConfigWarnings ::
      Trace IO FormattedMessage
