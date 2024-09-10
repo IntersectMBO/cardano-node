@@ -26,6 +26,8 @@ let
       )
       # Amazon S3 HTTP to upload/download the genesis tar file.
       pkgs.awscli
+      # Used to download the logs.
+      pkgs.rsync
     ]
   ;
 

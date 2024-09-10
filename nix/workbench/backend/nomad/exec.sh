@@ -193,7 +193,7 @@ allocate-run-nomadexec() {
   ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
   backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
   # Will set the /nix/store paths from ".nix-store-path" in container-specs.json
-# backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
+  backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
 }
 
 # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
