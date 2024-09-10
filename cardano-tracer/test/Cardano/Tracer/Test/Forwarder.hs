@@ -14,8 +14,7 @@ module Cardano.Tracer.Test.Forwarder
   ) where
 
 import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
-import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
-                   forwardingCodecCBORTerm, forwardingVersionCodec)
+import           Cardano.Logging.Version
 import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -167,7 +166,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       mempty
       (simpleSingletonVersions
          ForwardingV_1
-         (ForwardingVersionData $ unI tsNetworkMagic)
+         (ForwardingVersionData (unI tsNetworkMagic) TraceSelectAll)
          (const $ forwarderApp [ (forwardEKGMetrics ekgConfig store,       1)
                                , (forwardTraceObjectsInit tfConfig sink,   2)
                                , (forwardDataPointsInit dpfConfig dpStore, 3)
@@ -239,7 +238,7 @@ doListenToAcceptor TestSetup{..}
               (HandshakeCallbacks acceptableVersion queryVersion)
               (simpleSingletonVersions
                  ForwardingV_1
-                 (ForwardingVersionData $ unI tsNetworkMagic)
+                 (ForwardingVersionData (unI tsNetworkMagic) TraceSelectAll)
                  (const $ SomeResponderApplication $
                     forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
                                  , (forwardTraceObjectsResp tfConfig sink,   2)

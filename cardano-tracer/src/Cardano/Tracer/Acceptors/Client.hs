@@ -5,8 +5,7 @@ module Cardano.Tracer.Acceptors.Client
   ) where
 
 import           Cardano.Logging (TraceObject)
-import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
-                   forwardingCodecCBORTerm, forwardingVersionCodec)
+import           Cardano.Logging.Version
 #if RTVIEW
 import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
                    prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
@@ -108,7 +107,7 @@ doConnectToForwarder snocket address netMagic timeLimits app = do
     mempty -- LocalSocket does not require to be configured
     (simpleSingletonVersions
        ForwardingV_1
-       (ForwardingVersionData $ NetworkMagic netMagic)
+       (ForwardingVersionData (NetworkMagic netMagic) TraceSelectAll)
        (const app)
     )
     Nothing

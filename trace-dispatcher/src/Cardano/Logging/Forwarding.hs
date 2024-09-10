@@ -216,7 +216,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     configureSocket
     (simpleSingletonVersions
        ForwardingV_1
-       (ForwardingVersionData magic)
+       (ForwardingVersionData magic TraceSelectAll)
        (const $ forwarderApp [ (forwardEKGMetricsRun,                      1)
                              , (forwardTraceObjectsInit tfConfig  sink,    2)
                              , (forwardDataPointsInit   dpfConfig dpStore, 3)
@@ -288,7 +288,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
             (HandshakeCallbacks acceptableVersion queryVersion)
             (simpleSingletonVersions
                ForwardingV_1
-               (ForwardingVersionData magic)
+               (ForwardingVersionData magic TraceSelectAll)
                (const $ SomeResponderApplication $
                  forwarderApp [ (forwardEKGMetricsRespRun,                  1)
                               , (forwardTraceObjectsResp tfConfig  sink,    2)

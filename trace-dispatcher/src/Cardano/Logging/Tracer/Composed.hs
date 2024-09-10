@@ -29,7 +29,6 @@ import           Data.Maybe (fromMaybe, isNothing)
 import qualified Data.Set as Set
 import           Data.Text hiding (map)
 
-
 -- | Construct a tracer according to the requirements for cardano node.
 -- The tracer gets a 'name', which is appended to its namespace.
 -- The tracer has to be an instance of LogFormatting for the display of
