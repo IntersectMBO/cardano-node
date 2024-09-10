@@ -11,7 +11,7 @@ let
   # recover CHaP location from cardano's project
   chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
-  nixPlanJson = cardanoNodeProject.plan-nix.json;
+  nixPlanJson = cardanoNodeProject.plan-nix + "/plan.json";
 
   workbench' = tools:
     pkgs.stdenv.mkDerivation {
