@@ -8,14 +8,8 @@ module Cardano.TxGenerator.Setup.NodeConfig
        (module Cardano.TxGenerator.Setup.NodeConfig)
        where
 
-import           Control.Applicative (Const (Const), getConst)
-import           Control.Monad.Trans.Except (runExceptT)
-import           Data.Bifunctor (first)
-import           Data.Monoid
-
-import qualified Ouroboros.Consensus.Cardano as Consensus
-
 import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
+
 import qualified Cardano.Ledger.Api.Transition as Ledger (tcShelleyGenesisL)
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
@@ -25,6 +19,12 @@ import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile,
                    NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
                    ProtocolFilepaths (..))
 import           Cardano.TxGenerator.Types
+import qualified Ouroboros.Consensus.Cardano.Node as Consensus
+
+import           Control.Applicative (Const (Const), getConst)
+import           Control.Monad.Trans.Except (runExceptT)
+import           Data.Bifunctor (first)
+import           Data.Monoid
 
 
 -- | extract genesis from a Cardano protocol
@@ -35,7 +35,7 @@ getGenesis (SomeConsensusProtocol CardanoBlockType proto)
     = getConst $ Ledger.tcShelleyGenesisL Const transCfg
   where
     ProtocolInfoArgsCardano Consensus.CardanoProtocolParams
-      { Consensus.ledgerTransitionConfig = transCfg
+      { Consensus.cardanoLedgerTransitionConfig = transCfg
       } = proto
 
 -- | extract the path to genesis file from a NodeConfiguration for Cardano protocol

@@ -346,7 +346,7 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
 
   createStakeKeyRegistrationCertificate tap asbe
     poolOwnerstakeVkeyFp
-    2_000_000
+    0
     (workDir </> "pledger.regcert")
 
   void $ execCli' execConfig

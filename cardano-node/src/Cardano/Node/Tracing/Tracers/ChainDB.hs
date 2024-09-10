@@ -79,6 +79,7 @@ instance (  LogFormatting (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
+  forHuman v@ChainDB.TraceLastShutdownUnclean      = forHumanOrMachine v
   forHuman (ChainDB.TraceAddBlockEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceFollowerEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceCopyToImmutableDBEvent v) = forHumanOrMachine v
@@ -91,6 +92,8 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
 
+  forMachine details v@ChainDB.TraceLastShutdownUnclean =
+    forMachine details v
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceFollowerEvent v) =
@@ -114,6 +117,7 @@ instance (  LogFormatting (Header blk)
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
 
+  asMetrics v@ChainDB.TraceLastShutdownUnclean      = asMetrics v
   asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceFollowerEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceCopyToImmutableDBEvent v) = asMetrics v
@@ -128,6 +132,8 @@ instance (  LogFormatting (Header blk)
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
+  namespaceFor ev@ChainDB.TraceLastShutdownUnclean =
+    nsPrependInner "LastShutdownUnclean" (namespaceFor ev)
   namespaceFor (ChainDB.TraceAddBlockEvent ev) =
     nsPrependInner "AddBlockEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceFollowerEvent ev) =
@@ -1488,18 +1494,20 @@ instance MetaTrace (ChainDB.UnknownRange blk) where
 instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
-  forHuman (LedgerDB.TookSnapshot snap pt) =
+  forHuman (LedgerDB.TookSnapshot snap pt enclosedTiming) =
       "Took ledger snapshot " <> showT snap <>
-        " at " <> renderRealPointAsPhrase pt
+        " at " <> renderRealPointAsPhrase pt <> " at " <> 
+        showT enclosedTiming
   forHuman (LedgerDB.DeletedSnapshot snap) =
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
       "Invalid snapshot " <> showT snap <> showT failure
 
-  forMachine dtals (LedgerDB.TookSnapshot snap pt) =
+  forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
              , "snapshot" .= forMachine dtals snap
-             , "tip" .= show pt ]
+             , "tip" .= show pt 
+             , "enclosedTiming" .= enclosedTiming]
   forMachine dtals (LedgerDB.DeletedSnapshot snap) =
     mconcat [ "kind" .= String "DeletedSnapshot"
              , "snapshot" .= forMachine dtals snap ]

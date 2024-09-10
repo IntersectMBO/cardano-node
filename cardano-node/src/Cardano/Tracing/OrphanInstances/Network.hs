@@ -61,9 +61,8 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters,
-                   PeerSelectionView (..), PeerSelectionState (..),
-                   PeerSelectionTargets (..), TracePeerSelection (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
+                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
@@ -98,7 +97,6 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import qualified Ouroboros.Network.Server2 as Server
-import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
@@ -2179,6 +2177,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_14 = Number 14
   toJSON NodeToClientV_15 = Number 15
   toJSON NodeToClientV_16 = Number 16
+  toJSON NodeToClientV_17 = Number 17
 
 instance FromJSON NodeToClientVersion where
   parseJSON (Number 9) = return NodeToClientV_9

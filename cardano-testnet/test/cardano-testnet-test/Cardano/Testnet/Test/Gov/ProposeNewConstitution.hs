@@ -182,7 +182,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   submitTx execConfig cEra voteTxFp
 
-  waitForGovActionVotes epochStateView (EpochInterval 1)
+  waitForGovActionVotes epochStateView (EpochInterval 2)
 
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.

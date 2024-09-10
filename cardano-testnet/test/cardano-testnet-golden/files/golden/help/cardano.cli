@@ -22,11 +22,16 @@ Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
                            configuration for all nodes.
                            (default: [SpoTestnetNodeOptions Nothing [],SpoTestnetNodeOptions Nothing [],SpoTestnetNodeOptions Nothing []])
-  --shelley-era            Specify the Shelley era
-  --allegra-era            Specify the Allegra era
-  --mary-era               Specify the Mary era
-  --alonzo-era             Specify the Alonzo era
-  --babbage-era            Specify the Babbage era (default)
+  --shelley-era            Specify the Shelley era - DEPRECATED - will be
+                           removed in the future
+  --allegra-era            Specify the Allegra era - DEPRECATED - will be
+                           removed in the future
+  --mary-era               Specify the Mary era - DEPRECATED - will be removed
+                           in the future
+  --alonzo-era             Specify the Alonzo era - DEPRECATED - will be removed
+                           in the future
+  --babbage-era            Specify the Babbage era (default) - DEPRECATED - will
+                           be removed in the future
   --conway-era             Specify the Conway era
   --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
   --slot-length SECONDS    Slot length (default: 0.1)

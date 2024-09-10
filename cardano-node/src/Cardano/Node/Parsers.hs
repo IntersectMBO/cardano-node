@@ -20,8 +20,8 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
-import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
-                   MempoolCapacityBytesOverride (..))
+import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..))
+import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 
@@ -50,7 +50,7 @@ nodeRunParser :: Parser PartialNodeConfiguration
 nodeRunParser = do
   -- Filepaths
   topFp <- lastOption parseTopologyFile
-  dbFp <- lastOption parseDbPath
+  dbFp <- lastOption parseNodeDatabasePaths
   validate <- lastOption parseValidateDB
   socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
   traceForwardSocket <- lastOption parseTracerSocketMode
@@ -88,7 +88,7 @@ nodeRunParser = do
                  socketFp
            , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
            , pncTopologyFile = TopologyFile <$> topFp
-           , pncDatabaseFile = DbFile <$> dbFp
+           , pncDatabaseFile = dbFp
            , pncDiffusionMode = mempty
            , pncNumOfDiskSnapshots = numOfDiskSnapshots
            , pncSnapshotInterval = snapshotInterval
@@ -224,14 +224,42 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
         <> help "[DEPRECATED: Set it in config file] Don't override mempool capacity"
         )
 
-parseDbPath :: Parser FilePath
+
+parseNodeDatabasePaths :: Parser NodeDatabasePaths
+parseNodeDatabasePaths = parseDbPath <|> parseMultipleDbPaths
+
+parseDbPath :: Parser NodeDatabasePaths
 parseDbPath =
-  strOption
-    ( long "database-path"
-    <> metavar "FILEPATH"
-    <> help "Directory where the state is stored."
-    <> completer (bashCompleter "file")
-    )
+    fmap OnePathForAllDbs $
+        strOption $
+            mconcat
+                [ long "database-path"
+                , metavar "FILEPATH"
+                , help "Directory where the state is stored."
+                , completer (bashCompleter "file")
+                ]
+
+parseMultipleDbPaths :: Parser NodeDatabasePaths
+parseMultipleDbPaths = MultipleDbPaths <$> parseImmutableDbPath <*> parseVolatileDbPath
+
+parseVolatileDbPath :: Parser FilePath
+parseVolatileDbPath = strOption $
+  mconcat
+    [ long "volatile-database-path"
+    , metavar "FILEPATH"
+    , help "Directory where the state is stored."
+    , completer (bashCompleter "file")
+    ]
+
+parseImmutableDbPath :: Parser FilePath
+parseImmutableDbPath = strOption $
+  mconcat
+    [ long "immutable-database-path"
+    , metavar "FILEPATH"
+    , help "Directory where the state is stored."
+    , completer (bashCompleter "file")
+    ]
+
 
 parseValidateDB :: Parser Bool
 parseValidateDB =

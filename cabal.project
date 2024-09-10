@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-08-20T21:35:22Z
-  , cardano-haskell-packages 2024-08-18T22:35:14Z
+  , cardano-haskell-packages 2024-09-09T11:32:44Z
 
 packages:
   cardano-node
@@ -34,8 +34,8 @@ packages:
 
 extra-packages: Cabal
 
-program-options
-  ghc-options: -Werror
+-- program-options
+--   ghc-options: -Werror
 
 test-show-details: direct
 
@@ -72,3 +72,11 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-cli.git
+    tag: d1d4ddef07614ddbed61b42626e73ae30504382c
+    --sha256: sha256-sghDLRheKc8I4BAJCggJfH+xotGASg7vkR245EMctrY=
+    subdir: cardano-cli
+

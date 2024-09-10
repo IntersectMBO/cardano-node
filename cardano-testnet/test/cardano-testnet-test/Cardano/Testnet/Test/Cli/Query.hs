@@ -159,11 +159,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
           protocolParametersOutFile
           "test/cardano-testnet-test/files/golden/queries/protocolParametersFileOut.json"
 
-    TestQueryConstitutionHashCmd ->
-      -- constitution-hash
-      -- Currently disabled (not accessible from the command line)
-      pure ()
-
     TestQueryTipCmd ->
       -- tip
       do

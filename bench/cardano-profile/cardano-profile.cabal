@@ -13,7 +13,6 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-extra-source-files:     README.md
 data-files:             data/all-profiles.json
                         data/ci-test-bage.json
                         data/genesis/epoch-timeline.json
