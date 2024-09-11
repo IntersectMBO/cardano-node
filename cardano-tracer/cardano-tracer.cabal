@@ -179,7 +179,7 @@ library
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
-                      , smtp-mail == 0.3.0.0
+                      , smtp-mail ^>= 0.5
                       , snap-blaze
                       , snap-core
                       , snap-server
