@@ -26,9 +26,10 @@ import           System.IO (hPutStrLn, stderr)
 import           Paths_cardano_node (version)
 import Control.Exception (finally)
 import qualified Debug.TimeStats as TimeStats
+import qualified GHC.Debug.Stub
 
 main :: IO ()
-main = do
+main = GHC.Debug.Stub.withGhcDebugUnix "/tmp/ghc-debug" $ do
   Crypto.cryptoInit
 
   toplevelExceptionHandler $ do

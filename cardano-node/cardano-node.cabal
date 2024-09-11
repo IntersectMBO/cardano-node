@@ -214,6 +214,16 @@ library
                       , typed-protocols >= 0.1
                       , yaml
 
+executable take-snapshot
+  hs-source-dirs:       hsscripts
+  main-is:              take-snapshot.hs
+  ghc-options:          -threaded
+                        -rtsopts
+                        "-with-rtsopts=-T -I0 -A16m -N1 --disable-delayed-os-memory-return"
+
+  build-depends:        base
+                      , ghc-debug-client >= 0.6
+
 executable cardano-node
   import:               project-config
   hs-source-dirs:       app
@@ -233,6 +243,7 @@ executable cardano-node
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
+                      , ghc-debug-stub >= 0.6
                       , optparse-applicative-fork
                       , text
                       , timestats
