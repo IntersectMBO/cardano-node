@@ -149,14 +149,6 @@ in
       analysis = workbench.run-analysis { inherit pkgs workbench profileData run; };
     };
 
-  overlay = self: super:
-    (backend.overlay profileData self super
-    //
-    {
-      inherit workbench-interactive-start;
-      inherit workbench-interactive-stop;
-      inherit workbench-interactive-restart;
-    });
 in
 {
   inherit profileName profileData;
@@ -164,7 +156,7 @@ in
   inherit profiling;
   inherit workbench-profile-run;
 
-  inherit batchName stateDir overlay;
+  inherit batchName stateDir;
 
   inherit workbench-interactive-start;
   inherit workbench-interactive-stop;

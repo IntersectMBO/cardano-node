@@ -129,9 +129,9 @@ in project.shellFor {
     pkgs.moreutils
     pkgs.pstree
     pkgs.time
-    workbench-interactive-start
-    workbench-interactive-stop
-    workbench-interactive-restart
+    workbench-runner.workbench-interactive-start
+    workbench-runner.workbench-interactive-stop
+    workbench-runner.workbench-interactive-restart
   ]
   # Backend packages take precendence.
   ++ workbench-runner.backend.extraShellPkgs

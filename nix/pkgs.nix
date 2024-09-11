@@ -54,9 +54,6 @@ let
         inherit workbench workbenchDevMode workbenchStartArgs profiling;
       };
 
-  # Workbench instantiated by parameters from customConfig:
-  custom-config-workbench-runner = workbench-runner {};
-
 in with final;
 {
   inherit (cardanoNodeProject.args) compiler-nix-name;
@@ -164,5 +161,4 @@ in with final;
       });
     };
   };
-} //
-custom-config-workbench-runner.overlay final prev
+}

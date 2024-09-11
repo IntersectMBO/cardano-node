@@ -41,12 +41,6 @@ let
     in (import ../nomad.nix params).materialise-profile
   ;
 
-  overlay =
-    proTopo: self: super:
-    {
-    }
-  ;
-
   service-modules = {
     node = { config, ... }:
       let selfCfg = config.services.cardano-node;
@@ -63,7 +57,7 @@ in
 
   inherit extraShellPkgs;
   inherit materialise-profile;
-  inherit overlay service-modules;
+  inherit service-modules;
   inherit stateDir basePort;
 
   inherit useCabalRun;
