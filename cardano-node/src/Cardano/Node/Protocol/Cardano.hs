@@ -141,8 +141,6 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
         Shelley.readLeaderCredentials files
 
-    --TODO: all these protocol versions below are confusing and unnecessary.
-    -- It could and should all be automated and these config entries eliminated.
     return $!
       SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ Consensus.CardanoProtocolParams {
         Consensus.byronProtocolParams =

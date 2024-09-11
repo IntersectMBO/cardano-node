@@ -243,6 +243,7 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Node parameters, not protocol-specific
       pncSocketPath <- Last <$> v .:? "SocketPath"
+      pncDatabaseFile <- Last <$> v .:? "DatabasePath"
       pncDiffusionMode
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncNumOfDiskSnapshots
@@ -337,7 +338,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTraceForwardSocket = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
-           , pncDatabaseFile = mempty
+           , pncDatabaseFile
            , pncProtocolFiles = mempty
            , pncValidateDB = mempty
            , pncShutdownConfig = mempty

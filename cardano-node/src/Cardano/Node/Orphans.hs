@@ -9,6 +9,7 @@ module Cardano.Node.Orphans () where
 import           Cardano.Api ()
 
 import           Ouroboros.Consensus.Node
+import qualified Data.Text as Text
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
@@ -43,3 +44,13 @@ instance FromJSON AcceptedConnectionsLimit where
       <$> v .: "hardLimit"
       <*> v .: "softLimit"
       <*> v .: "delay"
+
+instance FromJSON NodeDatabasePaths where
+  parseJSON o@(Object{})= 
+    withObject "NodeDatabasePaths" 
+     (\v -> MultipleDbPaths
+              <$> v .: "ImmutableDbPath"
+              <*> v .: "VolatileDbPath"
+     ) o
+  parseJSON (String s) = return . OnePathForAllDbs $ Text.unpack s
+  parseJSON _ = fail "NodeDatabasePaths must be an object or a string"
