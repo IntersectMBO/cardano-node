@@ -1,18 +1,17 @@
 { pkgs, lib, cardanoLib
-, runJq
-, runWorkbench
+, workbenchNix
 }:
 
 let
   mkProfileJson = { profileName }:
-    runWorkbench "profile-${profileName}.json"
+    workbenchNix.runWorkbench "profile-${profileName}.json"
       "profile json ${profileName}";
 
   mkTopologyFiles = { profileName, profileJson }:
     pkgs.runCommand "workbench-topology-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-          [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
+          [ bash cardano-cli coreutils gnused jq moreutils workbenchNix.workbench ];
       }
       ''
       mkdir $out
@@ -21,14 +20,14 @@ let
   ;
 
   mkNodeSpecsJson = { profileName, profileJson }:
-    runWorkbench "node-specs-${profileName}.json"
+    workbenchNix.runWorkbench "node-specs-${profileName}.json"
                  "profile node-specs ${profileName} ${mkTopologyFiles {inherit profileName profileJson;}}";
 
   mkGenesisFiles = { profileName, profileJson, nodeSpecsJson }:
     pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-          [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
+          [ bash cardano-cli coreutils gnused jq moreutils workbenchNix.workbench ];
       }
       ''
       mkdir $out
@@ -63,7 +62,7 @@ let
       ''
   ;
 
-  jsonFilePretty = name: x: runJq name ''--null-input --sort-keys
+  jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
                                          --argjson x '${x}'
                                        '' "$x";
 
@@ -75,7 +74,8 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
-            inherit runWorkbench jsonFilePretty;
+            inherit workbenchNix;
+            inherit jsonFilePretty;
             baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
           })
         node-services;
@@ -114,17 +114,11 @@ let
         latency-service;
     };
 
-  profile-names-json =
-    runWorkbench "profile-names.json" "profiles list";
-
-  profile-names =
-    __fromJSON (__readFile profile-names-json);
-
   materialise-profile =
     profileArgs@{ profileName, backend, profiling }:
-      if ! builtins.elem profileName profile-names
+      if ! builtins.elem profileName workbenchNix.profile-names
       then
-        throw "No such profile: ${profileName}; Known profiles: ${toString profile-names}"
+        throw "No such profile: ${profileName}; Known profiles: ${toString workbenchNix.profile-names}"
       else
         let
           profileJson = mkProfileJson { inherit profileName; };
@@ -240,8 +234,4 @@ let
   ;
 
 in
-  {
-    inherit profile-names-json;
-    inherit profile-names;
-    inherit materialise-profile;
-  }
+  {inherit materialise-profile;}

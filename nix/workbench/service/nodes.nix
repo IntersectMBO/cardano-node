@@ -1,5 +1,5 @@
 { pkgs
-, runWorkbench
+, workbenchNix
 , jsonFilePretty
 
 ## The cardano-node config used as baseline:
@@ -220,7 +220,7 @@ let
 
       topology =
         rec {
-          JSON  = runWorkbench
+          JSON  = workbenchNix.runWorkbench
                     "topology-${name}.json"
                     "topology projection-for local-${nodeSpec.kind} ${toString i} ${profileName} ${topologyFiles} ${toString backend.basePort}";
           value = __fromJSON (__readFile JSON);

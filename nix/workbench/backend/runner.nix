@@ -1,13 +1,12 @@
 { pkgs
 , lib
-, cardanoNodePackages
 ##
 , batchName
 , profileName
 , backend
 ##
 , cardano-node-rev
-, workbench
+, workbenchNix
 , workbenchDevMode
 , workbenchStartArgs
 , profiling
@@ -19,7 +18,7 @@ let
 
   inherit (backend) stateDir basePort useCabalRun;
 
-  profileData = workbench.materialise-profile
+  profileData = workbenchNix.profile.materialise-profile
     { inherit profileName backend profiling; };
   backendData = backend.materialise-profile
     { inherit profileData; };
@@ -28,11 +27,11 @@ in
 
     path = pkgs.lib.makeBinPath path';
     path' =
-      [ cardanoNodePackages.bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils
+      [ workbenchNix.cardanoNodePackages.bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils
       ]
       ## In dev mode, call the script directly:
       ++ pkgs.lib.optionals (!workbenchDevMode)
-      [ workbench.workbench ];
+      [ workbenchNix.workbench ];
 
     workbench-interactive-start = pkgs.writeScriptBin "start-cluster" ''
       set -euo pipefail
@@ -70,7 +69,7 @@ in
           "report ${name}-log $out ${name}/stdout";
         run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
-            nativeBuildInputs = with cardanoNodePackages; with pkgs; [
+            nativeBuildInputs = with workbenchNix.cardanoNodePackages; with pkgs; [
               bash
               bech32
               coreutils
@@ -79,7 +78,7 @@ in
               moreutils
               nix
               pstree
-              workbench.workbench
+              workbenchNix.workbench
               zstd
             ]
             ++
@@ -145,7 +144,7 @@ in
         analysis = pkgs.runCommand "workbench-run-analysis-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
             nativeBuildInputs = with pkgs;
-              [ bash coreutils gnused jq moreutils nix workbench.workbench ];
+              [ bash coreutils gnused jq moreutils nix workbenchNix.workbench ];
           }
           ''
           echo "analysing run:  ${run}"

@@ -10,25 +10,8 @@ let
   workbench = import ./workbench
     {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
 
-  # A conveniently-parametrisable workbench preset.
-  # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
-  # The general idea is:
-  # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
-  # 2. batchName -> profileName -> profiling -> backend -> workbench -> runner
-  # * `workbench` is in case a pinned version of the workbench is needed.
+  # Workbench runner instantiated by parameters from customConfig:
   workbench-runner =
-  let
-    backendRegistry =
-      {
-        nomadcloud      = params:
-          import ./workbench/backend/nomad/cloud.nix  params;
-        nomadexec       = params:
-          import ./workbench/backend/nomad/exec.nix   params;
-        supervisor      = params:
-          import ./workbench/backend/supervisor.nix   params;
-      }
-    ;
-  in
     { stateDir           ? customConfig.localCluster.stateDir
     , batchName          ? customConfig.localCluster.batchName
     , profileName        ? customConfig.localCluster.profileName
@@ -39,26 +22,16 @@ let
     , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
     , profiling          ? customConfig.profiling
     , cardano-node-rev   ? null
-    , workbench          ? pkgs.workbench
     }:
-    let
-        # The `useCabalRun` flag is set in the backend to allow the backend to
-        # override its value. The runner uses the value of `useCabalRun` from
-        # the backend to prevent a runner using a different value.
-        backend = (backendRegistry."${backendName}")
-                   { inherit pkgs lib stateDir basePort useCabalRun; };
-    in import ./workbench/backend/runner.nix
-      {
-        inherit pkgs lib;
-        inherit (final) cardanoNodePackages;
-        inherit batchName profileName backend;
-        inherit cardano-node-rev;
-        inherit workbench workbenchDevMode workbenchStartArgs profiling;
+    workbench.runner
+      { inherit stateDir batchName profileName backendName basePort useCabalRun;
+        inherit workbenchDevMode workbenchStartArgs profiling cardano-node-rev;
       };
 
 in with final;
 {
   inherit (cardanoNodeProject.args) compiler-nix-name;
+
   inherit workbench workbench-runner;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
