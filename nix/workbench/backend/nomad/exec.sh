@@ -11,7 +11,6 @@ backend_nomadexec() {
 
     name )
       # Can be:
-      # nomadpodman       (Using podman Task Driver in the cloud is not planned)
       # nomadexec  (Starts Nomad Agents supporting the "nix_installable" stanza)
       # nomadcloud    (SRE managed Nomad Agents on Amazon S3 (dedicated or not))
       echo 'nomadexec'
@@ -24,7 +23,6 @@ backend_nomadexec() {
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
       # Repeated code / envars set by all sub-backends
-      setenvjqstr 'nomad_task_driver'    "exec"
       setenvjqstr 'nomad_environment'    "local"
       setenvjqstr 'one_tracer_per_node'  "true"
       # Local runs always run the generator inside Nomad Task "node-0"
@@ -162,8 +160,8 @@ setenv-defaults-nomadexec() {
   local backend_dir="${1}"
 
   setenvjqstr 'nomad_server_name'   "srv1"
-  # As one task driver runs as a normal user and the other as a root, use
-  # different names to allow restarting/reusing without cleaup, this way
+  # As other task driver can run as a normal user and exec needs root, use
+  # different names to allow restarting/reusing without cleanup, this way
   # data folders already there can be accessed without "permission denied"
   # errors.
   setenvjqstr 'nomad_client_name'   "cli1-exe"
@@ -195,7 +193,7 @@ allocate-run-nomadexec() {
   ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
   backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
   # Will set the /nix/store paths from ".nix-store-path" in container-specs.json
-# backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
+  backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
 }
 
 # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!

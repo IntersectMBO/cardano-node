@@ -7,9 +7,8 @@
 , lib
 , stateDir
 , profileData
-, containerSpecs
-, execTaskDriver
 , generatorTaskName
+, containerPkgs
 , oneTracerPerNode ? false
 , withSsh ? false
 }:
@@ -21,8 +20,8 @@ let
   # Nomad creates a working directory for each allocation on a client. This
   # directory can be found in the Nomad data_dir at ./alloc/«alloc_id». The
   # allocation working directory is where Nomad creates task directories and
-  # directories shared between tasks, write logs for tasks, and downloads
-  # artifacts or templates.
+  # directories shared between tasks, write logs for tasks, downloads artifacts
+  # and renders templates.
   # https://developer.hashicorp.com/nomad/docs/concepts/filesystem
   #
   # For example:
@@ -36,34 +35,26 @@ let
   # Templates are rendered into the task working directory. Drivers without
   # filesystem isolation (such as raw_exec) or drivers that build a chroot in
   # the task working directory (such as exec) can have templates rendered to
-  # arbitrary paths in the task. But task drivers such as docker can only access
-  # templates rendered into the NOMAD_ALLOC_DIR, NOMAD_TASK_DIR, or
-  # NOMAD_SECRETS_DIR. To work around this restriction, you can create a mount
-  # from the template destination to another location in the task.
+  # arbitrary paths in the task.
   ## - https://developer.hashicorp.com/nomad/docs/job-specification/template#template-destinations
   ## - https://developer.hashicorp.com/nomad/docs/runtime/environment#task-directories
   ## - https://developer.hashicorp.com/nomad/docs/concepts/filesystem
 
-  # Task's filesystem / working directory (maybe container or chroot) defaults:
+  # Workbench's ${stateDir} will be created/populated inside NOMAD_TASK_DIR.
   #
-  # When using the isolated fork task driver ("exec")
-  ## Default values below are stored in the job's "meta" stanza to be able to
-  ## overrided them with 'jq' from a workbench shell. These values in "meta"
-  ## are used to programatically create a "template" with "env = true;" so they
-  ## are automagically reachable as envars inside the Task's entrypoint and
-  ## 'supervisord' programs.
+  ## Some workbench default values are stored in the job's "meta" stanza to be
+  ## able to override them with 'jq' from a workbench shell. These values in
+  ## "meta" are used to programmatically create a "template" with "env = true;"
+  ## so they are automagically reachable as envars inside the Task's entrypoint
+  ## and/or 'supervisord' programs.
   ## Values go: Nix (defaults) -> meta -> template -> envars
-  #
-  ## See ./oci-images.nix for further details if using the `podman` driver.
-  ## For the `exec` driver almost everything is here.
-  #
 
-  # A symlink to the supervisord nix-installed inside the OCI image/chroot.
-  # We need to be able to `nomad exec supervisorctl ...` , for this the path
+  # Symlink to the supervisord that is nix-installed inside the deployed chroot.
+  # We need to be able to do `nomad exec supervisorctl ...` , for this the path
   # of the installed supervisor binaries is needed.
   task_supervisor_nix = "${stateDir}/supervisor/nix-store";
   # Location of the supervisord config file inside the container.
-  # This file can be mounted as a volume or created as a template.
+  # This file is created as a template.
   task_supervisord_conf = "${stateDir}/supervisor/supervisord.conf";
   # The URL to the listening inet or socket of the supervisord server:
   # The problem is that if we use "127.0.0.1:9001" as parameter (without the
@@ -82,8 +73,8 @@ let
 
   entrypoint =
     let
-      coreutils  = containerSpecs.containerPkgs.coreutils.nix-store-path;
-      supervisor = containerSpecs.containerPkgs.supervisor.nix-store-path;
+      coreutils  = containerPkgs.coreutils.nix-store-path;
+      supervisor = containerPkgs.supervisor.nix-store-path;
     in escapeTemplate
       ''
       # Store entrypoint's envars and "uname" in a file for debugging purposes.
@@ -111,11 +102,8 @@ let
         }" \
       > "''${NOMAD_TASK_DIR}"/entrypoint.dirs
 
-      # Only needed for "exec" ?
-      if test "''${TASK_DRIVER}" = "exec"
-      then
-        cd "''${NOMAD_TASK_DIR}"
-      fi
+      # Move to stateDir's parent directory.
+      cd "''${NOMAD_TASK_DIR}"
 
       # Create a symlink to 'supervisor' Nix Store folder so we can call it from
       # 'ssh' or 'nomad exec' without having it in PATH or knowing the currently
@@ -141,7 +129,7 @@ let
 
   # About the JSON Job Specification and my odd assumptions:
   #
-  # TL;DR; We are using what HashiCorp calls an unespecified format but it's the
+  # TL;DR; We are using what HashiCorp calls an unspecified format but it's the
   # same format the SRE team is using.
   #
   # At least in Nomad version v1.4.3, the CLI command to submit new jobs
@@ -250,7 +238,6 @@ let
     meta = {
       # Only top level "KEY=STRING" are allowed, no child objects/attributes!
       WORKBENCH_STATEDIR = stateDir;
-      TASK_DRIVER = if execTaskDriver then "exec" else "podman";
       SUPERVISORD_LOGLEVEL = task_supervisord_loglevel;
       ONE_TRACER_PER_NODE = oneTracerPerNode;
     };
@@ -411,8 +398,8 @@ let
           # Actually using the interface specified on Nomad Client startup that
           # for local runs it's forced to "lo" and whatever is automatically
           # fingerprinted or provided for cloud runs.
-          # TODO: Use "bridge" mode for podman, this will allow to run isolated
-          # local cluster with no addresses or ports clashing.
+          # TODO: Use "bridge" mode for local ?? this will allow to run isolated
+          # local cluster with no addresses or ports clashing ??
           mode = "host";
           # Specifies a TCP/UDP port allocation and can be used to specify both
           # dynamic ports and reserved ports.
@@ -453,18 +440,14 @@ let
                       # jobs like load balancers.
                       static = ''${toString portNum}'';
 
-                      # TODO: When switching the network mode to "bridge" for
-                      # podman use "Mapped Ports" to be able to run isolated
-                      # local cluster with no addresses or ports clashing.
+                      # The "exec" driver does not accept "Mapped Ports".
+                      # to = ''${toString portNum}'';
                       # Applicable when using "bridge" mode to configure port
                       # to map to inside the task's network namespace. Omitting
                       # this field or setting it to -1 sets the mapped port
                       # equal to the dynamic port allocated by the scheduler.
                       # The NOMAD_PORT_<label> environment variable will contain
                       # the to value.
-                      # to = ''${toString portNum}'';
-                      # The "podman" driver accepts "Mapped Ports", but not the
-                      # "exec" driver
                       # https://developer.hashicorp.com/nomad/docs/job-specification/network#mapped-ports
                       # https://developer.hashicorp.com/nomad/docs/job-specification/network#bridge-mode
                     }
@@ -525,7 +508,7 @@ let
             # ERROR: cannot verify iog-cardano-perf.s3.eu-central-1.amazonaws.com's certificate, issued by 'CN=Amazon RSA 2048 M01,O=Amazon,C=US':
             # Unable to locally verify the issuer's authority.
             # To connect to iog-cardano-perf.s3.eu-central-1.amazonaws.com insecurely, use `--no-check-certificate'.
-            SSL_CERT_FILE = "${containerSpecs.containerPkgs.cacert.nix-store-path}/etc/ssl/certs/ca-bundle.crt";
+            SSL_CERT_FILE = "${containerPkgs.cacert.nix-store-path}/etc/ssl/certs/ca-bundle.crt";
           };
 
           # Sensible defaults.
@@ -639,7 +622,6 @@ let
           template = [
             # Envars
             {
-              # podman container input environment variables.
               env = true;
               # File name to create inside the allocation directory.
               # Created in NOMAD_DATA_DIR/alloc/ALLOC_ID/TASK_NAME/envars
@@ -647,7 +629,6 @@ let
               # See runtime for available variables:
               # https://developer.hashicorp.com/nomad/docs/runtime/environment
               data = ''
-                TASK_DRIVER="{{ env "NOMAD_META_TASK_DRIVER" }}"
                 WORKBENCH_STATEDIR="{{ env "NOMAD_META_WORKBENCH_STATEDIR" }}"
                 SUPERVISORD_LOGLEVEL="{{ env "NOMAD_META_SUPERVISORD_LOGLEVEL" }}"
               '';
@@ -806,13 +787,11 @@ let
               destination = "local/${stateDir}/${nodeSpec.name}/start.sh";
               data = escapeTemplate (
                 let scriptValue = profileData.node-services."${nodeSpec.name}".start.value;
-                in if execTaskDriver
-                  then (startScriptToGoTemplate
+                in (startScriptToGoTemplate
                     nodeSpec                         # nodeSpec
                     servicePortName                  # servicePortName
                     scriptValue                      # startScript
                   )
-                  else scriptValue
               );
               change_mode = "noop";
               error_on_missing_key = true;
@@ -832,36 +811,32 @@ let
               env = false;
               destination = "local/${stateDir}/${nodeSpec.name}/topology.json";
               data = escapeTemplate (
-                if execTaskDriver
-                then
-                  # Recreate the "topology.json" with IPs and ports that are
-                  # nomad template variables.
-                  (topologyToGoTemplate
-                    # Fetch this node's entry in the profile's "topology.json".
-                    (if nodeSpec.name != "explorer"
-                     then
-                      # Non explorer nodes are under "coreNodes"
-                      builtins.head # Must exist!
-                        (builtins.filter
-                          (coreNode: coreNode.name == nodeSpec.name)
-                          profileData.topology.value.coreNodes
-                        )
-                     else
-                      # The explorer node is under "relayNodes"
-                      builtins.head # Must exist!
-                        (builtins.filter
-                          (coreNode: coreNode.name == nodeSpec.name)
-                          profileData.topology.value.relayNodes
-                        )
-                    )
-                    # The P2P flag.
-                    (if profileData.value.node ? verbatim && profileData.value.node.verbatim ? EnableP2P
-                     then profileData.value.node.verbatim.EnableP2P
-                     else false
-                    )
+                # Recreate the "topology.json" with IPs and ports that are
+                # nomad template variables.
+                (topologyToGoTemplate
+                  # Fetch this node's entry in the profile's "topology.json".
+                  (if nodeSpec.name != "explorer"
+                   then
+                    # Non explorer nodes are under "coreNodes"
+                    builtins.head # Must exist!
+                      (builtins.filter
+                        (coreNode: coreNode.name == nodeSpec.name)
+                        profileData.topology.value.coreNodes
+                      )
+                   else
+                    # The explorer node is under "relayNodes"
+                    builtins.head # Must exist!
+                      (builtins.filter
+                        (coreNode: coreNode.name == nodeSpec.name)
+                        profileData.topology.value.relayNodes
+                      )
                   )
-                # Do nothing with the topology files.
-                else (__readFile profileData.node-services."${nodeSpec.name}".topology.JSON )
+                  # The P2P flag.
+                  (if profileData.value.node ? verbatim && profileData.value.node.verbatim ? EnableP2P
+                   then profileData.value.node.verbatim.EnableP2P
+                   else false
+                  )
+                )
               );
               change_mode = "noop";
               error_on_missing_key = true;
@@ -886,23 +861,21 @@ let
               destination = "local/${stateDir}/generator/run-script.json";
               data = escapeTemplate (
                 let runScript = profileData.generator-service.config;
-                in if execTaskDriver
-                  # Recreate the "run-script.json" with IPs and ports that are
-                  # nomad template variables.
-                  then (runScriptToGoTemplate
-                    runScript.value
-                    # Just the node names.
-                    (lib.attrsets.mapAttrsToList
-                      (nodeSpecNodeName: nodeSpecNode: nodeSpecNodeName)
-                      # All the producer nodes. How the workbench creates it.
-                      (lib.attrsets.filterAttrs
-                        (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
-                        profileData.node-specs.value
-                      )
-                    )
-                  )
-                  # Do nothing with the topology files.
-                  else (__readFile runScript.JSON)
+                in
+                   # Recreate the "run-script.json" with IPs and ports that are
+                   # nomad template variables.
+                   (runScriptToGoTemplate
+                     runScript.value
+                     # Just the node names.
+                     (lib.attrsets.mapAttrsToList
+                       (nodeSpecNodeName: nodeSpecNode: nodeSpecNodeName)
+                       # All the producer nodes. How the workbench creates it.
+                       (lib.attrsets.filterAttrs
+                         (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
+                         profileData.node-specs.value
+                       )
+                     )
+                   )
               );
               change_mode = "noop";
               error_on_missing_key = true;
@@ -964,9 +937,9 @@ let
                   ../service/ssh.nix
                   {
                     inherit pkgs;
-                    bashInteractive = containerSpecs.containerPkgs.bashInteractive.nix-store-path;
-                    coreutils = containerSpecs.containerPkgs.coreutils.nix-store-path;
-                    openssh_hacks = containerSpecs.containerPkgs.openssh_hacks.nix-store-path;
+                    bashInteractive = containerPkgs.bashInteractive.nix-store-path;
+                    coreutils = containerPkgs.coreutils.nix-store-path;
+                    sshdExecutable = "${containerPkgs.openssh_hacks.nix-store-path}/bin/sshd";
                   }
               ;
             in [
@@ -1017,86 +990,19 @@ let
 
           }
           //
-          (if execTaskDriver
-            then {
-              driver = "exec";
-
-              config = {
-
-                command = "${containerSpecs.containerPkgs.bashInteractive.nix-store-path}/bin/bash";
-
-                args = ["local/entrypoint.sh"];
-
-                nix_installables =
-                  (lib.attrsets.mapAttrsToList
-                    (name: attr: attr.nix-store-path)
-                    containerSpecs.containerPkgs
-                  )
-                ;
-
-              };
-            } else {
-              driver = "podman";
-
-              # Specifies the driver configuration, which is passed directly to the
-              # driver to start the task. The details of configurations are specific
-              # to each driver, so please see specific driver documentation for more
-              # information.
-              # https://github.com/hashicorp/nomad-driver-podman#task-configuration
-              config = {
-
-                command = "${containerSpecs.containerPkgs.bashInteractive.nix-store-path}/bin/bash";
-
-                args = ["local/entrypoint.sh"];
-
-                # The image to run. Accepted transports are docker (default if
-                # missing), oci-archive and docker-archive. Images reference as
-                # short-names will be treated according to user-configured
-                # preferences.
-                image = "${containerSpecs.ociImage.imageName}:${containerSpecs.ociImage.imageTag}";
-
-                # Always pull the latest image on container start.
-                force_pull = false;
-
-                # Podman redirects its combined stdout/stderr logstream directly
-                # to a Nomad fifo. Benefits of this mode are: zero overhead,
-                # don't have to worry about log rotation at system or Podman
-                # level. Downside: you cannot easily ship the logstream to a log
-                # aggregator plus stdout/stderr is multiplexed into a single
-                # stream.
-                logging = {
-                  # The other option is: "journald"
-                  driver = "nomad";
-                };
-
-                # The hostname to assign to the container. When launching more
-                # than one of a task (using count) with this option set, every
-                # container the task starts will have the same hostname.
-                hostname = taskName;
-
-                network_mode = "host";
-
-                # This can be used here but not with "exec"!
-                # These name cannot be used for envars, "-" replaced with "_".
-                ports = [ servicePortName ];
-
-                # A list of /container_path strings for tmpfs mount points. See
-                # podman run --tmpfs options for details.
-                tmpfs = [
-                  "/tmp"
-                ];
-
-                # A list of host_path:container_path:options strings to bind
-                # host paths to container paths. Named volumes are not supported.
-                volumes = [];
-
-                # The working directory for the container. Defaults to the
-                # default set in the image.
-                working_dir = "local/";
-
-              };
-            }
-          );
+          {
+            driver = "exec";
+            config = {
+              command = "${containerPkgs.bashInteractive.nix-store-path}/bin/bash";
+              args = ["local/entrypoint.sh"];
+              nix_installables =
+                (lib.attrsets.mapAttrsToList
+                  (name: attr: attr.installable)
+                  containerPkgs
+                )
+              ;
+            };
+          };
       }));
       in lib.listToAttrs (
         # If not oneTracerPerNode, an individual tracer task is needed (instead

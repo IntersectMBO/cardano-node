@@ -1,25 +1,7 @@
 usage_nomad() {
      usage "nomad" "nomad helpers" <<EOF
-    $(helpcmd dir-path \(vault\|client\|server\|plugin\|webfs\))
+    $(helpcmd dir-path \(client\|server\|webfs\))
                      Gets the corresponding cache directory file path.
-
-    $(helpcmd vault \(ci\|world\) login)
-                     Login with your GitHub token. First copy the token by doing:
-                     Your profile -> Settings -> Developer Settings ->
-                     Tokens (Classic) -> Generate New Token (Classic)
-                     and create a new token with only the "read:org" permission.
-    $(helpcmd vault \(ci\|world\) nomad-token)
-                     Gets the corresponding Nomad token from the chosen Vault
-                     (WARNING: shows secrets!!!).
-    $(helpcmd vault ci pg-user)
-                     Gets SRE's Postgres server username from Vault
-                     (WARNING: shows secrets!!!).
-    $(helpcmd vault ci pg-pass)
-                     Gets SRE's Postgres server password from Vault
-                     (WARNING: shows secrets!!!).
-    $(helpcmd vault world aws-s3-credentials)
-                     Gets Cardano World's AWS S3 crdentials from Vault in JSON
-                     (WARNING: shows secrets!!!).
 
     $(helpcmd clients ready)
                      Creates a JSON array with "id", "name", "datacenter" and
@@ -40,9 +22,9 @@ usage_nomad() {
                      Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
                      must be provided by the user.
 
-    $(helpcmd agents start SERVER-NAME CLIENT-NAME TASK-DRIVER-NAME)
+    $(helpcmd agents start SERVER-NAME CLIENT-NAME)
                      Start a default 1 server 1 client Nomad cluster.
-    $(helpcmd agents stop  SERVER-NAME CLIENT-NAME TASK-DRIVER-NAME)
+    $(helpcmd agents stop  SERVER-NAME CLIENT-NAME)
                      Stop the default 1 server 1 client Nomad cluster.
 
     $(helpcmd \(server/client\) state-dir-path           NAME)
@@ -64,13 +46,6 @@ usage_nomad() {
                      Stops the Agent but does not clean its files
     $(helpcmd \(server/client\) cleanup                  NAME)
                      Deletes all logs and state files
-
-    $(helpcmd plugin nomad-driver-podman socket-path)
-    $(helpcmd plugin nomad-driver-podman pid-filepath)
-    $(helpcmd plugin nomad-driver-podman pid)
-    $(helpcmd plugin nomad-driver-podman is-running)
-    $(helpcmd plugin nomad-driver-podman start)
-    $(helpcmd plugin nomad-driver-podman stop)
 
     $(helpcmd webfs state-dir-path)
     $(helpcmd webfs document-root-path)
@@ -117,18 +92,13 @@ wb_nomad() {
 ### dir-path ) #################################################################
 ################################################################################
     dir-path )
-      local usage="USAGE: wb nomad ${op} vault|server|client|plugin|webfs"
+      local usage="USAGE: wb nomad ${op} server|client|webfs"
       # Calling `wb nomad dir-path  XXX` inside a Nix derivation will fail:
       # "mkdir: cannot create directory '/homeless-shelter': Permission denied"
       local nomad_cache_dir="$(envjqr 'cacheDir')"/nomad
       mkdir -p "${nomad_cache_dir}"
       local subop=${1:?$usage}; shift
       case "${subop}" in
-        vault )
-          local vault_dir="${nomad_cache_dir}"/vault
-          mkdir -p "${vault_dir}"
-          echo "${vault_dir}"
-        ;;
         server )
           local nomad_servers_dir="${nomad_cache_dir}"/server
           mkdir -p "${nomad_servers_dir}"
@@ -138,11 +108,6 @@ wb_nomad() {
           local nomad_clients_dir="${nomad_cache_dir}"/client
           mkdir -p "${nomad_clients_dir}"
           echo "${nomad_clients_dir}"
-        ;;
-        plugin )
-          local plugin_dir="${nomad_cache_dir}"/plugin
-          mkdir -p "${plugin_dir}"
-          echo "${plugin_dir}"
         ;;
         webfs )
           local webfs_dir="${nomad_cache_dir}"/webfs
@@ -154,184 +119,6 @@ wb_nomad() {
           mkdir -p "${ssh_dir}"
           echo "${ssh_dir}"
         ;;
-        * )
-          usage_nomad
-        ;;
-      esac
-    ;;
-################################################################################
-### vault ) ####################################################################
-################################################################################
-    vault )
-      local usage="USAGE: wb nomad ${op} world|ci"
-      local vault_dir="$(wb_nomad dir-path vault)"
-      local entity=${1:?$usage}; shift
-      case "${entity}" in
-####### vault -> ci )###########################################################
-        ci )
-          mkdir -p "${vault_dir}"/ci
-          local login_file="${vault_dir}"/ci/login.json
-          local vault_address="https://vault.ci.iog.io"
-          local action=${1:?$usage}; shift
-          case "${action}" in
-            login )
-              msg "First create and copy your GitHub token by doing: "
-              msg "Your profile -> Settings -> Developer Settings -> Tokens (Classic) -> Generate New Token (Classic)"
-              msg "and create a new token with only the \"read:org\" permission."
-              read -p "Hit enter to continue ..."
-              vault login                             \
-                -address="${vault_address}"           \
-                -method=github -path=github-employees \
-                -no-store -format=json                \
-              > "${login_file}"
-            ;;
-            enabled )
-              if test -f "${login_file}"
-              then
-                # Fetch token info from vault
-                local client_token
-                client_token=$(jq -r '.auth.client_token' "${login_file}")
-                local token_lookup_response
-                if token_lookup_response=$(VAULT_TOKEN="${client_token}" vault token lookup -address="${vault_address}" -namespace=perf -format=json)
-                then
-                  local expire_time
-                  expire_time=$(echo "${token_lookup_response}" | jq -r .data.expire_time)
-                  # Compare expire date with the actual date minus one day.
-                  # This avoids a token expiring while a profile is running.
-                  if test "$(date -u -d "${expire_time}" "+%s")" -ge "$(($(date -u "+%s") - 86400))"
-                  then
-                    true
-                  else
-                    rm "${login_file}"
-                    false
-                  fi
-                else
-                  fatal "Are you logged in to Vault? Call 'wb nomad vault ${entity} login' with your IOHK GitHub token (classic)"
-                fi
-              else
-                false
-              fi
-            ;;
-            nomad-token )
-              if ! wb_nomad vault "${entity}" enabled
-              then
-                wb_nomad vault "${entity}" login
-              fi
-              local client_token
-              client_token=$(jq -r '.auth.client_token' "${login_file}")
-              local nomad_token_json
-              if nomad_token_json=$(VAULT_TOKEN="${client_token}" vault read -address="${vault_address}" -non-interactive -format=json nomad/creds/perf)
-              then
-                echo "${nomad_token_json}" | jq -r .data.secret_id
-              else
-                fatal "Unable to fetch Nomad token from Vault"
-              fi
-            ;;
-            pg-user )
-              if ! wb_nomad vault "${entity}" enabled
-              then
-                wb_nomad vault "${entity}" login
-              fi
-              local client_token
-              client_token=$(jq -r '.auth.client_token' "${login_file}")
-              VAULT_TOKEN="${client_token}" vault kv get \
-                --address="${vault_address}"             \
-                -non-interactive                         \
-                -format=json                             \
-                kv/postgrest/perf                        \
-              | jq -r .data.data.postgrestDbUser
-            ;;
-            pg-pass )
-              if ! wb_nomad vault "${entity}" enabled
-              then
-                wb_nomad vault "${entity}" login
-              fi
-              local client_token
-              client_token=$(jq -r '.auth.client_token' "${login_file}")
-              VAULT_TOKEN="${client_token}" vault kv get \
-                --address="${vault_address}"             \
-                -non-interactive                         \
-                -format=json                             \
-                kv/postgrest/perf                        \
-              | jq -r .data.data.postgrestDbPass
-            ;;
-####### vault -> ci -> * )######################################################
-            * )
-              usage_nomad
-            ;;
-          esac
-        ;;
-####### vault -> world )########################################################
-        world )
-          mkdir -p "${vault_dir}"/world
-          local login_file="${vault_dir}"/world/login.json
-          local vault_address="https://vault.world.dev.cardano.org"
-          local action=${1:?$usage}; shift
-          case "${action}" in
-            login )
-              msg "First create and copy your GitHub token by doing: "
-              msg "Your profile -> Settings -> Developer Settings -> Tokens (Classic) -> Generate New Token (Classic)"
-              msg "and create a new token with only the \"read:org\" permission."
-              read -p "Hit enter to continue ..."
-              vault login                             \
-                -address="${vault_address}"           \
-                -method=github -path=github-employees \
-                -no-store -format=json                \
-              > "${login_file}"
-            ;;
-            enabled )
-              if test -f "${login_file}"
-              then
-                local client_token
-                client_token=$(jq -r '.auth.client_token' "${login_file}")
-                local token_lookup_response
-                if token_lookup_response=$(VAULT_TOKEN="${client_token}" vault token lookup -address="${vault_address}" -namespace=perf -format=json)
-                then
-                  # TODO: I need to check the expiration time?
-                  # echo "${token_lookup_response}" | jq -r .data.expire_time
-                  # 2023-02-19T13:07:26.125306646Z
-                  true
-                else
-                  fatal "Are you logged in to Vault? Call 'wb nomad vault ${entity} login' with your IOHK GitHub token (classic)"
-                fi
-              else
-                false
-              fi
-            ;;
-            nomad-token )
-              if ! wb_nomad vault "${entity}" enabled
-              then
-                wb_nomad vault "${entity}" login
-              fi
-              local client_token
-              client_token=$(jq -r '.auth.client_token' "${login_file}")
-              local nomad_token_json
-              if nomad_token_json=$(VAULT_TOKEN="${client_token}" vault read -address="${vault_address}" -non-interactive -format=json nomad/creds/perf)
-              then
-                echo "${nomad_token_json}" | jq -r .data.secret_id
-              else
-                fatal "Unable to fetch Nomad token from Vault"
-              fi
-            ;;
-            aws-s3-credentials )
-              if ! wb_nomad vault "${entity}" enabled
-              then
-                wb_nomad vault "${entity}" login
-              fi
-              local client_token
-              client_token=$(jq -r '.auth.client_token' "${login_file}")
-              VAULT_TOKEN="${client_token}" vault read \
-                --address="${vault_address}"           \
-                -format=json                           \
-                aws/creds/perf
-            ;;
-####### vault -> world -> * )###################################################
-            * )
-              usage_nomad
-            ;;
-          esac
-        ;;
-####### vault -> * )############################################################
         * )
           usage_nomad
         ;;
@@ -633,10 +420,9 @@ EOL
       case "${subop}" in
 ####### agents -> start )#######################################################
         start )
-          local usage="USAGE:wb nomad ${op} ${subop} SERVER-NAME CLIENT-NAME DRIVER-NAME"
+          local usage="USAGE:wb nomad ${op} ${subop} SERVER-NAME CLIENT-NAME"
           local server_name=${1:?$usage}; shift
           local client_name=${1:?$usage}; shift
-          local task_driver=${1:?$usage}; shift
           # Create config files for the server and start it.
           if ! wb_nomad server configure "${server_name}" 4646 4647 4648
           then
@@ -646,45 +432,28 @@ EOL
           then
             fatal "Failed to start Nomad server \"${server_name}\""
           fi
-          # Set up the podman driver and start it if it's needed.
-          if test "${task_driver}" = "podman"
-          then
-            # Create config files for the client and the Podman plugin/task driver.
-            wb_nomad plugin nomad-driver-podman start
-          fi
           # Create config files for the client and start it.
           # WARNING: Actually the client is configured to connect to all the
           # running servers, so if there are no servers ready the Nomad
           # cluster state is uknown (at least to me with the actual config).
-          if ! wb_nomad client configure "${client_name}" 14646 14647 14648 "${task_driver}"
+          if ! wb_nomad client configure "${client_name}" 14646 14647 14648
           then
             wb_nomad server stop "${server_name}" || true
             fatal "Failed to configure Nomad client \"${client_name}\""
           fi
           # Only the exec driver must be run as root.
-          if test "${task_driver}" = "exec"
+          # Pass the "root prefix" (command prefix)
+          if ! wb_nomad client start "${client_name}" "sudo "
           then
-            # Pass the "root prefix" (command prefix)
-            if ! wb_nomad client start "${client_name}" "sudo "
-            then
-              wb_nomad server stop "${server_name}" || true
-              fatal "Failed to start Nomad agents"
-            fi
-          else
-            if ! wb_nomad client start "${client_name}"
-            then
-              wb_nomad plugin nomad-driver-podman stop || true
-              wb_nomad server stop "${server_name}" || true
-              fatal "Failed to start Nomad agents"
-            fi
+            wb_nomad server stop "${server_name}" || true
+            fatal "Failed to start Nomad agents"
           fi
         ;;
 ####### agents -> stop )########################################################
         stop )
-          local usage="USAGE:wb nomad ${op} ${subop} SERVER-NAME CLIENT-NAME DRIVER-NAME"
+          local usage="USAGE:wb nomad ${op} ${subop} SERVER-NAME CLIENT-NAME"
           local server_name=${1:?$usage}; shift
           local client_name=${1:?$usage}; shift
-          local task_driver=${1:?$usage}; shift
           # Collect garbage to avoid orphaned mounts
           # https://support.hashicorp.com/hc/en-us/articles/360000654467-Removing-Orphaned-Mounts-from-Nomad-Allocation-Directory
           nomad system gc 2>&1 >/dev/null || true
@@ -692,13 +461,6 @@ EOL
             wb_nomad client stop "${client_name}" \
           ||                                      \
             msg "$(red "Failed to stop Nomad client \"${client_name}\"")"
-          # Stop driver(s)
-          if test "${task_driver}" = "podman"
-          then
-              wb_nomad plugin nomad-driver-podman stop \
-            ||                                         \
-              msg "$(red "Failed to stop nomad-driver-podman")"
-          fi
           # Stop server
             wb_nomad server stop "${server_name}" \
           ||                                      \
@@ -939,21 +701,18 @@ EOL
         ;;
 ####### client -> configure )###################################################
         configure )
-          local usage="USAGE: wb nomad ${op} ${subop} CLIENT-NAME HTTP-PORT RPC-PORT SERV-PORT DRIVER-NAME [GENESIS-DIR]"
+          local usage="USAGE: wb nomad ${op} ${subop} CLIENT-NAME HTTP-PORT RPC-PORT SERV-PORT [GENESIS-DIR]"
           local name=${1:?$usage}; shift
           # Ports
           local http_port=${1:?$usage}; shift
           local rpc_port=${1:?$usage}; shift
           local serv_port=${1:?$usage}; shift
-          # Unlike the server, the client can have different task drivers!
-          local task_driver=${1:?$usage}; shift
           # Checks
           # Assume the presence of the PID file means "running" because it
           # can represent an abnormal exit / uknown state!
           if wb_nomad client is-running "${name}"
           then
-            # When reusing, remember to check that client is running with
-            # the needed task driver!
+            # When reusing, remember to check that client is running!
             msg "$(red "FATAL: Nomad client \"${name}\" is already running or in an uknown state, call 'wb nomad client stop ${name}' or 'wb nomad nuke' first")"
             return 1
           else
@@ -965,30 +724,9 @@ EOL
             mkdir -p "${state_dir}"/data/{client,plugins,alloc}
             # Store the ports config
             echo "{\"http\": ${http_port}, \"rpc\": ${rpc_port}, \"serv\": ${serv_port}}" > "${state_dir}"/ports.json
-            # Store tast driver parameter
-            echo "${task_driver}" > "${state_dir}"/task_driver
-            # Task driver specific client configuration
-            if test "${task_driver}" = "podman"
-            then
-              local podman_socket_path=$(wb_nomad plugin nomad-driver-podman socket-path)
-              # Podman Task Driver - Client Requirements:
-              ## "Ensure that Nomad can find the plugin, refer to `plugin_dir`."
-              ### https://www.nomadproject.io/plugins/drivers/podman#client-  requirements
-              ## On every call to `wb nomad client configure` the
-              ## available `nomad-driver-podman` is replaced.
-              # TODO: Somehow move this logic to `wb nomad plugin`
-              rm -f "${state_dir}"/data/plugins/nomad-driver-podman
-              ln -s -f "$(which nomad-driver-podman)" "${state_dir}"/data/plugins/nomad-driver-podman
-              # Create configuration file
-              nomad_create_client_config "${name}" \
-                "${http_port}" "${rpc_port}" "${serv_port}" \
-                "${task_driver}" "${podman_socket_path}"
-            else
-              # Create configuration file
-              nomad_create_client_config "${name}" \
-                "${http_port}" "${rpc_port}" "${serv_port}" \
-                "${task_driver}"
-            fi
+            # Create configuration file
+            nomad_create_client_config "${name}" \
+              "${http_port}" "${rpc_port}" "${serv_port}"
           fi
         ;;
 ####### client -> port )########################################################
@@ -1144,36 +882,18 @@ EOL
           # TODO: Configure the node?
           # nomad node eligibility -enable "${client_id}"
           # nomad node drain -disable "${client_id}"
-          local task_driver=$(cat "${state_dir}"/task_driver)
-          if test "${task_driver}" == "exec"
+          # Look for "Drivers":{"exec":  {"Detected":true,"Healthy":true}}
+          if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Detected') = "true"
           then
-            # Look for "Drivers":{"exec":  {"Detected":true,"Healthy":true}}
-            if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Detected') = "true"
-            then
-              # Not using `fatal` here, let the caller decide!
-              msg "$(red "FATAL: Task driver \"exec\" was not detected")"
-              return 1
-            fi
-            if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Healthy') = "true"
-            then
-              # Not using `fatal` here, let the caller decide!
-              msg "$(red "FATAL: Task driver \"exec\" is not healthy")"
-              return 1
-            fi
-          else
-            # Look for "Drivers":{"podman":{"Detected":true,"Healthy":true}}
-            if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.podman.Detected') = "true"
-            then
-              # Not using `fatal` here, let the caller decide!
-              msg "$(red "FATAL: Task driver \"podman\" was not detected")"
-              return 1
-            fi
-            if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.podman.Healthy') = "true"
-            then
-              # Not using `fatal` here, let the caller decide!
-              msg "$(red "FATAL: Task driver \"podman\" is not healthy")"
-              return 1
-            fi
+            # Not using `fatal` here, let the caller decide!
+            msg "$(red "FATAL: Task driver \"exec\" was not detected")"
+            return 1
+          fi
+          if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Healthy') = "true"
+          then
+            # Not using `fatal` here, let the caller decide!
+            msg "$(red "FATAL: Task driver \"exec\" is not healthy")"
+            return 1
           fi
           true
           # TODO: Check all the clients connected to the server!
@@ -1264,125 +984,6 @@ EOL
           usage_nomad
         ;;
       esac # client
-    ;;
-################################################################################
-### plugin ) ###################################################################
-################################################################################
-    plugin )
-      local usage="USAGE: wb nomad ${op} nomad-driver-podman"
-      local plugin=${1:?$usage}; shift
-      case "${plugin}" in
-####### plugin -> nomad-driver-podman )#########################################
-        nomad-driver-podman )
-          local usage="USAGE: wb nomad ${op} ${plugin}"
-          local subop=${1:?$usage}; shift
-          case "$subop" in
-########### plugin -> nomad-driver-podman -> socket-path )######################
-            socket-path )
-              # Socket of the process that connects nomad-driver-podman with podman.
-              # Can't reside inside "$dir", can't use a path longer than 108 characters!
-              # See: https://man7.org/linux/man-pages/man7/unix.7.html
-              # char        sun_path[108];            /* Pathname */
-              echo "${XDG_RUNTIME_DIR:-/run/user/$UID}/workbench-podman.sock"
-            ;;
-########### plugin -> nomad-driver-podman -> pid-filepath )#####################
-            pid-filepath )
-              local plugin_dir="$(wb_nomad dir-path plugin)"
-              echo "${plugin_dir}"/nomad-driver-podman.pid
-            ;;
-########### plugin -> nomad-driver-podman -> pid )##############################
-            pid )
-              local pid_file=$(wb_nomad plugin nomad-driver-podman pid-filepath)
-              if test -f $pid_file
-              then
-                local pid_number=$(cat "${pid_file}")
-                # Check if the process is running
-                if kill -0 "${pid_number}" >/dev/null 2>&1
-                then
-                  echo "${pid_number}"
-                else
-                  rm "${pid_file}"
-                  false
-                fi
-              else
-                false
-              fi
-            ;;
-########### plugin -> nomad-driver-podman -> is-running )#######################
-            is-running )
-              wb_nomad plugin nomad-driver-podman pid >/dev/null
-            ;;
-########### plugin -> nomad-driver-podman -> start )############################
-            # Start the `podman` API service needed by `nomad`.
-            start ) # TODO: Check that it's not already running!
-              msg "Preparing podman API service for nomad driver \`nomad-driver-podman\` ..."
-              local podman_socket_path=$(wb_nomad plugin nomad-driver-podman socket-path)
-        #      if test -S "$socket"
-        #      then
-        #          msg "Podman API service was already running"
-        #      else
-                # The session is kept open waiting for a new connection for 60 seconds.
-                # https://discuss.hashicorp.com/t/nomad-podman-rhel8-driver-difficulties/21877/4
-                # `--time`: Time until the service session expires in seconds. Use 0
-                # to disable the timeout (default 5).
-                local pid_file=$(wb_nomad plugin nomad-driver-podman pid-filepath)
-                podman system service --time 60 "unix://$podman_socket_path" &
-                local pid_number="$!"
-                echo "${pid_number}" > "${pid_file}"
-                local i=0 patience=5
-                while test ! -S "$podman_socket_path"
-                do printf "%3d" $i; sleep 1
-                  i=$((i+1))
-                  if test $i -ge $patience
-                  then echo
-                      progress "nomad-driver-podman" "$(red FATAL):  workbench:  nomad-driver-podman:  patience ran out after ${patience}s, socket $podman_socket_path"
-                      fatal "nomad-driver-podman startup did not succeed:  check logs"
-                      rm "${pid_file}"
-                  fi
-                  echo -ne "\b\b\b"
-                done >&2
-        #      fi
-              msg "Podman API service started"
-            ;;
-########### plugin -> nomad-driver-podman -> stop )#############################
-            stop )
-              local pid_number
-              local pid_file=$(wb_nomad plugin nomad-driver-podman pid-filepath "${name}")
-              # Call without `local` to obtain the subcommand's return code.
-              if pid_number=$(wb_nomad plugin nomad-driver-podman pid)
-              then
-                msg "Killing nomad-driver-podman (PID ${pid_number}) ..."
-                if ! kill -SIGINT "${pid_number}"
-                then
-                  fatal \
-                    "Killing nomad-driver-podman failed, \
-                    is PID \"${pid_number}\" (${pid_file}) running?"
-                else
-                  # Wait 15 seconds for the process to fully exit or kill it.
-                  if ! timeout 15 tail --pid="${pid_number}" -f /dev/null
-                  then
-                    kill -SIGKILL "${pid_number}" || true
-                  fi
-                fi
-                # Remove PID file
-                rm "${pid_file}"
-              else
-                msg "nomad-driver-podman API service is not running"
-                # If a PID file was already there it's not removed!
-                false
-              fi
-            ;;
-########### plugin -> nomad-driver-podman -> * )################################
-            * )
-              usage_nomad
-            ;;
-          esac  # plugin -> nomad-driver-podman
-        ;;
-####### plugin -> * )###########################################################
-        * )
-          usage_nomad
-        ;;
-      esac # plugin
     ;;
 ################################################################################
 ### rsync ) ####################################################################
@@ -1554,16 +1155,6 @@ EOF
           msg "Failed to remove config folder of Nomad client \"${client_name}\", now in unknown state, manual cleanup needed"
         fi
       done
-      # Nuke the nomad-driver-podman plugin
-      if wb_nomad plugin nomad-driver-podman is-running
-      then
-        wb_nomad plugin nomad-driver-podman stop
-      fi
-      local podman_socket_path=$(wb_nomad plugin nomad-driver-podman socket-path)
-      if test -S "${podman_socket_path}"
-      then
-        rm "${podman_socket_path}"
-      fi
       # Nuke all Nomad servers
       for server_name in $(ls "${nomad_servers_dir}"); do
         msg "Config folder of Nomad server \"${server_name}\" found"
@@ -1589,7 +1180,7 @@ EOF
         fi
       done
       # Nuke the Nomad Agents' .cache dir
-      # Keep top level Nomad cache dir because it includes Vault's dirs.
+      # Keep top level Nomad cache dir because it includes webfs and ssh dirs.
       rm -rf "${nomad_clients_dir}" >/dev/null 2>&1
       rm -rf "${nomad_servers_dir}" >/dev/null 2>&1
       # Bye HTTP server
@@ -1598,10 +1189,6 @@ EOF
         wb_nomad webfs stop
       fi
       rm -rf "$(wb_nomad webfs state-dir-path)"
-      # TODO: podman ?
-      # rm -rf ~/.local/share/containers/cache/
-      # rm -rf ~/.local/share/containers/storage/
-      # rm -rf ~/.config/containers/podman/
     ;;
 ################################################################################
 ### job ) ######################################################################
@@ -1676,12 +1263,12 @@ EOF
           # Some docs on the scheduling flow:
           # https://developer.hashicorp.com/nomad/docs/concepts/scheduling/scheduling
           # Notes:
-          # 1) In "misterious" cases a new evaluation ID is given later
+          # 1) In "mysterious" cases a new evaluation ID is given later
           #    and the initial one is forgotten!
           #    For example if there are placement errors, like when the
           #    requested task driver is not available, the initial
           #    deployment stays "running" and new evaluation IDs can be
-          #    found whith the following message:
+          #    found with the following message:
           #    "StatusDescription": "created to place remaining allocations"
           #    This is weird/unintuitive to me!
           # 2) An evaluation can be marked as "complete" in the `-json`

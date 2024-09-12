@@ -1,7 +1,7 @@
 { pkgs
 , bashInteractive
 , coreutils
-, openssh_hacks
+, sshdExecutable
 }:
 
 with pkgs.lib;
@@ -46,7 +46,7 @@ in {
       # Specifies the name  of the configuration file. The default is
       # /etc/ssh/sshd_config. sshd refuses to start if there is no configuration
       # file.
-      ${openssh_hacks}/bin/sshd -D -e -f /local/run/current/ssh/sshd_config
+      ${sshdExecutable} -D -e -f /local/run/current/ssh/sshd_config
     '';
   };
 

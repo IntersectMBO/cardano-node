@@ -7,23 +7,23 @@
 }:
 let
 
-  # The exec (non podman) task driver can run in a local environment were it
-  # starts a Nomad Server and Nomad Agents instances and used webfs to
-  # distribute the genesis folder.
+  # The exec task driver can run in a local environment were it starts a Nomad
+  # Server and Nomad Agents instances and used webfs to distribute the genesis
+  # folder.
   name = "nomadexec";
 
   # Unlike the supervisor backend `useCabalRun` is always false here.
   useCabalRun = false;
 
-  # The versions of Nomad and the Nomad plugins needed are defined here instead
-  # of inside the flake!
-  extraShellPkgs = let
-    # If we are going to use the `exec` driver we use the SRE patched version of
-    # Nomad that allows to use `nix_installables` as artifacts.
-    commit = "8f3b74796a8f56f38a812813c64dba995956a66e"; # Patched 1.6.3
-    nomad-sre = (__getFlake "github:input-output-hk/cardano-perf/${commit}").packages.x86_64-linux.nomad;
-  in
-    [ nomad-sre
+  extraShellPkgs =
+    [
+      # SRE's patched Nomad 1.6.3 that enables `nix_installables` as artifacts.
+      (
+        # Only x86_64-linux is supported.
+        if builtins.currentSystem != "x86_64-linux"
+        then builtins.abort "Nomad backends only available for x86_64-linux"
+        else (import ./patch.nix {})
+      )
       # The HTTP server to upload/download the genesis tar file in a local env.
       pkgs.webfs
     ]

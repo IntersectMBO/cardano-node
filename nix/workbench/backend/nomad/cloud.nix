@@ -7,19 +7,27 @@
 }:
 let
 
-  # The exec (non podman) task driver can run in a cloud environment using SRE's
-  # Nomad servers with the "nix_installable" patch and Amazon S3 to distribute
-  # ther genesis files. All credentials are obtained using Vault.
+  # The exec task driver can run in a cloud environment using SRE's Nomad
+  # servers with the "nix_installable" patch and Amazon S3 to distribute the
+  # genesis files (Buckets needs write permissions for the deployer machine).
   name = "nomadcloud";
 
   # Unlike the supervisor backend `useCabalRun` is always false here.
   useCabalRun = false;
 
-  # No override of the Nomad and Vault binaries in "workbench/shell.nix"
   extraShellPkgs =
     [
+      # SRE's patched Nomad 1.6.3 that enables `nix_installables` as artifacts.
+      (
+        # Only x86_64-linux is supported.
+        if builtins.currentSystem != "x86_64-linux"
+        then builtins.abort "Nomad backends only available for x86_64-linux"
+        else (import ./patch.nix {})
+      )
       # Amazon S3 HTTP to upload/download the genesis tar file.
       pkgs.awscli
+      # Used to download the logs.
+      pkgs.rsync
     ]
   ;
 
