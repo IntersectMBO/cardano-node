@@ -112,16 +112,16 @@ instance HasTextFormatter ConsensusStartupException where
 instance HasPrivacyAnnotation SanityCheckIssue
 instance HasSeverityAnnotation SanityCheckIssue where
   getSeverityAnnotation _ = Error
-instance Transformable Text IO SanityCheckIssue where 
+instance Transformable Text IO SanityCheckIssue where
   trTransformer = trStructured
 
-instance ToObject SanityCheckIssue where  
-  toObject _verb issue = 
+instance ToObject SanityCheckIssue where
+  toObject _verb issue =
     mconcat
       [ "kind" .= String "SanityCheckIssue"
       , "issue" .= toJSON issue
-      ] 
-instance ToJSON SanityCheckIssue where 
+      ]
+instance ToJSON SanityCheckIssue where
   toJSON = Aeson.String . pack . show
 
 instance ConvertRawHash blk => ConvertRawHash (Header blk) where
@@ -239,7 +239,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
-  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Debug
+  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -509,7 +509,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
-      ChainDB.TraceLastShutdownUnclean -> "TraceLastShutdownUnclean"
+      ChainDB.TraceLastShutdownUnclean -> "ChainDB is not clean. Validating all immutable chunks"
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -615,10 +615,14 @@ instance ( ConvertRawHash blk
                    " This is most likely an expected change in the serialization format,"
                 <> " which currently requires a chain replay"
               _ -> ""
-        LedgerDB.TookSnapshot snap pt enclosedTiming ->
+
+        LedgerDB.TookSnapshot snap pt RisingEdge ->
+          "Taking ledger snapshot " <> showT snap <>
+          " at " <> renderRealPointAsPhrase pt
+        LedgerDB.TookSnapshot snap pt (FallingEdgeWith t) ->
           "Took ledger snapshot " <> showT snap <>
-          " at " <> renderRealPointAsPhrase pt <> " at" <>
-          showT enclosedTiming
+          " at " <> renderRealPointAsPhrase pt <>
+          ", duration: " <> showT t
         LedgerDB.DeletedSnapshot snap ->
           "Deleted old snapshot " <> showT snap
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
@@ -1088,7 +1092,7 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show pt
-               , "enclosedTiming" .= enclosedTiming
+               , "enclosedTime" .= enclosedTiming
                ]
     LedgerDB.DeletedSnapshot snap ->
       mconcat [ "kind" .= String "TraceSnapshotEvent.DeletedSnapshot"

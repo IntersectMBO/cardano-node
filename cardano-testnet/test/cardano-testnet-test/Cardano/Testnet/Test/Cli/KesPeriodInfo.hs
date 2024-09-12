@@ -61,6 +61,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       sbe = ShelleyBasedEraConway
+      asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
       cTestnetOptions = def { cardanoNodeEra = asbe }
 

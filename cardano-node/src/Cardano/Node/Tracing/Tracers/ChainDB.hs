@@ -79,7 +79,8 @@ instance (  LogFormatting (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
-  forHuman v@ChainDB.TraceLastShutdownUnclean      = forHumanOrMachine v
+  forHuman ChainDB.TraceLastShutdownUnclean        =
+    "ChainDB is not clean. Validating all immutable chunks"
   forHuman (ChainDB.TraceAddBlockEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceFollowerEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceCopyToImmutableDBEvent v) = forHumanOrMachine v
@@ -92,8 +93,8 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
 
-  forMachine details v@ChainDB.TraceLastShutdownUnclean =
-    forMachine details v
+  forMachine _ ChainDB.TraceLastShutdownUnclean =
+    mconcat [ "kind" .= String "LastShutdownUnclean" ]
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceFollowerEvent v) =
@@ -117,7 +118,7 @@ instance (  LogFormatting (Header blk)
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
 
-  asMetrics v@ChainDB.TraceLastShutdownUnclean      = asMetrics v
+  asMetrics ChainDB.TraceLastShutdownUnclean        = []
   asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceFollowerEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceCopyToImmutableDBEvent v) = asMetrics v
@@ -132,8 +133,8 @@ instance (  LogFormatting (Header blk)
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
-  namespaceFor ev@ChainDB.TraceLastShutdownUnclean =
-    nsPrependInner "LastShutdownUnclean" (namespaceFor ev)
+  namespaceFor ChainDB.TraceLastShutdownUnclean =
+    Namespace [] ["LastShutdownUnclean"]
   namespaceFor (ChainDB.TraceAddBlockEvent ev) =
     nsPrependInner "AddBlockEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceFollowerEvent ev) =
@@ -157,6 +158,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
 
+  severityFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Info
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -203,6 +205,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
   severityFor _ns _ = Nothing
 
+  privacyFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Public
   privacyFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -249,6 +252,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
   privacyFor _ _ = Nothing
 
+  detailsFor (Namespace _ ["LastShutdownUnclean"]) _ = Just DNormal
   detailsFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -319,6 +323,11 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     metricsDocFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk))
   metricsDocFor _ = []
 
+  documentFor (Namespace _ ["LastShutdownUnclean"]) = Just $ mconcat
+    [ "Last shutdown of the node didn't leave the ChainDB directory in a clean"
+    , " state. Therefore, revalidating all the immutable chunks is necessary to"
+    , " ensure the correctness of the chain."
+    ]
   documentFor (Namespace out ("AddBlockEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceAddBlockEvent blk))
   documentFor (Namespace out ("FollowerEvent" : tl)) =
@@ -344,7 +353,9 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   documentFor _ = Nothing
 
   allNamespaces =
-        map  (nsPrependInner "AddBlockEvent")
+        Namespace [] ["LastShutdownUnclean"]
+
+          : (map  (nsPrependInner "AddBlockEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceAddBlockEvent blk)])
           ++ map  (nsPrependInner "FollowerEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceFollowerEvent blk)])
@@ -366,6 +377,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (ImmDB.TraceEvent blk)])
           ++ map  (nsPrependInner "VolatileDbEvent")
                   (allNamespaces :: [Namespace (VolDB.TraceEvent blk)])
+            )
 
 
 --------------------------------------------------------------------------------
@@ -1494,10 +1506,12 @@ instance MetaTrace (ChainDB.UnknownRange blk) where
 instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
-  forHuman (LedgerDB.TookSnapshot snap pt enclosedTiming) =
+  forHuman (LedgerDB.TookSnapshot snap pt RisingEdge) =
+      "Taking ledger snapshot " <> showT snap <>
+        " at " <> renderRealPointAsPhrase pt
+  forHuman (LedgerDB.TookSnapshot snap pt (FallingEdgeWith t)) =
       "Took ledger snapshot " <> showT snap <>
-        " at " <> renderRealPointAsPhrase pt <> " at " <> 
-        showT enclosedTiming
+        " at " <> renderRealPointAsPhrase pt <> ", duration: " <> showT t
   forHuman (LedgerDB.DeletedSnapshot snap) =
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
@@ -1512,8 +1526,8 @@ instance ( StandardHash blk
   forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
              , "snapshot" .= forMachine dtals snap
-             , "tip" .= show pt 
-             , "enclosedTiming" .= enclosedTiming]
+             , "tip" .= show pt
+             , "enclosedTime" .= enclosedTiming]
   forMachine dtals (LedgerDB.DeletedSnapshot snap) =
     mconcat [ "kind" .= String "DeletedSnapshot"
              , "snapshot" .= forMachine dtals snap ]
@@ -1532,12 +1546,15 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["TookSnapshot"]) = Just
-          "A snapshot was written to disk."
+    documentFor (Namespace _ ["TookSnapshot"]) = Just $ mconcat
+         [ "A snapshot is being written to disk. Two events will be traced, one"
+         , " for when the node starts taking the snapshot and another one for"
+         , " when the snapshot has been written to the disk."
+         ]
     documentFor (Namespace _ ["DeletedSnapshot"]) = Just
-          "A snapshot was written to disk."
+          "A snapshot was deleted from the disk."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just
-          "An on disk snapshot was skipped because it was invalid."
+          "An on disk snapshot was invalid. Unless it was suffixed, it will be deleted"
     documentFor _ = Nothing
 
     allNamespaces =

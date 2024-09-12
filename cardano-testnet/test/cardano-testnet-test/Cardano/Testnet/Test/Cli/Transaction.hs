@@ -51,7 +51,6 @@ hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \te
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraBabbage -- TODO: We should only support the latest era and the upcoming era
     sbe = ShelleyBasedEraConway
     txEra = AsConwayEra
     era = toCardanoEra sbe

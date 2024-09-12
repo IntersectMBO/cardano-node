@@ -63,7 +63,6 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       sbe = shelleyBasedEra @ConwayEra -- TODO: We should only support the latest era and the upcoming era
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def { cardanoNodeEra = asbe }
-      sbe = shelleyBasedEra @ConwayEra
       eraString = eraToString sbe
 
   tr@TestnetRuntime

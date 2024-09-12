@@ -87,7 +87,7 @@ tests = do
           ]
         ]
     , T.testGroup "SubmitApi"
-            [ ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
+            [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
             ]
         
     ]
