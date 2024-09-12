@@ -306,7 +306,7 @@
                   internal.roots.project = windowsProject.roots;
                   variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
                 });
-            } // optionalAttrs (system == "x86_64-darwin") {
+            } // optionalAttrs (system == "x86_64-darwin" || system == "aarch64-darwin") {
               native = lib.filterAttrs
                 (n: _:
                   # only build docker images once on linux:
