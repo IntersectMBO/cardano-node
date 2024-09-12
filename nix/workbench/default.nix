@@ -1,6 +1,5 @@
 { pkgs
-, lib, jq, runCommand
-, db-analyser
+, lib
 , cardanoNodePackages
 , cardanoNodeProject
 }:
@@ -60,34 +59,28 @@ let
 
   runWorkbench =
     name: command:
-    runCommand name {} ''
+    pkgs.runCommand name {} ''
       ${workbench}/bin/wb ${command} > $out
-    '';
-
-  runWorkbenchJqOnly =
-    name: command:
-    runCommand name {} ''
-      ${workbench' (with pkgs; [jq moreutils])}/bin/wb ${command} > $out
     '';
 
   runJq =
     name: args: query:
-    runCommand name {} ''
+    pkgs.runCommand name {} ''
       args=(${args})
-      ${jq}/bin/jq '${query}' "''${args[@]}" > $out
+      ${pkgs.jq}/bin/jq '${query}' "''${args[@]}" > $out
     '';
 
   run-analysis = import ./analyse/analyse.nix;
 
 in {
-  inherit workbench' workbench runWorkbench runWorkbenchJqOnly;
+  inherit workbench' workbench runWorkbench;
   inherit runJq;
 
   inherit run-analysis;
 
   inherit
-    (pkgs.callPackage ./profile/profile.nix
-      {inherit runJq runWorkbenchJqOnly runWorkbench;}
+    (import ./profile/profile.nix
+      {inherit pkgs lib runJq runWorkbench; inherit (cardanoNodePackages) cardanoLib;}
     )
     profile-names-json
     profile-names

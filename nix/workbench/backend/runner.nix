@@ -26,8 +26,6 @@ let
 in
   let
 
-    inherit (profileData.value) era composition monetary;
-
     path = pkgs.lib.makeBinPath path';
     path' =
       [ cardanoNodePackages.bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils

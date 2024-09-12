@@ -2,12 +2,13 @@
 final: prev:
 
 let
-  inherit (prev) customConfig;
-  inherit (final) pkgs cardanoNodePackages cardanoNodeProject;
+  inherit (final) pkgs;
   inherit (prev.pkgs) lib;
+  inherit (prev) customConfig;
 
   # A generic, fully parameteric version of the workbench development environment.
-  workbench = pkgs.callPackage ./workbench {};
+  workbench = import ./workbench
+    {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
 
   # A conveniently-parametrisable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
@@ -48,7 +49,8 @@ let
                    { inherit pkgs lib stateDir basePort useCabalRun; };
     in import ./workbench/backend/runner.nix
       {
-        inherit pkgs lib cardanoNodePackages;
+        inherit pkgs lib;
+        inherit (final) cardanoNodePackages;
         inherit batchName profileName backend;
         inherit cardano-node-rev;
         inherit workbench workbenchDevMode workbenchStartArgs profiling;

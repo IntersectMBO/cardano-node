@@ -1,5 +1,4 @@
 { pkgs
-, runJq
 , runWorkbench
 , jsonFilePretty
 

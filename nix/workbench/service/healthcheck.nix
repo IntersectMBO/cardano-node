@@ -1,5 +1,4 @@
 { pkgs
-, runJq
 , backend
 , profile
 , nodeSpecs

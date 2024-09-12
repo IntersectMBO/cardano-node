@@ -1,7 +1,6 @@
 { pkgs, lib, cardanoLib
-, runCommand
 , runJq
-, runWorkbenchJqOnly,  runWorkbench
+, runWorkbench
 }:
 
 let
@@ -76,7 +75,7 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
-            inherit runJq runWorkbench jsonFilePretty;
+            inherit runWorkbench jsonFilePretty;
             baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
           })
         node-services;
@@ -96,7 +95,7 @@ let
           ../service/tracer.nix
           {
             inherit backend profile nodeSpecs;
-            inherit runJq jsonFilePretty;
+            inherit jsonFilePretty;
           })
         tracer-service;
 
@@ -105,7 +104,6 @@ let
           ../service/healthcheck.nix
           {
             inherit backend profile nodeSpecs;
-            inherit runJq;
           })
         healthcheck-service;
 
