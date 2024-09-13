@@ -206,8 +206,8 @@ library
                       , strict-sop-core
                       , strict-stm
                       , time
-                      , trace-dispatcher ^>= 2.6.0
-                      , trace-forward ^>= 2.2.6
+                      , trace-dispatcher ^>= 2.7.0
+                      , trace-forward ^>= 2.2.7
                       , trace-resources ^>= 0.2.2
                       , tracer-transformers
                       , transformers
