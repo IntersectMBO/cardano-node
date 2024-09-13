@@ -1,25 +1,25 @@
 { pkgs
 , lib
 ##
-, batchName
-, profileName
+, profile
 , backend
+, batchName
 ##
 , cardano-node-rev
 , workbenchNix
 , workbenchDevMode
 , workbenchStartArgs
-, profiling
 ##
 , cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
 }:
 let
+  profileName = profile.name;
+  inherit (profile) profiling;
   backendName = backend.name;
-
   inherit (backend) stateDir basePort useCabalRun;
 
-  profileData = workbenchNix.profile.materialise-profile
-    { inherit profileName backend profiling; };
+  profileData = profile.materialise-profile
+    { inherit backend; };
   backendData = backend.materialise-profile
     { inherit profileData; };
 in

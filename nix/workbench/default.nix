@@ -107,19 +107,26 @@ in pkgs.lib.fix (self: {
   ;
 
   # Return a profile attr with a `materialise-profile` function.
+  # profileName -> profiling -> profile
   profile =
-    import ./profile/profile.nix
+    { profileName
+    , profiling
+    }:
+    (import ./profile/profile.nix
       { inherit pkgs lib;
         inherit (cardanoNodePackages) cardanoLib;
         workbenchNix = self;
+        inherit profileName profiling;
       }
+    )
   ;
 
   # A conveniently-parametrisable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
-  # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
-  # 2. batchName -> profileName -> profiling -> backend -> runner
+  # 1. profileName -> profiling -> profile
+  # 2. backendName -> stateDir -> basePort -> useCabalRun -> backend
+  # 3. profile -> backend -> batchName -> runner
   runner =
     { stateDir
     , batchName
@@ -133,6 +140,10 @@ in pkgs.lib.fix (self: {
     , cardano-node-rev
     }:
     let
+        # Only a name needed to create a profile attrset.
+        profile = self.profile
+                    { inherit profileName profiling; }
+        ;
         # The `useCabalRun` flag is set in the backend to allow the backend to
         # override its value. The runner uses the value of `useCabalRun` from
         # the backend to prevent a runner using a different value.
@@ -142,9 +153,10 @@ in pkgs.lib.fix (self: {
     in import ./backend/runner.nix
       {
           inherit pkgs lib;
-          inherit batchName profileName backend;
+          inherit profile backend;
+          inherit batchName;
           inherit cardano-node-rev;
           workbenchNix = self;
-          inherit workbenchDevMode workbenchStartArgs profiling;
+          inherit workbenchDevMode workbenchStartArgs;
       };
 })

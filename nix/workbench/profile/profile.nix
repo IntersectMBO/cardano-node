@@ -1,13 +1,16 @@
 { pkgs, lib, cardanoLib
 , workbenchNix
+, profileName
+, profiling
 }:
 
 let
-  mkProfileJson = { profileName }:
+  profileJson =
     workbenchNix.runWorkbench "profile-${profileName}.json"
-      "profile json ${profileName}";
+      "profile json ${profileName}"
+  ;
 
-  mkTopologyFiles = { profileName, profileJson }:
+  topologyFiles =
     pkgs.runCommand "workbench-topology-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
@@ -19,11 +22,12 @@ let
       ''
   ;
 
-  mkNodeSpecsJson = { profileName, profileJson }:
+  nodeSpecsJson =
     workbenchNix.runWorkbench "node-specs-${profileName}.json"
-                 "profile node-specs ${profileName} ${mkTopologyFiles {inherit profileName profileJson;}}";
+                 "profile node-specs ${profileName} ${topologyFiles}"
+  ;
 
-  mkGenesisFiles = { profileName, profileJson, nodeSpecsJson }:
+  genesisFiles =
     pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
@@ -66,7 +70,7 @@ let
                                          --argjson x '${x}'
                                        '' "$x";
 
-  mkServices = { profile, nodeSpecs, topologyFiles, backend, profiling }:
+  mkServices = { profile, nodeSpecs, backend }:
     rec {
       inherit
         (pkgs.callPackage
@@ -115,30 +119,19 @@ let
     };
 
   materialise-profile =
-    profileArgs@{ profileName, backend, profiling }:
+    profileArgs@{ backend }:
       if ! builtins.elem profileName workbenchNix.profile-names
       then
         throw "No such profile: ${profileName}; Known profiles: ${toString workbenchNix.profile-names}"
       else
         let
-          profileJson = mkProfileJson { inherit profileName; };
           profile = __fromJSON (__readFile profileJson);
-          topologyFiles =
-            mkTopologyFiles { inherit profileName profileJson; }
-          ;
-          nodeSpecsJson = mkNodeSpecsJson
-            { inherit profileName profileJson;};
           nodeSpecs = __fromJSON (__readFile nodeSpecsJson);
-          genesisFiles =
-            mkGenesisFiles
-              { inherit profileName profileJson nodeSpecsJson; }
-          ;
           inherit (mkServices
             {
-              inherit backend profiling;
+              inherit backend;
               inherit profile;
               inherit nodeSpecs;
-              inherit topologyFiles;
             })
             node-services
             generator-service
@@ -233,5 +226,8 @@ let
           )
   ;
 
-in
-  {inherit materialise-profile;}
+in {
+  name = profileName;
+  inherit profiling;
+  inherit materialise-profile;
+}
