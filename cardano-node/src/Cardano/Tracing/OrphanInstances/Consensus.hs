@@ -239,7 +239,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
-  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Info
+  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice

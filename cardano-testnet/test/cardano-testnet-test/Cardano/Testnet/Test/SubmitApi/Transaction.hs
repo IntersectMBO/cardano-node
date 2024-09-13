@@ -49,6 +49,8 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Golden as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/transaction/"'@
 hprop_transaction :: Property
 hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -156,7 +158,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \temp
       UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
       txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
 
-      H.assert $ 5_000_001 `List.elem` txouts2
+      H.assert $ 15_000_003_000_000 `List.elem` txouts2
 
     response <- H.byDurationM 1 5 "Expected UTxO found" $ do
       txBodySigned <- H.leftFailM $ H.readJsonFile @Aeson.Value txbodySignedFp

@@ -40,7 +40,7 @@ common project-config
                         -Wunused-packages
 common maybe-Win32 
   if os(windows) 
-    build-depends:      Win32 
+    build-depends:      Win32
 
 common maybe-unix
   if !os(windows)
