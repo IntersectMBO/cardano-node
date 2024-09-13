@@ -73,7 +73,6 @@ source-repository-package
   tag: 5c304e5adbd27907c675bd60a2282264a65f117c
   --sha256: Jn3Qqlsirlyu23bsFN2SO054LIe2rcsHUW1tN8Pm1Ks=
   subdir:
-    ouroboros-network
     ouroboros-network-api
     ouroboros-network-protocols
 
