@@ -128,6 +128,51 @@ in with final;
 
   all-profiles-json = workbench.profile-names-json;
 
+  # The profile data and backend data of the cloud / "*-nomadperf" profiles.
+  # Useful to mix workbench and cardano-node commits, mostly because of scripts.
+  profile-data-nomadperf = builtins.listToAttrs (
+    builtins.map
+    (cloudName:
+      # Only Conway era cloud profiles are flake outputs.
+      let profileName = "${cloudName}-coay";
+      in {
+        name = profileName;
+        value =
+          let
+              # Default values only ("run/current", 30000, profiling "none").
+              profile = workbench.profile {
+                inherit profileName;
+                inherit (customConfig) profiling;
+              };
+              backend = workbench.backend
+                { backendName = "nomadcloud";
+                  stateDir    = customConfig.localCluster.stateDir;
+                  basePort    = customConfig.localCluster.basePort;
+                  useCabalRun = customConfig.localCluster.useCabalRun;
+                }
+              ;
+              profileData = profile.materialise-profile
+                { inherit backend; }
+              ;
+              backendData = backend.materialise-profile {inherit profileData;};
+          in pkgs.runCommand "workbench-data-${profileName}" {}
+            ''
+            mkdir $out
+            ln -s ${profileData} $out/profileData
+            ln -s ${backendData} $out/backendData
+            ''
+        ;
+        }
+    )
+    # Fetch all "*-nomadperf" profiles.
+    (__fromJSON (__readFile
+      (pkgs.runCommand "cardano-profile-names-cloud-noera" {} ''
+        ${cardanoNodePackages.cardano-profile}/bin/cardano-profile names-cloud-noera > $out
+      ''
+      )
+    ))
+  );
+
   # Disable failing python uvloop tests
   python39 = prev.python39.override {
     packageOverrides = pythonFinal: pythonPrev: {

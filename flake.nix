@@ -211,7 +211,7 @@
                               workbenchStartArgs = [ "--create-testnet-data" "--trace" ];
                             };
 
-            inherit (pkgs) all-profiles-json;
+            inherit (pkgs) all-profiles-json profile-data-nomadperf;
 
             system-tests = pkgs.writeShellApplication {
               name = "system-tests";

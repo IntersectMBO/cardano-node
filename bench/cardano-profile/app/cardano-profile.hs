@@ -16,7 +16,14 @@ import qualified Cardano.Benchmarking.Profile.Types as Types
 
 --------------------------------------------------------------------------------
 
-data Cli = Names | All | ByName String | LibMK | ToJson String | FromJson String
+data Cli =
+    Names
+  | NamesCloudNoEra
+  | All
+  | ByName String
+  | LibMK
+  | ToJson String
+  | FromJson String
 
 --------------------------------------------------------------------------------
 
@@ -26,6 +33,8 @@ main = do
   case cli of
     -- Print all profile names.
     Names -> BSL8.putStrLn $ Aeson.encode Profiles.names
+    -- Print all cloud profile (-nomadperf) names.
+    NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesCloudNoEra
     -- Print a map with all profiles, with an optional overlay.
     All -> do
       obj <- lookupOverlay
@@ -75,6 +84,12 @@ cliParser = OA.hsubparser $
         (OA.info
           (pure Names)
           (OA.fullDesc <> OA.header "names" <> OA.progDesc "All profiles names")
+        )
+  <>
+      OA.command "names-cloud-noera"
+        (OA.info
+          (pure NamesCloudNoEra)
+          (OA.fullDesc <> OA.header "names" <> OA.progDesc "All cloud profiles names (no era suffix)")
         )
   <>
       OA.command "all"
