@@ -1494,7 +1494,13 @@ instance ( StandardHash blk
   forHuman (LedgerDB.DeletedSnapshot snap) =
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
-      "Invalid snapshot " <> showT snap <> showT failure
+      "Invalid snapshot " <> showT snap <> showT failure <> context
+    where
+      context = case failure of
+        LedgerDB.InitFailureRead{} ->
+             " This is most likely an expected change in the serialization format,"
+          <> " which currently requires a chain replay"
+        _ -> ""
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt) =
     mconcat [ "kind" .= String "TookSnapshot"
