@@ -27,45 +27,6 @@ let
                  "profile node-specs ${profileName} ${topologyFiles}"
   ;
 
-  genesisFiles =
-    pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
-      { requiredSystemFeatures = [ "benchmark" ];
-        nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-          [ bash cardano-cli coreutils gnused jq moreutils workbenchNix.workbench ];
-      }
-      ''
-      mkdir $out
-
-      cache_key_input=$(wb genesis profile-cache-key-input ${profileJson})
-      cache_key=$(      wb genesis profile-cache-key       ${profileJson})
-
-      genesis_keepalive() {
-        while test ! -e $out/profile; do echo 'genesis_keepalive for Hydra'; sleep 10s; done
-      }
-      genesis_keepalive &
-      __genesis_keepalive_pid=$!
-      __genesis_keepalive_termination() {
-        kill $__genesis_keepalive_pid 2>/dev/null || true
-      }
-      trap __genesis_keepalive_termination EXIT
-
-      args=(
-        genesis actually-genesis
-        ${profileJson}
-        ${nodeSpecsJson}
-        $out
-        "$cache_key_input"
-        "$cache_key"
-      )
-      time wb "''${args[@]}"
-
-      touch done
-
-      ln -s ${profileJson}   $out
-      ln -s ${nodeSpecsJson} $out
-      ''
-  ;
-
   jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
                                          --argjson x '${x}'
                                        '' "$x";
@@ -220,7 +181,6 @@ let
                 value = (__fromJSON (__readFile "${topologyFiles}/topology.json"));
               };
               node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
-              genesis.files = genesisFiles;
               inherit node-services generator-service tracer-service healthcheck-service latency-service;
             }
           )
@@ -229,5 +189,6 @@ let
 in {
   name = profileName;
   inherit profiling;
+  inherit profileJson nodeSpecsJson;
   inherit materialise-profile;
 }
