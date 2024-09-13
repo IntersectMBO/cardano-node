@@ -22,6 +22,7 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
+import           Data.Default.Class
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
@@ -39,6 +40,7 @@ import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -68,11 +70,11 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = numVotes
         }
+      shelleyOptions = def { shelleyEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -80,7 +82,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

@@ -16,6 +16,7 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Data.Default.Class
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
@@ -24,6 +25,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -46,11 +48,8 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let cardanoNodeEra = AnyShelleyBasedEra sbe
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 50 -- 50 * (1/10s) length, i.e. 5 seconds
-        , cardanoSlotLength = 0.1  -- 1/10s slot (100ms)
-        , cardanoNodeEra
-        }
+      fastTestnetOptions = def { cardanoNodeEra }
+      shelleyOptions = def { shelleyEpochLength = 50 } -- 50 * (1/10s) length, i.e. 5 seconds
 
   TestnetRuntime
     { testnetMagic
@@ -58,7 +57,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

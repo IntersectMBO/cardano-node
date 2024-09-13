@@ -24,6 +24,7 @@ import           Prelude
 
 import           Control.Monad
 import           Data.Bifunctor (first)
+import           Data.Default.Class
 import           Data.Foldable
 import qualified Data.Map.Strict as Map
 import           Data.String
@@ -37,6 +38,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -56,10 +58,9 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
-        }
+      asbe = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def { shelleyEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -67,7 +68,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

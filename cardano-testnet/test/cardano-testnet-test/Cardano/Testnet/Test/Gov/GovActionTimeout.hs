@@ -16,6 +16,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import           Data.String (fromString)
 import           System.FilePath ((</>))
 
@@ -23,6 +24,7 @@ import           Testnet.Components.Query
 import           Testnet.Process.Cli.DRep (makeActivityChangeProposal)
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -45,10 +47,9 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
-        }
+      asbe = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def { shelleyEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
@@ -56,7 +57,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

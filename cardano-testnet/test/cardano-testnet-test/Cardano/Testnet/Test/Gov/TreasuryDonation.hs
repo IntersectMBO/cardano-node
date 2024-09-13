@@ -19,6 +19,7 @@ import           Prelude
 
 import           Control.Monad (unless, void)
 import           Control.Monad.Catch (MonadCatch)
+import           Data.Default.Class
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import           System.Exit
@@ -27,6 +28,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -44,11 +46,8 @@ hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation"
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
-        }
+      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+      shelleyOptions = def { shelleyEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
@@ -56,7 +55,7 @@ hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation"
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

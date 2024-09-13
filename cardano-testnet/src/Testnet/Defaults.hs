@@ -68,6 +68,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Vector as Vector
+import           Data.Word (Word64)
 import           Lens.Micro
 import           Numeric.Natural
 import           System.FilePath ((</>))
@@ -416,31 +417,31 @@ defaultByronProtocolParamsJsonValue =
     ]
 
 defaultShelleyGenesis
-  :: UTCTime
-  -> CardanoTestnetOptions
+  :: AnyShelleyBasedEra
+  -> UTCTime
+  -> Word64
+  -> ShelleyTestnetOptions
   -> Api.ShelleyGenesis StandardCrypto
-defaultShelleyGenesis startTime testnetOptions = do
-  let CardanoTestnetOptions
-        { cardanoTestnetMagic = testnetMagic
-        , cardanoSlotLength = slotLength
-        , cardanoEpochLength = epochLength
-        , cardanoMaxSupply = sgMaxLovelaceSupply
-        , cardanoActiveSlotsCoeff
-        , cardanoNodeEra
-        } = testnetOptions
+defaultShelleyGenesis asbe startTime maxSupply options = do
+  let ShelleyTestnetOptions
+        { shelleyTestnetMagic = magic
+        , shelleySlotLength = slotLength
+        , shelleyEpochLength = epochLength
+        , shelleyActiveSlotsCoeff
+        } = options
       -- f
-      activeSlotsCoeff = round (cardanoActiveSlotsCoeff * 100) % 100
+      activeSlotsCoeff = round (shelleyActiveSlotsCoeff * 100) % 100
       -- make security param k satisfy: epochLength = 10 * k / f
       -- TODO: find out why this actually degrates network stability - turned off for now
       -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
-      pVer = eraToProtocolVersion cardanoNodeEra
+      pVer = eraToProtocolVersion asbe
       protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
       protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
   Api.shelleyGenesisDefaults
         { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff
         , Api.sgEpochLength = EpochSize $ fromIntegral epochLength
-        , Api.sgMaxLovelaceSupply
-        , Api.sgNetworkMagic = fromIntegral testnetMagic
+        , Api.sgMaxLovelaceSupply = maxSupply
+        , Api.sgNetworkMagic = fromIntegral magic
         , Api.sgProtocolParams = protocolParamsWithPVer
         -- using default from shelley genesis k = 2160
         -- , Api.sgSecurityParam = securityParam

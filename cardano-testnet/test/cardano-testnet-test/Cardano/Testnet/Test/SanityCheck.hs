@@ -14,12 +14,14 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
 
+import           Data.Default.Class
 import           Prelude
 
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack
 
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -43,13 +45,14 @@ hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-ch
   -- Start a local test net
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
+  let fastTestnetOptions = def
+      shelleyOptions = def
+        { shelleyEpochLength = 100
+        , shelleySlotLength = 0.1
         }
 
   TestnetRuntime{configurationFile, poolNodes}
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
   nr@NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes
   let socketPath = nodeSocketPath nr
 

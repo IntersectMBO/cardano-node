@@ -12,6 +12,7 @@ import           Prelude
 
 import           Control.Concurrent.Async ()
 import           Control.Monad.Trans.State.Strict
+import           Data.Default.Class
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
@@ -29,11 +30,9 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       sbe = ShelleyBasedEraBabbage
-      options = cardanoDefaultTestnetOptions
-        { cardanoNodeEra = AnyShelleyBasedEra sbe
-        }
+      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
 
-  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
+  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options def conf
 
   socketPathAbs <- do
     socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)

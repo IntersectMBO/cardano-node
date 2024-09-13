@@ -25,6 +25,7 @@ import qualified Data.Aeson.Lens as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Default.Class
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Text as Text
@@ -54,7 +55,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       sbe = ShelleyBasedEraBabbage
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-      options = cardanoDefaultTestnetOptions
+      options = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
         }
 
@@ -65,7 +66,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
     , testnetMagic
     , poolNodes
     , wallets=wallet0:_
-    } <- cardanoTestnetDefault options conf
+    } <- cardanoTestnetDefault options def conf
 
   poolNode1 <- H.headM poolNodes
 

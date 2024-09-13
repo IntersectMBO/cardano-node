@@ -18,6 +18,7 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Data.Default.Class
 import           Data.Either
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
@@ -44,7 +45,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
   tr@TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- cardanoTestnetDefault cardanoDefaultTestnetOptions conf
+    } <- cardanoTestnetDefault def def conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
   startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
 

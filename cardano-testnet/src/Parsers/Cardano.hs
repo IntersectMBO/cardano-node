@@ -9,6 +9,7 @@ import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
 
 import           Prelude
 
+import           Data.Default.Class
 import           Data.Functor
 import qualified Data.List as L
 import           Data.Word (Word64)
@@ -20,46 +21,29 @@ import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
 
 
-optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
-optsTestnet envCli = CardanoTestnetOptions
+optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
+optsTestnet envCli = CardanoTestnetCliOptions
+  <$> pCardanoTestnetCliOptions envCli
+  <*> pShelleyTestnetOptions
+
+pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
+pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   <$> pNumSpoNodes
   <*> pAnyShelleyBasedEra'
-  <*> OA.option auto
-      (   OA.long "epoch-length"
-      <>  OA.help "Epoch length, in number of slots"
-      <>  OA.metavar "SLOTS"
-      <>  OA.showDefault
-      <>  OA.value (cardanoEpochLength cardanoDefaultTestnetOptions)
-      )
-  <*> OA.option auto
-      (   OA.long "slot-length"
-      <>  OA.help "Slot length"
-      <>  OA.metavar "SECONDS"
-      <>  OA.showDefault
-      <>  OA.value (cardanoSlotLength cardanoDefaultTestnetOptions)
-      )
-  <*> pNetworkId
-  <*> OA.option auto
-      (   OA.long "active-slots-coeff"
-      <>  OA.help "Active slots co-efficient"
-      <>  OA.metavar "DOUBLE"
-      <>  OA.showDefault
-      <>  OA.value (cardanoActiveSlotsCoeff cardanoDefaultTestnetOptions)
-      )
   <*> pMaxLovelaceSupply
   <*> OA.option auto
       (   OA.long "enable-p2p"
       <>  OA.help "Enable P2P"
       <>  OA.metavar "BOOL"
       <>  OA.showDefault
-      <>  OA.value (cardanoEnableP2P cardanoDefaultTestnetOptions)
+      <>  OA.value (cardanoEnableP2P def)
       )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
       <>  OA.showDefault
-      <>  OA.value (cardanoNodeLoggingFormat cardanoDefaultTestnetOptions)
+      <>  OA.value (cardanoNodeLoggingFormat def)
       )
   <*> OA.option auto
       (   OA.long "num-dreps"
@@ -86,9 +70,8 @@ pNumSpoNodes =
      <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
      <>  OA.metavar "COUNT"
      <>  OA.showDefault
-     <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
+     <>  OA.value (cardanoNodes def)
      )
-
 
 _pSpo :: Parser TestnetNodeOptions
 _pSpo =
@@ -113,8 +96,40 @@ parseNodeConfigFile = NodeConfigurationYaml <$>
                , "Or use num-pool-nodes to use cardano-testnet's default configuration."
                ]
 
+pShelleyTestnetOptions :: Parser ShelleyTestnetOptions
+pShelleyTestnetOptions =
+  ShelleyTestnetOptions
+    <$> pNetworkId
+    <*> pEpochLength
+    <*> pSlotLength
+    <*> pActiveSlotCoeffs
+  where
+    pEpochLength =
+      OA.option auto
+        (   OA.long "epoch-length"
+        <>  OA.help "Epoch length, in number of slots"
+        <>  OA.metavar "SLOTS"
+        <>  OA.showDefault
+        <>  OA.value (shelleyEpochLength def)
+        )
+    pSlotLength =
+      OA.option auto
+        (   OA.long "slot-length"
+        <>  OA.help "Slot length"
+        <>  OA.metavar "SECONDS"
+        <>  OA.showDefault
+        <>  OA.value (shelleySlotLength def)
+        )
+    pActiveSlotCoeffs =
+      OA.option auto
+        (   OA.long "active-slots-coeff"
+        <>  OA.help "Active slots co-efficient"
+        <>  OA.metavar "DOUBLE"
+        <>  OA.showDefault
+        <>  OA.value (shelleyActiveSlotsCoeff def)
+        )
 
-cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetOptions
+cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetCliOptions
 cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)
 
 pNetworkId :: Parser Int
@@ -132,6 +147,6 @@ pMaxLovelaceSupply =
       <>  help "Max lovelace supply that your testnet starts with."
       <>  metavar "WORD64"
       <>  showDefault
-      <>  value (cardanoMaxSupply cardanoDefaultTestnetOptions)
+      <>  value (cardanoMaxSupply def)
       )
 

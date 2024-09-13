@@ -22,6 +22,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import qualified Data.List as List
+import           Data.Default.Class
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Lens.Micro
@@ -47,19 +48,17 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraBabbage
+    sbe = ShelleyBasedEraBabbage -- TODO: We should only support the latest era and the upcoming era
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    options = cardanoDefaultTestnetOptions
-      { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-      }
+    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
     , wallets=wallet0:_
-    } <- cardanoTestnetDefault options conf
+    } <- cardanoTestnetDefault options def conf
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1

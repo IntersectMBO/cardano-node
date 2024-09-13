@@ -8,10 +8,10 @@
 
 module Testnet.Start.Cardano
   ( ForkPoint(..)
+  , CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
   , extraSpoNodeCliArgs
   , TestnetNodeOptions(..)
-  , cardanoDefaultTestnetOptions
   , cardanoDefaultTestnetNodeOptions
 
   , TestnetRuntime (..)
@@ -43,10 +43,10 @@ import           Data.Either
 import qualified Data.List as L
 import           Data.Maybe
 import qualified Data.Text as Text
-import           Data.Time (UTCTime, diffUTCTime)
+import           Data.Time (diffUTCTime)
 import           Data.Time.Clock (NominalDiffTime)
 import qualified Data.Time.Clock as DTC
-import           Data.Word (Word32)
+import           Data.Word (Word64)
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
@@ -71,12 +71,10 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
-testnetMinimumConfigurationRequirements :: MonadTest m => CardanoTestnetOptions -> m ()
-testnetMinimumConfigurationRequirements cTestnetOpts = do
-  let actualLength = length (cardanoNodes cTestnetOpts)
-  when (actualLength < 2) $ do
-     H.noteShow_ ("Need at least two nodes to run a cluster, but got: " <> show actualLength)
-     H.noteShow_ cTestnetOpts
+testnetMinimumConfigurationRequirements :: MonadTest m => NumPools -> m ()
+testnetMinimumConfigurationRequirements (NumPools n) =
+  when (n < 2) $ do
+     H.noteShow_ ("Need at least two nodes to run a cluster, but got: " <> show n)
      H.failure
 
 data ForkPoint
@@ -90,19 +88,23 @@ data ForkPoint
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
--- | Like 'cardanoTestnet', but using defaults for all configuration files.
+-- | Like 'cardanoTestnet', but using 'ShelleyTestnetOptions' to obtain
+-- the genesis files, instead of passing them directly.
 -- See 'cardanoTestnet' for additional documentation.
 cardanoTestnetDefault
   :: ()
   => HasCallStack
   => CardanoTestnetOptions
+  -> ShelleyTestnetOptions
   -> Conf
   -> H.Integration TestnetRuntime
-cardanoTestnetDefault opts conf = do
-  AnyShelleyBasedEra sbe <- pure $ cardanoNodeEra cardanoDefaultTestnetOptions
+cardanoTestnetDefault testnetOptions shelleyOptions conf = do
+  AnyShelleyBasedEra sbe <- pure cardanoNodeEra
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
-  (startTime, shelleyGenesis) <- getDefaultShelleyGenesis opts
-  cardanoTestnet opts conf startTime shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
+  shelleyGenesis <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply shelleyOptions
+  cardanoTestnet testnetOptions conf shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
+  where
+    CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply} = testnetOptions
 
 -- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
 getDefaultAlonzoGenesis :: ()
@@ -117,12 +119,14 @@ getDefaultShelleyGenesis :: ()
   => HasCallStack
   => MonadIO m
   => MonadTest m
-  => CardanoTestnetOptions
-  -> m (UTCTime, ShelleyGenesis StandardCrypto)
-getDefaultShelleyGenesis opts = do
+  => AnyShelleyBasedEra
+  -> Word64 -- ^ The max supply
+  -> ShelleyTestnetOptions
+  -> m (ShelleyGenesis StandardCrypto)
+getDefaultShelleyGenesis asbe maxSupply opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-  return (startTime, Defaults.defaultShelleyGenesis startTime opts)
+  return $ Defaults.defaultShelleyGenesis asbe startTime maxSupply opts
 
 -- | Setup a number of credentials and pools, like this:
 --
@@ -174,37 +178,26 @@ getDefaultShelleyGenesis opts = do
 -- >         └── utxo.{addr,skey,vkey}
 cardanoTestnet :: ()
   => HasCallStack
-  => CardanoTestnetOptions -- ^ The options to use. Must be consistent with the genesis files.
+  => CardanoTestnetOptions -- ^ The options to use
   -> Conf
-  -> UTCTime -- ^ The starting time. Must be the same as the one in the shelley genesis.
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
                                    --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
   -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> H.Integration TestnetRuntime
 cardanoTestnet
-  testnetOptions Conf {tempAbsPath=TmpAbsolutePath tmpAbsPath} startTime
+  testnetOptions Conf {tempAbsPath=TmpAbsolutePath tmpAbsPath}
   shelleyGenesis alonzoGenesis conwayGenesis = do
-  let shelleyStartTime = sgSystemStart shelleyGenesis
-      shelleyTestnetMagic = sgNetworkMagic shelleyGenesis
-      optionsMagic :: Word32 = fromIntegral $ cardanoTestnetMagic testnetOptions
-      testnetMagic = cardanoTestnetMagic testnetOptions
+  let (CardanoTestnetOptions _cardanoNodes asbe maxSupply _p2p nodeLoggingFormat _numDReps newEpochStateLogging) = testnetOptions
+      startTime = sgSystemStart shelleyGenesis
+      testnetMagic = fromIntegral $ sgNetworkMagic shelleyGenesis
       numPoolNodes = length $ cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
-      maxSupply = cardanoMaxSupply testnetOptions
-      asbe = cardanoNodeEra testnetOptions
   AnyShelleyBasedEra sbe <- pure asbe
 
-   -- Sanity checks
-  testnetMinimumConfigurationRequirements testnetOptions
-  when (shelleyStartTime /= startTime) $ do
-    H.note_ $ "Expected same system start in shelley genesis and parameter, but got " <> show shelleyStartTime <> " and " <> show startTime
-    H.failure
-  when (shelleyTestnetMagic /= optionsMagic) $ do
-    H.note_ $ "Expected same network magic in shelley genesis and parameter, but got " <> show shelleyTestnetMagic <> " and " <> show optionsMagic
-    H.failure
-  -- Done with sanity checks
+  -- Sanity check
+  testnetMinimumConfigurationRequirements nPools
 
   H.note_ OS.os
 
@@ -359,7 +352,7 @@ cardanoTestnet
     now <- H.noteShowIO DTC.getCurrentTime
     deadline <- H.noteShow $ DTC.addUTCTime 45 now
     forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
-      assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+      assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
     H.noteShowIO_ DTC.getCurrentTime
 
@@ -395,9 +388,9 @@ cardanoTestnet
 
     stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
-    assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
+    assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
-    when (cardanoEnableNewEpochStateLogging testnetOptions) $
+    when newEpochStateLogging $
       TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
 
     pure runtime

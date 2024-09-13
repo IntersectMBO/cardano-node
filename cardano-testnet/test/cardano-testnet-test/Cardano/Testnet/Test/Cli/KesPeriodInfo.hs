@@ -23,6 +23,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import           Data.Default.Class
 import           Data.Function
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -56,18 +57,17 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     <- mkConf tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = ShelleyBasedEraBabbage
+      sbe = ShelleyBasedEraBabbage -- TODO: We should only support the latest era and the upcoming era
+      asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
-      cTestnetOptions = cardanoDefaultTestnetOptions
-                          { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                          }
+      cTestnetOptions = def { cardanoNodeEra = asbe }
 
   runTime@TestnetRuntime
     { configurationFile
     , testnetMagic
     , wallets=wallet0:_
     , poolNodes
-    } <- cardanoTestnetDefault cTestnetOptions conf
+    } <- cardanoTestnetDefault cTestnetOptions def conf
   node1sprocket <- H.headM $ poolSprockets runTime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
@@ -88,11 +88,11 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 3
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
-    <- registerSingleSpo 1 tempAbsPath
+    <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
          node1SocketPath
          termEpoch
-         cTestnetOptions
+         testnetMagic
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)
 

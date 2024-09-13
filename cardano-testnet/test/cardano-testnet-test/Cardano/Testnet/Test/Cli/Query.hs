@@ -45,6 +45,7 @@ import qualified Data.Aeson.Lens as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (type (:~:) (Refl))
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
@@ -69,6 +70,7 @@ import           Testnet.Process.Cli.Transaction (TxOutAddress (ReferenceScriptA
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types (ShelleyTestnetOptions(..))
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 
@@ -90,16 +92,16 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let sbe = ShelleyBasedEraConway
+      asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def
+        { shelleyEpochLength = 100
         -- We change slotCoeff because epochLength must be equal to:
         -- securityParam * 10 / slotCoeff
-        , cardanoActiveSlotsCoeff = 0.5
+        , shelleyActiveSlotsCoeff = 0.5
         }
 
   TestnetRuntime
@@ -108,7 +110,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     , configurationFile
     , wallets=wallet0:wallet1:_
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   let shelleyGeneisFile = work </> Defaults.defaultGenesisFilepath ShelleyEra
 

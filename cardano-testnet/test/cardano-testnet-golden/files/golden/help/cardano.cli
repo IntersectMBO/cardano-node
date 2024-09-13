@@ -6,15 +6,15 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   | --babbage-era
   | --conway-era
   ]
-  [--epoch-length SLOTS]
-  [--slot-length SECONDS]
-  --testnet-magic INT
-  [--active-slots-coeff DOUBLE]
   [--max-lovelace-supply WORD64]
   [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
+  --testnet-magic INT
+  [--epoch-length SLOTS]
+  [--slot-length SECONDS]
+  [--active-slots-coeff DOUBLE]
 
   Start a testnet in any era
 
@@ -28,11 +28,6 @@ Available options:
   --alonzo-era             Specify the Alonzo era
   --babbage-era            Specify the Babbage era (default)
   --conway-era             Specify the Conway era
-  --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
-  --slot-length SECONDS    Slot length (default: 0.1)
-  --testnet-magic INT      Specify a testnet magic id.
-  --active-slots-coeff DOUBLE
-                           Active slots co-efficient (default: 5.0e-2)
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
                            (default: 100000020000000)
@@ -45,4 +40,9 @@ Available options:
   --enable-new-epoch-state-logging
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log
+  --testnet-magic INT      Specify a testnet magic id.
+  --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
+  --slot-length SECONDS    Slot length (default: 0.1)
+  --active-slots-coeff DOUBLE
+                           Active slots co-efficient (default: 5.0e-2)
   -h,--help                Show this help text

@@ -12,6 +12,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
@@ -21,6 +22,7 @@ import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
+import           Testnet.Start.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras as H
@@ -42,11 +44,11 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 0
         }
+      shelleyOptions = def { shelleyEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
@@ -54,7 +56,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

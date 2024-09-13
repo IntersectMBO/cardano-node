@@ -31,7 +31,7 @@ opts envCli = Opt.info (commands envCli <**> helper) idm
 -- by allowing the user to start testnets in any era (excluding Byron)
 -- via StartCardanoTestnet
 data CardanoTestnetCommands
-  = StartCardanoTestnet CardanoTestnetOptions
+  = StartCardanoTestnet CardanoTestnetCliOptions
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
@@ -51,6 +51,6 @@ runTestnetCmd = \case
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
 
 
-runCardanoOptions :: CardanoTestnetOptions -> IO ()
-runCardanoOptions options =
-  runTestnet $ cardanoTestnetDefault options
+runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
+runCardanoOptions (CardanoTestnetCliOptions testnetOptions shelleyOptions) =
+  runTestnet $ cardanoTestnetDefault testnetOptions shelleyOptions

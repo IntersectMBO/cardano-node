@@ -29,6 +29,7 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.State.Class
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Default.Class
 import           Data.Map (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as Text
@@ -41,7 +42,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (eraToString)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -60,11 +61,10 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
       era = toCardanoEra sbe
       eraName = eraToString era
 
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoActiveSlotsCoeff = 0.3
-        }
+      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+      shelleyOptions = def { shelleyEpochLength = 200
+                           , shelleyActiveSlotsCoeff = 0.3
+                           }
 
   TestnetRuntime
     { testnetMagic
@@ -72,7 +72,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime

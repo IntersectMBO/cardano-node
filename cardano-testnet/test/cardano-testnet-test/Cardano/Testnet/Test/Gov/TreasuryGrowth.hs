@@ -15,6 +15,7 @@ import           Cardano.Testnet as TN
 import           Prelude
 
 import           Control.Monad.Trans.State.Strict
+import           Data.Default.Class
 import           Data.List (sortOn)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -24,7 +25,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (eraToString)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import qualified Hedgehog as H
@@ -41,13 +42,12 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
 
   let era = ConwayEra
       sbe = ShelleyBasedEraConway
-      options = cardanoDefaultTestnetOptions
-                  { cardanoEpochLength = 100
-                  , cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
-                  , cardanoActiveSlotsCoeff = 0.3
-                  }
+      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe } -- TODO: We should only support the latest era and the upcoming era
+      shelleyOptions = def { shelleyEpochLength = 100
+                           , shelleyActiveSlotsCoeff = 0.3
+                           }
 
-  TestnetRuntime{testnetMagic, configurationFile, poolNodes} <- cardanoTestnetDefault options conf
+  TestnetRuntime{testnetMagic, configurationFile, poolNodes} <- cardanoTestnetDefault options shelleyOptions conf
 
   (execConfig, socketPathAbs) <- do
     PoolNode{poolRuntime} <- H.headM poolNodes
