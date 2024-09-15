@@ -1,4 +1,4 @@
-{ pkgs, lib, cardanoLib
+{ pkgs, lib
 , workbenchNix
 , profileName
 , profiling
@@ -41,7 +41,7 @@ let
             inherit topologyFiles profiling;
             inherit workbenchNix;
             inherit jsonFilePretty;
-            baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
+            baseNodeConfig = workbenchNix.cardanoNodePackages.cardanoLib.environments.testnet.nodeConfig;
           })
         node-services;
 

@@ -6,7 +6,8 @@
 , batchName
 ##
 , cardano-node-rev
-, workbenchNix
+, workbench
+, cardanoNodePackages
 , workbenchDevMode
 , workbenchStartArgs
 ##
@@ -27,11 +28,11 @@ in
 
     path = pkgs.lib.makeBinPath path';
     path' =
-      [ workbenchNix.cardanoNodePackages.bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils
+      [ cardanoNodePackages.bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils
       ]
       ## In dev mode, call the script directly:
       ++ pkgs.lib.optionals (!workbenchDevMode)
-      [ workbenchNix.workbench ];
+      [ workbench ];
 
     workbench-interactive-start = pkgs.writeScriptBin "start-cluster" ''
       set -euo pipefail
@@ -70,7 +71,7 @@ in
           pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
             { requiredSystemFeatures = [ "benchmark" ];
               nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-                [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
+                [ bash cardano-cli coreutils gnused jq moreutils workbench ];
             }
             ''
             mkdir $out
@@ -109,7 +110,7 @@ in
           "report ${name}-log $out ${name}/stdout";
         run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
-            nativeBuildInputs = with workbenchNix.cardanoNodePackages; with pkgs; [
+            nativeBuildInputs = with cardanoNodePackages; with pkgs; [
               bash
               bech32
               coreutils
@@ -118,7 +119,7 @@ in
               moreutils
               nix
               pstree
-              workbenchNix.workbench
+              workbench
               zstd
             ]
             ++
@@ -184,7 +185,7 @@ in
         analysis = pkgs.runCommand "workbench-run-analysis-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
             nativeBuildInputs = with pkgs;
-              [ bash coreutils gnused jq moreutils nix workbenchNix.workbench ];
+              [ bash coreutils gnused jq moreutils nix workbench ];
           }
           ''
           echo "analysing run:  ${run}"

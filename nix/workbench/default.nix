@@ -114,7 +114,6 @@ in pkgs.lib.fix (self: {
     }:
     (import ./profile/profile.nix
       { inherit pkgs lib;
-        inherit (cardanoNodePackages) cardanoLib;
         workbenchNix = self;
         inherit profileName profiling;
       }
@@ -156,7 +155,8 @@ in pkgs.lib.fix (self: {
           inherit profile backend;
           inherit batchName;
           inherit cardano-node-rev;
-          workbenchNix = self;
+          inherit workbench; # The derivation.
+          inherit cardanoNodePackages;
           inherit workbenchDevMode workbenchStartArgs;
       };
 })
