@@ -69,7 +69,7 @@ import           Testnet.Process.Cli.Transaction (
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Start.Types (ShelleyTestnetOptions(..))
+import           Testnet.Start.Types (GenesisOptions(..))
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 

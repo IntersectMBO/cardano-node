@@ -420,10 +420,10 @@ defaultShelleyGenesis
   :: AnyShelleyBasedEra
   -> UTCTime
   -> Word64
-  -> ShelleyTestnetOptions
+  -> GenesisOptions
   -> Api.ShelleyGenesis StandardCrypto
 defaultShelleyGenesis asbe startTime maxSupply options = do
-  let ShelleyTestnetOptions
+  let GenesisOptions
         { shelleyTestnetMagic = magic
         , shelleySlotLength = slotLength
         , shelleyEpochLength = epochLength

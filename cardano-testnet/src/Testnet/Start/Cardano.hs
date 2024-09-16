@@ -88,14 +88,14 @@ data ForkPoint
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
--- | Like 'cardanoTestnet', but using 'ShelleyTestnetOptions' to obtain
+-- | Like 'cardanoTestnet', but using 'GenesisOptions' to obtain
 -- the genesis files, instead of passing them directly.
 -- See 'cardanoTestnet' for additional documentation.
 cardanoTestnetDefault
   :: ()
   => HasCallStack
   => CardanoTestnetOptions
-  -> ShelleyTestnetOptions
+  -> GenesisOptions
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault testnetOptions shelleyOptions conf = do
@@ -121,7 +121,7 @@ getDefaultShelleyGenesis :: ()
   => MonadTest m
   => AnyShelleyBasedEra
   -> Word64 -- ^ The max supply
-  -> ShelleyTestnetOptions
+  -> GenesisOptions
   -> m (ShelleyGenesis StandardCrypto)
 getDefaultShelleyGenesis asbe maxSupply opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime

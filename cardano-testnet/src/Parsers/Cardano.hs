@@ -24,7 +24,7 @@ import           Testnet.Types (readNodeLoggingFormat)
 optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
 optsTestnet envCli = CardanoTestnetCliOptions
   <$> pCardanoTestnetCliOptions envCli
-  <*> pShelleyTestnetOptions
+  <*> pGenesisOptions
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
@@ -96,9 +96,9 @@ parseNodeConfigFile = NodeConfigurationYaml <$>
                , "Or use num-pool-nodes to use cardano-testnet's default configuration."
                ]
 
-pShelleyTestnetOptions :: Parser ShelleyTestnetOptions
-pShelleyTestnetOptions =
-  ShelleyTestnetOptions
+pGenesisOptions :: Parser GenesisOptions
+pGenesisOptions =
+  GenesisOptions
     <$> pNetworkId
     <*> pEpochLength
     <*> pSlotLength
