@@ -91,6 +91,8 @@ data Action where
   -- 'Cardano.Benchmarking.Script.Env.setEnvKeys'.
   ReadSigningKey     :: !String -> !(SigningKeyFile In) -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
+  DefineDRepKeys     :: !String -> ![(SigningKey PaymentKey, VerificationKey StakeKey)] -> Action
+  -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
   -- | 'AddFund' is mostly a wrapper around
   -- 'Cardano.Benchmarking.Wallet.walletRefInsertFund' which in turn

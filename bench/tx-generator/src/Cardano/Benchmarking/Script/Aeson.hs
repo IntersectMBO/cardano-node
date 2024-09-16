@@ -72,6 +72,15 @@ instance FromJSON (SigningKey PaymentKey) where
       Right k   -> pure k
       Left err  -> fail $ show err
 
+instance ToJSON (VerificationKey StakeKey) where
+  toJSON = toJSON . serialiseToTextEnvelope Nothing
+instance FromJSON (VerificationKey StakeKey) where
+  parseJSON o = do
+    te <- parseJSON o
+    case deserialiseFromTextEnvelope (AsVerificationKey AsStakeKey) te of
+      Right k  -> pure k
+      Left err -> fail $ show err
+
 instance ToJSON ProtocolParametersSource where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum
