@@ -8,6 +8,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -47,6 +48,10 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvGenesis
         , getEnvKeys
         , setEnvKeys
+        , getEnvDRepOneKeyPair
+        , setEnvDRepOneKeyPair
+        , getEnvDRepManyKeyPairs
+        , setEnvDRepManyKeyPairs
         , getEnvNetworkId
         , setEnvNetworkId
         , getEnvProtocol
@@ -63,7 +68,7 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvSummary
 ) where
 
-import           Cardano.Api (File (..), SocketPath)
+import           Cardano.Api (File (..), SocketPath, StakeKey, VerificationKey)
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
@@ -83,6 +88,7 @@ import           Prelude
 
 import           Control.Concurrent.STM (STM)
 import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
+import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
@@ -106,6 +112,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
                , envKeys :: Map String (SigningKey PaymentKey)
+               , envDRepKeyPairs :: Map String (SigningKey PaymentKey, VerificationKey StakeKey)
                , envWallets :: Map String WalletRef
                , envSummary :: Maybe PlutusBudgetSummary
                }
@@ -116,6 +123,7 @@ emptyEnv :: Env
 emptyEnv = Env { protoParams = Nothing
                , envGenesis = Nothing
                , envKeys = Map.empty
+               , envDRepKeyPairs = Map.empty
                , envProtocol = Nothing
                , envNetworkId = Nothing
                , envSocketPath = Nothing
@@ -197,6 +205,19 @@ setEnvGenesis val = modifyEnv (\e -> e { envGenesis = Just val })
 setEnvKeys :: String -> SigningKey PaymentKey -> ActionM ()
 setEnvKeys key val = modifyEnv (\e -> e { envKeys = Map.insert key val (envKeys e) })
 
+-- | Write accessor for `envDRepKeys`.
+-- There's some slightly unfortunate argument naming in that the values
+-- to be looked up are keys in a different context.
+setEnvDRepOneKeyPair :: String -> (SigningKey PaymentKey, VerificationKey StakeKey) -> ActionM ()
+setEnvDRepOneKeyPair key val = modifyEnv \e@Env {..} -> e { envDRepKeyPairs = Map.insert key val envDRepKeyPairs }
+
+-- | Bulk write accessor for DRep keys also stored in the `Map.Map` for
+-- `envKeys`.
+setEnvDRepManyKeyPairs :: String -> [(SigningKey PaymentKey, VerificationKey StakeKey)] -> ActionM ()
+setEnvDRepManyKeyPairs drepPrefix keyPairList =
+  uncurry3 zipWithM_ $ (, [1 :: Int ..], keyPairList) \n keyPair -> do
+    (drepPrefix <> show n) `setEnvDRepOneKeyPair` keyPair
+
 -- | Write accessor for `envProtocol`.
 setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
 setEnvProtocol val = modifyEnv (\e -> e { envProtocol = Just val })
@@ -272,6 +293,32 @@ getEnvGenesis = getEnvVal envGenesis "Genesis"
 -- | Read accessor for `envKeys`.
 getEnvKeys :: String -> ActionM (SigningKey PaymentKey)
 getEnvKeys = getEnvMap envKeys
+
+getEnvDRepOneKeyPair :: String -> ActionM (SigningKey PaymentKey, VerificationKey StakeKey)
+getEnvDRepOneKeyPair = getEnvMap envDRepKeyPairs
+
+-- | Bulk read accessor for DRep keys also stored in the `Map.Map` for
+-- `envKeys`. It seems convenient to not bother with an explicit bound
+-- to the range to search in favor of just taking the first lookup
+-- failure as the signal that the bound's been exceeded.
+-- Also note that the single lookup routine above throws an exception in
+-- the case of a lookup failure where here we would much rather
+-- explicitly handle the `Maybe` returned by `Map.lookup` for loop
+-- termination in the @unfoldrM'@, which is cribbed from @monad-loops@.
+getEnvDRepManyKeyPairs :: String -> ActionM [(SigningKey PaymentKey, VerificationKey StakeKey)]
+getEnvDRepManyKeyPairs drepPrefix = flip unfoldrM' (1 :: Int) \n -> do
+    m <- lift $ RWS.gets envDRepKeyPairs
+    pure $ (, n + 1) <$> (drepPrefix <> show n) `Map.lookup` m
+  where
+    -- cribbed from monad-loops, albeit not quite verbatim
+    unfoldrM' :: (Int -> ActionM (Maybe (keyPair, Int))) -> Int -> ActionM [keyPair]
+    unfoldrM' f = go where
+      go z = do
+                x <- f z
+                uncurry3 maybe $ (pure mzero,, x) \(x', z') -> do
+                  xs <- go z'
+                  pure $ pure x' `mplus` xs
+
 
 -- | Read accessor for `envNetworkId`.
 getEnvNetworkId :: ActionM NetworkId
