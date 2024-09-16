@@ -79,7 +79,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 3
         }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic

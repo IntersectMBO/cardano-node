@@ -424,13 +424,13 @@ defaultShelleyGenesis
   -> Api.ShelleyGenesis StandardCrypto
 defaultShelleyGenesis asbe startTime maxSupply options = do
   let GenesisOptions
-        { shelleyTestnetMagic = magic
-        , shelleySlotLength = slotLength
-        , shelleyEpochLength = epochLength
-        , shelleyActiveSlotsCoeff
+        { genesisTestnetMagic = magic
+        , genesisSlotLength = slotLength
+        , genesisEpochLength = epochLength
+        , genesisActiveSlotsCoeff
         } = options
       -- f
-      activeSlotsCoeff = round (shelleyActiveSlotsCoeff * 100) % 100
+      activeSlotsCoeff = round (genesisActiveSlotsCoeff * 100) % 100
       -- make security param k satisfy: epochLength = 10 * k / f
       -- TODO: find out why this actually degrates network stability - turned off for now
       -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10

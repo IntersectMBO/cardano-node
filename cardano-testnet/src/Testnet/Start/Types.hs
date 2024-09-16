@@ -78,18 +78,18 @@ instance Default CardanoTestnetOptions where
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
 data GenesisOptions = GenesisOptions
-  { shelleyTestnetMagic :: Int -- TODO Use the NetworkMagic type from API
-  , shelleyEpochLength :: Int -- ^ An epoch's duration, in number of slots
-  , shelleySlotLength :: Double -- ^ Slot length, in seconds
-  , shelleyActiveSlotsCoeff :: Double
+  { genesisTestnetMagic :: Int -- TODO Use the NetworkMagic type from API
+  , genesisEpochLength :: Int -- ^ An epoch's duration, in number of slots
+  , genesisSlotLength :: Double -- ^ Slot length, in seconds
+  , genesisActiveSlotsCoeff :: Double
   } deriving (Eq, Show)
 
 instance Default GenesisOptions where
   def = GenesisOptions
-    { shelleyTestnetMagic = 42
-    , shelleyEpochLength = 500
-    , shelleySlotLength = 0.1
-    , shelleyActiveSlotsCoeff = 0.05
+    { genesisTestnetMagic = 42
+    , genesisEpochLength = 500
+    , genesisSlotLength = 0.1
+    , genesisActiveSlotsCoeff = 0.05
     }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)

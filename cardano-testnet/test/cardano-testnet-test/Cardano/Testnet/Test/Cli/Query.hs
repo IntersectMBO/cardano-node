@@ -97,10 +97,10 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       eraName = eraToString era
       fastTestnetOptions = def { cardanoNodeEra = asbe }
       shelleyOptions = def
-        { shelleyEpochLength = 100
+        { genesisEpochLength = 100
         -- We change slotCoeff because epochLength must be equal to:
         -- securityParam * 10 / slotCoeff
-        , shelleyActiveSlotsCoeff = 0.5
+        , genesisActiveSlotsCoeff = 0.5
         }
 
   TestnetRuntime

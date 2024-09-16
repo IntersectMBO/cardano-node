@@ -54,7 +54,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic

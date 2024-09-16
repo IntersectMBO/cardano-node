@@ -49,7 +49,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic

@@ -60,7 +60,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic

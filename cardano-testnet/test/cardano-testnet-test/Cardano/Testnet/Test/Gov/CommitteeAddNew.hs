@@ -79,7 +79,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = nDrepVotes
         }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
