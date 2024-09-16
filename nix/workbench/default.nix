@@ -70,13 +70,9 @@ let
       ${pkgs.jq}/bin/jq '${query}' "''${args[@]}" > $out
     '';
 
-  run-analysis = import ./analyse/analyse.nix;
-
 in {
   inherit workbench' workbench runWorkbench;
   inherit runJq;
-
-  inherit run-analysis;
 
   inherit
     (import ./profile/profile.nix
