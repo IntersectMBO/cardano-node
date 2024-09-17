@@ -80,8 +80,8 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
   -- back-port of BulkSync for genesis to ouroboros-consensus-0.20.0.0
-  tag: 0874ad4a61854f50bf9303d9f662ae6b129fac6d
-  --sha256: iw9IWAnUz4SX6OIBfe4HsRukZr8adyLbCS36CJo+8OE=
+  tag: 4de3792bc62eb95b6754d793b6bc607797d5ffdf
+  --sha256: 0vv2cdggjayqnny3y60sa3mj7x8n2ccsdin5gn7x5xqpsvi8h0jr
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
