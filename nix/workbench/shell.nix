@@ -11,7 +11,6 @@
 , workbenchDevMode ? false
 ##
 , withHoogle ? true
-, withMainnet ? true
 }:
 
 with lib;
@@ -86,7 +85,7 @@ in project.shellFor {
     }
     trap workbench_atexit EXIT
     ''
-    + optionalString withMainnet
+    + optionalString (profileData.value.scenario == "chainsync")
     ''
     export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
     ''

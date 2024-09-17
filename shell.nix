@@ -99,7 +99,6 @@ let
               inherit cardano-mainnet-mirror;
               inherit workbench-runner workbenchDevMode;
               inherit withHoogle;
-              withMainnet = false;
             };
     in project.shellFor {
     name = "devops-shell";
