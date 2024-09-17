@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -42,6 +43,7 @@ module Cardano.Benchmarking.Script.Env (
         , traceDebug
         , traceError
         , traceBenchTxSubmit
+        , getGenesisCacheDir
         , getBenchTracers
         , setBenchTracers
         , getEnvGenesis
@@ -74,6 +76,8 @@ import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, ShelleyGenesis,
                    SigningKey)
+import           Cardano.Benchmarking.Profile.Types as Profile
+                   (Composition (..), Derived (..), Genesis (..), Profile (..))
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -86,6 +90,7 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Prelude
 
+import           Control.Applicative (Applicative (..), Alternative (..))
 import           Control.Concurrent.STM (STM)
 import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
 import           Control.Monad
@@ -94,9 +99,13 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
+import qualified Data.List as List (intercalate)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe (maybeToList)
 import qualified Data.Text as Text
+import qualified System.Environment as Env (lookupEnv)
+import           System.FilePath ((</>))
 import qualified System.IO as IO (hPutStrLn, stderr)
 
 
@@ -136,6 +145,42 @@ newEnvConsts envIOManager envNixSvcOpts = do
   envThreads <- STM.newTVar Nothing
   benchTracers <- STM.newTVar Nothing
   pure Tracer.EnvConsts { .. }
+
+-- | This computes the cache directory name from the
+-- `Cardano.Benchmarking.Profile.Types.Generator` parameter.
+-- wb code uses this:
+-- @"'${XDG_CACHE_HOME:-$HOME/.cache}'/cardano-workbench"@
+getGenesisCacheDir :: Profile.Profile
+                   -> String
+                   -> ExceptT Error IO FilePath
+getGenesisCacheDir Profile {..} hashStr = do
+  lookupEnv' "XDG_CACHE_HOME" <$|$>
+        (</> ".cache") <$$> lookupEnv' "HOME" >>= \case
+    Nothing -> do
+      throwE . UserError . List.intercalate " " $
+        [ "Cardano.Benchmark.Scripts.Env.getGenesisCacheDir: Failed to"
+        , "find either XDG_CACHE_HOME or HOME in the environment" ]
+    Just cacheDirPath -> do
+      pure $ cacheDirPath </> "cardano-workbench" </> "genesis" </> cacheDir
+  where
+    Profile.Composition {..} = composition
+    Profile.Derived     {..} = derived
+    Profile.Genesis     {..} = genesis
+    infixl 4 <$$> -- known from composition-extra
+    f <$$> x = fmap (fmap f) x
+    infixl 2 <$|$> -- somehow no hooglable libs have liftA2 (<|>)
+    (<$|$>) = liftA2 (<|>)
+    lookupEnv' = liftIO . Env.lookupEnv
+    cacheDir :: FilePath
+    cacheDir = List.intercalate "-" $
+       [ "k" <> show n_pools ]
+      <> if | dense_pool_density == 1 -> []
+            | otherwise -> ["d" <> show dense_pool_density]
+      <> [ show (d `div` 1000) <> "kD" | d <- Maybe.maybeToList delegators ]
+      <> if | dreps == 0 -> []
+            | otherwise  -> [ show dreps <> "Dr" ]
+      <> [ show (utxo_stuffed `div` 1000) <> "kU"
+         , hashStr ]
 
 -- | This abbreviates an `ExceptT` and `RWST` with particular types
 -- used as parameters.

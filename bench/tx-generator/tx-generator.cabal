@@ -122,6 +122,7 @@ library
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
+                      , cardano-profile
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
@@ -129,6 +130,7 @@ library
                       , data-default-class
                       , dlist
                       , extra
+                      , filepath
                       , formatting
                       , generic-monoid
                       , ghc-prim
