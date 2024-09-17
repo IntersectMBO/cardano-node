@@ -126,7 +126,7 @@ let
     profileArgs@{ profileName, backend, profiling }:
       if ! builtins.elem profileName profile-names
       then
-        throw "No such profile: ${profileName}; Known profiles: ${toString (__attrNames profile-names)}"
+        throw "No such profile: ${profileName}; Known profiles: ${toString profile-names}"
       else
         let
           profileJson = mkProfileJson { inherit profileName; };
