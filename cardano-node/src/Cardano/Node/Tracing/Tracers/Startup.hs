@@ -283,7 +283,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
         NotEffective -> 0
       )]
   asMetrics (BICommon BasicInfoCommon {..}) =
-    [ PrometheusM "basicInfo" [("nodeStartTime", (pack . show) biNodeStartTime)]]
+    [ PrometheusM "basicInfo" [("nodeStartTime", (pack . show) biNodeStartTime)]
+    , IntM "node.start.time" ((ceiling . utcTimeToPOSIXSeconds) biNodeStartTime)
+    ]
   asMetrics _ = []
 
 instance MetaTrace  (StartupTrace blk) where

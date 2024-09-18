@@ -276,6 +276,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["BlockFetch", "Server"]
     configureTracers configReflection trConfig [blockFetchServerTr]
 
+    !servedBlockLatestTr <- servedBlockLatest mbTrEKG
+
     !forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Forge", "StateInfo"]
@@ -350,6 +352,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            <> traceWith blockFetchClientMetricsTr
       , Consensus.blockFetchServerTracer = Tracer $
           traceWith blockFetchServerTr
+          <> traceWith servedBlockLatestTr
       , Consensus.forgeStateInfoTracer = Tracer $
           traceWith (traceAsKESInfo (Proxy @blk) forgeKESInfoTr)
       , Consensus.gddTracer = Tracer $
