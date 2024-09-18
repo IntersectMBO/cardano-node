@@ -1,4 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -30,6 +31,7 @@ ran into circular dependency issues during the above transition.
  -}
 module Cardano.Benchmarking.Script.Env (
         ActionM
+        , DRepKeyPair
         , Env (..)
         , Error (..)
         , emptyEnv
@@ -50,6 +52,7 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvGenesis
         , getEnvKeys
         , setEnvKeys
+        , readDRepKeys
         , getEnvDRepOneKeyPair
         , setEnvDRepOneKeyPair
         , getEnvDRepManyKeyPairs
@@ -78,6 +81,7 @@ import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, S
                    SigningKey)
 import           Cardano.Benchmarking.Profile.Types as Profile
                    (Composition (..), Derived (..), Genesis (..), Profile (..))
+import           Cardano.Benchmarking.Script.Aeson ()
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -90,15 +94,26 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Prelude
 
+#if MIN_VERSION_base(4,18,0)
+import           Control.Applicative (Alternative (..))
+#else
 import           Control.Applicative (Applicative (..), Alternative (..))
+#endif
+
 import           Control.Concurrent.STM (STM)
 import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
+import qualified Control.Exception as Except (IOException, catch)
 import           Control.Monad
+import           Control.Monad.Extra
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
+import qualified Data.Aeson as Aeson (decode)
+import qualified Data.ByteString.Lazy as LBS (readFile)
+import           Data.Functor
+import qualified Data.IORef as IO (IORef, modifyIORef, newIORef, readIORef)
 import qualified Data.List as List (intercalate)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -121,7 +136,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
                , envKeys :: Map String (SigningKey PaymentKey)
-               , envDRepKeyPairs :: Map String (SigningKey PaymentKey, VerificationKey StakeKey)
+               , envDRepKeyPairs :: Map String DRepKeyPair
                , envWallets :: Map String WalletRef
                , envSummary :: Maybe PlutusBudgetSummary
                }
@@ -150,9 +165,7 @@ newEnvConsts envIOManager envNixSvcOpts = do
 -- `Cardano.Benchmarking.Profile.Types.Generator` parameter.
 -- wb code uses this:
 -- @"'${XDG_CACHE_HOME:-$HOME/.cache}'/cardano-workbench"@
-getGenesisCacheDir :: Profile.Profile
-                   -> String
-                   -> ExceptT Error IO FilePath
+getGenesisCacheDir :: Profile.Profile -> String -> ActionM FilePath
 getGenesisCacheDir Profile {..} hashStr = do
   lookupEnv' "XDG_CACHE_HOME" <$|$>
         (</> ".cache") <$$> lookupEnv' "HOME" >>= \case
@@ -181,6 +194,28 @@ getGenesisCacheDir Profile {..} hashStr = do
             | otherwise  -> [ show dreps <> "Dr" ]
       <> [ show (utxo_stuffed `div` 1000) <> "kU"
          , hashStr ]
+
+type DRepKeyPair = (SigningKey PaymentKey, VerificationKey StakeKey)
+
+readDRepKeys :: Profile.Profile -> String -> ActionM [DRepKeyPair]
+readDRepKeys profile hashStr = do
+  dirFilePath <- getGenesisCacheDir profile hashStr <$/> "drep-keys"
+  v :: IO.IORef Int <- liftIO $ IO.newIORef 1
+  liftIO . whileJustM $ flip Except.catch handleIOErrorsAsMaybe do
+    n <- liftIO $ IO.readIORef v
+    let dirPath = dirFilePath </> "drep" <> show n
+    signingKeyString <- LBS.readFile $ dirPath </> "drep.skey"
+    verificationKeyString <- LBS.readFile $ dirPath </> "drep.vkey"
+    IO.modifyIORef v (+1)
+    pure $ (:[]) <$>
+      Aeson.decode signingKeyString <$~$> Aeson.decode verificationKeyString
+  where
+    infixl 5 <$/>
+    md <$/> e = md <&> (</> e)
+    infixl 6 <$~$>
+    (<$~$>) = liftM2 (,)
+    handleIOErrorsAsMaybe :: Except.IOException -> IO (Maybe [DRepKeyPair])
+    handleIOErrorsAsMaybe = const $ pure Nothing
 
 -- | This abbreviates an `ExceptT` and `RWST` with particular types
 -- used as parameters.
@@ -323,8 +358,8 @@ getBenchTracers = do
     Nothing -> do
       -- If this occurs, it may be worthwhile to output it in more ways
       -- because the tracer isn't actually initialized.
-      let errMsg = "Env.getBenchTracers: attempted to set tracer before\
-                   \  STM.TVar init"
+      let errMsg = unwords [ "Env.getBenchTracers: attempted to set"
+                           , "tracer before STM.TVar init" ]
       traceError errMsg
       liftIO $ do
         putStrLn errMsg
