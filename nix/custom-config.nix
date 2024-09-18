@@ -5,7 +5,7 @@ self: {
     cacheDir    = "${self.localCluster.stateDir}/.cache";
     stateDir    = "run/current";
     batchName   = "undefined";
-    profileName = "default-bage";
+    profileName = "default-coay";
     backendName = "supervisor";
     basePort    = 30000;
     workbenchDevMode = true;
