@@ -175,7 +175,7 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- Wait for socket to be created
     eSprocketError <-
       Ping.waitForSprocket
-        30  -- timeout
+        120  -- timeout
         0.2 -- check interval
         sprocket
 
@@ -188,7 +188,7 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     firstExceptT
       (\ioex ->
         NodeExecutableError . hsep $
-          ["Socket", pretty socketAbsPath, "was not created after 30 seconds. There was no output on stderr. Exception:", prettyException ioex])
+          ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
       $ hoistEither eSprocketError
       
     -- Ping node and fail on error
