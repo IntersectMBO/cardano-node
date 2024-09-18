@@ -6,26 +6,26 @@ let
   inherit (prev.pkgs) lib;
   inherit (prev) customConfig;
 
-  # A generic, fully parameteric version of the workbench development environment.
+  # A generic, fully parametric version of the workbench development environment.
   workbench = import ./workbench
     {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
 
   # Workbench runner instantiated by parameters from customConfig:
   workbench-runner =
-    { stateDir           ? customConfig.localCluster.stateDir
-    , batchName          ? customConfig.localCluster.batchName
-    , profileName        ? customConfig.localCluster.profileName
+    { profileName        ? customConfig.localCluster.profileName
+    , profiling          ? customConfig.profiling
     , backendName        ? customConfig.localCluster.backendName
+    , stateDir           ? customConfig.localCluster.stateDir
     , basePort           ? customConfig.localCluster.basePort
     , useCabalRun        ? customConfig.localCluster.useCabalRun
     , workbenchDevMode   ? customConfig.localCluster.workbenchDevMode
+    , batchName          ? customConfig.localCluster.batchName
     , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
-    , profiling          ? customConfig.profiling
     , cardano-node-rev   ? null
     }:
     workbench.runner
-      { inherit stateDir batchName profileName backendName basePort useCabalRun;
-        inherit workbenchDevMode workbenchStartArgs profiling cardano-node-rev;
+      { inherit profileName profiling backendName stateDir basePort useCabalRun;
+        inherit batchName workbenchDevMode workbenchStartArgs cardano-node-rev;
       };
 
 in with final;

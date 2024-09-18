@@ -1,17 +1,15 @@
-{ pkgs
-, lib
+{ pkgs, lib
 ##
 , profile
 , backend
-, batchName
 ##
-, cardano-node-rev
-, workbench
-, cardanoNodePackages
+, workbench # The derivation.
 , workbenchDevMode
+, cardanoNodePackages # The binaries to use when calling the workbench.
+, batchName
 , workbenchStartArgs
 ##
-, cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
+, cardano-node-rev
 }:
 let
   profileName = profile.name;
@@ -33,7 +31,7 @@ in
       ## In dev mode, call the script directly:
       ++ pkgs.lib.optionals (!workbenchDevMode)
       [ workbench ];
-
+    cacheDir = "${__getEnv "HOME"}/.cache/cardano-workbench";
     workbench-interactive-start = pkgs.writeScriptBin "start-cluster" ''
       set -euo pipefail
 

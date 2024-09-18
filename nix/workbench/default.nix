@@ -1,5 +1,4 @@
-{ pkgs
-, lib
+{ pkgs, lib
 , cardanoNodePackages
 , cardanoNodeProject
 }:
@@ -7,10 +6,14 @@
 with lib;
 
 let
+
   # recover CHaP location from cardano's project
   chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
   nixPlanJson = cardanoNodeProject.plan-nix.json;
+
+  # Workbench derivation and functions to create derivations from `wb` commands.
+  ##############################################################################
 
   workbench' = tools:
     pkgs.stdenv.mkDerivation {
@@ -45,23 +48,36 @@ let
       dontStrip = true;
     };
 
-  workbench = with cardanoNodePackages; with pkgs; workbench' (
-    [ git graphviz
-      jq
-      moreutils
-      procps
-      cardano-cli
-      cardano-profile
-      cardano-topology
-    ] ++ lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) db-analyser
-      ++ [ locli ]
+  # Workbench with its dependencies to call from Nix.
+  workbench = workbench' (
+      (with pkgs;
+        [ git graphviz
+          jq
+          moreutils
+          procps
+        ]
+      )
+      ++
+      (with cardanoNodePackages;
+        [
+          cardano-cli
+          cardano-profile
+          cardano-topology
+          locli
+        ]
+      )
+      ++
+      lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) pkgs.db-analyser
     );
 
   runWorkbench =
-    name: command:
+    name: command: # Name of the derivation and `wb` command to run.
     pkgs.runCommand name {} ''
       ${workbench}/bin/wb ${command} > $out
     '';
+
+  # Helper functions.
+  ##############################################################################
 
   runJq =
     name: args: query:
@@ -70,18 +86,36 @@ let
       ${pkgs.jq}/bin/jq '${query}' "''${args[@]}" > $out
     '';
 
-  profile-names-json =
-    runWorkbench "profile-names.json" "profiles list";
+  # Auxiliary functions of `wb` commands.
+  ##############################################################################
 
-  profile-names =
-    __fromJSON (__readFile profile-names-json);
+  profile-names = __fromJSON (__readFile profile-names-json);
+
+  profile-names-json = runWorkbench "profile-names.json" "profiles list";
+
+# Output
+################################################################################
 
 in pkgs.lib.fix (self: {
+
   inherit cardanoNodePackages;
   inherit workbench' workbench runWorkbench;
   inherit runJq;
-
   inherit profile-names-json profile-names;
+
+  # Return a profile attr with a `materialise-profile` function.
+  # profileName -> profiling -> profile
+  profile =
+    { profileName
+    , profiling
+    }:
+    (import ./profile/profile.nix
+      { inherit pkgs lib;
+        workbenchNix = self;
+        inherit profileName profiling;
+      }
+    )
+  ;
 
   # Return a backend attr with a `materialise-profile` function.
   # backendName -> stateDir -> basePort -> useCabalRun -> backend
@@ -106,20 +140,6 @@ in pkgs.lib.fix (self: {
         { inherit pkgs lib stateDir basePort useCabalRun; }
   ;
 
-  # Return a profile attr with a `materialise-profile` function.
-  # profileName -> profiling -> profile
-  profile =
-    { profileName
-    , profiling
-    }:
-    (import ./profile/profile.nix
-      { inherit pkgs lib;
-        workbenchNix = self;
-        inherit profileName profiling;
-      }
-    )
-  ;
-
   # A conveniently-parametrisable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
@@ -127,22 +147,20 @@ in pkgs.lib.fix (self: {
   # 2. backendName -> stateDir -> basePort -> useCabalRun -> backend
   # 3. profile -> backend -> batchName -> runner
   runner =
-    { stateDir
-    , batchName
-    , profileName
+    { profileName
+    , profiling
     , backendName
+    , stateDir
     , basePort
     , useCabalRun
     , workbenchDevMode
+    , batchName
     , workbenchStartArgs
-    , profiling
     , cardano-node-rev
     }:
     let
         # Only a name needed to create a profile attrset.
-        profile = self.profile
-                    { inherit profileName profiling; }
-        ;
+        profile = self.profile { inherit profileName profiling; };
         # The `useCabalRun` flag is set in the backend to allow the backend to
         # override its value. The runner uses the value of `useCabalRun` from
         # the backend to prevent a runner using a different value.
@@ -153,10 +171,8 @@ in pkgs.lib.fix (self: {
       {
           inherit pkgs lib;
           inherit profile backend;
-          inherit batchName;
+          inherit workbench workbenchDevMode cardanoNodePackages;
+          inherit batchName workbenchStartArgs;
           inherit cardano-node-rev;
-          inherit workbench; # The derivation.
-          inherit cardanoNodePackages;
-          inherit workbenchDevMode workbenchStartArgs;
       };
 })

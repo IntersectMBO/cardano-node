@@ -1,7 +1,6 @@
 { pkgs, lib
 , workbenchNix
-, profileName
-, profiling
+, profileName, profiling
 }:
 
 let
