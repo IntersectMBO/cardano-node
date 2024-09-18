@@ -49,6 +49,9 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/kes-period-info/"'@
 hprop_kes_period_info :: Property
 hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -57,7 +60,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     <- mkConf tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = ShelleyBasedEraBabbage -- TODO: We should only support the latest era and the upcoming era
+      sbe = ShelleyBasedEraConway
       asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
       cTestnetOptions = def { cardanoNodeEra = asbe }
@@ -95,7 +98,9 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
          testnetMagic
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)
-
+  
+  H.noteShow_ $ "Test SPO stake pool id: " <> stakePoolId 
+  
   -- Create test stake address to delegate to the new stake pool
   -- NB: We need to fund the payment credential of the overall address
   --------------------------------------------------------------
@@ -135,7 +140,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
-    2_000_000
+    0
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
@@ -340,6 +345,8 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
      [ "query", "stake-snapshot"
      , "--all-stake-pools"
      ]
+
+  -- TODO: Create a check here that confirms there are four stake pools and each has stake!
   H.writeFile (work </> "stake-snapshot-2.json") stakeSnapshot2
 
   ledgerStateJson2 <- execCli' execConfig

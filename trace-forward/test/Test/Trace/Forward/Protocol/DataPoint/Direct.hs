@@ -16,8 +16,8 @@ direct :: Monad m
 direct DataPointForwarder { recvMsgDone }
        (SendMsgDone mdone) =
   (,) <$> recvMsgDone <*> mdone
-direct DataPointForwarder { recvMsgDataPointsRequest }
+direct server@DataPointForwarder { recvMsgDataPointsRequest }
        (SendMsgDataPointsRequest (dpNames :: [DataPointName]) mclient) = do
-  (reply, server) <- recvMsgDataPointsRequest dpNames
+  reply <- recvMsgDataPointsRequest dpNames
   client <- mclient reply
   direct server client

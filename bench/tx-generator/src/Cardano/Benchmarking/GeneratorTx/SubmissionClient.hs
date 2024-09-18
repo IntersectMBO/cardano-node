@@ -25,43 +25,38 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   , txSubmissionClient
   ) where
 
+import           Cardano.Api hiding (Active)
+import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
+
+import           Cardano.Benchmarking.LogTypes
+import           Cardano.Benchmarking.Types
+import           Cardano.Logging
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
-import           Prelude (error, fail)
-
-import           Control.Arrow ((&&&))
-
-import qualified Data.List as L
-import qualified Data.List.Extra as L
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
-
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
+import qualified Ouroboros.Consensus.Cardano.Block as Block
+                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId, txInBlockSize)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
-
-import qualified Ouroboros.Consensus.Cardano.Block as Block
-                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
-
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
                    ClientStTxIds (..), ClientStTxs (..), TxSubmissionClient (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyList (..),
-                   TokBlockingStyle (..), TxSizeInBytes)
+                   NumTxIdsToAck (..), NumTxIdsToReq (..), TokBlockingStyle (..))
+import           Ouroboros.Network.SizeInBytes
 
-import           Cardano.Api hiding (Active)
-import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
+import           Prelude (error, fail)
 
-import           Cardano.Logging
-
-import           Cardano.Benchmarking.LogTypes
-import           Cardano.Benchmarking.Types
+import           Control.Arrow ((&&&))
+import qualified Data.List as L
+import qualified Data.List.Extra as L
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
 
 data SubmissionThreadStats
@@ -129,10 +124,10 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   requestTxIds :: forall blocking.
        LocalState era
     -> TokBlockingStyle blocking
-    -> Word16
-    -> Word16
+    -> NumTxIdsToAck
+    -> NumTxIdsToReq
     -> m (ClientStTxIds blocking (GenTxId CardanoBlock) (GenTx CardanoBlock) m ())
-  requestTxIds state blocking ackNum reqNum = do
+  requestTxIds state blocking (NumTxIdsToAck ackNum) (NumTxIdsToReq reqNum) = do
     let ack = Ack $ fromIntegral ackNum
         req = Req $ fromIntegral reqNum
     traceWith tr $ reqIdsTrace ack req blocking
@@ -182,8 +177,8 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
               , stsUnavailable =
                 stsUnavailable stats + Unav (length missIds)}))
 
-  txToIdSize :: tx -> (GenTxId CardanoBlock, TxSizeInBytes)
-  txToIdSize = (Mempool.txId &&& txInBlockSize) . toGenTx
+  txToIdSize :: tx -> (GenTxId CardanoBlock, SizeInBytes)
+  txToIdSize = (Mempool.txId &&& (SizeInBytes . txInBlockSize)) . toGenTx
 
   toGenTx :: tx -> GenTx CardanoBlock
   toGenTx tx = toConsensusGenTx $ TxInMode (shelleyBasedEra @era) tx

@@ -9,6 +9,9 @@
     containers,
     foldl,
     github ^>= 0.29,
+    http-client,
+    http-types,
+    network-uri,
     optparse-applicative ^>= 0.18,
     ansi-wl-pprint >= 1,
     pandoc ^>= 3.1,
@@ -16,13 +19,15 @@
     req,
     text,
     turtle ^>= 1.6.0,
+    uri-encode,
   default-extensions:
     BlockArguments,
     DataKinds,
     ImportQualifiedPost,
     LambdaCase,
     OverloadedStrings,
-    RecordWildCards
+    RecordWildCards,
+    ScopedTypeVariables
   ghc-options: -Wall -Wextra -Wcompat
 -}
 
@@ -37,13 +42,20 @@ import           Data.Aeson
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.CaseInsensitive as CI
 import           Data.Foldable
+import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Version
 import qualified GitHub
+import           Network.HTTP.Client (HttpExceptionContent(..), HttpException(..), responseStatus, responseHeaders)
 import           Network.HTTP.Req
+import           Network.HTTP.Types.Header (hLocation)
+import           Network.HTTP.Types.Status (found302)
+import qualified Network.URI as URI
+import qualified Network.URI.Encode as URIE
 import           Options.Applicative
 import           Prettyprinter
 import qualified Prettyprinter.Util as PP
@@ -195,8 +207,41 @@ data CHaPEntry =
   deriving (Show)
 
 findChangelogFromGitHub :: MonadIO m => GitHubAccessToken -> CHaPEntry -> m (Maybe (Text, Text))
-findChangelogFromGitHub accessToken CHaPEntry{..} = do
-  contentDir <- liftIO (runGitHub accessToken (changelogLookupGitHub entryGitHubOwner entryGitHubRepo entrySubdir entryGitHubRevision)) >>= \case
+findChangelogFromGitHub accessToken c@CHaPEntry{..} = do
+  liftIO $ print c
+  let query = changelogLookupGitHub entryGitHubOwner entryGitHubRepo entrySubdir entryGitHubRevision
+  liftIO $ print query 
+  contentDir <- liftIO (runGitHub accessToken query) >>= \case
+    Left (GitHub.HTTPError originalError@(HttpExceptionRequest _originalReq (StatusCodeException resp _))) -> do 
+      if responseStatus resp == found302
+      then do
+              let responseHeaders' = responseHeaders resp
+              case List.lookup hLocation responseHeaders' of 
+                Nothing -> die "findChangelogFromGitHub: Got HTTP 302 redirect but no location header found"
+                Just redirectLocation -> do
+
+                  -- We must construct the redirect URL
+                  -- We drop 2 characters at the end because the location appears to be malformed
+                  let responseLocation = URIE.decodeText $ Text.dropEnd 2 $ Text.decodeUtf8 redirectLocation
+                      finalResponseQueryURl = responseLocation 
+
+                  newLocationQuery <- case query of 
+                                       GitHub.Query _ queryString -> do
+                                         redirectPathSegments <- generateRedirectPathSegments finalResponseQueryURl
+                                         pure $ GitHub.query redirectPathSegments queryString 
+                                       unexpected  -> die $ "findChangelogFromGitHub: Expected a Query type but got: " <> repr unexpected
+              
+                  r <- liftIO (runGitHub accessToken newLocationQuery)            
+                  case r of 
+                    Left e' -> die $ Text.unlines [ "Redirect failed: " <> repr e'
+                                                  , "Original http error: " <> repr originalError
+                                                  ]
+                    Right (GitHub.ContentFile _) -> die
+                      "Redirect result: Expected changelogLookupGitHub to return a directory, but got a single file"
+                    Right (GitHub.ContentDirectory dir) -> pure dir
+    
+          else die $
+            "GitHub lookup failed with HTTP exception: " <> Text.pack (show resp) 
     Left gitHubError -> die $
       "GitHub lookup failed with error " <> repr gitHubError
     Right (GitHub.ContentFile _) -> die
@@ -209,6 +254,17 @@ findChangelogFromGitHub accessToken CHaPEntry{..} = do
       let name = GitHub.contentName (GitHub.contentItemInfo res)
           path = GitHub.contentPath (GitHub.contentItemInfo res)
       Just (name, constructGitHubPath entryGitHubOwner entryGitHubRepo entryGitHubRevision path)
+
+generateRedirectPathSegments :: MonadIO m => Text -> m [Text]
+generateRedirectPathSegments url = 
+    case URI.parseURI (Text.unpack url) of
+        Just uri -> 
+            let segments = map Text.pack $ URI.pathSegments uri
+            in if null segments
+               then die $ "generateRedirectPathSegments: No path segments found in URL: " <> url
+               else return segments
+        Nothing -> die $  "generateRedirectPathSegments: Invalid URL: " <> url
+
 
 changelogLookupGitHub :: GitHub.Name GitHub.Owner
                       -> GitHub.Name GitHub.Repo
