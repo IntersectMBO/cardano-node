@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -29,9 +30,10 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipHash, renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
-                   ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
-                   blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
-                   realPointSlot)
+                   ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader (..),
+                   Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, headerPoint,
+                   pointHash, realPointHash, realPointSlot, withOriginToMaybe)
+import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), TraceGDDEvent (..))
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -67,6 +69,7 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
+import Ouroboros.Consensus.Block.SupportsSanityCheck
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
@@ -75,6 +78,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
+import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Data (Proxy (..))
@@ -104,6 +108,21 @@ instance HasSeverityAnnotation ConsensusStartupException where
 instance Transformable Text IO ConsensusStartupException where
   trTransformer = trStructured
 instance HasTextFormatter ConsensusStartupException where
+
+instance HasPrivacyAnnotation SanityCheckIssue
+instance HasSeverityAnnotation SanityCheckIssue where
+  getSeverityAnnotation _ = Error
+instance Transformable Text IO SanityCheckIssue where
+  trTransformer = trStructured
+
+instance ToObject SanityCheckIssue where
+  toObject _verb issue =
+    mconcat
+      [ "kind" .= String "SanityCheckIssue"
+      , "issue" .= toJSON issue
+      ]
+instance ToJSON SanityCheckIssue where
+  toJSON = Aeson.String . pack . show
 
 instance ConvertRawHash blk => ConvertRawHash (Header blk) where
   toShortRawHash _ = toShortRawHash (Proxy @blk)
@@ -220,6 +239,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
+  getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -489,6 +509,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
+      ChainDB.TraceLastShutdownUnclean -> "ChainDB is not clean. Validating all immutable chunks"
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -594,9 +615,14 @@ instance ( ConvertRawHash blk
                    " This is most likely an expected change in the serialization format,"
                 <> " which currently requires a chain replay"
               _ -> ""
-        LedgerDB.TookSnapshot snap pt ->
-          "Took ledger snapshot " <> showT snap <>
+
+        LedgerDB.TookSnapshot snap pt RisingEdge ->
+          "Taking ledger snapshot " <> showT snap <>
           " at " <> renderRealPointAsPhrase pt
+        LedgerDB.TookSnapshot snap pt (FallingEdgeWith t) ->
+          "Took ledger snapshot " <> showT snap <>
+          " at " <> renderRealPointAsPhrase pt <>
+          ", duration: " <> showT t
         LedgerDB.DeletedSnapshot snap ->
           "Deleted old snapshot " <> showT snap
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
@@ -898,6 +924,8 @@ instance ( ConvertRawHash blk
          , ToObject (LedgerEvent blk)
          , ToObject (SelectView (BlockProtocol blk)))
       => ToObject (ChainDB.TraceEvent blk) where
+  toObject _verb ChainDB.TraceLastShutdownUnclean =
+    mconcat [ "kind" .= String "TraceLastShutdownUnclean" ]
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
@@ -1060,10 +1088,12 @@ instance ( ConvertRawHash blk
 
   toObject MinimalVerbosity (ChainDB.TraceSnapshotEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceSnapshotEvent ev) = case ev of
-    LedgerDB.TookSnapshot snap pt ->
+    LedgerDB.TookSnapshot snap pt enclosedTiming ->
       mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
                , "snapshot" .= toObject verb snap
-               , "tip" .= show pt ]
+               , "tip" .= show pt
+               , "enclosedTime" .= enclosedTiming
+               ]
     LedgerDB.DeletedSnapshot snap ->
       mconcat [ "kind" .= String "TraceSnapshotEvent.DeletedSnapshot"
                , "snapshot" .= toObject verb snap ]
@@ -1666,6 +1696,65 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
     mconcat
       [ "kind" .= String "GsmEventSyncingToPreSyncing"
       ]
+
+instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
+instance HasSeverityAnnotation (TraceGDDEvent peer blk) where
+  getSeverityAnnotation _ = Debug
+instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
+  trTransformer = trStructured
+
+instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
+  toObject verb TraceGDDEvent {..} = mconcat $
+    [ "kind" .= String "TraceGDDEvent"
+    , "losingPeers".= toJSON (map (toObject verb) losingPeers)
+    , "loeHead" .= toObject verb loeHead
+    , "sgen" .= toJSON (unGenesisWindow sgen)
+    ] <> do
+      guard $ verb >= MaximalVerbosity
+      [ "bounds" .= toJSON (
+           map
+           ( \(peer, density) -> Object $ mconcat
+             [ "kind" .= String "PeerDensityBound"
+             , "peer" .= toObject verb peer
+             , "densityBounds" .= toObject verb density
+             ]
+           )
+           bounds
+         )
+       , "curChain" .= toObject verb curChain
+       , "candidates" .= toJSON (
+           map
+           ( \(peer, frag) -> Object $ mconcat
+             [ "kind" .= String "PeerCandidateFragment"
+             , "peer" .= toObject verb peer
+             , "candidateFragment" .= toObject verb frag
+             ]
+           )
+           candidates
+         )
+       , "candidateSuffixes" .= toJSON (
+           map
+           ( \(peer, frag) -> Object $ mconcat
+             [ "kind" .= String "PeerCandidateSuffix"
+             , "peer" .= toObject verb peer
+             , "candidateSuffix" .= toObject verb frag
+             ]
+           )
+           candidateSuffixes
+         )
+       ]
+
+instance (ConvertRawHash blk, GetHeader blk) => ToObject (DensityBounds blk) where
+  toObject verb DensityBounds {..} = mconcat
+    [ "kind" .= String "DensityBounds"
+    , "clippedFragment" .= toObject verb clippedFragment
+    , "offersMoreThanK" .= toJSON offersMoreThanK
+    , "lowerBound" .= toJSON lowerBound
+    , "upperBound" .= toJSON upperBound
+    , "hasBlockAfter" .= toJSON hasBlockAfter
+    , "latestSlot" .= toJSON (unSlotNo <$> withOriginToMaybe latestSlot)
+    , "idling" .= toJSON idling
+    ]
 
 instance ConvertRawHash blk => ToObject (Tip blk) where
   toObject _verb TipGenesis =

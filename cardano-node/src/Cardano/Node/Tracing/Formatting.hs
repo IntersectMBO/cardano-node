@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -11,6 +13,7 @@ import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Node.Tracing.Render (renderHeaderHashForDetails)
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), RealPoint, realPointHash,
                    realPointSlot)
+import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
 
 import           Data.Aeson (Value (String), toJSON, (.=))
@@ -51,3 +54,22 @@ instance ConvertRawHash blk
         , "slot" .= unSlotNo (realPointSlot p)
         , "hash" .= renderHeaderHashForDetails (Proxy @blk) dtal (realPointHash p)
         ]
+
+instance (ConvertRawHash blk) => LogFormatting (AF.Anchor blk) where
+  forMachine dtal = \case
+    AF.AnchorGenesis -> mconcat
+      [ "kind" .= String "AnchorGenesis" ]
+    AF.Anchor slot hash bno -> mconcat
+      [ "kind" .= String "Anchor"
+      , "slot" .= toJSON (unSlotNo slot)
+      , "headerHash" .= renderHeaderHashForDetails (Proxy @blk) dtal hash
+      , "blockNo" .= toJSON (unBlockNo bno)
+      ]
+
+instance (ConvertRawHash blk, HasHeader blk) => LogFormatting (AF.AnchoredFragment blk) where
+  forMachine dtal frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchor" .= forMachine dtal (AF.anchor frag)
+    , "headPoint" .= forMachine dtal (AF.headPoint frag)
+    , "length" .= toJSON (AF.length frag)
+    ]

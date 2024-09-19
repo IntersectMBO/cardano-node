@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
+module Cardano.Testnet.Test.SubmitApi.Transaction
   ( hprop_transaction
   ) where
 
@@ -36,6 +36,7 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 import           Text.Regex (mkRegex, subRegex)
 
+import           Testnet.Components.Configuration
 import           Testnet.Process.Run (execCli', mkExecConfig, procSubmitApi)
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.SubmitApi
@@ -48,12 +49,15 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Golden as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/transaction/"'@
 hprop_transaction :: Property
-hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
-      sbe = ShelleyBasedEraBabbage
+      sbe = ShelleyBasedEraConway
+      eraString = eraToString sbe
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
       options = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
@@ -88,7 +92,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
   txFailedResponseYamlGoldenFp <- H.note "test/cardano-testnet-test/files/golden/tx.failed.response.json.golden"
 
   void $ execCli' execConfig
-    [ "babbage", "query", "utxo"
+    [ eraString, "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -99,7 +103,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "build"
+    [ eraString, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_001
@@ -107,7 +111,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
     ]
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "sign"
+    [ eraString, "transaction", "sign"
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
@@ -144,7 +148,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
 
     H.byDurationM 5 45 "Expected UTxO found" $ do
       void $ execCli' execConfig
-        [ "babbage", "query", "utxo"
+        [ eraString, "query", "utxo"
         , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
         , "--cardano-mode"
         , "--out-file", work </> "utxo-2.json"
@@ -154,7 +158,7 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction"
       UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
       txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
 
-      H.assert $ 5_000_001 `List.elem` txouts2
+      H.assert $ 15_000_003_000_000 `List.elem` txouts2
 
     response <- H.byDurationM 1 5 "Expected UTxO found" $ do
       txBodySigned <- H.leftFailM $ H.readJsonFile @Aeson.Value txbodySignedFp

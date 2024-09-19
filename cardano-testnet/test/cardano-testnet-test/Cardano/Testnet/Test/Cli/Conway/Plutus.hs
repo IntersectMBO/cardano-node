@@ -42,6 +42,8 @@ import qualified Hedgehog.Extras as H
 -- Certifying YES
 -- Voting NO
 -- Proposing NO
+-- Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV3/"'@
 hprop_plutus_v3 :: Property
 hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os

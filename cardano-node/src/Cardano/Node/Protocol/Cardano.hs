@@ -33,10 +33,9 @@ import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
+import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import           Ouroboros.Consensus.Config (emptyCheckpointsMap)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
-import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
 
 import           Prelude
 
@@ -142,11 +141,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
         Shelley.readLeaderCredentials files
 
-    --TODO: all these protocol versions below are confusing and unnecessary.
-    -- It could and should all be automated and these config entries eliminated.
     return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ CardanoProtocolParams {
-        paramsByron =
+      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ Consensus.CardanoProtocolParams {
+        Consensus.byronProtocolParams =
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
           byronPbftSignatureThreshold =
@@ -167,94 +164,25 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
               npcByronSupportedProtocolVersionAlt,
           byronSoftwareVersion = Byron.softwareVersion,
           byronLeaderCredentials =
-            byronLeaderCredentials,
-          byronMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+            byronLeaderCredentials
         }
-      , paramsShelleyBased =
+      , Consensus.shelleyBasedProtocolParams =
         Consensus.ProtocolParamsShelleyBased {
           shelleyBasedInitialNonce      = Shelley.genesisHashToPraosNonce
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
-      , paramsShelley =
-        Consensus.ProtocolParamsShelley {
-          -- This is /not/ the Shelley protocol version. It is the protocol
-          -- version that this node will declare that it understands, when it
-          -- is in the Shelley era. That is, it is the version of protocol
-          -- /after/ Shelley, i.e. Allegra.
-          shelleyProtVer =
-            ProtVer (natVersion @3) 0,
-          shelleyMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
-        }
-      , paramsAllegra =
-        Consensus.ProtocolParamsAllegra {
-          -- This is /not/ the Allegra protocol version. It is the protocol
-          -- version that this node will declare that it understands, when it
-          -- is in the Allegra era. That is, it is the version of protocol
-          -- /after/ Allegra, i.e. Mary.
-          allegraProtVer =
-            ProtVer (natVersion @4) 0,
-          allegraMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
-        }
-      , paramsMary =
-        Consensus.ProtocolParamsMary {
-          -- This is /not/ the Mary protocol version. It is the protocol
-          -- version that this node will declare that it understands, when it
-          -- is in the Mary era. That is, it is the version of protocol
-          -- /after/ Mary, i.e. Alonzo.
-          maryProtVer = ProtVer (natVersion @5) 0,
-          maryMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
-        }
-      , paramsAlonzo =
-        Consensus.ProtocolParamsAlonzo {
-          -- This is /not/ the Alonzo protocol version. It is the protocol
-          -- version that this node will declare that it understands, when it
-          -- is in the Alonzo era. That is, it is the version of protocol
-          -- /after/ Alonzo, i.e. Babbage.
-          -- NOTE:
-          -- We are not actually transitioning to version 7.2,
-          -- this is a HACK so that we can distinguish between others
-          -- versions of the node that are broadcasting major version 7.
-          -- We intentionally broadcast 7.0 starting in Babbage.
-          alonzoProtVer = ProtVer (natVersion @7) 2,
-          alonzoMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
-        }
-      , paramsBabbage =
-        Praos.ProtocolParamsBabbage {
-          -- If Conway is not enabled, this is the Babbage protocol version,
-          -- since that's the last one node understands.
-          --
-          -- If Conway is enabled, then this is /not/ the Babbage protocol
-          -- version. It is the protocol version that this node will declare
-          -- that it understands during the Babbage era. That is, it is the
-          -- version of protocol /after/ Babbage, i.e. Conway.
-          Praos.babbageProtVer = ProtVer (natVersion @9) 1,
-          Praos.babbageMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
-        }
-      , paramsConway =
-        Praos.ProtocolParamsConway {
-          -- ProtVer 9 corresponds to the Conway bootstrap era.
-          -- ProtVer 10 corresponds to the Conway post bootstrap era.
-          Praos.conwayProtVer =
+      , Consensus.cardanoProtocolVersion =
             if npcExperimentalHardForksEnabled
             then ProtVer (natVersion @10) 0
-            else ProtVer (natVersion @9) 1,
-          Praos.conwayMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
-        }
+            else ProtVer (natVersion @9) 1
         -- The remaining arguments specify the parameters needed to transition between two eras
-      , ledgerTransitionConfig =
+      , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
             shelleyGenesis
             alonzoGenesis
             conwayGenesis
-      , hardForkTriggers =
+      , Consensus.cardanoHardForkTriggers =
         Consensus.CardanoHardForkTriggers' {
           triggerHardForkShelley =
             -- What will trigger the Byron -> Shelley hard fork?
@@ -310,7 +238,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
        -- TODO: once https://github.com/IntersectMBO/cardano-node/issues/5730 is implemented 'emptyCheckpointsMap' needs to be replaced with the checkpoints map read from a configuration file.
-      , checkpoints = emptyCheckpointsMap
+      , Consensus.cardanoCheckpoints = emptyCheckpointsMap
       }
 
         ----------------------------------------------------------------------

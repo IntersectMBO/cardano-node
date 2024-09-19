@@ -12,6 +12,7 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
@@ -197,7 +198,7 @@ eExpectedConfig = do
     , ncStartAsNonProducingNode = False
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
-    , ncDatabaseFile = DbFile "mainnet/db/"
+    , ncDatabaseFile = OnePathForAllDbs "mainnet/db/"
     , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration

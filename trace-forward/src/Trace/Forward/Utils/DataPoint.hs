@@ -61,8 +61,7 @@ readFromStore dpStore =
   DataPointForwarder
     { recvMsgDataPointsRequest = \dpNames -> do
         store <- readTVarIO dpStore
-        let replyList = map (lookupDataPoint store) dpNames
-        return (replyList, readFromStore dpStore)
+        return $ map (lookupDataPoint store) dpNames
     , recvMsgDone = return ()
     }
  where
