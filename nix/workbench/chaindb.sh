@@ -20,11 +20,6 @@ cardano_mainnet_geneses=(
     --arg shelley_hash '1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81'
 )
 
-membench_params=$(jq '
-{ final_chunk:   1800
-, snapshot_slot: 37173650
-}' --null-input)
-
 chaindb() {
 local source= geneses=() mainnet= cachedir= sargs=()
 while test $# -gt 0
@@ -48,16 +43,6 @@ do case "$1" in
 op=${1:?$(usage_chaindb)}; shift
 
 case "$op" in
-
-mainnet-membench-chaindb )
-    local usage="USAGE: wb chaindb $op OUTDIR"
-    local out=${1:?$usage}; shift
-
-    progress "chaindb" "producing a membench-like chaindb"
-    chaindb mainnet-chunks-with-snapshot-at-slot "$out" \
-            $(jq .snapshot_slot <<<$membench_params) \
-            $(jq .final_chunk   <<<$membench_params)
-    ;;
 
 mainnet-chunks-with-snapshot-at-slot )
     local usage="USAGE: wb chaindb $op OUTDIR SNAPSHOT-SLOTNO FINAL-CHUNKNO"
