@@ -17,6 +17,10 @@
 Overview of the ``cardano-node`` repository
 *******************************************
 
+.. image:: https://assets.devzero.io/open-in-devzero.svg
+   :target: https://www.devzero.io/dashboard/recipes/new?repo-url=https://github.com/input-output-hk/cardano-node
+   :alt: Open in DevZero
+
 Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-specs>`_, `consensus <https://github.com/input-output-hk/ouroboros-consensus>`_,
 `networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>`_ and
 `node shell <https://github.com/input-output-hk/cardano-shell>`_ repositories.
