@@ -548,6 +548,14 @@ def all_profile_variants:
       | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview", "doublebudget"]
     ) as $costmodel_v9_preview_doubleb
   |
+    ({}
+      | .genesis.pparamsOverlays      = ["stepshalf"]
+    ) as $costmodel_stepshalf
+  |
+    ({}
+      | .genesis.pparamsOverlays      = ["doublebudget"]
+    ) as $costmodel_doubleb
+  |
     ($costmodel_v9_preview
       | .genesis.pparamsOverlays      as $ovls
       | .genesis.pparamsOverlays      = $ovls + ["blocksize64k"]
@@ -1248,10 +1256,10 @@ def all_profile_variants:
   , $plutusv3blst_nomadperf_template *
     { name: "plutusv3-blst-nomadperf"
     }
-  , $plutusv3blst_nomadperf_template * $costmodel_v9_preview_stepshalf *
+  , $plutusv3blst_nomadperf_template * $costmodel_stepshalf *
     { name: "plutusv3-blst-half-nomadperf"
     }
-  , $plutusv3blst_nomadperf_template * $costmodel_v9_preview_doubleb *
+  , $plutusv3blst_nomadperf_template * $costmodel_doubleb *
     { name: "plutusv3-blst-double-nomadperf"
     }
   , $plutussecp_nomadperf_template * $plutus_loop_secp_ecdsa *
