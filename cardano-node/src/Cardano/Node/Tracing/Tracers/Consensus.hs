@@ -864,7 +864,9 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace [] ["SendBlock"]) =
-      [("served.block", "")]
+      [("served.block", "")
+      ,("served.block.latest", "")]
+
     metricsDocFor _ = []
 
     documentFor (Namespace [] ["SendBlock"]) = Just
@@ -872,6 +874,47 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
     documentFor _ = Nothing
 
     allNamespaces = [Namespace [] ["SendBlock"]]
+
+--------------------------------------------------------------------------------
+-- Metric for server block latest
+--------------------------------------------------------------------------------
+
+data ServedBlock = ServedBlock {
+    maxSlotNo :: SlotNo
+  , localUp :: Word64
+  , servedBlocksLatest :: Word64
+}
+
+instance LogFormatting ServedBlock where
+  forMachine _mDtal ServedBlock {} = mempty
+
+  asMetrics ServedBlock {..} =
+    [IntM "served.block.latest" (fromIntegral servedBlocksLatest)]
+
+emptyServedBlocks :: ServedBlock
+emptyServedBlocks = ServedBlock 0 0 0
+
+servedBlockLatest ::
+     Maybe (Trace IO FormattedMessage)
+  -> IO (Trace IO  (TraceLabelPeer peer (TraceBlockFetchServerEvent blk)))
+servedBlockLatest mbTrEKG =
+      foldTraceM calculateServedBlockLatest emptyServedBlocks
+                  (metricsFormatter
+                    (mkMetricsTracer mbTrEKG))
+
+calculateServedBlockLatest :: ServedBlock
+                          -> LoggingContext
+                          -> TraceLabelPeer peer (TraceBlockFetchServerEvent blk)
+                          -> IO ServedBlock
+calculateServedBlockLatest ServedBlock{..} _lc (TraceLabelPeer _ (TraceBlockFetchServerSendBlock p)) =
+    case pointSlot p of
+      Origin    -> return $ ServedBlock maxSlotNo localUp servedBlocksLatest
+      At slotNo ->
+          case compare maxSlotNo slotNo of
+              LT -> return $ ServedBlock slotNo (localUp + 1) (localUp + 1)
+              GT -> return $ ServedBlock maxSlotNo localUp servedBlocksLatest
+              EQ -> return $ ServedBlock maxSlotNo (localUp + 1) (localUp + 1)
+
 
 --------------------------------------------------------------------------------
 -- Gdd Tracer
@@ -976,63 +1019,6 @@ instance LogFormatting SanityCheckIssue where
     "Configuration contains multiple security parameters: " <> Text.pack (show e)
 
 
---------------------------------------------------------------------------------
--- Metric for server block latest
---------------------------------------------------------------------------------
-
-data ServedBlock = ServedBlock {
-    maxSlotNo :: SlotNo
-  , localUp :: Word64
-  , servedBlocksLatest :: Word64
-}
-
-instance MetaTrace ServedBlock where
-    namespaceFor ServedBlock {} =
-      Namespace [] ["ServedBlockLatest"]
-
-    severityFor (Namespace [] ["ServedBlockLatest"]) _ = Just
-      Debug
-    severityFor _ _ = Nothing
-
-    documentFor _ = Nothing
-
-    metricsDocFor (Namespace [] ["ServedBlockLatest"]) =
-      [("served.block.latest", "")]
-    metricsDocFor _ = []
-
-    allNamespaces = [Namespace [] ["ServedBlockLatest"]]
-
-
-instance LogFormatting ServedBlock where
-  forMachine _mDtal ServedBlock {} = mempty
-
-  asMetrics ServedBlock {..} =
-    [IntM "served.block.latest" (fromIntegral servedBlocksLatest)]
-
-
-emptyServedBlocks :: ServedBlock
-emptyServedBlocks = ServedBlock 0 0 0
-
-servedBlockLatest ::
-     Maybe (Trace IO FormattedMessage)
-  -> IO (Trace IO  (TraceLabelPeer peer (TraceBlockFetchServerEvent blk)))
-servedBlockLatest mbTrEKG =
-      foldTraceM calculateServedBlockLatest emptyServedBlocks
-                  (metricsFormatter
-                    (mkMetricsTracer mbTrEKG))
-
-calculateServedBlockLatest :: ServedBlock
-                          -> LoggingContext
-                          -> TraceLabelPeer peer (TraceBlockFetchServerEvent blk)
-                          -> IO ServedBlock
-calculateServedBlockLatest ServedBlock{..} _lc (TraceLabelPeer _ (TraceBlockFetchServerSendBlock p)) =
-    case pointSlot p of
-      Origin    -> return $ ServedBlock maxSlotNo localUp servedBlocksLatest
-      At slotNo ->
-          case compare maxSlotNo slotNo of
-              LT -> return $ ServedBlock slotNo (localUp + 1) (localUp + 1)
-              GT -> return $ ServedBlock maxSlotNo localUp servedBlocksLatest
-              EQ -> return $ ServedBlock maxSlotNo (localUp + 1) (localUp + 1)
 
 --------------------------------------------------------------------------------
 -- TxInbound Tracer
