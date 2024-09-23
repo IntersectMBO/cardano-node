@@ -65,3 +65,16 @@ allow-newer: katip:Win32
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 7bd492eaf6b78dec53eb5c541b2c8fb5828e2b5c
+  --sha256: 0h3mpwnjp6w4m3jv4knhr754py4xwkk5mb16m4shf53di6mpbimw
+  subdir:
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    ouroboros-consensus
+    sop-extras
+    strict-sop-core
