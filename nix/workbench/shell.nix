@@ -11,7 +11,6 @@
 , workbenchDevMode ? false
 ##
 , withHoogle ? true
-, withMainnet ? true
 }:
 
 with lib;
@@ -86,7 +85,7 @@ in project.shellFor {
     }
     trap workbench_atexit EXIT
     ''
-    + optionalString withMainnet
+    + optionalString (profileData.value.scenario == "chainsync")
     ''
     export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
     ''
@@ -130,9 +129,9 @@ in project.shellFor {
     pkgs.moreutils
     pkgs.pstree
     pkgs.time
-    workbench-interactive-start
-    workbench-interactive-stop
-    workbench-interactive-restart
+    workbench-runner.workbench-interactive-start
+    workbench-runner.workbench-interactive-stop
+    workbench-runner.workbench-interactive-restart
   ]
   # Backend packages take precendence.
   ++ workbench-runner.backend.extraShellPkgs

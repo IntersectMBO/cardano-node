@@ -1,32 +1,28 @@
-{ pkgs
-, lib
-, cardanoNodePackages
+{ pkgs, lib
 ##
-, batchName
-, profileName
+, profile
 , backend
 ##
-, cardano-node-rev
-, workbench
+, workbench # The derivation.
 , workbenchDevMode
+, cardanoNodePackages # The binaries to use when calling the workbench.
+, batchName
 , workbenchStartArgs
-, profiling
 ##
-, cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
+, cardano-node-rev
 }:
 let
+  profileName = profile.name;
+  inherit (profile) profiling;
   backendName = backend.name;
-
   inherit (backend) stateDir basePort useCabalRun;
 
-  profileData = workbench.materialise-profile
-    { inherit profileName backend profiling; };
+  profileData = profile.materialise-profile
+    { inherit backend; };
   backendData = backend.materialise-profile
     { inherit profileData; };
 in
   let
-
-    inherit (profileData.value) era composition monetary;
 
     path = pkgs.lib.makeBinPath path';
     path' =
@@ -34,8 +30,8 @@ in
       ]
       ## In dev mode, call the script directly:
       ++ pkgs.lib.optionals (!workbenchDevMode)
-      [ workbench.workbench ];
-
+      [ workbench ];
+    cacheDir = "${__getEnv "HOME"}/.cache/cardano-workbench";
     workbench-interactive-start = pkgs.writeScriptBin "start-cluster" ''
       set -euo pipefail
 
@@ -65,12 +61,51 @@ in
         echo "workbench:  alternate command for this action:  wb run restart" >&2
     '';
 
-    nodeBuildProduct =
-      name:
-      "report ${name}-log $out ${name}/stdout";
-
     workbench-profile-run =
       let
+        profileJson = profile.profileJson;
+        nodeSpecsJson = profile.nodeSpecsJson;
+        genesisFiles =
+          pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
+            { requiredSystemFeatures = [ "benchmark" ];
+              nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
+                [ bash cardano-cli coreutils gnused jq moreutils workbench ];
+            }
+            ''
+            mkdir $out
+
+            cache_key_input=$(wb genesis profile-cache-key-input ${profileJson})
+            cache_key=$(      wb genesis profile-cache-key       ${profileJson})
+
+            genesis_keepalive() {
+              while test ! -e $out/profile; do echo 'genesis_keepalive for Hydra'; sleep 10s; done
+            }
+            genesis_keepalive &
+            __genesis_keepalive_pid=$!
+            __genesis_keepalive_termination() {
+              kill $__genesis_keepalive_pid 2>/dev/null || true
+            }
+            trap __genesis_keepalive_termination EXIT
+
+            args=(
+              genesis actually-genesis
+              ${profileJson}
+              ${nodeSpecsJson}
+              $out
+              "$cache_key_input"
+              "$cache_key"
+            )
+            time wb "''${args[@]}"
+
+            touch done
+
+            ln -s ${profileJson}   $out
+            ln -s ${nodeSpecsJson} $out
+            ''
+        ;
+        nodeBuildProduct =
+          name:
+          "report ${name}-log $out ${name}/stdout";
         run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
             nativeBuildInputs = with cardanoNodePackages; with pkgs; [
@@ -82,7 +117,7 @@ in
               moreutils
               nix
               pstree
-              workbench.workbench
+              workbench
               zstd
             ]
             ++
@@ -102,7 +137,7 @@ in
               start
               --profile-data        ${profileData}
               --backend-data        ${backendData}
-              --genesis-cache-entry ${profileData.genesis.files}
+              --genesis-cache-entry ${genesisFiles}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
               --node-source         ${pkgs.cardanoNodeProject.args.src}
@@ -144,19 +179,43 @@ in
 
             echo "workbench-test:  completed run $run"
             '';
-  in
-    run // {
-      analysis = workbench.run-analysis { inherit pkgs workbench profileData run; };
-    };
+        trace = false;
+        analysis = pkgs.runCommand "workbench-run-analysis-${profileName}"
+          { requiredSystemFeatures = [ "benchmark" ];
+            nativeBuildInputs = with pkgs;
+              [ bash coreutils gnused jq moreutils nix workbench ];
+          }
+          ''
+          echo "analysing run:  ${run}"
+          mkdir -p $out/nix-support
 
-  overlay = self: super:
-    (backend.overlay profileData self super
-    //
-    {
-      inherit workbench-interactive-start;
-      inherit workbench-interactive-stop;
-      inherit workbench-interactive-restart;
-    });
+          ln -s ${run} $out/run
+
+          cmd=(
+              wb
+              ${pkgs.lib.optionalString trace "--trace"}
+              analyse
+              # --filters size-full
+              --outdir  $out
+              standard
+              ${run}
+              )
+          echo "''${cmd[*]}" > $out/wb-analyse.sh
+
+          ''${cmd[@]} 2>&1 |
+              tee $out/wb-analyse.log
+
+          cd $out
+          for x in $(ls *.json *.org *.txt | grep -v 'flt\.json$')
+          do echo "report $x $out $x" >> $out/nix-support/hydra-build-products
+          done
+          EOF
+          ''
+        ;
+      in
+        run // {inherit analysis;}
+    ;
+
 in
 {
   inherit profileName profileData;
@@ -164,7 +223,7 @@ in
   inherit profiling;
   inherit workbench-profile-run;
 
-  inherit batchName stateDir overlay;
+  inherit batchName stateDir;
 
   inherit workbench-interactive-start;
   inherit workbench-interactive-stop;

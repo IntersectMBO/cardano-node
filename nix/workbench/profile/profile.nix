@@ -1,19 +1,19 @@
-{ pkgs, lib, cardanoLib
-, runCommand
-, runJq
-, runWorkbenchJqOnly,  runWorkbench
+{ pkgs, lib
+, workbenchNix
+, profileName, profiling
 }:
 
 let
-  mkProfileJson = { profileName }:
-    runWorkbench "profile-${profileName}.json"
-      "profile json ${profileName}";
+  profileJson =
+    workbenchNix.runWorkbench "profile-${profileName}.json"
+      "profile json ${profileName}"
+  ;
 
-  mkTopologyFiles = { profileName, profileJson }:
+  topologyFiles =
     pkgs.runCommand "workbench-topology-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-          [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
+          [ bash cardano-cli coreutils gnused jq moreutils workbenchNix.workbench ];
       }
       ''
       mkdir $out
@@ -21,54 +21,16 @@ let
       ''
   ;
 
-  mkNodeSpecsJson = { profileName, profileJson }:
-    runWorkbench "node-specs-${profileName}.json"
-                 "profile node-specs ${profileName} ${mkTopologyFiles {inherit profileName profileJson;}}";
-
-  mkGenesisFiles = { profileName, profileJson, nodeSpecsJson }:
-    pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
-      { requiredSystemFeatures = [ "benchmark" ];
-        nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-          [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
-      }
-      ''
-      mkdir $out
-
-      cache_key_input=$(wb genesis profile-cache-key-input ${profileJson})
-      cache_key=$(      wb genesis profile-cache-key       ${profileJson})
-
-      genesis_keepalive() {
-        while test ! -e $out/profile; do echo 'genesis_keepalive for Hydra'; sleep 10s; done
-      }
-      genesis_keepalive &
-      __genesis_keepalive_pid=$!
-      __genesis_keepalive_termination() {
-        kill $__genesis_keepalive_pid 2>/dev/null || true
-      }
-      trap __genesis_keepalive_termination EXIT
-
-      args=(
-        genesis actually-genesis
-        ${profileJson}
-        ${nodeSpecsJson}
-        $out
-        "$cache_key_input"
-        "$cache_key"
-      )
-      time wb "''${args[@]}"
-
-      touch done
-
-      ln -s ${profileJson}   $out
-      ln -s ${nodeSpecsJson} $out
-      ''
+  nodeSpecsJson =
+    workbenchNix.runWorkbench "node-specs-${profileName}.json"
+                 "profile node-specs ${profileName} ${topologyFiles}"
   ;
 
-  jsonFilePretty = name: x: runJq name ''--null-input --sort-keys
+  jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
                                          --argjson x '${x}'
                                        '' "$x";
 
-  mkServices = { profile, nodeSpecs, topologyFiles, backend, profiling }:
+  mkServices = { profile, nodeSpecs, backend }:
     rec {
       inherit
         (pkgs.callPackage
@@ -76,8 +38,9 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
-            inherit runJq runWorkbench jsonFilePretty;
-            baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
+            inherit workbenchNix;
+            inherit jsonFilePretty;
+            baseNodeConfig = workbenchNix.cardanoNodePackages.cardanoLib.environments.testnet.nodeConfig;
           })
         node-services;
 
@@ -96,7 +59,7 @@ let
           ../service/tracer.nix
           {
             inherit backend profile nodeSpecs;
-            inherit runJq jsonFilePretty;
+            inherit jsonFilePretty;
           })
         tracer-service;
 
@@ -105,7 +68,6 @@ let
           ../service/healthcheck.nix
           {
             inherit backend profile nodeSpecs;
-            inherit runJq;
           })
         healthcheck-service;
 
@@ -116,37 +78,20 @@ let
         latency-service;
     };
 
-  profile-names-json =
-    runWorkbench "profile-names.json" "profiles list";
-
-  profile-names =
-    __fromJSON (__readFile profile-names-json);
-
   materialise-profile =
-    profileArgs@{ profileName, backend, profiling }:
-      if ! builtins.elem profileName profile-names
+    profileArgs@{ backend }:
+      if ! builtins.elem profileName workbenchNix.profile-names
       then
-        throw "No such profile: ${profileName}; Known profiles: ${toString (__attrNames profile-names)}"
+        throw "No such profile: ${profileName}; Known profiles: ${toString workbenchNix.profile-names}"
       else
         let
-          profileJson = mkProfileJson { inherit profileName; };
           profile = __fromJSON (__readFile profileJson);
-          topologyFiles =
-            mkTopologyFiles { inherit profileName profileJson; }
-          ;
-          nodeSpecsJson = mkNodeSpecsJson
-            { inherit profileName profileJson;};
           nodeSpecs = __fromJSON (__readFile nodeSpecsJson);
-          genesisFiles =
-            mkGenesisFiles
-              { inherit profileName profileJson nodeSpecsJson; }
-          ;
           inherit (mkServices
             {
-              inherit backend profiling;
+              inherit backend;
               inherit profile;
               inherit nodeSpecs;
-              inherit topologyFiles;
             })
             node-services
             generator-service
@@ -235,15 +180,14 @@ let
                 value = (__fromJSON (__readFile "${topologyFiles}/topology.json"));
               };
               node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
-              genesis.files = genesisFiles;
               inherit node-services generator-service tracer-service healthcheck-service latency-service;
             }
           )
   ;
 
-in
-  {
-    inherit profile-names-json;
-    inherit profile-names;
-    inherit materialise-profile;
-  }
+in {
+  name = profileName;
+  inherit profiling;
+  inherit profileJson nodeSpecsJson;
+  inherit materialise-profile;
+}

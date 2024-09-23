@@ -99,7 +99,6 @@ let
               inherit cardano-mainnet-mirror;
               inherit workbench-runner workbenchDevMode;
               inherit withHoogle;
-              withMainnet = false;
             };
     in project.shellFor {
     name = "devops-shell";
@@ -123,9 +122,9 @@ let
       pstree
       pkgs.time
       workbench.workbench
-      workbench-interactive-start
-      workbench-interactive-stop
-      workbench-interactive-restart
+      workbench-runner.workbench-interactive-start
+      workbench-runner.workbench-interactive-stop
+      workbench-runner.workbench-interactive-restart
     ];
 
     # Disable build tools for all of hsPkgs (would include duplicates for cardano-cli, cardano-node, etc.)
