@@ -94,6 +94,7 @@ import qualified Cardano.Api as Api
                    , PaymentKey
                    , TxMetadataInEra (..)
                    , Value)
+import qualified Cardano.Api.Experimental as Api (UnsignedTx (..))
 import qualified Cardano.Api.Byron as Byron (WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Ledger as Ledger
                    ( ConwayEraTxCert (..)
@@ -118,6 +119,7 @@ import qualified Cardano.Api.Shelley as Api
                    , ReferenceScript (..)
                    , ScriptWitness (..)
                    , ShelleyBasedEra (..)
+                   , Tx (..)
                    , TxAuxScripts (..)
                    , TxBody (..)
                    , TxBodyContent (..)
@@ -356,6 +358,9 @@ import qualified Cardano.CLI.Types.Errors.TxValidationError as CLI
                    , validateTxValidityLowerBound)
 import qualified Cardano.CLI.Types.Output as CLI (renderScriptCosts)
 import qualified Cardano.CLI.Types.TxFeature as CLI (TxFeature (..))
+import qualified Cardano.Ledger.Api.Tx as Ledger (Tx (..))
+import qualified Cardano.Ledger.Api as Ledger (Tx)
+import qualified Cardano.Ledger.Alonzo.Core as Ledger (Tx)
 import           Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Ledger
                    (pattern RetirePoolTxCert , ppMinFeeAL)
@@ -391,6 +396,7 @@ import qualified System.Exit as Exit (ExitCode (..), exitWith)
 import qualified System.IO as IO (hPutStrLn, print, stderr)
 
 
+{-
 runTransactionCmds :: Cmd.TransactionCmds era -> Api.ExceptT CLI.TxCmdError IO ()
 runTransactionCmds = \case
   Cmd.TransactionBuildCmd args -> runTransactionBuildCmd args
@@ -406,11 +412,13 @@ runTransactionCmds = \case
   Cmd.TransactionPolicyIdCmd args -> runTransactionPolicyIdCmd args
   Cmd.TransactionWitnessCmd args -> runTransactionWitnessCmd args
   Cmd.TransactionSignWitnessCmd args -> runTransactionSignWitnessCmd args
+-}
 
 -- ----------------------------------------------------------------------------
 -- Building transactions
 --
 
+{-
 runTransactionBuildCmd
   :: ()
   => Cmd.TransactionBuildCmdArgs era
@@ -552,7 +560,7 @@ runTransactionBuildCmd
             (Just td, Just ctv) -> Just (ctv, td)
 
     -- We need to construct the txBodycontent outside of runTxBuild
-    Api.BalancedTxBody txBodyContent balancedTxBody _ _ <-
+    Api.BalancedTxBody txBodyContent (Api.UnsignedTx (Api.ShelleyTx _ (Ledger.Tx { body = balancedTxBody }))) _ _ <-
       runTxBuild
         eon
         nodeSocketPath
@@ -620,7 +628,9 @@ runTransactionBuildCmd
         let noWitTx = Api.makeSignedTransaction [] balancedTxBody
          in Api.lift (Api.cardanoEraConstraints era $ Api.writeTxFileTextEnvelopeCddl eon fpath noWitTx)
               & Api.onLeft (Api.left . CLI.TxCmdWriteFileError)
+-}
 
+{-
 runTransactionBuildEstimateCmd
   :: ()
   => Cmd.TransactionBuildEstimateCmdArgs era
@@ -778,6 +788,7 @@ runTransactionBuildEstimateCmd -- TODO change type
     let noWitTx = Api.makeSignedTransaction [] balancedTxBody
     Api.lift (Api.writeTxFileTextEnvelopeCddl sbe txBodyOutFile noWitTx)
       & Api.onLeft (Api.left . CLI.TxCmdWriteFileError)
+-}
 
 getPoolDeregistrationInfo
   :: Api.Certificate era
