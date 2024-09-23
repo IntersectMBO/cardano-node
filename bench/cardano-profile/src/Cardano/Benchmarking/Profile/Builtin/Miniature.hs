@@ -106,7 +106,8 @@ profilesNoEraMiniature =
           P.empty & base
         . P.desc "Miniature dataset, dense topology on local cluster, 64k blocks"
         . P.torusDense . V.hosts 6 . P.loopback
-        . V.genesisVariantLatest . P.blocksize64k . P.v9Preview . P.v8Preview
+        -- Function `genesisVariantPreVoltaire` last to match `jq` order.
+        . P.blocksize64k . P.v9Preview . V.genesisVariantPreVoltaire
         . P.dreps 0
         . P.p2pOn
         . P.analysisSizeFull . P.analysisUnitary
