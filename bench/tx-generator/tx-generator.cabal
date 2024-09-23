@@ -26,7 +26,7 @@ common with-library
   -- It makes sure, we only depend on that package if it is buildable.
   -- The tx-generator will fall back to pre-serialized Plutus scripts if this package is not present.
   if !(impl(ghc <9.6) || impl(ghc >=9.7))
-    build-depends:      plutus-scripts-bench ^>= 1.0.4
+    build-depends:      plutus-scripts-bench >= 1.0.4
     cpp-options:        -DWITH_LIBRARY
 
 common maybe-unix
@@ -108,13 +108,13 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 9.3
+                      , cardano-api >= 9.3
                       , cardano-binary
-                      , cardano-cli ^>= 9.4
+                      , cardano-cli >= 9.4
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
-                      , cardano-git-rev ^>= 0.2.2
+                      , cardano-git-rev >= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-api
                       , cardano-ledger-byron
@@ -179,7 +179,7 @@ executable tx-generator
                         "-with-rtsopts=-T"
 
   build-depends:        base
-                      , cardano-api ^>= 9.2
+                      , cardano-api >= 9.2
                       , tx-generator
 
 test-suite tx-generator-apitest
