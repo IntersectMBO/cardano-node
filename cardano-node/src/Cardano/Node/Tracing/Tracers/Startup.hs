@@ -403,7 +403,8 @@ instance MetaTrace  (StartupTrace blk) where
   metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
     [("forging_enabled","Can this node forge blocks? (Is it provided with block forging credentials) 0 = no, 1 = yes")]
   metricsDocFor (Namespace _ ["Common"]) =
-    [("systemStartTime","The UTC time this node was started.")]
+    [("systemStartTime","The UTC time this node was started."),
+     ("node.start.time","The UTC time this node was started represented in POSIX seconds.")]
 
 
   metricsDocFor _ = []
