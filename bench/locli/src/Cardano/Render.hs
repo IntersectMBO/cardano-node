@@ -11,7 +11,11 @@
 
 module Cardano.Render (module Cardano.Render) where
 
-import Prelude                          (id, show)
+#if MIN_VERSION_base(4,16,0) && !MIN_VERSION_base(4,18,0)
+import Prelude                          (type (~))
+#endif
+
+import qualified Prelude
 import Cardano.Prelude                  hiding (head, show)
 
 import Data.Aeson.Text                  (encodeToLazyText)
@@ -148,8 +152,8 @@ renderScalarLim wLim v Field{..} =
     IFloat   (($ v)->x) ->      packWi $ printf "%F" x
     IDeltaTM (($ v)->x) -> smaybe "---"     showDt x
     IDeltaT  (($ v)->x) ->                  showDt x
-    IDate    (($ v)->x) -> packWi $ take 10 $ show x
-    ITime    (($ v)->x) -> packWi $ take  8 $ drop 11 $ show x
+    IDate    (($ v)->x) -> packWi $ take 10 $ Prelude.show x
+    ITime    (($ v)->x) -> packWi $ take  8 $ drop 11 $ Prelude.show x
     IText    (($ v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
 
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
@@ -187,7 +191,7 @@ renderSummary rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ =
    fields' :: [Field ISelect I a]
    fields' = filter fieldSelr timelineFields
 renderSummary rc  _ _ _ =
-  error $ "renderSummary: RenderConfig not supported:  " <> show rc
+  error $ "renderSummary: RenderConfig not supported:  " <> Prelude.show rc
 
 renderProfilingData ::
   RenderConfig -> Anchor -> (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> [Text]
@@ -307,7 +311,7 @@ mapRenderCDF fieldSelr centiSelr fSampleProps x =
 
    -- Pick relevant centiles:
    subsetCenti :: CDF p b -> CDF p b
-   subsetCenti = maybe id subsetCDF centiSelr
+   subsetCenti = maybe Prelude.id subsetCDF centiSelr
 
    centiles :: [Centile]
    centiles = mapSomeFieldCDF
@@ -386,11 +390,11 @@ renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} 
    fields' = filterFields fieldSelr
 
    restrictCDF :: forall c. CDF p c -> CDF p c
-   restrictCDF = maybe id subsetCDF centileSelr
+   restrictCDF = maybe Prelude.id subsetCDF centileSelr
 
    percSpecs :: [Centile]
    percSpecs = maybe (mapSomeFieldCDF centilesCDF x (fSelect . head $ cdfFields @a @p))
-                     id
+                     Prelude.id
                      centileSelr
 
 renderAnalysisCDFs a fieldSelr aspect _centileSelr rc@RenderConfig{rcFormat=AsReport} x =
@@ -495,7 +499,7 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr rc@RenderConfig{rcFormat=AsPretty}
    cdfSamplesProps :: Divisible c => CDF p c -> [[c]]
    cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd)
                      . cdfSamples
-                     . maybe id subsetCDF centiSelr
+                     . maybe Prelude.id subsetCDF centiSelr
 
    sizeAvg :: [Text]
    sizeAvg = fmap (T.intercalate " ")
@@ -544,7 +548,7 @@ formatDiffTime :: Width -> NominalDiffTime -> Text
 formatDiffTime = centerLim renderDiffTime handleStrOverflowFloat
 
 renderDiffTime :: NominalDiffTime -> Text
-renderDiffTime = T.pack . dropWhileEnd (== 's').show
+renderDiffTime = T.pack . dropWhileEnd (== 's') . Prelude.show
 
 handleStrOverflowFloat :: Int -> Text -> Text
 handleStrOverflowFloat w =
