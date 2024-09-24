@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                9.2.0
+version:                9.2.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -38,8 +38,8 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
-common maybe-Win32 
-  if os(windows) 
+common maybe-Win32
+  if os(windows)
     build-depends:      Win32
 
 common maybe-unix
@@ -55,7 +55,7 @@ common text
 library
   import:               project-config
                       , maybe-unix
-                      , maybe-Win32  
+                      , maybe-Win32
                       , text
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS
@@ -155,7 +155,7 @@ library
                       , cardano-ledger-babbage
                       , cardano-ledger-binary
                       , cardano-ledger-byron
-                      , cardano-ledger-conway
+                      , cardano-ledger-conway >= 1.16.2
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
