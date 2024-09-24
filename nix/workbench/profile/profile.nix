@@ -22,8 +22,8 @@ let
   ;
 
   nodeSpecsJson =
-    workbenchNix.runWorkbench "node-specs-${profileName}.json"
-                 "profile node-specs ${profileName} ${topologyFiles}"
+    workbenchNix.runCardanoProfile "node-specs-${profileName}.json"
+                 "node-specs ${profileJson} ${topologyFiles}/topology.json"
   ;
 
   jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
