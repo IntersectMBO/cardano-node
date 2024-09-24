@@ -37,6 +37,7 @@ library
   other-modules:        Paths_cardano_profile
   autogen-modules:      Paths_cardano_profile
   exposed-modules:      Cardano.Benchmarking.Profile
+                      -- Profile definitions.
                       , Cardano.Benchmarking.Profile.Builtin.Cloud
                       , Cardano.Benchmarking.Profile.Builtin.Empty
                       , Cardano.Benchmarking.Profile.Builtin.ForgeStress
@@ -52,6 +53,7 @@ library
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Idle
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly
                       , Cardano.Benchmarking.Profile.Extra.Scaling
+                      , Cardano.Benchmarking.Profile.NodeSpecs
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types

@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSL8
 import qualified Options.Applicative as OA
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile as Profiles
+import qualified Cardano.Benchmarking.Profile.NodeSpecs as NodeSpecs
 import qualified Cardano.Benchmarking.Profile.Types as Types
 
 --------------------------------------------------------------------------------
@@ -22,6 +23,7 @@ data Cli =
   | All
   | ByName String
   | LibMK
+  | NodeSpecs FilePath FilePath
   | ToJson String
   | FromJson String
 
@@ -49,6 +51,18 @@ main = do
           in BSL8.putStrLn aeson
     LibMK -> do
       mapM_ putStrLn Profiles.libMk
+    (NodeSpecs profilePath topologyPath) -> do
+      eitherProfile <- Aeson.eitherDecodeFileStrict profilePath
+      let profile = case eitherProfile of
+                      (Left errorMsg) ->
+                        error $ "Not a valid profile: " ++ errorMsg
+                      (Right value) -> value
+      eitherTopology <- Aeson.eitherDecodeFileStrict topologyPath
+      let topology = case eitherTopology of
+                      (Left errorMsg) ->
+                        error $ "Not a valid topology: " ++ errorMsg
+                      (Right value) -> value
+      BSL8.putStrLn $ Aeson.encode $ NodeSpecs.nodeSpecs profile topology
     -- Print a single profiles, with an optional overlay.
     (ToJson filePath) -> print filePath
 --      str <- readFile filePath
@@ -108,6 +122,15 @@ cliParser = OA.hsubparser $
         (OA.info
           (pure LibMK)
           (OA.fullDesc <> OA.header "lib-make" <> OA.progDesc "Makefile include")
+        )
+  <>
+      OA.command "node-specs"
+        (OA.info
+          (     NodeSpecs
+            <$> OA.argument OA.str (OA.metavar "PROFILE-JSON-FILEPATH" )
+            <*> OA.argument OA.str (OA.metavar "TOPOLOGY-JSON-FILEPATH")
+          )
+          (OA.fullDesc <> OA.header "node-specs" <> OA.progDesc "Create the profile's node-specs.json file")
         )
   <>
       OA.command "to-json"
