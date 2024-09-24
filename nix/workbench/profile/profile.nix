@@ -5,8 +5,8 @@
 
 let
   profileJson =
-    workbenchNix.runWorkbench "profile-${profileName}.json"
-      "profile json ${profileName}"
+    workbenchNix.runCardanoProfile "profile-${profileName}.json"
+      "by-name ${profileName}"
   ;
 
   topologyFiles =
