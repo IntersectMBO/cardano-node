@@ -139,7 +139,7 @@ nodeSpecs' profile topology =
             , Pool
             , if i' - n_bfts < n_singular_pools
               then 1
-              else (Types.dense_pool_density $ Types.composition profile)
+              else Types.dense_pool_density $ Types.composition profile
             , True
             )
           )
@@ -194,12 +194,12 @@ nodeSpecs' profile topology =
         , kind = kind'
         , pools = pools'
         , autostart = autostart'
-        , name = "node-" ++ (show i')
+        , name = "node-" ++ show i'
         , isProducer = kind' == BFT || kind' == Pool
         , port = 30000 + i'
         , region =
             let nodes = filter
-                        (\coreNode -> (toEnum $ TopologyTypes.nodeId coreNode) == i')
+                        (\coreNode -> toEnum (TopologyTypes.nodeId coreNode) == i')
                         (TopologyTypes.coreNodes topology)
             in case nodes of
                  (node:_) -> Just $ TopologyTypes.region node
@@ -222,7 +222,7 @@ nodeSpecs' profile topology =
         , port = 30000 + i'
         , region =
             let nodes = filter
-                        (\relayNode -> (toEnum $ TopologyTypes.nodeId relayNode) == i')
+                        (\relayNode -> toEnum (TopologyTypes.nodeId relayNode) == i')
                         (TopologyTypes.relayNodes topology)
             in case nodes of
                  (node:_) -> Just $ TopologyTypes.region node
