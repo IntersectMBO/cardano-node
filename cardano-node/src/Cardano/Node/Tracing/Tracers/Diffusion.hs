@@ -851,6 +851,10 @@ instance LogFormatting TraceLedgerPeers where
       , "domainAccessPoint" .= show dap
       , "error" .= show reason
       ]
+  forMachine _dtal UsingBigLedgerPeerSnapshot =
+    mconcat
+      [ "kind" .= String "UsingBigLedgerPeerSnapshot"
+      ]
 
 instance MetaTrace TraceLedgerPeers where
     namespaceFor PickedLedgerPeer {} =
@@ -885,6 +889,8 @@ instance MetaTrace TraceLedgerPeers where
       Namespace [] ["TraceLedgerPeersResult"]
     namespaceFor TraceLedgerPeersFailure {} =
       Namespace [] ["TraceLedgerPeersFailure"]
+    namespaceFor UsingBigLedgerPeerSnapshot {} =
+      Namespace [] ["UsingBigLedgerPeerSnapshot"]
 
     severityFor (Namespace _ ["PickedPeer"]) _ = Just Debug
     severityFor (Namespace _ ["PickedPeers"]) _ = Just Info
@@ -900,6 +906,7 @@ instance MetaTrace TraceLedgerPeers where
     severityFor (Namespace _ ["TraceLedgerPeersDomains"]) _ = Just Debug
     severityFor (Namespace _ ["TraceLedgerPeersResult"]) _ = Just Debug
     severityFor (Namespace _ ["TraceLedgerPeersFailure"]) _ = Just Debug
+    severityFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["PickedPeer"]) = Just
@@ -928,6 +935,8 @@ instance MetaTrace TraceLedgerPeers where
       ""
     documentFor (Namespace _ ["TraceLedgerPeersFailure"]) = Just
       ""
+    documentFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) = Just
+      ""
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -943,4 +952,5 @@ instance MetaTrace TraceLedgerPeers where
       , Namespace [] ["TraceLedgerPeersDomains"]
       , Namespace [] ["TraceLedgerPeersResult"]
       , Namespace [] ["TraceLedgerPeersFailure"]
+      , Namespace [] ["UsingBigLedgerPeerSnapshot"]
       ]

@@ -79,7 +79,7 @@ import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
-import           Data.Aeson (Value (..))
+import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
@@ -376,6 +376,11 @@ condenseT = pack . condense
 showT :: Show a => a -> Text
 showT = pack . show
 
+instance ToJSON ByteSize32 where
+  toJSON (ByteSize32 w) = toJSON w
+
+instance FromJSON ByteSize32 where
+  parseJSON v = ByteSize32 <$> parseJSON v
 
 instance ( tx ~ GenTx blk
          , HasTxId tx

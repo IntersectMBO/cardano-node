@@ -126,6 +126,9 @@ nodeRunParser = do
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncConsensusMode = mempty
+           , pncMinBigLedgerPeersForTrustedState = mempty
+           , pncEnableNewTxSubmissionProtocol = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath

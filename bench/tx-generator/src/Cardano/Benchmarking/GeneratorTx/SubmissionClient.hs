@@ -86,7 +86,11 @@ type LocalState era = (TxSource era, UnAcked (Tx era), SubmissionThreadStats)
 type EndOfProtocolCallback m = SubmissionThreadStats -> m ()
 
 txSubmissionClient
+<<<<<<< HEAD
   :: forall m era.
+=======
+  :: forall m era .
+>>>>>>> 2906cc210 (Integrate o-network and o-consensus)
      ( MonadIO m, MonadFail m
      , IsShelleyBasedEra era
      )
