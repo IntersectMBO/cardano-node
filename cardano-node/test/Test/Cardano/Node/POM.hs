@@ -17,9 +17,12 @@ import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
+import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..),
+                   defaultMinBigLedgerPeersForTrustedState)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.TxSubmission.Inbound.Server (EnableNewTxSubmissionProtocol (..))
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -145,6 +148,9 @@ testPartialYamlConfig =
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
+    , pncConsensusMode = mempty
+    , pncMinBigLedgerPeersForTrustedState = mempty
+    , pncEnableNewTxSubmissionProtocol = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -185,6 +191,9 @@ testPartialCliConfig =
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
+    , pncConsensusMode = Last (Just PraosMode)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncEnableNewTxSubmissionProtocol = Last (Just DisableNewTxSubmissionProtocol)
     }
 
 -- | Expected final NodeConfiguration
@@ -231,6 +240,9 @@ eExpectedConfig = do
     , ncTargetNumberOfActiveBigLedgerPeers = 5
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
+    , ncConsensusMode = PraosMode
+    , ncMinBigLedgerPeersForTrustedState = defaultMinBigLedgerPeersForTrustedState
+    , ncEnableNewTxSubmissionProtocol = DisableNewTxSubmissionProtocol
     }
 
 -- -----------------------------------------------------------------------------

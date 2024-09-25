@@ -25,6 +25,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
 
 import           Cardano.Logging
 import           Cardano.Node.Queries (HasKESInfo (..))
+import           Cardano.Node.Tracing.Compat (fromDetailLevel)
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
@@ -33,6 +34,7 @@ import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
+import           Cardano.Tracing.OrphanInstances.Common (ToObject (..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -985,7 +987,7 @@ instance LogFormatting SanityCheckIssue where
 -- TxInbound Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (TraceTxSubmissionInbound txid tx) where
+instance (ToJSON txid, ToObject tx) => LogFormatting (TraceTxSubmissionInbound txid tx) where
   forMachine _dtal (TraceTxSubmissionCollected count) =
     mconcat
       [ "kind" .= String "TraceTxSubmissionCollected"
@@ -1011,6 +1013,16 @@ instance LogFormatting (TraceTxSubmissionInbound txid tx) where
       [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
+  forMachine _dtal (TraceTxInboundAddedToMempool txids) =
+    mconcat
+      [ "kind" .= String "TraceTxInboundAddedToMempool"
+      , "txids" .= txids
+      ]
+  forMachine dtal (TraceTxInboundDecision td) =
+    mconcat
+      [ "kind" .= String "TraceTxInboundDecision"
+      , "decision" .= toObject (fromDetailLevel dtal) td
+      ]
 
   asMetrics (TraceTxSubmissionCollected count)=
     [CounterM "submissions.submitted" (Just count)]
@@ -1028,12 +1040,16 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
     namespaceFor TraceTxInboundTerminated {} = Namespace [] ["Terminated"]
     namespaceFor TraceTxInboundCanRequestMoreTxs {} = Namespace [] ["CanRequestMoreTxs"]
     namespaceFor TraceTxInboundCannotRequestMoreTxs {} = Namespace [] ["CannotRequestMoreTxs"]
+    namespaceFor TraceTxInboundAddedToMempool {} = Namespace [] ["TxInboundAddedToMempool"]
+    namespaceFor TraceTxInboundDecision {} = Namespace [] ["TxInboundDecision"]
 
     severityFor (Namespace _ ["Collected"]) _ = Just Debug
     severityFor (Namespace _ ["Processed"]) _ = Just Debug
     severityFor (Namespace _ ["Terminated"]) _ = Just Notice
     severityFor (Namespace _ ["CanRequestMoreTxs"]) _ = Just Debug
     severityFor (Namespace _ ["CannotRequestMoreTxs"]) _ = Just Debug
+    severityFor (Namespace _ ["TxInboundAddedToMempool"]) _ = Just Debug
+    severityFor (Namespace _ ["TxInboundDecision "]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["Collected"]) =
@@ -1060,6 +1076,13 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
       , " txids. Since this is the only thing to do now, we make this a"
       , " blocking call."
       ]
+    documentFor (Namespace _ ["TxInboundAddedToMempool"]) = Just $ mconcat
+      [ "Transaction ids that made it into the mempool"
+      ]
+    documentFor (Namespace _ ["TxInboundDecision"]) = Just $ mconcat
+      [ "Current decision made by the decision logic thread"
+      , " to guide the TX Submission protocol"
+      ]
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -1068,6 +1091,8 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
         , Namespace [] ["Terminated"]
         , Namespace [] ["CanRequestMoreTxs"]
         , Namespace [] ["CannotRequestMoreTxs"]
+        , Namespace [] ["TxInboundAddedToMempool"]
+        , Namespace [] ["TxInboundDecision"]
         ]
 
 --------------------------------------------------------------------------------
@@ -1215,23 +1240,33 @@ instance
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
+      where
+        ByteSize32 w = msNumBytes mpSz
   asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
+      where
+        ByteSize32 w = msNumBytes mpSz
   asMetrics (TraceMempoolRemoveTxs _txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
+      where
+        ByteSize32 w = msNumBytes mpSz
   asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
+      where
+        ByteSize32 w = msNumBytes mpSz
   asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
     ]
+      where
+        ByteSize32 w = msNumBytes mpSz
 
   asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
     [ IntM "txsSyncDuration" (round $ 1000 * duration)
