@@ -15,15 +15,13 @@ import           Cardano.Tracer.Handlers.RTView.State.Last
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Main
 import           Cardano.Tracer.Handlers.RTView.Update.EraSettings
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
-import           Cardano.Tracer.Handlers.SSL.Certs
 import           Cardano.Tracer.Handlers.State.TraceObjects
 import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Utils (sequenceConcurrently_)
 
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
-import           Control.Monad (void)
 import           Control.Monad.Extra (whenJust)
-import qualified Data.Text as T
-import           Data.Text.Encoding (encodeUtf8)
+import           Data.ByteString.UTF8 (fromString)
+import           Network.Wai.Handler.Warp (Port)
 import           System.Time.Extra (sleep)
 
 import qualified Graphics.UI.Threepenny as UI
@@ -42,8 +40,6 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
     traceWith teTracer TracerStartedRTView
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
-    -- Get paths to default SSL files for config.
-    (certFile, keyFile) <- placeDefaultSSLFiles tracerEnv
     -- Initialize displayed stuff outside of main page renderer,
     -- to be able to update corresponding elements after page reloading.
     displayedElements <- initDisplayedElements
@@ -55,8 +51,8 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
     lastResources <- initLastResources
     eraSettings   <- initErasSettings
 
-    void . sequenceConcurrently $
-      [ UI.startGUI (config host port certFile keyFile) $
+    sequenceConcurrently_
+      [ UI.startGUI (config host port) $
           mkMainPage
             tracerEnv
             tracerEnvRTView
@@ -73,16 +69,12 @@ runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
   TracerConfig{network, logging, hasRTView} = teConfig tracerEnv
 
   -- RTView's web page is available via 'https://' url only.
-  config h p cert key =
+  config :: String -> Port -> UI.Config
+  config host port =
     UI.defaultConfig
-      { UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
+      { UI.jsAddr    = Just (fromString host)
+      , UI.jsPort    = Just port
+      , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
       , UI.jsWindowReloadOnDisconnect = False
-      , UI.jsUseSSL =
-          Just $ UI.ConfigSSL
-            { UI.jsSSLBind = encodeUtf8 $ T.pack h
-            , UI.jsSSLPort = fromIntegral p
-            , UI.jsSSLCert = cert
-            , UI.jsSSLKey  = key
-            , UI.jsSSLChainCert = False
-            }
+      , UI.jsUseSSL = Nothing
       }

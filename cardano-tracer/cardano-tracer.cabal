@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.2.4
+version:                0.3
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
@@ -155,11 +155,12 @@ library
                         cardano-git-rev ^>=0.2.2
                       , cassava
                       , threepenny-gui
+                      , utf8-string
                       , vector
 
   build-depends:        aeson
                       , async
-                      , async-extras
+                      , auto-update
                       , bimap
                       , blaze-html
                       , bytestring
@@ -168,21 +169,20 @@ library
                       , containers
                       , contra-tracer
                       , directory
-                      , ekg
                       , ekg-core
-                      , ekg-forward ^>= 0.5
+                      , ekg-forward >= 0.5
+                      , ekg-wai
                       , extra
                       , filepath
+                      , http-types
                       , mime-mail
                       , optparse-applicative
                       , ouroboros-network ^>= 0.17
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
+                      , slugify
                       , smtp-mail ^>= 0.5
-                      , snap-blaze
-                      , snap-core
-                      , snap-server
                       , stm
                       , string-qq
                       , text
@@ -191,6 +191,8 @@ library
                       , trace-forward
                       , trace-resources
                       , unordered-containers
+                      , wai ^>= 3.2
+                      , warp ^>= 3.4
                       , yaml
 
   if flag(systemd) && os(linux)
@@ -281,8 +283,7 @@ library demo-acceptor-lib
 
   exposed-modules:      Cardano.Tracer.Test.Acceptor
 
-  build-depends:        async-extras
-                      , bytestring
+  build-depends:        bytestring
                       , cardano-tracer
                       , containers
                       , extra

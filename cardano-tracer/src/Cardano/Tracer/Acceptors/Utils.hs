@@ -1,7 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
-#if RTVIEW
 {-# LANGUAGE OverloadedStrings #-}
-#endif
+{-# LANGUAGE TupleSections #-}
 
 module Cardano.Tracer.Acceptors.Utils
   ( prepareDataPointRequestor
@@ -26,6 +25,7 @@ import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import qualified Data.Bimap as BM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import           Data.Time.Clock.POSIX (getPOSIXTime)
 #if RTVIEW
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 #endif
@@ -51,11 +51,25 @@ prepareMetricsStores
   -> IO (EKG.Store, TVar MetricsLocalStore)
 prepareMetricsStores TracerEnv{teConnectedNodes, teAcceptedMetrics} connId = do
   addConnectedNode teConnectedNodes connId
-  storesForNewNode <- (,) <$> EKG.newStore
-                          <*> newTVarIO emptyMetricsLocalStore
-  atomically $
-    modifyTVar' teAcceptedMetrics $ M.insert (connIdToNodeId connId) storesForNewNode
+  store <- EKG.newStore
+
+  EKG.registerCounter "ekg.server_timestamp_ms" getTimeMs store
+  storesForNewNode <- (store ,) <$> newTVarIO emptyMetricsLocalStore
+
+  atomically do
+    modifyTVar' teAcceptedMetrics do
+      M.insert (connIdToNodeId connId) storesForNewNode
+
   return storesForNewNode
+
+  where
+    -- forkServer definition of `getTimeMs'. The ekg frontend relies
+    -- on the "ekg.server_timestamp_ms" metric being in every
+    -- store. While forkServer adds that that automatically we must
+    -- manually add it.
+    -- url
+    --  + https://github.com/tvh/ekg-wai/blob/master/System/Remote/Monitoring/Wai.hs#L237-L238
+    getTimeMs = (round . (* 1000)) `fmap` getPOSIXTime
 
 addConnectedNode
   :: ConnectedNodes

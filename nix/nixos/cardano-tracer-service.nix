@@ -28,10 +28,10 @@ let serviceConfigToJSON =
           rpMaxAgeHours   = 24;
         } // (cfg.rotation or {});
 
-        hasEKG = [
-          { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase;     }
-          { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase + 1; }
-        ];
+        hasEKG = {
+          epHost  = "127.0.0.1"; 
+          epPort  = cfg.ekgPortBase;
+        };
         ekgRequestFreq = 1;
         hasPrometheus = {
           epHost    = "127.0.0.1";

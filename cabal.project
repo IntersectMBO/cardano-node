@@ -48,7 +48,7 @@ package cryptonite
   flags: -support_rdrand
 
 package snap-server
-  flags: +openssl
+  flags: -openssl
 
 package bitvec
   flags: -simd
@@ -62,8 +62,8 @@ constraints:
 
 allow-newer:
   , katip:Win32
+  , ekg-wai:time
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-

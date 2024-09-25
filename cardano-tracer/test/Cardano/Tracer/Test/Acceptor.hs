@@ -18,14 +18,13 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
 #else
 import           Control.Concurrent.STM.TVar (readTVarIO)
 #endif
-import           Control.Monad (forM_, forever, void)
+import           Control.Monad (forM_, forever)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
@@ -94,7 +93,7 @@ launchAcceptorsSimple mode localSock dpName = do
         }
 #endif
             -- NOTE: no reforwarding in this acceptor.
-  void . sequenceConcurrently $
+  sequenceConcurrently_
     [ runAcceptors tracerEnv tracerEnvRTView
     , runDataPointsPrinter dpName dpRequestors
     ]

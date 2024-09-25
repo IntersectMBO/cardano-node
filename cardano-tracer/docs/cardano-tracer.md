@@ -337,72 +337,135 @@ The fields `rpMaxAgeMinutes`, `rpMaxAgeHours` specify the lifetime of the log fi
 
 ## Prometheus
 
-The optional field `hasPrometheus` specifies the host and port of the web page with metrics. For example:
+At top-level route `/` Promtheus gives a list of connected nodes.
+
+The responses are either human-readable names (HTML) with clickable
+links, or JSON mapping from connected node names to relative URLs,
+depending on desired content type (`Accept:` header of the request).
+
+The routes dynamically depend on the connected nodes, the node names
+are [sluggified](https://hackage.haskell.org/package/slugify).
+
+The optional field `hasPrometheus` specifies the host and port of the
+web page with Prometheus metrics. For example:
 
 ```
 "hasPrometheus": {
   "epHost": "127.0.0.1",
-  "epPort": 3000
+  "epPort": 3200
 }
 ```
 
-Here the web page is available at `http://127.0.0.1:3000`. Please note that if you skip this field, the web page will not be available.
-
-After you open `http://127.0.0.1:3000` in your browser, you will see the list of identifiers of connected nodes (or the warning message, if there are no connected nodes yet), for example:
-
-```
-* tmp-forwarder.sock@0
-* tmp-forwarder.sock@1
-* tmp-forwarder.sock@2
-```
-
-Each identifier is a hyperlink to the page where you will see the **current** list of metrics received from the corresponding node, in such a format:
+With this example, the list of clickable identifiers of connected
+nodes will be available at `http://127.0.0.1:3200`, such as:
 
 ```
+* 127.0.0.1:30004
+* 127.0.0.1:30001
+* 127.0.0.1:30005
+* 127.0.0.1:30000
+* 127.0.0.1:30003
+* 127.0.0.1:30002
+* TxGenerator
+```
+
+Clicking an identifier will take you to its monitoring page. For
+example clicking on `127.0.0.1:30004` displays the monitoring metrics
+at `http://localhost:3200/12700130004`.
+
+Sending a HTTP GET request with a JSON Accept header gives the metrics
+of the top-level route, or identifier as JSON. `jq '.'` pretty-prints
+the JSON object.
+
+```
+$ curl --silent -H "Accept: application/json" '127.0.0.1:3200' | jq '.'
+{
+  "127.0.0.1:30000": "/12700130000",
+  "127.0.0.1:30001": "/12700130001",
+  "127.0.0.1:30002": "/12700130002",
+  "127.0.0.1:30003": "/12700130003",
+  "127.0.0.1:30004": "/12700130004",
+  "127.0.0.1:30005": "/12700130005",
+  "TxGenerator": "/txgenerator"
+}
+```
+
+The Promethus output is a map from Prometheus metric to value:
+
+```
+$ curl '127.0.0.1:3200/12700130004'
+blockNum_int 35
+rts_gc_init_cpu_ms 5
 rts_gc_par_tot_bytes_copied 0
-rts_gc_num_gcs 2
-rts_gc_max_bytes_slop 15880
-rts_gc_num_bytes_usage_samples 1
-rts_gc_wall_ms 4005
-...
-rts_gc_par_max_bytes_copied 0
-rts_gc_mutator_cpu_ms 57
-rts_gc_mutator_wall_ms 4004
-rts_gc_gc_cpu_ms 1
-rts_gc_cumulative_bytes_used 184824
+served_block_counter 31
+submissions_accepted_counter 2771
+density_real 5.7692307692307696e-2
+blocksForged_int 6
+
 ```
 
 ## EKG Monitoring
 
-The optional field `hasEKG` specifies the hosts and ports of two web pages:
+At top-level route `/` EKG gives a list of connected nodes.
 
-1. the list of identifiers of connected nodes,
-2. EKG monitoring page.
+The responses are either human-readable names (HTML) with clickable
+links, or JSON mapping from connected node names to relative URLs,
+depending on desired content type (`Accept:` header of the request).
 
-For example, if you use JSON configuration file:
+The routes dynamically depend on the connected nodes, the node names
+are [sluggified](https://hackage.haskell.org/package/slugify).
+
+The optional field `hasEKG` specifies the host and port of the web
+page with EKG metrics. For example:
 
 ```
-"hasEKG": [
-  {
-    "epHost": "127.0.0.1",
-    "epPort": 3100
+"hasEKG": {
+  "epHost": "127.0.0.1",
+  "epPort": 3100
+}
+```
+
+With this example, the list of clickable identifiers of connected
+nodes will be available at `http://127.0.0.1:3100`, such as:
+
+```
+* 127.0.0.1:30004
+* 127.0.0.1:30001
+* 127.0.0.1:30005
+* 127.0.0.1:30000
+* 127.0.0.1:30003
+* 127.0.0.1:30002
+* TxGenerator
+```
+
+Clicking an identifier will take you to its monitoring page. For
+example clicking on `127.0.0.1:30004` displays the monitoring metrics
+at `http://localhost:3100/12700130004`.
+
+Sending a HTTP GET request with a JSON Accept header gives the metrics
+of an identifier as JSON. `jq '.'` pretty-prints the JSON object.
+
+```
+$ curl --silent -H 'Accept: application/json' '127.0.0.1:3100/12700130004' | jq '.'
+{
+  "ChainSync": {
+    "HeadersServed_counter": {
+      "type": "c",
+      "val": 24
+    }
   },
-  {
-    "epHost": "127.0.0.1",
-    "epPort": 3101
-  }
-]
+  "Mem": {
+    "resident_int": {
+      "type": "g",
+      "val": 91877376
+    }
+  },
+  "RTS": {
+    "alloc_int": {
+      "type": "g",
+      "val": 1014189896
+    },
 ```
-
-The page with the list of identifiers of connected nodes will be available at `http://127.0.0.1:3100`, for example:
-
-```
-* tmp-forwarder.sock@0
-* tmp-forwarder.sock@1
-* tmp-forwarder.sock@2
-```
-
-Each identifier is a hyperlink, after clicking to it you will be redirected to `http://127.0.0.1:3101` where you will see EKG monitoring page for corresponding node.
 
 ## Verbosity
 

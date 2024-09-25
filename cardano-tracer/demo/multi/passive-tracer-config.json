@@ -4,16 +4,10 @@
     "tag": "AcceptAt",
     "contents": "/run/user/1000/cardano-tracer-demo-1.sock"
   },
-  "hasEKG": [
-    {
-      "epHost": "127.0.0.1",
-      "epPort": 3100
-    },
-    {
-      "epHost": "127.0.0.1",
-      "epPort": 3101
-    }
-  ],
+  "hasEKG": {
+    "epHost": "127.0.0.1",
+    "epPort": 3100
+  },
   "hasPrometheus": {
     "epHost": "127.0.0.1",
     "epPort": 3000
