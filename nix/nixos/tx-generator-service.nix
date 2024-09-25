@@ -42,6 +42,7 @@ let
       inherit
         add_tx_size
         debugMode
+        drep_voting
         init_cooldown
         inputs_per_tx
         localNodeSocketPath
@@ -98,6 +99,8 @@ in pkgs.commonLib.defServiceModule
           datum               = mayOpt attrs "Plutus script datum.";
           redeemer            = mayOpt attrs "Plutus script redeemer.";
         };
+
+        drep_voting           = mayOpt bool "Activate DRep voting workload (mutually excl. with plutus)";
 
         # Overrides the usage of Nix Store paths by default.
         plutusRedeemerFile = mayOpt str "Plutus redeemer file path.";
