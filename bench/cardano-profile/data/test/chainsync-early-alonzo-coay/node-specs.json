@@ -1,0 +1,26 @@
+{
+  "node-0": {
+    "i": 0,
+    "kind": "chaindb-server",
+    "pools": 0,
+    "autostart": true,
+    "name": "node-0",
+    "isProducer": false,
+    "port": 30000,
+    "region": null,
+    "shutdown_on_slot_synced": 38901589,
+    "shutdown_on_block_synced": null
+  },
+  "explorer": {
+    "i": 1,
+    "kind": "explorer",
+    "pools": 0,
+    "autostart": false,
+    "name": "explorer",
+    "isProducer": false,
+    "port": 30001,
+    "region": null,
+    "shutdown_on_slot_synced": 38901589,
+    "shutdown_on_block_synced": null
+  }
+}

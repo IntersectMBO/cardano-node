@@ -50,7 +50,7 @@ data NodeSpec = NodeSpec
   , name :: String
   , isProducer :: Bool
   , port :: Integer
-  , region :: TopologyTypes.Location
+  , region :: Maybe TopologyTypes.Location -- `Maybe` for "chainsync*" profiles.
   , shutdown_on_slot_synced :: Maybe Integer
   , shutdown_on_block_synced :: Maybe Integer
   }
@@ -81,6 +81,28 @@ instance Aeson.FromJSON NodeSpecKind where
 
 --------------------------------------------------------------------------------
 
+-- `jq` range.
+{--
+$ jq --null-input 'range(0;0)'
+$ jq --null-input 'range(0;1)'
+0
+$ jq --null-input 'range(0;2)'
+0
+1
+$ ghci
+Prelude> [0..0]
+[0]
+Prelude> [0..1]
+[0,1]
+Prelude> [0..2]
+[0,1,2]
+--}
+range :: Integer -> Integer -> [Integer]
+range n1 n2 =
+  if n1 >= n2
+  then []
+  else [n1..(n2-1)]
+
 nodeSpecs :: Types.Profile -> TopologyTypes.Topology -> Map.Map String NodeSpec
 nodeSpecs profile topology =
   Map.fromList $
@@ -91,7 +113,7 @@ nodeSpecs' profile topology =
   let n_bfts = Types.n_bft_hosts $ Types.composition profile
       n_pools = Types.n_pool_hosts $ Types.composition profile
       n_singular_pools = Types.n_singular_hosts $ Types.composition profile
-      with_proxy =Types.with_proxy $ Types.composition profile
+      with_proxy = Types.with_proxy $ Types.composition profile
       with_chaindb_server =
         case Types.with_chaindb_server $ Types.composition profile of
           Nothing -> False
@@ -106,11 +128,10 @@ nodeSpecs' profile topology =
             , True
             )
           )
-          [
+          (range
             0
-            ..
-            n_bfts - 1
-          ]
+            n_bfts
+          )
       _pools =
         map
           (\i' ->
@@ -122,11 +143,10 @@ nodeSpecs' profile topology =
             , True
             )
           )
-          [
+          (range
             n_bfts
-            ..
-            (n_bfts + n_pools) - 1
-          ]
+            (n_bfts + n_pools)
+          )
       proxies =
         map
           (\i' ->
@@ -136,11 +156,10 @@ nodeSpecs' profile topology =
             , True
             )
           )
-          [
+          (range
             (n_bfts + n_pools)
-            ..
-            (n_bfts + n_pools + if with_proxy then 1 else 0) - 1
-          ]
+            (n_bfts + n_pools + if with_proxy then 1 else 0)
+          )
       chaindbs =
         map
           (\i' ->
@@ -150,11 +169,10 @@ nodeSpecs' profile topology =
             , True
             )
           )
-          [
-            (n_bfts + n_pools + if with_proxy then 1 else 0)
-            ..
-            (n_bfts + n_pools + if with_proxy then 1 else 0 + if with_chaindb_server then 1 else 0) - 1
-          ]
+          (range
+            (n_bfts + n_pools + (if with_proxy then 1 else 0))
+            (n_bfts + n_pools + (if with_proxy then 1 else 0) + (if with_chaindb_server then 1 else 0))
+          )
       explorers =
         map
           (\i' ->
@@ -164,11 +182,10 @@ nodeSpecs' profile topology =
             , False
             )
           )
-          [
-            (n_bfts + n_pools + if with_proxy then 1 else 0 + if with_chaindb_server then 1 else 0)
-            ..
-            (n_bfts + n_pools + if with_proxy then 1 else 0 + if with_chaindb_server then 1 else 0 + if with_explorer then 1 else 0) - 1
-          ]
+          (range
+            (n_bfts + n_pools + (if with_proxy then 1 else 0) + (if with_chaindb_server then 1 else 0))
+            (n_bfts + n_pools + (if with_proxy then 1 else 0) + (if with_chaindb_server then 1 else 0) + (if with_explorer then 1 else 0))
+          )
   in 
     map
       (\(i', kind', pools', autostart') ->
@@ -185,8 +202,8 @@ nodeSpecs' profile topology =
                         (\coreNode -> (toEnum $ TopologyTypes.nodeId coreNode) == i')
                         (TopologyTypes.coreNodes topology)
             in case nodes of
-                 (node:_) -> TopologyTypes.region node
-                 [] -> error $ "WTF! " ++ (show i')
+                 (node:_) -> Just $ TopologyTypes.region node
+                 [] -> Nothing
         , shutdown_on_slot_synced = Types.shutdown_on_slot_synced (Types.node profile)
         , shutdown_on_block_synced = Types.shutdown_on_block_synced (Types.node profile)
         }
@@ -208,8 +225,8 @@ nodeSpecs' profile topology =
                         (\relayNode -> (toEnum $ TopologyTypes.nodeId relayNode) == i')
                         (TopologyTypes.relayNodes topology)
             in case nodes of
-                 (node:_) -> TopologyTypes.region node
-                 [] -> error $ "WTF! " ++ (show i')
+                 (node:_) -> Just $ TopologyTypes.region node
+                 [] -> Nothing
         , shutdown_on_slot_synced = Types.shutdown_on_slot_synced (Types.node profile)
         , shutdown_on_block_synced = Types.shutdown_on_block_synced (Types.node profile)
         }
