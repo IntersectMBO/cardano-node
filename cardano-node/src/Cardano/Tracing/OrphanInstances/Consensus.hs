@@ -33,14 +33,16 @@ import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol
                    ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader (..),
                    Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, headerPoint,
                    pointHash, realPointHash, realPointSlot, withOriginToMaybe)
-import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), TraceGDDEvent (..))
+import           Ouroboros.Consensus.Block.SupportsSanityCheck
+import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
+                   TraceGDDEvent (..))
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent (..), LedgerUpdate,
                    LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxId,
-                   LedgerSupportsMempool, TxId, txForgetValidated, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTx,
+                   GenTxId, HasTxId, LedgerSupportsMempool, TxId, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -64,12 +66,12 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
                    chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
-import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart (..), Pushing (..))
+import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart (..), Pushing (..),
+                   ReplayStart (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
-import Ouroboros.Consensus.Block.SupportsSanityCheck
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
@@ -79,7 +81,7 @@ import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
-import           Data.Aeson (Value (..))
+import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
@@ -376,6 +378,11 @@ condenseT = pack . condense
 showT :: Show a => a -> Text
 showT = pack . show
 
+instance ToJSON ByteSize32 where
+  toJSON (ByteSize32 w) = toJSON w
+
+instance FromJSON ByteSize32 where
+  parseJSON v = ByteSize32 <$> parseJSON v
 
 instance ( tx ~ GenTx blk
          , HasTxId tx
@@ -589,9 +596,9 @@ instance ( ConvertRawHash blk
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
-        LedgerDB.ReplayFromSnapshot _ tip' _ _ ->
+        LedgerDB.ReplayFromSnapshot _ (ReplayStart tip') _ ->
           "Replaying ledger from snapshot at " <>
-            renderRealPointAsPhrase tip'
+            renderPointAsPhrase tip'
         LedgerDB.ReplayedBlock pt _ledgerEvents (LedgerDB.ReplayStart replayFrom) (LedgerDB.ReplayGoal replayTo) ->
           let fromSlot = withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayFrom
               atSlot   = unSlotNo $ realPointSlot pt
@@ -1077,7 +1084,7 @@ instance ( ConvertRawHash blk
   toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis _replayTo ->
       mconcat [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromGenesis" ]
-    LedgerDB.ReplayFromSnapshot snap tip' _replayFrom _replayTo ->
+    LedgerDB.ReplayFromSnapshot snap tip' _replayFrom ->
       mconcat [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show tip' ]
@@ -1704,8 +1711,12 @@ instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => Transformable Tex
   trTransformer = trStructured
 
 instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
-  toObject verb TraceGDDEvent {..} = mconcat $
-    [ "kind" .= String "TraceGDDEvent"
+  toObject verb (TraceGDDDisconnected peer) = mconcat
+    [ "kind" .= String "TraceGDDDisconnected"
+    , "peer" .= toJSON (map (toObject verb) $ toList peer)
+    ]
+  toObject verb (TraceGDDDebug GDDDebugInfo {..}) = mconcat $
+    [ "kind" .= String "TraceGDDDebug"
     , "losingPeers".= toJSON (map (toObject verb) losingPeers)
     , "loeHead" .= toObject verb loeHead
     , "sgen" .= toJSON (unGenesisWindow sgen)

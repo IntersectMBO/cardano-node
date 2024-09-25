@@ -126,6 +126,7 @@ import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer
 import           Network.Socket (SockAddr (..))
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Network.TypedProtocol.Core (PeerHasAgency (..))
+import Ouroboros.Network.TxSubmission.Inbound.Types (TxDecision(..), TraceTxLogic (..), SharedTxState (..), PeerTxState (..))
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -211,6 +212,12 @@ instance HasSeverityAnnotation (TraceTxSubmissionInbound txid tx) where
   getSeverityAnnotation TraceTxInboundTerminated = Notice
   getSeverityAnnotation TraceTxInboundCannotRequestMoreTxs {} = Debug
   getSeverityAnnotation TraceTxInboundCanRequestMoreTxs {} = Debug
+  getSeverityAnnotation TraceTxInboundAddedToMempool {} = Debug
+  getSeverityAnnotation TraceTxInboundDecision {} = Debug
+
+instance HasPrivacyAnnotation (TraceTxLogic peer txid tx)
+instance HasSeverityAnnotation (TraceTxLogic peer txid tx) where
+  getSeverityAnnotation _ = Debug
 
 
 instance HasPrivacyAnnotation (TraceTxSubmissionOutbound txid tx)
@@ -243,7 +250,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       TraceLedgerPeersDomains {}     -> Debug
       TraceLedgerPeersResult {}      -> Debug
       TraceLedgerPeersFailure {}     -> Debug
-
+      UsingBigLedgerPeerSnapshot {}  -> Info
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
 instance HasSeverityAnnotation (WithAddr addr ErrorPolicyTrace) where
@@ -484,6 +491,8 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
 
       TraceDebugState {} -> Info
 
+      TraceVerifyPeerSnapshot {} -> Info
+
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
   getSeverityAnnotation _ = Debug
@@ -632,7 +641,7 @@ instance (ToObject peer, ToObject (AnyMessageAndAgency (TraceTxSubmissionInbound
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk)))) where
   trTransformer = trStructured
 
-instance ToObject peer
+instance (ToObject peer, ToJSON (GenTxId blk), ToObject (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk))) where
   trTransformer = trStructured
 
@@ -664,11 +673,28 @@ instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))) where
   trTransformer = trStructured
 
-instance Transformable Text IO (TraceTxSubmissionInbound txid tx) where
-  trTransformer = trStructuredText
-instance HasTextFormatter (TraceTxSubmissionInbound txid tx) where
+instance (ToJSON txid, ToObject tx) => Transformable Text IO (TraceTxSubmissionInbound txid tx) where
+  trTransformer = trStructured
+instance (Show txid, Show tx) => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
   formatText a _ = pack (show a)
 
+
+instance ( ToJSON txid
+         , ToObject tx
+         , Aeson.ToJSONKey peer
+         , Aeson.ToJSONKey txid
+         ) => Transformable Text IO (TraceTxLogic peer txid tx) where
+  trTransformer = trStructured
+
+instance ( ToJSON txid
+         , ToObject tx
+         , ToObject peer
+         , Aeson.ToJSONKey peer
+         , Aeson.ToJSONKey txid
+         ) => Transformable Text IO (TraceLabelPeer peer (TraceTxLogic peer txid tx)) where
+  trTransformer = trStructured
+instance (Show txid, Show tx, Show peer) => HasTextFormatter (TraceTxLogic peer txid tx) where
+  formatText a _ = pack (show a)
 
 instance (Show tx, Show txid)
       => Transformable Text IO (TraceTxSubmissionOutbound txid tx) where
@@ -1259,8 +1285,16 @@ instance ToObject (AnyMessageAndAgency ps)
   toObject verb (TraceRecvMsg m) = mconcat
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
+instance (ToJSON txid, ToObject tx) => ToObject (TxDecision txid tx) where
+    toObject verb (TxDecision idsToAck idsToReq pipeline txsToReq txsToMempool) =
+        mconcat [ "txIdsToAcknowledge" .= getNumTxIdsToAck idsToAck
+                , "txIdsToRequest"     .= getNumTxIdsToReq idsToReq
+                , "pipelineTxIds"      .= pipeline
+                , "txsToRequest"       .= txsToReq
+                , "txsToMempool"       .= toJSON (map (toObject verb) txsToMempool)
+                ]
 
-instance ToObject (TraceTxSubmissionInbound txid tx) where
+instance (ToJSON txid, ToObject tx) => ToObject (TraceTxSubmissionInbound txid tx) where
   toObject _verb (TraceTxSubmissionCollected count) =
     mconcat
       [ "kind" .= String "TxSubmissionCollected"
@@ -1286,7 +1320,63 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
       [ "kind" .= String "TxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
+  toObject _verb (TraceTxInboundAddedToMempool txids) =
+    mconcat
+      [ "kind" .= String "TxInboundAddedToMempool"
+      , "txids" .= txids
+      ]
+  toObject verb (TraceTxInboundDecision td) =
+    mconcat
+      [ "kind" .= String "TxInboundDecision"
+      , "decision" .= toObject verb td
+      ]
 
+instance ( ToJSON txid
+         , ToObject tx
+         , Aeson.ToJSONKey txid
+         ) => ToJSON (PeerTxState txid tx) where
+  toJSON PeerTxState {..} =
+    Aeson.object
+      [ "kind" .= String "PeerTxState"
+      , "unacknowledgedTxIds" .= unacknowledgedTxIds
+      , "availableTxIds" .= fmap getSizeInBytes availableTxIds
+      , "requestedTxIdsInflight" .= getNumTxIdsToReq requestedTxIdsInflight
+      , "requestedTxsInflightSize" .= getSizeInBytes requestedTxsInflightSize
+      , "requestedTxsInflight" .= requestedTxsInflight
+      , "unknownTxs" .= unknownTxs
+      ]
+
+instance ( ToJSON txid
+         , ToObject tx
+         , Aeson.ToJSONKey peer
+         , Aeson.ToJSONKey txid
+         ) => ToObject (SharedTxState peer txid tx) where
+  toObject verb SharedTxState {..} =
+    mconcat
+      [ "kind" .= String "SharedTxState"
+      , "peerTxStates" .= peerTxStates
+      , "inflightTxs" .= inflightTxs
+      , "inflightTxsSize" .= getSizeInBytes inflightTxsSize
+      , "bufferedTxs" .= fmap (toObject verb <$>) bufferedTxs
+      , "referenceCounts" .= referenceCounts
+      ]
+
+instance ( ToJSON txid
+         , ToObject tx
+         , Aeson.ToJSONKey peer
+         , Aeson.ToJSONKey txid
+         ) => ToObject (TraceTxLogic peer txid tx) where
+  toObject verb (TraceSharedTxState s st) =
+    mconcat
+      [ "kind" .= String "SharedTxState"
+      , "name" .= s
+      , "sharedState" .= toObject verb st
+      ]
+  toObject verb (TraceTxDecisions m) =
+    mconcat
+      [ "kind" .= String "TxDecisions"
+      , "decisions" .= fmap (toObject verb) m
+      ]
 
 instance Aeson.ToJSONKey SockAddr where
 
@@ -1439,6 +1529,10 @@ instance ToObject TraceLedgerPeers where
       [ "kind" .= String "TraceLedgerPeersFailure"
       , "domainAccessPoint" .= show dap
       , "error" .= show reason
+      ]
+  toObject _verb UsingBigLedgerPeerSnapshot =
+    mconcat
+      [ "kind" .= String "UsingBigLedgerPeerSnapshot"
       ]
 
 
@@ -1956,6 +2050,10 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
+            ]
+  toObject _verb (TraceVerifyPeerSnapshot b) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "value" .= b
             ]
 
 -- Connection manager abstract state.  For explanation of each state see
