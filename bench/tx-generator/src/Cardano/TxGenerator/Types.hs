@@ -21,6 +21,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
 
+import           Control.Exception (IOException)
 import           GHC.Generics (Generic)
 import           GHC.Natural
 import           Prettyprinter
@@ -129,12 +130,14 @@ data TxGenError where
   ProtocolError   :: Cardano.Api.Error e => !e -> TxGenError
   PlutusError     :: Show e => !e -> TxGenError
   TxGenError      :: !String -> TxGenError
+  IOError         :: !IOException -> TxGenError
 
 instance Show TxGenError where
   show (ApiError e) = docToString $ "ApiError " <> parens (prettyError e)
   show (ProtocolError e) = docToString $ "ProtocolError " <> parens (prettyError e)
-  show (PlutusError e) = docToString $ "ProtocolError " <> parens (pshow e)
+  show (PlutusError e) = docToString $ "PlutusError " <> parens (pshow e)
   show (TxGenError e) = docToString $ "ApiError " <> parens (pshow e)
+  show (IOError e) = docToString $ "IOError " <> parens (pshow e)
 
 instance Semigroup TxGenError where
   TxGenError a <> TxGenError b  = TxGenError (a <> b)
