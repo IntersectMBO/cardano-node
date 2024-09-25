@@ -32,7 +32,8 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
-import           Ouroboros.Consensus.Storage.LedgerDB (UpdateLedgerDbTraceEvent (..))
+import           Ouroboros.Consensus.Storage.LedgerDB (ReplayStart (..),
+                   UpdateLedgerDbTraceEvent (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -1572,9 +1573,9 @@ instance (StandardHash blk, ConvertRawHash blk)
           => LogFormatting (LedgerDB.TraceReplayEvent blk) where
   forHuman (LedgerDB.ReplayFromGenesis _replayTo) =
       "Replaying ledger from genesis"
-  forHuman (LedgerDB.ReplayFromSnapshot snap tip' _ _) =
+  forHuman (LedgerDB.ReplayFromSnapshot snap (ReplayStart tip') _) =
       "Replaying ledger from snapshot " <> showT snap <> " at " <>
-        renderRealPointAsPhrase tip'
+        renderPointAsPhrase tip'
   forHuman (LedgerDB.ReplayedBlock
               pt
               _ledgerEvents
@@ -1596,7 +1597,7 @@ instance (StandardHash blk, ConvertRawHash blk)
 
   forMachine _dtal (LedgerDB.ReplayFromGenesis _replayTo) =
       mconcat [ "kind" .= String "ReplayFromGenesis" ]
-  forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip' _ _) =
+  forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip' _) =
       mconcat [ "kind" .= String "ReplayFromSnapshot"
                , "snapshot" .= forMachine dtal snap
                , "tip" .= show tip' ]
