@@ -15,7 +15,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile,
+import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile (..),
                    NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
                    ProtocolFilepaths (..))
 import           Cardano.TxGenerator.Types
@@ -25,6 +25,7 @@ import           Control.Applicative (Const (Const), getConst)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Monoid
+import           System.FilePath (takeDirectory)
 
 
 -- | extract genesis from a Cardano protocol
@@ -44,6 +45,9 @@ getGenesisPath nodeConfig =
   case ncProtocolConfig nodeConfig of
     NodeProtocolConfigurationCardano _ shelleyConfig _ _ _ ->
       Just $ npcShelleyGenesisFile shelleyConfig
+
+getGenesisDirectory :: NodeConfiguration -> Maybe FilePath
+getGenesisDirectory nodeConfig = takeDirectory . unGenesisFile <$> getGenesisPath nodeConfig
 
 mkConsensusProtocol :: NodeConfiguration -> IO (Either TxGenError SomeConsensusProtocol)
 mkConsensusProtocol nodeConfig =

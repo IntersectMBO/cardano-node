@@ -61,6 +61,11 @@ compileToScript = do
         pure
   tc <- askNixOption _nix_cardanoTracerSocket
   emit $ StartProtocol nc tc
+
+  whenM (fromMaybe False <$> askNixOption _nix_drep_voting) do
+    emit $ ReadDRepKeys nc
+    logMsg "Importing DRep SigningKeys. Done."
+
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet

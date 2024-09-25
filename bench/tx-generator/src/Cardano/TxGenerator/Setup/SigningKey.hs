@@ -4,20 +4,21 @@
 module Cardano.TxGenerator.Setup.SigningKey
        ( parseSigningKeyTE
        , parseSigningKeyBase16
+       , readDRepKeyFile
        , readSigningKeyFile
        , PaymentKey
        , SigningKey
        )
        where
 
+import           Cardano.Api
+
+import           Cardano.CLI.Types.Common (SigningKeyFile)
+import           Cardano.TxGenerator.Types (TxGenError (..))
+
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS (ByteString)
 import           Data.ByteString.Base16 as Base16 (decode)
-
-import           Cardano.Api
-import           Cardano.CLI.Types.Common (SigningKeyFile)
-
-import           Cardano.TxGenerator.Types (TxGenError (..))
 
 
 parseSigningKeyTE :: TextEnvelope -> Either TxGenError (SigningKey PaymentKey)
@@ -39,6 +40,9 @@ parseSigningKeyBase16 k
 
 readSigningKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey PaymentKey))
 readSigningKeyFile f = first ApiError <$> readFileTextEnvelopeAnyOf acceptedTypes f
+
+readDRepKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey DRepKey))
+readDRepKeyFile f = first ApiError <$> readKeyFileTextEnvelope (AsSigningKey AsDRepKey) f
 
 acceptedTypes :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
 acceptedTypes =

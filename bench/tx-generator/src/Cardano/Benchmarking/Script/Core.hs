@@ -45,6 +45,7 @@ import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import qualified Cardano.TxGenerator.Genesis as Genesis
 import           Cardano.TxGenerator.PlutusContext
+import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Setup.Plutus as Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx
@@ -62,6 +63,7 @@ import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
+import           System.FilePath ((</>))
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -94,6 +96,19 @@ readSigningKey name filePath =
 
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys
+
+readDRepKeys :: FilePath -> ActionM ()
+readDRepKeys ncFile = do
+  genesis <- onNothing throwKeyErr $ getGenesisDirectory <$> liftIOSafe (mkNodeConfig ncFile)
+  -- "cache-entry" is a link or copy of the actual genesis folder created by "create-testnet-data"
+  -- in the workbench's run directory structure, this link or copy is created for each run - by workbench
+  ks <- liftIOSafe . Genesis.genesisLoadDRepKeys $ genesis </> "cache-entry"
+  setEnvDRepKeys ks
+  traceDebug $ "DRep SigningKeys loaded: " ++ show (length ks) ++ " from: " ++ genesis
+  where
+    throwKeyErr = liftTxGenError . TxGenError $
+      "readDRepKeys: no genesisDirectory could "
+        <> "be retrieved from the node config"
 
 addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do

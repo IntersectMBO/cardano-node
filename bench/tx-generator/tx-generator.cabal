@@ -123,8 +123,10 @@ library
                       , cborg >= 0.2.2 && < 0.3
                       , containers
                       , constraints-extras
+                      , directory
                       , dlist
                       , extra
+                      , filepath
                       , formatting
                       , generic-monoid
                       , ghc-prim
