@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-09-05T18:39:40Z
-  , cardano-haskell-packages 2024-09-10T12:51:27Z
+  , hackage.haskell.org 2024-09-25T18:20:40Z
+  , cardano-haskell-packages 2024-10-10T04:22:19Z
 
 packages:
   cardano-node
@@ -67,3 +67,52 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: cb273afbe290350b21276c7f090374b628812729
+  --sha256: sha256-sDJFqVAUoBPhyJsexe8OejHlAoRxoeYsZrtr6/34VRs=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+    sop-extras
+    strict-sop-core
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 9145bdd9938420cd137b808c6821b371d7a2ef3f
+  --sha256: sha256-hKmtNEPiefpeBssrbPp0nhvkAxkuFtHhwErIZTlNsGQ=
+  subdir:
+    cardano-api
+    cardano-api-gen
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: b66065f85aacfd2190751cd935e413e189883f6e
+  --sha256: sha256-aPdQfxmcNdIfDttvY8hanT6NOBHhCQZ6r3uFbKgk1VQ=
+  subdir:
+   cardano-ping
+   monoidal-synchronisation
+   quickcheck-monoids
+   network-mux
+   ouroboros-network
+   ouroboros-network-api
+   ouroboros-network-framework
+   ouroboros-network-mock
+   ouroboros-network-protocols
+   ouroboros-network-testing
+   ntp-client
+   cardano-client
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: 9eecc36eb9a88dceb78c9d004770bdad5282805d
+  --sha256: sha256-nZ8NRIN1QSbBetqWtdxuSZ3sQ669BYveNYEmoHQIJGo=
+  subdir:
+    cardano-cli
