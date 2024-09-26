@@ -2,7 +2,7 @@ module Parsers.Cardano
   ( cmdCardano
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), bounded)
+import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..))
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
@@ -129,4 +129,3 @@ pMaxLovelaceSupply =
       <>  showDefault
       <>  value (cardanoMaxSupply def)
       )
-
