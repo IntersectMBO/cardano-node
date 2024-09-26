@@ -49,7 +49,7 @@ library
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.4
+                      , cardano-ping ^>= 0.5
                       , contra-tracer
                       , containers
                       , data-default-class
