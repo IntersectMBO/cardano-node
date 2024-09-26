@@ -2,11 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.Metrics.Utils
-  ( MetricName
-  , MetricValue
-  , MetricsList
-  , RouteDictionary(..)
-  , getListOfMetrics
+  ( RouteDictionary(..)
   , renderListOfConnectedNodes
   , renderJson
   , nodeNames
@@ -14,9 +10,7 @@ module Cardano.Tracer.Handlers.Metrics.Utils
   ) where
 
 import qualified Data.ByteString.Lazy as Lazy
-import           Data.Maybe (mapMaybe)
 import           Data.Foldable (for_)
-import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as Map
 import           Data.Map (Map)
 import           Data.Text (Text)
@@ -30,27 +24,12 @@ import           Data.Aeson (encode)
 import           Cardano.Tracer.Environment (TracerEnv(..))
 import qualified System.Metrics as EKG
 import           Cardano.Tracer.Types (NodeName, NodeId, MetricsStores)
-import           System.Metrics (Store, Value (..), sampleAll)
 import           Text.Blaze.Html (Html)
 import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 import           Text.Blaze.Html5 (Markup, a, li, ul, body, title, head, (!), textValue, html, toHtml) -- hiding (map)
 import           Text.Blaze.Html5.Attributes hiding (title)
 import           Text.Slugify (slugify)
 
-
-type MetricName  = Text
-type MetricValue = Text
-type MetricsList = [(MetricName, MetricValue)]
-
-getListOfMetrics :: Store -> IO MetricsList
-getListOfMetrics = fmap (mapMaybe metricsWeNeed . HM.toList) . sampleAll
- where
-  metricsWeNeed (mName, mValue) =
-    case mValue of
-      Counter c -> Just (mName, T.pack $ show c)
-      Gauge g   -> Just (mName, T.pack $ show g)
-      Label l   -> Just (mName, l)
-      _         -> Nothing -- 'ekg-forward' doesn't support 'Distribution' yet.
 
 newtype RouteDictionary = RouteDictionary
   { getRouteDictionary :: [(Text, (EKG.Store, NodeName))]

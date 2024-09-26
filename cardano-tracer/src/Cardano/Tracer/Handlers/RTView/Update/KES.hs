@@ -8,7 +8,6 @@ module Cardano.Tracer.Handlers.RTView.Update.KES
   ) where
 
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.UI.Utils

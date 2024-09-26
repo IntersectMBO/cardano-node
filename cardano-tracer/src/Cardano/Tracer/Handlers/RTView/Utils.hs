@@ -1,22 +1,26 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracer.Handlers.RTView.Utils
-  ( forAcceptedMetrics_
-  , forAcceptedMetricsUI_
-  , forConnected
-  , forConnected_
-  , forConnectedUI
-  , forConnectedUI_
+  ( module Cardano.Tracer.Handlers.RTView.Utils
   ) where
 
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
+import qualified Data.HashMap.Strict as HM (toList)
 import qualified Data.Map.Strict as M
+import           Data.Maybe (mapMaybe)
 import qualified Data.Set as S
+import           Data.Text as T (Text, pack)
+import           System.Metrics (Store, Value (..), sampleAll)
 
 import           Graphics.UI.Threepenny.Core
+
+type MetricName  = Text
+type MetricValue = Text
+type MetricsList = [(MetricName, MetricValue)]
+
 
 forConnected :: TracerEnv -> (NodeId -> IO b) -> IO [b]
 forConnected TracerEnv{teConnectedNodes} action =
@@ -47,3 +51,13 @@ forAcceptedMetricsUI_
   -> UI ()
 forAcceptedMetricsUI_ TracerEnv{teAcceptedMetrics} action =
   mapM_ action . M.toList =<< liftIO (readTVarIO teAcceptedMetrics)
+
+getListOfMetrics :: Store -> IO MetricsList
+getListOfMetrics = fmap (mapMaybe metricsWeNeed . HM.toList) . sampleAll
+ where
+  metricsWeNeed (mName, mValue) =
+    case mValue of
+      Counter c -> Just (mName, T.pack $ show c)
+      Gauge g   -> Just (mName, T.pack $ show g)
+      Label l   -> Just (mName, l)
+      _         -> Nothing -- 'ekg-forward' doesn't support 'Distribution' yet.
