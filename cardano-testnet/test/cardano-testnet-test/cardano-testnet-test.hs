@@ -13,6 +13,10 @@ import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
+import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
+import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
+import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
+import qualified Cardano.Testnet.Test.Cli.Query
 
 import           Prelude
 
@@ -35,7 +39,7 @@ tests = do
     [ T.testGroup "Spec"
         [ T.testGroup "Ledger Events"
             [ ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
-          --  , ignoreOnWindows "Treasury Growth" Gov.prop_check_if_treasury_is_growing
+           , ignoreOnWindows "Treasury Growth" Gov.prop_check_if_treasury_is_growing
             -- TODO: Replace foldBlocks with checkConditionResult
             -- TODO: All governance related tests disabled in cardano-node-9.2 due to flakiness
             --, T.testGroup "Governance"
@@ -53,8 +57,8 @@ tests = do
               --  , ignoreOnWindows "Gov Action Timeout" Gov.hprop_check_gov_action_timeout
               --  , ignoreOnWindows "Treasury Donation" Gov.hprop_ledger_events_treasury_donation
                 -- Treasury Withdrawal flakey - disabled in cardano-node-9.2
-               -- , ignoreOnMacAndWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
-               -- , ignoreOnWindows "PParam change fails for SPO" Gov.hprop_check_pparam_fails_spo
+               , ignoreOnMacAndWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
+               , ignoreOnWindows "PParam change fails for SPO" Gov.hprop_check_pparam_fails_spo
                 -- FIXME Those tests are flaky
                 -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                 ]
@@ -83,7 +87,7 @@ tests = do
           , ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
           , ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
           , ignoreOnWindows "foldEpochState receives ledger state" Cardano.Testnet.Test.FoldEpochState.prop_foldEpochState
-          -- , ignoreOnMacAndWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
+          , ignoreOnMacAndWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
           ]
         ]
     , T.testGroup "SubmitApi"
