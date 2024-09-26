@@ -248,7 +248,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       ]
 
   jsonBS <- createConfigJson tempAbsPath sbe
-  H.lbsWriteFile (unFile configurationFile) jsonBS
+  H.lbsWriteFile (unFile configurationFile) $ Aeson.encode jsonBS
   newNodePortNumber <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $
     startNode tempAbsPath "test-spo" testnetDefaultIpv4Address newNodePortNumber testnetMagic

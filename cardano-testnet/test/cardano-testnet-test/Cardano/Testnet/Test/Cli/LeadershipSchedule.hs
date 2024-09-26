@@ -23,8 +23,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson as J
-import qualified Data.Aeson.Types as J
+import qualified Data.Aeson.Types as Aeson
 import           Data.Default.Class
 import           Data.List ((\\))
 import qualified Data.List as L
@@ -243,7 +242,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       ]
 
   jsonBS <- createConfigJson tempAbsPath sbe
-  H.lbsWriteFile (unFile configurationFile) jsonBS
+  H.lbsWriteFile (unFile configurationFile) $ Aeson.encode jsonBS
   newNodePort <- H.randomPort testnetDefaultIpv4Address
   eRuntime <- runExceptT . retryOnAddressInUseError $
     startNode (TmpAbsolutePath work) "test-spo" testnetDefaultIpv4Address newNodePort testnetMagic
@@ -276,7 +275,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
   currentScheduleJson <- H.leftFailM $ H.readJsonFile currentLeaderShipScheduleFile
 
-  expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) currentScheduleJson
+  expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ Aeson.parseEither (Aeson.parseJSON @[LeadershipSlot]) currentScheduleJson
 
   maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -50,13 +51,12 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import           Data.String
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
 import qualified System.Directory as System
-import           System.FilePath.Posix (takeDirectory, (</>))
+import           System.FilePath.Posix ((</>))
 
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -74,24 +74,11 @@ createConfigJson :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
-  -> m LBS.ByteString
+  -> m Aeson.Value
 createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
-  shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
-  alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
-  conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
-
-  pure . A.encodePretty . Object
-    $ mconcat [ byronGenesisHash
-              , shelleyGenesisHash
-              , alonzoGenesisHash
-              , conwayGenesisHash
-              , defaultYamlHardforkViaConfig sbe
-              ]
-   where
-    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
-    getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
-
+  -- "create-testnet-data" will fill in the hashes for eras after byron
+  pure $ Aeson.Object (byronGenesisHash <> defaultYamlHardforkViaConfig sbe)
 
 -- Generate hashes for genesis.json files
 
@@ -130,7 +117,8 @@ numDReps CardanoTestnetOptions { cardanoNumDReps } = NumDReps cardanoNumDReps
 
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => NumPools -- ^ The number of pools to make
+  => File NodeConfig In -- ^ Path to the node configuration file
+  -> NumPools -- ^ The number of pools to make
   -> NumDReps -- ^ The number of pools to make
   -> Word64 -- ^ The maximum supply
   -> AnyShelleyBasedEra -- ^ The era to use
@@ -138,10 +126,11 @@ createSPOGenesisAndFiles
   -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
-  -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply sbe shelleyGenesis
+  -> m (File NodeConfig In) -- ^ The node configuration file to use
+createSPOGenesisAndFiles nodeConfigFile (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply sbe shelleyGenesis
                          alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
-  let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
+  let inputNodeConfigFile = unFile nodeConfigFile
+      inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
       inputGenesisConwayFp  = tempAbsPath </> genesisInputFilepath ConwayEra
 
@@ -153,8 +142,6 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply
     LBS.writeFile inputGenesisAlonzoFp  $ A.encodePretty alonzoGenesis
     LBS.writeFile inputGenesisConwayFp  $ A.encodePretty conwayGenesis
 
-  let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
-  genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
   let testnetMagic = sgNetworkMagic shelleyGenesis
       -- At least there should be a delegator per DRep
       -- otherwise some won't be representing anybody
@@ -177,6 +164,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply
 
   execCli_
     [ anyShelleyBasedEraToString sbe, "genesis", "create-testnet-data"
+    , "--node-configuration", inputNodeConfigFile
     , "--spec-shelley", inputGenesisShelleyFp
     , "--spec-alonzo",  inputGenesisAlonzoFp
     , "--spec-conway",  inputGenesisConwayFp
@@ -192,19 +180,14 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply
     ]
 
   -- Remove the input files. We don't need them anymore, since create-testnet-data wrote new versions.
-  forM_ [inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp] (liftIO . System.removeFile)
-
-  -- Move all genesis related files
-  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath </> "byron"
+  liftIO $ forM_ [inputNodeConfigFile, inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp] System.removeFile
 
   files <- H.listDirectory tempAbsPath
   forM_ files H.note
 
-  H.renameFile (tempAbsPath </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
-
-  return genesisShelleyDir
+  return $ File $ tempAbsPath </> "configuration.json" -- Filename used by create-testnet-data
   where
-    genesisInputFilepath e = "genesis-input." <> anyEraToString (AnyCardanoEra e) <> ".json"
+    genesisInputFilepath e = "genesis-input." <> eraToString e <> ".json"
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"

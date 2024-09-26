@@ -135,7 +135,7 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 -- > ├── byron-gen-command
 -- > │   └── genesis-keys.00{0,1,2}.key
 -- > ├── byron.genesis.spec.json
--- > ├── configuration.yaml
+-- > ├── configuration.json
 -- > ├── current-stake-pools.json
 -- > ├── delegate-keys
 -- > │   ├── delegate{1,2,3}
@@ -211,6 +211,7 @@ cardanoTestnet
   else do
     H.lbsWriteFile (tmpAbsPath </> "byron.genesis.spec.json")
       . encode $ Defaults.defaultByronProtocolParamsJsonValue
+    let byronDir = tmpAbsPath </> "byron"
 
     -- Because in Conway the overlay schedule and decentralization parameter
     -- are deprecated, we must use the "create-staked" cli command to create
@@ -220,7 +221,7 @@ cardanoTestnet
       startTime
       Byron.byronDefaultGenesisOptions
       (tmpAbsPath </> "byron.genesis.spec.json")
-      (tmpAbsPath </> "byron-gen-command")
+      byronDir
 
     -- Write specification files. Those are the same as the genesis files
     -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
@@ -229,9 +230,13 @@ cardanoTestnet
     writeGenesisSpecFile "alonzo" alonzoGenesis
     writeGenesisSpecFile "conway" conwayGenesis
 
-    configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
+    inputConfigurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
+    -- Note that 'createConfigJson' adds the Byron hash to the node's configuration,
+    -- For more recent eras, --create-testnet-data will do it.
+    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+    H.evalIO $ LBS.writeFile (unFile inputConfigurationFile) $ Aeson.encode config
 
-    _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+    configurationFile <- createSPOGenesisAndFiles inputConfigurationFile nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
     -- TODO: This should come from the configuration!
     let poolKeyDir :: Int -> FilePath
@@ -299,17 +304,12 @@ cardanoTestnet
           }
         }
 
-    -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-
-    H.evalIO $ LBS.writeFile (unFile configurationFile) config
-
     portNumbers <- replicateM numPoolNodes $ H.randomPort testnetDefaultIpv4Address
     -- Byron related
     forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
       let iStr = printf "%03d" (i - 1)
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
+      H.renameFile (byronDir </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
+      H.renameFile (byronDir </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
       H.writeFile (tmpAbsPath </> poolKeyDir i </> "port") (show portNumber)
 
     -- Make topology files
