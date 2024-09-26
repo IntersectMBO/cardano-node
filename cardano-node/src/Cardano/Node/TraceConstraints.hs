@@ -6,7 +6,6 @@
 
 module Cardano.Node.TraceConstraints (TraceConstraints) where
 
-
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Ledger.Credential
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -29,6 +28,7 @@ import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Network.Block (Serialised)
 
 import           Data.Aeson
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -71,4 +71,5 @@ type TraceConstraints blk =
     , LogFormatting (CannotForge blk)
     , LogFormatting (ForgeStateUpdateError blk)
     , LogFormatting (Set (Credential 'Staking StandardCrypto))
+    , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking StandardCrypto))
     )

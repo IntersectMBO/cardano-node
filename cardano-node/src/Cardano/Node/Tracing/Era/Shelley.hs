@@ -32,7 +32,7 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Ledger
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
+import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe, Mismatch (..))
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -100,6 +100,12 @@ instance LogFormatting (Set (Credential 'Staking StandardCrypto)) where
              , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
 
+instance LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking StandardCrypto)) where
+  forMachine _dtal keyHashes =
+    mconcat [ "kind" .= String "StakingKeyHashes"
+             , "stakeKeyHashes" .= toJSON keyHashes
+             ]
+
 instance
   ( LogFormatting (PredicateFailure (Ledger.EraRule "DELEG" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "POOL" era))
@@ -152,8 +158,8 @@ instance LogFormatting (Conway.ConwayGovCertPredFailure era) where
 
 instance LogFormatting (Conway.ConwayDelegPredFailure era) where
   forMachine _dtal = mconcat . \case
-    Conway.DelegateeNotRegisteredDELEG poolID ->
-      [ "kind" .= String "DelegateeNotRegisteredDELEG"
+    Conway.DelegateeStakePoolNotRegisteredDELEG poolID ->
+      [ "kind" .= String "DelegateeStakePoolNotRegisteredDELEG"
       , "poolID" .= String (textShow poolID)
       ]
     Conway.IncorrectDepositDELEG coin ->
@@ -176,10 +182,10 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= coin
       , "error" .= String "Stake key has non-zero account balance"
       ]
-    Conway.DRepAlreadyRegisteredForStakeKeyDELEG credential ->
-      [ "kind" .= String "DRepAlreadyRegisteredForStakeKeyDELEG"
-      , "amount" .= String (textShow credential)
-      , "error" .= String "DRep already registered for the stake key"
+    Conway.DelegateeDRepNotRegisteredDELEG credential ->
+      [ "kind" .= String "DelegateeDRepNotRegisteredDELEG"
+      , "credential" .= String (textShow credential)
+      , "error" .= String "Delegated rep is not registered for provided stake key"
       ]
 
 instance
@@ -297,12 +303,14 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGERS" era))
   ) => LogFormatting (ShelleyBbodyPredFailure era) where
-  forMachine _dtal (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
+  forMachine _dtal (WrongBlockBodySizeBBODY (Mismatch { mismatchSupplied = actualBodySz
+                                                      , mismatchExpected = claimedBodySz })) =
     mconcat [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
              , "claimedBlockBodySize" .= claimedBodySz
              ]
-  forMachine _dtal (InvalidBodyHashBBODY actualHash claimedHash) =
+  forMachine _dtal (InvalidBodyHashBBODY (Mismatch { mismatchSupplied = actualHash
+                                                   , mismatchExpected = claimedHash })) =
     mconcat [ "kind" .= String "InvalidBodyHashBBODY"
              , "actualBodyHash" .= textShow actualHash
              , "claimedBodyHash" .= textShow claimedHash
@@ -417,7 +425,8 @@ instance
     mconcat [ "kind" .= String "MissingTxMetadata"
              , "txBodyMetadataHash" .= txBodyMetadataHash
              ]
-  forMachine _dtal (ConflictingMetadataHash txBodyMetadataHash fullMetadataHash) =
+  forMachine _dtal (ConflictingMetadataHash (Mismatch { mismatchSupplied = txBodyMetadataHash
+                                                      , mismatchExpected = fullMetadataHash })) =
     mconcat [ "kind" .= String "ConflictingMetadataHash"
              , "txBodyMetadataHash" .= txBodyMetadataHash
              , "fullMetadataHash" .= fullMetadataHash
@@ -443,7 +452,8 @@ instance
     mconcat [ "kind" .= String "ExpiredUTxO"
              , "ttl"  .= ttl
              , "slot" .= slot ]
-  forMachine _dtal (MaxTxSizeUTxO txsize maxtxsize) =
+  forMachine _dtal (MaxTxSizeUTxO (Mismatch { mismatchSupplied = txsize
+                                            , mismatchExpected = maxtxsize })) =
     mconcat [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
@@ -465,7 +475,9 @@ instance
              ]
   forMachine _dtal InputSetEmptyUTxO =
     mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
-  forMachine _dtal (FeeTooSmallUTxO minfee txfee) =
+  -- TODO are these arguments in the right order?
+  forMachine _dtal (FeeTooSmallUTxO (Mismatch { mismatchSupplied = minfee
+                                              , mismatchExpected = txfee })) =
     mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= txfee ]
@@ -565,7 +577,9 @@ renderValueNotConservedErr consumed produced = String $
 instance
   ( Ledger.Crypto (Ledger.EraCrypto era)
   ) => LogFormatting (ShelleyPpupPredFailure era) where
-  forMachine _dtal (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
+  -- TODO are these arguments in the right order?
+  forMachine _dtal (NonGenesisUpdatePPUP (Mismatch { mismatchSupplied = proposalKeys
+                                                   , mismatchExpected = genesisKeys })) =
     mconcat [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
   forMachine _dtal (PPUpdateWrongEpoch currEpoch intendedEpoch votingPeriod) =
@@ -690,13 +704,20 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "unregisteredKeyHash" .= String (textShow unregStakePool)
              , "error" .= String "This stake pool key hash is unregistered"
              ]
-  forMachine _dtal (StakePoolRetirementWrongEpochPOOL currentEpoch intendedRetireEpoch maxRetireEpoch) =
+  forMachine _dtal (StakePoolRetirementWrongEpochPOOL
+                   -- inspired by Ledger's Test.Cardano.Ledger.Generic.PrettyCore
+                   -- but is it correct here?
+                    (Mismatch { mismatchExpected = currentEpoch })
+                    (Mismatch { mismatchSupplied = intendedRetireEpoch
+                              , mismatchExpected = maxRetireEpoch})) =
     mconcat [ "kind" .= String "StakePoolRetirementWrongEpochPOOL"
              , "currentEpoch" .= String (textShow currentEpoch)
              , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
              , "maxEpochForRetirement" .= String (textShow maxRetireEpoch)
              ]
-  forMachine _dtal (StakePoolCostTooLowPOOL certCost protCost) =
+  -- TODO are these supplied in the right order?
+  forMachine _dtal (StakePoolCostTooLowPOOL (Mismatch { mismatchSupplied = certCost
+                                                      , mismatchExpected = protCost })) =
     mconcat [ "kind" .= String "StakePoolCostTooLowPOOL"
              , "certificateCost" .= String (textShow certCost)
              , "protocolParCost" .= String (textShow protCost)
@@ -709,7 +730,8 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "error" .= String "The stake pool metadata hash is too large"
              ]
 
-  forMachine _dtal (WrongNetworkPOOL networkId listedNetworkId poolId) =
+  forMachine _dtal (WrongNetworkPOOL (Mismatch { mismatchSupplied = networkId
+                                               , mismatchExpected = listedNetworkId }) poolId) =
     mconcat [ "kind" .= String "WrongNetworkPOOL"
              , "networkId" .= String (textShow networkId)
              , "listedNetworkId" .= String (textShow listedNetworkId)
@@ -752,22 +774,11 @@ instance
 instance LogFormatting (ShelleyPoolreapPredFailure era) where
   forMachine _dtal x = case x of {} -- no constructors
 
-
 instance LogFormatting (ShelleySnapPredFailure era) where
   forMachine _dtal x = case x of {} -- no constructors
 
--- TODO: Need to elaborate more on this error
-instance LogFormatting (ShelleyNewppPredFailure era) where
-  forMachine _dtal (UnexpectedDepositPot outstandingDeposits depositPot) =
-    mconcat [ "kind" .= String "UnexpectedDepositPot"
-             , "outstandingDeposits" .= String (textShow outstandingDeposits)
-             , "depositPot" .= String (textShow depositPot)
-             ]
-
-
 instance LogFormatting (ShelleyMirPredFailure era) where
   forMachine _dtal x = case x of {} -- no constructors
-
 
 instance LogFormatting (ShelleyRupdPredFailure era) where
   forMachine _dtal x = case x of {} -- no constructors
@@ -890,13 +901,6 @@ instance LogFormatting (OcertPredicateFailure crypto) where
 
 instance LogFormatting (UpdnPredicateFailure crypto) where
   forMachine _dtal x = case x of {} -- no constructors
-
-instance LogFormatting (ShelleyUpecPredFailure era) where
-  forMachine _dtal (NewPpFailure (UnexpectedDepositPot totalOutstanding depositPot)) =
-    mconcat [ "kind" .= String "UnexpectedDepositPot"
-             , "totalOutstanding" .=  String (textShow totalOutstanding)
-             , "depositPot" .= String (textShow depositPot)
-             ]
 
 --------------------------------------------------------------------------------
 -- Alonzo related
@@ -1099,6 +1103,7 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
   , LogFormatting (Set (Credential 'Staking (Ledger.EraCrypto era)))
+  , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking (Ledger.EraCrypto era)))
   ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
   forMachine _ (Conway.ConwayTxRefScriptsSizeTooBig  actual limit) =
@@ -1113,6 +1118,10 @@ instance
     mconcat [ "kind" .= String "ConwayTreasuryValueMismatch"
             , "actual" .= actual
             , "submittedInTx" .= inTx
+            ]
+  forMachine _ (Conway.ConwayMempoolFailure message) =
+    mconcat [ "kind" .= String "ConwayMempoolFailure"
+            , "actual" .= message
             ]
 
 instance
@@ -1184,7 +1193,18 @@ instance
     mconcat [ "kind" .= String "DisallowedVotesDuringBootstrap"
             , "votes" .= votes
             ]
-
+  forMachine _ (Conway.ZeroTreasuryWithdrawals govAction) =
+    mconcat [ "kind" .= String "ZeroTreasuryWithdrawals"
+            , "govAction" .= govAction
+            ]
+  forMachine _ (Conway.ProposalReturnAccountDoesNotExist account) =
+    mconcat [ "kind" .= String "ProposalReturnAccountDoesNotExist"
+            , "invalidAccount" .= account
+            ]
+  forMachine _ (Conway.TreasuryWithdrawalReturnAccountsDoNotExist accounts) =
+    mconcat [ "kind" .= String "TreasuryWithdrawalReturnAccountsDoNotExist"
+            , "invalidAccounts" .= accounts
+            ]
 
 instance
   ( Consensus.ShelleyBasedEra era
