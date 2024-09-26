@@ -95,7 +95,7 @@ import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
-import           Control.Exception (SomeException, bracket)
+import           Control.Exception (SomeException)
 import           Control.Monad (forM_)
 import           Data.Aeson.Types (ToJSON)
 import           Data.Proxy (Proxy (..))
@@ -781,7 +781,5 @@ docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl = do
        doWrite f (docuResultsToMetricsHelptext bl)
   where
     doWrite outfile text =
-      bracket
-        (openFile outfile WriteMode)
-        hClose
-        (\handle -> hSetEncoding handle utf8 >> T.hPutStr handle text)
+      withFile outfile WriteMode $ \handle ->
+        hSetEncoding handle utf8 >> T.hPutStr handle text
