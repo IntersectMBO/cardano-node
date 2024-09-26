@@ -37,14 +37,14 @@ traceObjectsHandler
 traceObjectsHandler _ _ _ [] = return ()
 traceObjectsHandler tracerEnv _tracerEnvRTView nodeId traceObjects = do
   nodeName <- askNodeName tracerEnv nodeId
-  forConcurrently_ logging \loggingParams@LoggingParams{logMode} -> do
+  forConcurrently_ logging \loggingParams@LoggingParams{logMode, logFormat} -> do
     showProblemIfAny verbosity do
       case logMode of
         FileMode ->
           writeTraceObjectsToFile teRegistry
              loggingParams nodeName teCurrentLogLock traceObjects
         JournalMode ->
-          writeTraceObjectsToJournal nodeName traceObjects
+          writeTraceObjectsToJournal logFormat nodeName traceObjects
 #if RTVIEW
   whenJust hasRTView \_ -> let
     TracerEnvRTView { teSavedTO } = _tracerEnvRTView
