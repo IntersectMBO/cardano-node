@@ -39,8 +39,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnaps
                    SnapshotInterval (..))
 import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode,
                    MinBigLedgerPeersForTrustedState, defaultConsensusMode,
-                   defaultEnableNewTxSubmissionProtocol, defaultMinBigLedgerPeersForTrustedState,
-                   defaultPeerSharing)
+                   defaultMinBigLedgerPeersForTrustedState, defaultPeerSharing)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.Server (EnableNewTxSubmissionProtocol (..))
@@ -357,7 +356,7 @@ instance FromJSON PartialNodeConfiguration where
       newTxSubmissionProtocol <- v .:? "EnableNewTxSubmissionProtocol"
       let pncEnableNewTxSubmissionProtocol =
             case newTxSubmissionProtocol of
-              Nothing -> Last $ Just defaultEnableNewTxSubmissionProtocol
+              Nothing -> Last $ Just EnableNewTxSubmissionProtocol -- defaultEnableNewTxSubmissionProtocol
               Just False -> Last $ Just DisableNewTxSubmissionProtocol
               Just True -> Last $ Just EnableNewTxSubmissionProtocol
 
@@ -576,7 +575,7 @@ defaultPartialNodeConfiguration =
     , pncPeerSharing                    = Last (Just defaultPeerSharing)
     , pncConsensusMode                  = Last (Just defaultConsensusMode)
     , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
-    , pncEnableNewTxSubmissionProtocol  = Last (Just defaultEnableNewTxSubmissionProtocol)
+    , pncEnableNewTxSubmissionProtocol  = Last (Just EnableNewTxSubmissionProtocol) -- defaultEnableNewTxSubmissionProtocol)
     }
 
 lastOption :: Parser a -> Parser (Last a)

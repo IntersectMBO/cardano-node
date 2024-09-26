@@ -193,7 +193,7 @@ testPartialCliConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
-    , pncEnableNewTxSubmissionProtocol = Last (Just DisableNewTxSubmissionProtocol)
+    , pncEnableNewTxSubmissionProtocol = Last (Just EnableNewTxSubmissionProtocol)
     }
 
 -- | Expected final NodeConfiguration
@@ -242,7 +242,7 @@ eExpectedConfig = do
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncMinBigLedgerPeersForTrustedState = defaultMinBigLedgerPeersForTrustedState
-    , ncEnableNewTxSubmissionProtocol = DisableNewTxSubmissionProtocol
+    , ncEnableNewTxSubmissionProtocol = EnableNewTxSubmissionProtocol
     }
 
 -- -----------------------------------------------------------------------------

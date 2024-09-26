@@ -558,7 +558,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
-                , rnEnableNewTxSubmissionProtocol = DisableNewTxSubmissionProtocol
+                , rnEnableNewTxSubmissionProtocol = EnableNewTxSubmissionProtocol
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
