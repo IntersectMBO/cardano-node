@@ -35,7 +35,7 @@ data TracerEnv = TracerEnv
   , teReforwardTraceObjects :: !([TraceObject] -> IO ())
   , teRegistry              :: !HandleRegistry
   , teStateDir              :: !(Maybe FilePath)
-  , teMetricsHelp           :: !([(Text, Builder)])
+  , teMetricsHelp           :: ![(Text, Builder)]
   }
 
 #if RTVIEW

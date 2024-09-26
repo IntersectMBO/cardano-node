@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Tracer.Handlers.Metrics.Utils
   ( module Cardano.Tracer.Handlers.Metrics.Utils
@@ -34,8 +35,8 @@ newtype RouteDictionary = RouteDictionary
   { getRouteDictionary :: [(Text, (EKG.Store, NodeName))]
   }
 
-renderListOfConnectedNodes :: Text -> [NodeName] -> Lazy.ByteString
-renderListOfConnectedNodes metricsTitle nodenames
+renderListOfConnectedNodes :: Text -> RouteDictionary -> Lazy.ByteString
+renderListOfConnectedNodes metricsTitle (nodeNames -> nodenames)
   | [] <- nodenames
   = "There are no connected nodes yet."
   | otherwise

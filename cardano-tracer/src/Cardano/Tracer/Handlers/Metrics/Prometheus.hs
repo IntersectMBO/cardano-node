@@ -98,7 +98,7 @@ renderPrometheus computeRoutes_autoUpdate metricsComp helpTextDict request send 
     [] ->
       send $ uncurry (responseLBS status200) $ if wantsJson
         then (contentHdrJSON    , renderJson routeDictionary)
-        else (contentHdrUtf8Html, renderListOfConnectedNodes "Prometheus metrics" (nodeNames routeDictionary))
+        else (contentHdrUtf8Html, renderListOfConnectedNodes "Prometheus metrics" routeDictionary)
 
     route:_
       | Just (store :: EKG.Store, _) <- lookup route (getRouteDictionary routeDictionary)
