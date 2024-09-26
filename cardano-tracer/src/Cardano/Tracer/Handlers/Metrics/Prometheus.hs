@@ -35,24 +35,34 @@ import qualified System.Metrics as EKG
 import           System.Metrics (Sample, Value (..), sampleAll)
 import           System.Time.Extra (sleep)
 
--- | Runs simple HTTP server that listens host and port and returns
---   the list of currently connected nodes in such a format:
+-- | Runs a simple HTTP server that listens on @endpoint@.
 --
---   * relay-1
---   * relay-2
---   * core-1
+--   At the root, it lists the connected nodes, either as HTML or JSON, depending
+--   on the requests 'Accept: ' header.
 --
---  where 'relay-1', 'relay-2' and 'core-1' are nodes' names.
+--   Routing is dynamic, depending on the connected nodes. A valid URL is derived
+--   from the nodeName configured for the connecting node. E.g. a node name
+--   of `127.0.0.1:30004` will result in the route `/12700130004` which
+--   renders that node's Prometheus / OpenMetrics text exposition:
 --
---  Each of list items is a href. By clicking on it, the user will be
---  redirected to the page with the list of metrics received from that node,
---  in such a format:
---
---  rts_gc_par_tot_bytes_copied 0
---  rts_gc_num_gcs 17
---  rts_gc_max_bytes_slop 15888
---  rts_gc_bytes_copied 165952
---  ekg_server_timestamp_ms 1639569439623
+-- # TYPE Mem_resident_int gauge
+-- # HELP Mem_resident_int Kernel-reported RSS (resident set size)
+-- Mem_resident_int 103792640
+-- # TYPE rts_gc_max_bytes_used gauge
+-- rts_gc_max_bytes_used 5811512
+-- # TYPE rts_gc_gc_cpu_ms counter
+-- rts_gc_gc_cpu_ms 50
+-- # TYPE RTS_gcMajorNum_int gauge
+-- # HELP RTS_gcMajorNum_int Major GCs
+-- RTS_gcMajorNum_int 4
+-- # TYPE rts_gc_num_bytes_usage_samples counter
+-- rts_gc_num_bytes_usage_samples 4
+-- # TYPE remainingKESPeriods_int gauge
+-- remainingKESPeriods_int 62
+-- # TYPE rts_gc_bytes_copied counter
+-- rts_gc_bytes_copied 17114384
+-- # TYPE nodeCannotForge_int gauge
+-- # HELP nodeCannotForge_int How many times was this node unable to forge [a block]?
 --
 runPrometheusServer
   :: TracerEnv
