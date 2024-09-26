@@ -2,31 +2,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.Metrics.Utils
-  ( RouteDictionary(..)
-  , renderListOfConnectedNodes
-  , renderJson
-  , nodeNames
-  , computeRoutes
+  ( module Cardano.Tracer.Handlers.Metrics.Utils
   ) where
 
-import qualified Data.ByteString.Lazy as Lazy
-import           Data.Foldable (for_)
-import qualified Data.Map as Map
-import           Data.Map (Map)
-import           Data.Text (Text)
-import qualified Data.Text as T
+import           Cardano.Tracer.Environment (TracerEnv (..))
+import           Cardano.Tracer.Types (MetricsStores, NodeId, NodeName)
+
 import           Prelude hiding (head)
-import qualified Data.Bimap as Bimap
 
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (readTVar)
 import           Data.Aeson (encode)
-import           Cardano.Tracer.Environment (TracerEnv(..))
+import qualified Data.Bimap as Bimap
+import qualified Data.ByteString.Lazy as Lazy
+import           Data.Foldable (for_)
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Text (Text)
+import qualified Data.Text as T
+import           Network.HTTP.Types (ResponseHeaders, hContentType)
 import qualified System.Metrics as EKG
-import           Cardano.Tracer.Types (NodeName, NodeId, MetricsStores)
 import           Text.Blaze.Html (Html)
 import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
-import           Text.Blaze.Html5 (Markup, a, li, ul, body, title, head, (!), textValue, html, toHtml) -- hiding (map)
+import           Text.Blaze.Html5 (Markup, a, body, head, html, li, textValue, title, toHtml, ul,
+                   (!))
 import           Text.Blaze.Html5.Attributes hiding (title)
 import           Text.Slugify (slugify)
 
@@ -82,3 +81,11 @@ computeRoutes TracerEnv{teConnectedNodesNames, teAcceptedMetrics} = atomically d
                ]
 
   pure (RouteDictionary routes)
+
+
+
+contentHdrJSON, contentHdrOpenMetrics, contentHdrUtf8Html, contentHdrUtf8Text :: ResponseHeaders
+contentHdrJSON        = [(hContentType, "application/json")]
+contentHdrOpenMetrics = [(hContentType, "application/openmetrics-text; version=1.0.0; charset=utf-8")]
+contentHdrUtf8Html    = [(hContentType, "text/html; charset=utf-8")]
+contentHdrUtf8Text    = [(hContentType, "text/plain; charset=utf-8")]

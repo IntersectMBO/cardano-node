@@ -83,6 +83,7 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
                          }
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
+    , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     }
@@ -113,6 +114,7 @@ propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
     , rotation       = Nothing
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
+    , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     }
@@ -143,6 +145,7 @@ propMultiResp ts@TestSetup{..} format rootDir localSock = do
     , rotation       = Nothing
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
+    , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     }

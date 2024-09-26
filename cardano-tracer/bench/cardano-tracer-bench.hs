@@ -75,6 +75,7 @@ main = do
         , teReforwardTraceObjects = \_-> pure ()
         , teRegistry              = handleRegistry
         , teStateDir              = Nothing
+        , teMetricsHelp           = []
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -148,6 +149,7 @@ main = do
     , rotation       = Nothing
     , verbosity      = Nothing
     , metricsComp    = Nothing
+    , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     }
