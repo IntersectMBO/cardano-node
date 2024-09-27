@@ -11,6 +11,7 @@ module Cardano.Tracer.Configuration
   ( Address (..)
   , Endpoint (..)
   , setEndpoint
+  , FileOrMap (..)
   , LogFormat (..)
   , LogMode (..)
   , LoggingParams (..)
@@ -24,7 +25,7 @@ module Cardano.Tracer.Configuration
 import qualified Cardano.Logging.Types as Log
 
 import           Control.Applicative ((<|>))
-import           Data.Aeson (FromJSON (..), ToJSON, withObject, (.:))
+import           Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:))
 import           Data.Fixed (Pico)
 import           Data.Function ((&))
 import           Data.Functor ((<&>))
@@ -39,9 +40,8 @@ import           Data.Text (Text)
 import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
+import           Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 import           System.Exit (die)
-
-import Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 
 -- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath
@@ -119,6 +119,17 @@ data Verbosity
   deriving stock (Eq, Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
+newtype FileOrMap = FOM (Either FilePath (Map Text Text))
+  deriving stock (Eq, Show)
+
+instance ToJSON FileOrMap where
+  toJSON      (FOM fom) = either toJSON toJSON fom
+  toEncoding  (FOM fom) = either toEncoding toEncoding fom
+
+instance FromJSON FileOrMap where
+  parseJSON v =
+    (FOM . Left <$> parseJSON v) <|> (FOM . Right <$> parseJSON v)
+
 -- | Tracer configuration.
 data TracerConfig = TracerConfig
   { networkMagic   :: !Word32                       -- ^ Network magic from genesis the node is launched with.
@@ -138,6 +149,7 @@ data TracerConfig = TracerConfig
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
   , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
+  , metricsHelp    :: !(Maybe FileOrMap)            -- ^ JSON file or object containing a key-value map "metric name -> help text" for Prometheus "# HELP " annotations
   , resourceFreq   :: !(Maybe Int)                  -- ^ Frequency (1/millisecond) for gathering resource data.
   }
   deriving stock (Eq, Show, Generic)

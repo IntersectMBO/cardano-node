@@ -4,21 +4,24 @@
 
 # Contents
 
-1. [Introduction](#Introduction)
-   1. [Motivation](#Motivation)
-   3. [Overview](#Overview)
-2. [Build and run](#Build-and-run)
-3. [Configuration](#Configuration)
-   1. [Distributed Scenario](#Distributed-scenario)
-   2. [Local Scenario](#Local-scenario)
-   3. [Network Magic](#Network-magic)
-   4. [Requests](#Requests)
-   5. [Logging](#Logging)
-   6. [Logs Rotation](#Logs-rotation)
-   7. [Prometheus](#Prometheus)
-   8. [EKG Monitoring](#EKG-monitoring)
-   9. [Verbosity](#Verbosity)
-   10. [RTView](#RTView)
+- [Cardano Tracer](#cardano-tracer)
+- [Contents](#contents)
+- [Introduction](#introduction)
+  - [Motivation](#motivation)
+  - [Overview](#overview)
+- [Build and run](#build-and-run)
+- [Configuration](#configuration)
+  - [Distributed Scenario](#distributed-scenario)
+    - [Important](#important)
+  - [Local Scenario](#local-scenario)
+  - [Network Magic](#network-magic)
+  - [Requests](#requests)
+  - [Logging](#logging)
+  - [Logs Rotation](#logs-rotation)
+  - [Prometheus](#prometheus)
+  - [EKG Monitoring](#ekg-monitoring)
+  - [Verbosity](#verbosity)
+  - [RTView](#rtview)
 
 # Introduction
 
@@ -390,19 +393,50 @@ $ curl --silent -H "Accept: application/json" '127.0.0.1:3200' | jq '.'
 }
 ```
 
-The Promethus output is a map from Prometheus metric to value:
+Prometheus uses the text-based exposition format, complete with `# TYPE` and `# HELP` annotations. The latter ones have to be provided by the `metricsHelp` config value (see below).  
+
+The output should be [OpenMetrics](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#text-format) compliant. Example snippet:
 
 ```
 $ curl '127.0.0.1:3200/12700130004'
-blockNum_int 35
-rts_gc_init_cpu_ms 5
-rts_gc_par_tot_bytes_copied 0
-served_block_counter 31
-submissions_accepted_counter 2771
-density_real 5.7692307692307696e-2
-blocksForged_int 6
-
+# TYPE Mem_resident_int gauge
+# HELP Mem_resident_int Kernel-reported RSS (resident set size)
+Mem_resident_int 103792640
+# TYPE rts_gc_max_bytes_used gauge
+rts_gc_max_bytes_used 5811512
+# TYPE rts_gc_gc_cpu_ms counter
+rts_gc_gc_cpu_ms 50
+# TYPE RTS_gcMajorNum_int gauge
+# HELP RTS_gcMajorNum_int Major GCs
+RTS_gcMajorNum_int 4
+# TYPE rts_gc_par_avg_bytes_copied gauge
+rts_gc_par_avg_bytes_copied 0
+# TYPE rts_gc_num_bytes_usage_samples counter
+rts_gc_num_bytes_usage_samples 4
+# TYPE remainingKESPeriods_int gauge
+remainingKESPeriods_int 62
+# TYPE rts_gc_bytes_copied counter
+rts_gc_bytes_copied 17114384
+# TYPE nodeCannotForge_int gauge
+# HELP nodeCannotForge_int How many times was this node unable to forge [a block]?
+# EOF
 ```
+
+Passing metric help annotations to the service can be done in the config file, either as a key-value map from metric name to help text, or as a seperate JSON file containing such a map.
+The system's internal metric names have to be used as keys (cf. [metrics documentation](https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/new-tracing/tracers_doc_generated.md#metrics)).
+```
+"metricsHelp": "path/to/key-value-map.json"
+```
+or
+```
+"metricsHelp": {
+  "Mem.resident": "Kernel-reported RSS (resident set size)",
+  "RTS.gcMajorNum": "Major GCs",
+  "nodeCannotForge": "How many times was this node unable to forge [a block]?"
+}
+```
+
+
 
 ## EKG Monitoring
 

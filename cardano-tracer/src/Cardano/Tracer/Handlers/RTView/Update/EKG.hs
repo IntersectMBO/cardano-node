@@ -7,8 +7,8 @@ module Cardano.Tracer.Handlers.RTView.Update.EKG
 
 import           Cardano.Logging (showT)
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils (getListOfMetrics)
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.STM.TVar (readTVarIO)

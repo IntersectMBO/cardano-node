@@ -1,63 +1,42 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Tracer.Handlers.Metrics.Utils
-  ( MetricName
-  , MetricValue
-  , MetricsList
-  , RouteDictionary(..)
-  , getListOfMetrics
-  , renderListOfConnectedNodes
-  , renderJson
-  , nodeNames
-  , computeRoutes
+  ( module Cardano.Tracer.Handlers.Metrics.Utils
   ) where
 
-import qualified Data.ByteString.Lazy as Lazy
-import           Data.Maybe (mapMaybe)
-import           Data.Foldable (for_)
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map as Map
-import           Data.Map (Map)
-import           Data.Text (Text)
-import qualified Data.Text as T
+import           Cardano.Tracer.Environment (TracerEnv (..))
+import           Cardano.Tracer.Types (MetricsStores, NodeId, NodeName)
+
 import           Prelude hiding (head)
-import qualified Data.Bimap as Bimap
 
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (readTVar)
 import           Data.Aeson (encode)
-import           Cardano.Tracer.Environment (TracerEnv(..))
+import qualified Data.Bimap as Bimap
+import qualified Data.ByteString.Lazy as Lazy
+import           Data.Foldable (for_)
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Text (Text)
+import qualified Data.Text as T
+import           Network.HTTP.Types (ResponseHeaders, hContentType)
 import qualified System.Metrics as EKG
-import           Cardano.Tracer.Types (NodeName, NodeId, MetricsStores)
-import           System.Metrics (Store, Value (..), sampleAll)
 import           Text.Blaze.Html (Html)
 import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
-import           Text.Blaze.Html5 (Markup, a, li, ul, body, title, head, (!), textValue, html, toHtml) -- hiding (map)
+import           Text.Blaze.Html5 (Markup, a, body, head, html, li, textValue, title, toHtml, ul,
+                   (!))
 import           Text.Blaze.Html5.Attributes hiding (title)
 import           Text.Slugify (slugify)
 
-
-type MetricName  = Text
-type MetricValue = Text
-type MetricsList = [(MetricName, MetricValue)]
-
-getListOfMetrics :: Store -> IO MetricsList
-getListOfMetrics = fmap (mapMaybe metricsWeNeed . HM.toList) . sampleAll
- where
-  metricsWeNeed (mName, mValue) =
-    case mValue of
-      Counter c -> Just (mName, T.pack $ show c)
-      Gauge g   -> Just (mName, T.pack $ show g)
-      Label l   -> Just (mName, l)
-      _         -> Nothing -- 'ekg-forward' doesn't support 'Distribution' yet.
 
 newtype RouteDictionary = RouteDictionary
   { getRouteDictionary :: [(Text, (EKG.Store, NodeName))]
   }
 
-renderListOfConnectedNodes :: Text -> [NodeName] -> Lazy.ByteString
-renderListOfConnectedNodes metricsTitle nodenames
+renderListOfConnectedNodes :: Text -> RouteDictionary -> Lazy.ByteString
+renderListOfConnectedNodes metricsTitle (nodeNames -> nodenames)
   | [] <- nodenames
   = "There are no connected nodes yet."
   | otherwise
@@ -103,3 +82,11 @@ computeRoutes TracerEnv{teConnectedNodesNames, teAcceptedMetrics} = atomically d
                ]
 
   pure (RouteDictionary routes)
+
+
+
+contentHdrJSON, contentHdrOpenMetrics, contentHdrUtf8Html, contentHdrUtf8Text :: ResponseHeaders
+contentHdrJSON        = [(hContentType, "application/json")]
+contentHdrOpenMetrics = [(hContentType, "application/openmetrics-text; version=1.0.0; charset=utf-8")]
+contentHdrUtf8Html    = [(hContentType, "text/html; charset=utf-8")]
+contentHdrUtf8Text    = [(hContentType, "text/plain; charset=utf-8")]

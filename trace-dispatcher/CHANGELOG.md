@@ -1,5 +1,9 @@
 # Revision history for trace-dispatcher
 
+## 2.7.0 -- Sep 2024
+* Add `docuResultsToMetricsHelptext` for JSON output of metrics docs; required
+  by `cardano-node` command `trace-documentation --output-metric-help`
+
 ## 2.6.0
 
 * With a metrics prefix that can be set in the configuration (tcMetricsPrefix)

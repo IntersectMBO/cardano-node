@@ -1,14 +1,17 @@
 # ChangeLog
 
-## 0.3 (September 20, 2024)
+## 0.3 (September 26, 2024)
 
 * Abondon `snap` webserver in favour of `wai`/`warp` for Prometheus and EKG Monitoring.
 * Add dynamic routing to EKG stores of all connected nodes.
 * Derive URL compliant routes from connected node names (instead of plain node names).
 * Remove the requirement of two distinct ports for the EKG backend (changing `hasEKG` config type).
+* Improved OpenMetrics compliance of Prometheus exposition; also addresses [issue#5140][i5140].
+* Prometheus help annotations can be provided via the new optional config value `metricsHelp`.
 * For optional RTView component only: Disable SSL/https connections. Force `snap-server`
   dependency to build with `-flag -openssl`.
 * Add JSON responses when listing connected nodes for both Prometheus and EKG Monitoring.
+* Fix: actually send `forHuman` rendering output to journald when specified.
 * Add consistency check for redundant port values in the config.
 
 ## 0.2.4 (August 13, 2024)
@@ -48,3 +51,7 @@
 ## 0.1.0
 
 Initial version.
+
+
+
+[i5140]: https://github.com/IntersectMBO/cardano-node/issues/5140

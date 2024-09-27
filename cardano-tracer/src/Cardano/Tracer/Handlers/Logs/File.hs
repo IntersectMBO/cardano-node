@@ -65,6 +65,7 @@ writeTraceObjectsToFile registry loggingParams@LoggingParams{logRoot, logFormat}
           BS8.hPutStr handle preparedLines
           hFlush handle
 
+  -- when no forHuman message is implemented for a trace, fallback to forMachine
 traceTextForHuman :: TraceObject -> T.Text
 traceTextForHuman TraceObject{toHuman, toMachine} =
   fromMaybe toMachine toHuman

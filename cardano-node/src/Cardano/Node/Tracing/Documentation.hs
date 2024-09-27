@@ -96,6 +96,7 @@ import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInboun
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import           Control.Exception (SomeException)
+import           Control.Monad (forM_)
 import           Data.Aeson.Types (ToJSON)
 import           Data.Proxy (Proxy (..))
 import qualified Data.Text.IO as T
@@ -110,6 +111,7 @@ data TraceDocumentationCmd
   = TraceDocumentationCmd
     { tdcConfigFile :: FilePath
     , tdcOutput     :: FilePath
+    , tdMetricsHelp :: Maybe FilePath
     }
 
 parseTraceDocumentationCmd :: Opt.Parser TraceDocumentationCmd
@@ -124,14 +126,20 @@ parseTraceDocumentationCmd =
          (TraceDocumentationCmd
            <$> Opt.strOption
                ( Opt.long "config"
-                 <> Opt.metavar "NODE-CONFIGURATION"
+                 <> Opt.metavar "FILE"
                  <> Opt.help "Configuration file for the cardano-node"
                )
            <*> Opt.strOption
                ( Opt.long "output-file"
                  <> Opt.metavar "FILE"
-                 <> Opt.help "Generated documentation output file"
+                 <> Opt.help "Generated documentation output file (Markdown)"
                )
+           <*> Opt.optional (Opt.strOption
+                ( Opt.long "output-metric-help"
+                  <> Opt.metavar "FILE"
+                  <> Opt.help "Metrics helptext file for cardano-tracer (JSON)"
+                )
+              )
            Opt.<**> Opt.helper)
        $ mconcat [ Opt.progDesc "Generate the trace documentation" ]
      ]
@@ -147,7 +155,7 @@ runTraceDocumentationCmd
   :: TraceDocumentationCmd
   -> IO ()
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
-  docTracers tdcConfigFile tdcOutput
+  docTracers tdcConfigFile tdcOutput tdMetricsHelp
 
 -- Have to repeat the construction of the tracers here,
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
@@ -155,10 +163,11 @@ runTraceDocumentationCmd TraceDocumentationCmd{..} = do
 docTracers ::
      FilePath
   -> FilePath
+  -> Maybe FilePath
   -> IO ()
-docTracers configFileName outputFileName = do
+docTracers configFileName outputFileName mbMetricsHelpFilename = do
     (bl, trConfig) <- docTracersFirstPhase (Just configFileName)
-    docTracersSecondPhase outputFileName trConfig bl
+    docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl
 
 
 -- Have to repeat the construction of the tracers here,
@@ -761,12 +770,16 @@ docTracersFirstPhase condConfigFileName = do
 
 docTracersSecondPhase ::
      FilePath
+  -> Maybe FilePath
   -> TraceConfig
   -> DocTracer
   -> IO ()
-docTracersSecondPhase outputFileName trConfig bl = do
-    content <- docuResultsToText bl trConfig
-    handle <- openFile outputFileName WriteMode
-    hSetEncoding handle utf8
-    T.hPutStr handle content
-    hClose handle
+docTracersSecondPhase outputFileName mbMetricsHelpFilename trConfig bl = do
+    docuResultsToText bl trConfig
+      >>= doWrite outputFileName
+    forM_ mbMetricsHelpFilename $ \f ->
+       doWrite f (docuResultsToMetricsHelptext bl)
+  where
+    doWrite outfile text =
+      withFile outfile WriteMode $ \handle ->
+        hSetEncoding handle utf8 >> T.hPutStr handle text

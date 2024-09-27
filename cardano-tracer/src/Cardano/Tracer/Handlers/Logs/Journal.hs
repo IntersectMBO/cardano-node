@@ -12,10 +12,12 @@ module Cardano.Tracer.Handlers.Logs.Journal
 import qualified Cardano.Logging as L
 #endif
 import           Cardano.Logging (TraceObject (..))
+import           Cardano.Tracer.Configuration (LogFormat (..))
 import           Cardano.Tracer.Types (NodeName)
 
 #ifdef SYSTEMD
 import           Data.Char (isDigit)
+import           Data.Maybe (fromMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Data.Text.Encoding (encodeUtf8)
@@ -25,17 +27,19 @@ import           Systemd.Journal (Priority (..), message, mkJournalField, priori
                    sendJournalFields, syslogIdentifier)
 
 -- | Store 'TraceObject's in Linux systemd's journal service.
-writeTraceObjectsToJournal :: NodeName -> [TraceObject] -> IO ()
-writeTraceObjectsToJournal nodeName = mapM_ (sendJournalFields . mkJournalFields)
+writeTraceObjectsToJournal :: LogFormat -> NodeName -> [TraceObject] -> IO ()
+writeTraceObjectsToJournal logFormat nodeName =
+  mapM_ (sendJournalFields . mkJournalFields)
  where
-  mkJournalFields trOb@TraceObject{toHuman, toMachine} =
-    case (toHuman, toMachine) of
-      (Nothing,          msgForMachine) -> mkJournalFields' trOb msgForMachine
-      (Just _,           msgForMachine) -> mkJournalFields' trOb msgForMachine
+  -- when no forHuman message is implemented for a trace, fallback to forMachine (same as for file handler)
+  getMsg :: TraceObject -> T.Text
+  getMsg = case logFormat of
+    ForMachine -> toMachine
+    ForHuman   -> \TraceObject{toHuman, toMachine} -> fromMaybe toMachine toHuman
 
-  mkJournalFields' TraceObject{toSeverity, toNamespace, toThreadId, toTimestamp} msg =
+  mkJournalFields trObj@TraceObject{toSeverity, toNamespace, toThreadId, toTimestamp} =
        syslogIdentifier nodeName
-    <> message msg
+    <> message (getMsg trObj)
     <> priority (mkPriority toSeverity)
     <> HM.fromList
          [ (namespace, encodeUtf8 $ mkName toNamespace)
@@ -62,6 +66,6 @@ writeTraceObjectsToJournal nodeName = mapM_ (sendJournalFields . mkJournalFields
   mkPriority L.Emergency = Emergency
 #else
 -- It works only on Linux distributions with systemd support.
-writeTraceObjectsToJournal :: NodeName -> [TraceObject] -> IO ()
-writeTraceObjectsToJournal _ _ = pure ()
+writeTraceObjectsToJournal :: LogFormat -> NodeName -> [TraceObject] -> IO ()
+writeTraceObjectsToJournal _ _ _ = pure ()
 #endif

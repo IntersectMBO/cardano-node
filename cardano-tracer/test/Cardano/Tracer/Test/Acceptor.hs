@@ -79,6 +79,7 @@ launchAcceptorsSimple mode localSock dpName = do
         , teReforwardTraceObjects = \_-> pure ()
         , teRegistry              = registry
         , teStateDir              = Nothing
+        , teMetricsHelp           = []
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -112,6 +113,7 @@ launchAcceptorsSimple mode localSock dpName = do
     , rotation       = Nothing
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
+    , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     }

@@ -30,7 +30,7 @@ runMetricsServers tracerEnv = do
     computeRoutes_autoUpdate :: IO Utils.RouteDictionary <-
       mkAutoUpdate defaultUpdateSettings
         { updateAction = Utils.computeRoutes tracerEnv
-        , updateFreq   = 1_000_000 -- 1/sec
+        , updateFreq   = 5_000_000 -- invalidate memoized RouteDictionary every 5 seconds
         }
 
     sequenceConcurrently_ do

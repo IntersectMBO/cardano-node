@@ -6,23 +6,23 @@ module Cardano.Tracer.Handlers.Metrics.Monitoring
   ( runMonitoringServer
   ) where
 
-import           Prelude hiding (head)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 
-import qualified Data.Text as T
-import           System.Time.Extra (sleep)
+import           Prelude hiding (head)
 
-import qualified Cardano.Tracer.Handlers.Metrics.Utils as Utils
-import           Cardano.Tracer.Handlers.Metrics.Utils (renderListOfConnectedNodes)
+import           Data.ByteString as ByteString (ByteString, isInfixOf)
 import           Data.ByteString.Builder (stringUtf8)
+import qualified Data.Text as T
 import           Network.HTTP.Types
 import           Network.Wai
-import           Network.Wai.Handler.Warp (runSettings, defaultSettings)
+import           Network.Wai.Handler.Warp (defaultSettings, runSettings)
 import qualified System.Metrics as EKG
 import           System.Remote.Monitoring.Wai
+import           System.Time.Extra (sleep)
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
 --   for particular EKG.Store. Since 'cardano-tracer' can be connected to any number
@@ -37,7 +37,7 @@ import           System.Remote.Monitoring.Wai
 runMonitoringServer
   :: TracerEnv
   -> Endpoint -- ^ (web page with list of connected nodes, EKG web page).
-  -> IO Utils.RouteDictionary
+  -> IO RouteDictionary
   -> IO ()
 runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
   -- Pause to prevent collision between "Listening"-notifications from servers.
@@ -50,27 +50,35 @@ runMonitoringServer TracerEnv{teTracer} endpoint computeRoutes_autoUpdate = do
   runSettings (setEndpoint endpoint defaultSettings) do
     renderEkg dummyStore computeRoutes_autoUpdate
 
-renderEkg :: EKG.Store -> IO Utils.RouteDictionary -> Application
+renderEkg :: EKG.Store -> IO RouteDictionary -> Application
 renderEkg dummyStore computeRoutes_autoUpdate request send = do
-  routeDictionary :: Utils.RouteDictionary <-
+  routeDictionary :: RouteDictionary <-
     computeRoutes_autoUpdate
 
-  let nodeNames :: [NodeName]
-      nodeNames = Utils.nodeNames routeDictionary
+  let acceptHeader :: Maybe ByteString
+      acceptHeader = lookup hAccept $ requestHeaders request
+
+  let wantsJson :: Bool
+      wantsJson = all @Maybe ("application/json" `ByteString.isInfixOf`) acceptHeader
 
   case pathInfo request of
+
     [] ->
-      send $ responseLBS status200 [] (renderListOfConnectedNodes "EKG metrics" nodeNames)
+      send $ uncurry (responseLBS status200) $ if wantsJson
+        then (contentHdrJSON    , renderJson routeDictionary)
+        else (contentHdrUtf8Html, renderListOfConnectedNodes "EKG metrics" routeDictionary)
+
     route:rest
       | Just (store :: EKG.Store, _ :: NodeName)
-     <- lookup route (Utils.getRouteDictionary routeDictionary)
+     <- lookup route (getRouteDictionary routeDictionary)
      -> monitor store request { pathInfo = rest } send
       -- all endings in ekg-wai's asset/ folder
+
       | any (`T.isSuffixOf` route) [".html", ".css", ".js", ".png"]
         -- we actually need an empty dummy store here, as we're sure monitor will internally invoke the staticApp to serve the assets
      -> monitor dummyStore request send
+
       | otherwise
-     -> send $ responseBuilder status404 [] do
+     -> send $ responseBuilder status404 contentHdrUtf8Text do
         "Not found: "
           <> stringUtf8 (show route)
-          <> "\n" <> stringUtf8 (show nodeNames)

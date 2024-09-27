@@ -8,51 +8,66 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.MetaTrace
 
 import           Prelude hiding (head)
 
+import qualified Data.ByteString as ByteString
 import           Data.ByteString.Builder (stringUtf8)
+import           Data.Char
 import           Data.Functor ((<&>))
+import qualified Data.HashMap.Strict as HM
+import           Data.List (find)
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import           Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import           Data.Text.Lazy.Builder (Builder)
+import qualified Data.Text.Lazy.Builder as TB
+import qualified Data.Text.Lazy.Builder.Int as TB
+import qualified Data.Text.Lazy.Encoding as TL
 import           Network.HTTP.Types
 import           Network.Wai hiding (responseHeaders)
-import           Network.Wai.Handler.Warp (runSettings, defaultSettings)
+import           Network.Wai.Handler.Warp (defaultSettings, runSettings)
+import qualified System.Metrics as EKG
 import           System.Metrics (Sample, Value (..), sampleAll)
 import           System.Time.Extra (sleep)
-import qualified Cardano.Tracer.Handlers.Metrics.Utils as Utils
-import qualified Data.ByteString as ByteString
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as Lazy.Text
-import qualified Data.Text.Lazy.Encoding as Lazy.Text
-import qualified System.Metrics as EKG
 
--- | Runs simple HTTP server that listens host and port and returns
---   the list of currently connected nodes in such a format:
+-- | Runs a simple HTTP server that listens on @endpoint@.
 --
---   * relay-1
---   * relay-2
---   * core-1
+--   At the root, it lists the connected nodes, either as HTML or JSON, depending
+--   on the requests 'Accept: ' header.
 --
---  where 'relay-1', 'relay-2' and 'core-1' are nodes' names.
+--   Routing is dynamic, depending on the connected nodes. A valid URL is derived
+--   from the nodeName configured for the connecting node. E.g. a node name
+--   of `127.0.0.1:30004` will result in the route `/12700130004` which
+--   renders that node's Prometheus / OpenMetrics text exposition:
 --
---  Each of list items is a href. By clicking on it, the user will be
---  redirected to the page with the list of metrics received from that node,
---  in such a format:
---
---  rts_gc_par_tot_bytes_copied 0
---  rts_gc_num_gcs 17
---  rts_gc_max_bytes_slop 15888
---  rts_gc_bytes_copied 165952
---  ekg_server_timestamp_ms 1639569439623
+-- # TYPE Mem_resident_int gauge
+-- # HELP Mem_resident_int Kernel-reported RSS (resident set size)
+-- Mem_resident_int 103792640
+-- # TYPE rts_gc_max_bytes_used gauge
+-- rts_gc_max_bytes_used 5811512
+-- # TYPE rts_gc_gc_cpu_ms counter
+-- rts_gc_gc_cpu_ms 50
+-- # TYPE RTS_gcMajorNum_int gauge
+-- # HELP RTS_gcMajorNum_int Major GCs
+-- RTS_gcMajorNum_int 4
+-- # TYPE rts_gc_num_bytes_usage_samples counter
+-- rts_gc_num_bytes_usage_samples 4
+-- # TYPE remainingKESPeriods_int gauge
+-- remainingKESPeriods_int 62
+-- # TYPE rts_gc_bytes_copied counter
+-- rts_gc_bytes_copied 17114384
+-- # TYPE nodeCannotForge_int gauge
+-- # HELP nodeCannotForge_int How many times was this node unable to forge [a block]?
 --
 runPrometheusServer
   :: TracerEnv
   -> Endpoint
-  -> IO Utils.RouteDictionary
+  -> IO RouteDictionary
   -> IO ()
 runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   -- Pause to prevent collision between "Listening"-notifications from servers.
@@ -64,90 +79,126 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
     { ttPrometheusEndpoint = endpoint
     }
   runSettings (setEndpoint endpoint defaultSettings) do
-    renderPrometheus computeRoutes_autoUpdate metricsComp where
+    renderPrometheus computeRoutes_autoUpdate metricsComp teMetricsHelp where
 
   TracerEnv
     { teTracer
     , teConfig = TracerConfig { metricsComp }
+    , teMetricsHelp
     } = tracerEnv
 
-renderPrometheus :: IO Utils.RouteDictionary -> Maybe (Map Text Text) -> Application
-renderPrometheus computeRoutes_autoUpdate metricsComp request send = do
-  routeDictionary :: Utils.RouteDictionary <-
+renderPrometheus
+  :: IO RouteDictionary
+  -> Maybe (Map Text Text)
+  -> [(Text, Builder)]
+  -> Application
+renderPrometheus computeRoutes_autoUpdate metricsComp helpTextDict request send = do
+  routeDictionary :: RouteDictionary <-
     computeRoutes_autoUpdate
 
-  let header :: RequestHeaders
-      header = requestHeaders request
+  let acceptHeader :: Maybe ByteString.ByteString
+      acceptHeader = lookup hAccept $ requestHeaders request
 
-  let wantsJson :: Bool
-      wantsJson = all @Maybe ("application/json" `ByteString.isInfixOf`) (lookup hAccept header)
-
-  let responseHeaders :: ResponseHeaders
-      responseHeaders = [(hContentType, if wantsJson then "application/json" else "text/html")]
+  let wantsJson, wantsOpenMetrics :: Bool
+      wantsJson         = all @Maybe ("application/json"             `ByteString.isInfixOf`) acceptHeader
+      wantsOpenMetrics  = all @Maybe ("application/openmetrics-text" `ByteString.isInfixOf`) acceptHeader
 
   case pathInfo request of
 
     [] ->
-      send $ responseLBS status200 responseHeaders if wantsJson
-        then Utils.renderJson routeDictionary
-        else Utils.renderListOfConnectedNodes "Prometheus metrics" (Utils.nodeNames routeDictionary)
+      send $ uncurry (responseLBS status200) $ if wantsJson
+        then (contentHdrJSON    , renderJson routeDictionary)
+        else (contentHdrUtf8Html, renderListOfConnectedNodes "Prometheus metrics" routeDictionary)
 
     route:_
-      | Just (store :: EKG.Store, _) <- lookup route (Utils.getRouteDictionary routeDictionary)
-     -> do metrics <- getMetricsFromNode metricsComp store
-           send $ responseLBS status200 [(hContentType, "text/plain")] (Lazy.Text.encodeUtf8 (Lazy.Text.fromStrict metrics))
+      | Just (store :: EKG.Store, _) <- lookup route (getRouteDictionary routeDictionary)
+     -> do metrics <- getMetricsFromNode metricsComp helpTextDict store
+           send $ responseBuilder status200
+            (if wantsOpenMetrics then contentHdrOpenMetrics else contentHdrUtf8Text)
+            (TL.encodeUtf8Builder metrics)
 
-      -- all endings in ekg-wai's asset/ folder
       | otherwise
-     -> send $ responseBuilder status404 [(hContentType, "text/plain")] do
+     -> send $ responseBuilder status404 contentHdrUtf8Text do
         "Not found: "
           <> stringUtf8 (show route)
 
-type MetricName  = Text
-type MetricValue = Text
-type MetricsList = [(MetricName, MetricValue)]
+type MetricName = Text
 
 getMetricsFromNode
-  :: Maybe (Map Text Text)
+  :: Maybe (Map MetricName MetricName)
+  -> [(Text, Builder)]
   -> EKG.Store
-  -> IO Text
-getMetricsFromNode metricsComp ekgStore =
-  sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
- where
+  -> IO TL.Text
+getMetricsFromNode metricsComp helpTextDict ekgStore =
+  sampleAll ekgStore <&> renderExpositionFromSample metricsComp helpTextDict
 
-  getListOfMetrics :: Sample -> MetricsList
-  getListOfMetrics =
-    metricsCompatibility
-    . filter (not . T.null . fst)
-    . map metricsWeNeed
-    . HM.toList
+renderExpositionFromSample
+  :: Maybe (Map MetricName MetricName)
+  -> [(MetricName, Builder)]
+  -> Sample
+  -> TL.Text
+renderExpositionFromSample renameMap helpTextDict =
+  TB.toLazyText . (`mappend` buildEOF) . HM.foldlWithKey' buildMetric mempty
+  where
+    buildHelpText :: MetricName -> (Builder -> Builder)
+    buildHelpText name = maybe
+      (const mempty)
+      (buildHelp . snd)
+      (find ((`T.isInfixOf` name) . fst) helpTextDict)
 
-  metricsWeNeed :: (Text, Value) -> (Text, Text)
-  metricsWeNeed (mName, mValue) =
-    case mValue of
-      Counter c -> (mName, T.pack $ show c)
-      Gauge g   -> (mName, T.pack $ show g)
-      Label l   -> (mName, l)
-      _         -> ("",    "") -- 'ekg-forward' doesn't support 'Distribution' yet.
+    -- implements the metricsComp config option
+    replaceName :: MetricName -> MetricName
+    replaceName =
+      case renameMap of
+        Nothing   -> Prelude.id
+        Just mmap -> \name -> M.findWithDefault name name mmap
 
-  metricsCompatibility :: MetricsList -> MetricsList
-  metricsCompatibility metricsList =
-    case metricsComp of
-      Nothing -> metricsList
-      Just mmap -> foldl (\ accu p'@(mn,mv) -> case Map.lookup mn mmap of
-                                             Nothing -> p' : accu
-                                             Just rep -> p' : (rep,mv) : accu)
-                         []
-                         metricsList
+    prepareName :: MetricName -> MetricName
+    prepareName =
+        T.filter (\c -> isAsciiLower c || isAsciiUpper c || isDigit c || c == '_')
+      . T.replace " " "_"
+      . T.replace "-" "_"
+      . T.replace "." "_"
 
-  renderListOfMetrics :: MetricsList -> Text
-  renderListOfMetrics [] = "No metrics were received from this node."
-  renderListOfMetrics mList = T.intercalate "\n" $
-    map (\(mName, mValue) -> prepareName mName <> " " <> mValue) mList
+    -- the help annotation line
+    buildHelp :: Builder -> Builder -> Builder
+    buildHelp h n =
+      TB.fromText "# HELP " `mappend` (n `mappend` (space `mappend` (h `mappend` newline)))
 
-  prepareName :: Text -> Text
-  prepareName =
-      T.filter (`elem` (['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']))
-    . T.replace " " "_"
-    . T.replace "-" "_"
-    . T.replace "." "_"
+    buildMetric :: TB.Builder -> MetricName -> Value -> TB.Builder
+    buildMetric acc mName mValue =
+      acc `mappend` case mValue of
+        Counter c -> annotate buildCounter `mappend` buildVal space  (TB.decimal c)
+        Gauge g   -> annotate buildGauge   `mappend` buildVal space  (TB.decimal g)
+        Label l
+          | Just ('{', _) <- T.uncons l
+                  -> annotate buildInfo    `mappend` buildVal mempty (TB.fromText l)
+          | otherwise
+                  -> helpAnnotation        `mappend` buildVal space  (TB.fromText l)
+        _         ->                                 mempty
+      where
+        helpAnnotation = buildHelpText mName buildName
+
+        -- annotates a metric in the order TYPE, UNIT, HELP
+        -- TODO: UNIT annotation
+        annotate annType =
+          buildTypeAnn annType `mappend` helpAnnotation
+
+        -- the name for exposition
+        buildName = TB.fromText $ prepareName $ replaceName mName
+
+        -- the type annotation line
+        buildTypeAnn t =
+          TB.fromText "# TYPE " `mappend` (buildName `mappend` (t `mappend` newline))
+
+        -- the actual metric line, optional spacing after name, because of labels: 'metric_name{label_value="foo"} 1'
+        buildVal spacing v =
+          buildName `mappend` (spacing `mappend` (v `mappend` newline))
+
+buildGauge, buildCounter, buildInfo, buildEOF, newline, space :: Builder
+buildGauge    = TB.fromText " gauge"
+buildCounter  = TB.fromText " counter"
+buildInfo     = TB.fromText " info"
+buildEOF      = TB.fromText "# EOF\n"
+newline       = TB.singleton '\n'
+space         = TB.singleton ' '
