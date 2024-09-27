@@ -83,6 +83,7 @@ import qualified Data.Text as Text
 import           Data.Time (DiffTime, NominalDiffTime)
 import           Data.Word (Word32, Word64)
 
+
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
     mconcat [ "connectionId" .= String (showT local'
@@ -516,14 +517,16 @@ incCdf v cdf =
     then cdf {counter = counter cdf + 1}
     else cdf
 
+
 data ClientMetrics = ClientMetrics {
-    cmSlotMap  :: IntPSQ Word64 NominalDiffTime
-  , cmCdf1sVar :: CdfCounter
-  , cmCdf3sVar :: CdfCounter
-  , cmCdf5sVar :: CdfCounter
-  , cmDelay    :: Double
+    cmSlotMap   :: IntPSQ Word64 NominalDiffTime
+  , cmCdf1sVar  :: CdfCounter
+  , cmCdf3sVar  :: CdfCounter
+  , cmCdf5sVar  :: CdfCounter
+  , cmDelay     :: Double
   , cmBlockSize :: Word32
-  , cmTraceIt  :: Bool
+  , cmTraceIt   :: Bool
+  , cmTraceVars :: Bool
 }
 
 instance LogFormatting ClientMetrics where
@@ -531,29 +534,32 @@ instance LogFormatting ClientMetrics where
   asMetrics ClientMetrics {..} =
     if cmTraceIt
       then
-        let  size = Pq.size cmSlotMap
-             msgs =
-               [ DoubleM "blockfetchclient.blockdelay"
-                    cmDelay
-               , IntM "blockfetchclient.blocksize"
-                    (fromIntegral cmBlockSize)
-               , DoubleM "blockfetchclient.blockdelay.cdfOne"
-                    (fromIntegral (counter cmCdf1sVar) / fromIntegral size)
-               , DoubleM "blockfetchclient.blockdelay.cdfThree"
-                    (fromIntegral (counter cmCdf3sVar) / fromIntegral size)
-               , DoubleM "blockfetchclient.blockdelay.cdfFive"
-                    (fromIntegral (counter cmCdf5sVar) / fromIntegral size)
-               ]
-        in if cmDelay > 5
-             then
-               CounterM "blockfetchclient.lateblocks" Nothing
-                 : msgs
-             else msgs
-      else []
+        let size = Pq.size cmSlotMap
+            msgs =
+              [ DoubleM "blockfetchclient.blockdelay" cmDelay
+              , IntM "blockfetchclient.blocksize" (fromIntegral cmBlockSize)
+              ]
+              <> if cmTraceVars
+                    then  cdfMetric "blockfetchclient.blockdelay.cdfOne" cmCdf1sVar
+                          <> cdfMetric "blockfetchclient.blockdelay.cdfThree" cmCdf3sVar
+                          <> cdfMetric "blockfetchclient.blockdelay.cdfFive" cmCdf5sVar
+                          <> lateBlockMetric cmDelay
+                    else []
+                      where
+                        cdfMetric name var =
+                          [ DoubleM name (fromIntegral (counter var) / fromIntegral size)
+                          ]
+
+                        lateBlockMetric delay =
+                          [ CounterM "blockfetchclient.lateblocks" Nothing
+                          | delay > 5
+                          ]
+        in msgs
+    else []
 
 instance MetaTrace ClientMetrics where
   namespaceFor _ = Namespace [] ["ClientMetrics"]
-  severityFor _ _ = Just Info
+  severityFor _ _ = Nothing
   documentFor _ = Just ""
 
   metricsDocFor (Namespace _ ["ClientMetrics"]) =
@@ -580,6 +586,7 @@ initialClientMetrics =
       0
       0
       False
+      False
 
 calculateBlockFetchClientMetrics ::
      ClientMetrics
@@ -587,60 +594,65 @@ calculateBlockFetchClientMetrics ::
   -> BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
   -> IO ClientMetrics
 calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
-            (TraceLabelPeer _ (BlockFetch.CompletedBlockFetch p _ _ _ forgeDelay blockSize)) =
-    case pointSlot p of
-            Origin -> pure cm {cmTraceIt = False}  -- Nothing to do.
-            At (SlotNo slotNo) -> do
-               if Pq.null cmSlotMap && forgeDelay > 20
-                  then pure cm {cmTraceIt = False} -- During startup wait until we are in sync
-                  else case Pq.lookup (fromIntegral slotNo) cmSlotMap of
-                        Just _ -> pure cm {cmTraceIt = False}  -- dupe, we only track the first
-                        Nothing -> do
-                          let slotMap' = Pq.insert (fromIntegral slotNo) slotNo forgeDelay cmSlotMap
-                          if Pq.size slotMap' > 1080 -- TODO k/2, should come from config file
-                            then case Pq.minView slotMap' of
-                                 Nothing -> pure cm {cmTraceIt = False} -- Err. We just inserted an element!
-                                 Just (_, minSlotNo, minDelay, slotMap'') ->
-                                   if minSlotNo == slotNo
-                                      then pure cm {cmTraceIt = False, cmSlotMap = slotMap'}
-                                      else let
-                                         cdf1sVar = decCdf minDelay cmCdf1sVar
-                                         cdf3sVar = decCdf minDelay cmCdf3sVar
-                                         cdf5sVar = decCdf minDelay cmCdf5sVar
-                                         cdf1sVar' = incCdf forgeDelay cdf1sVar
-                                         cdf3sVar' = incCdf forgeDelay cdf3sVar
-                                         cdf5sVar' = incCdf forgeDelay cdf5sVar
-                                         in pure cm {
-                                              cmCdf1sVar  = cdf1sVar'
-                                            , cmCdf3sVar  = cdf3sVar'
-                                            , cmCdf5sVar  = cdf5sVar'
-                                            , cmDelay     = realToFrac  forgeDelay
-                                            , cmBlockSize = getSizeInBytes blockSize
-                                            , cmTraceIt   = True
-                                            , cmSlotMap   = slotMap''}
-                            else let
-                               cdf1sVar' = incCdf forgeDelay cmCdf1sVar
-                               cdf3sVar' = incCdf forgeDelay cmCdf3sVar
-                               cdf5sVar' = incCdf forgeDelay cmCdf5sVar
-                                -- -- Wait until we have at least 45 samples before we start providing
-                                -- -- cdf estimates.
-                               in if Pq.size slotMap' >= 45
-                                    then pure cm {
-                                         cmCdf1sVar  = cdf1sVar'
-                                       , cmCdf3sVar  = cdf3sVar'
-                                       , cmCdf5sVar  = cdf5sVar'
-                                       , cmDelay     = realToFrac forgeDelay
-                                       , cmBlockSize = getSizeInBytes blockSize
-                                       , cmTraceIt   = True
-                                       , cmSlotMap   = slotMap'}
-                                   else pure cm {
-                                        cmCdf1sVar  = cdf1sVar'
-                                      , cmCdf3sVar  = cdf3sVar'
-                                      , cmCdf5sVar  = cdf5sVar'
-                                      , cmTraceIt   = False
-                                      , cmSlotMap   = slotMap'}
+    (TraceLabelPeer _ (BlockFetch.CompletedBlockFetch p _ _ _ forgeDelay blockSize)) =
+  case pointSlot p of
+    Origin -> pure cm {cmTraceIt = False}  -- Nothing to do for Origin
+    At (SlotNo slotNo) ->
+      if Pq.null cmSlotMap && forgeDelay > 20
+        then pure cm {cmTraceIt = False}  -- During startup wait until we are in sync
+        else processSlot slotNo
+  where
+    processSlot slotNo =
+      case Pq.lookup (fromIntegral slotNo) cmSlotMap of
+        Just _  -> pure cm {cmTraceIt = False}  -- Duplicate, only track the first
+        Nothing -> let slotMap' = Pq.insert (fromIntegral slotNo) slotNo forgeDelay cmSlotMap
+                   in if Pq.size slotMap' > 1080
+                        then trimSlotMap slotMap' slotNo
+                        else updateMetrics slotMap' slotNo
+
+    trimSlotMap slotMap' slotNo =
+      case Pq.minView slotMap' of
+        Nothing -> pure cm {cmTraceIt = False}  -- Error: Just inserted element
+        Just (_, minSlotNo, minDelay, slotMap'') ->
+          if minSlotNo == slotNo
+            then pure cm { cmTraceIt = False, cmSlotMap = slotMap' }
+            else let updatedMetrics = updateCDFs minDelay forgeDelay
+                 in pure cm
+                      { cmCdf1sVar  = fst3 updatedMetrics
+                      , cmCdf3sVar  = snd3 updatedMetrics
+                      , cmCdf5sVar  = thd3 updatedMetrics
+                      , cmDelay     = realToFrac forgeDelay
+                      , cmBlockSize = getSizeInBytes blockSize
+                      , cmSlotMap   = slotMap'' }
+
+    updateMetrics slotMap' _slotNo =
+      let updatedMetrics = updateCDFs 0 forgeDelay
+      in if Pq.size slotMap' >= 45
+            then pure cm
+                 { cmCdf1sVar  = fst3 updatedMetrics
+                 , cmCdf3sVar  = snd3 updatedMetrics
+                 , cmCdf5sVar  = thd3 updatedMetrics
+                 , cmDelay     = realToFrac forgeDelay
+                 , cmBlockSize = getSizeInBytes blockSize
+                 , cmSlotMap   = slotMap' }
+            else pure cm
+                 { cmCdf1sVar  = fst3 updatedMetrics
+                 , cmCdf3sVar  = snd3 updatedMetrics
+                 , cmCdf5sVar  = thd3 updatedMetrics
+                 , cmTraceVars = False
+                 , cmSlotMap   = slotMap' }
+
+    updateCDFs minDelay forgeDelay' =
+      ( incCdf forgeDelay' (decCdf minDelay cmCdf1sVar)
+      , incCdf forgeDelay' (decCdf minDelay cmCdf3sVar)
+      , incCdf forgeDelay' (decCdf minDelay cmCdf5sVar) )
+
+    fst3 (x, _, _) = x
+    snd3 (_, y, _) = y
+    thd3 (_, _, z) = z
 
 calculateBlockFetchClientMetrics cm _lc _ = pure cm
+
 
 --------------------------------------------------------------------------------
 -- BlockFetchDecision Tracer
@@ -864,8 +876,8 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace [] ["SendBlock"]) =
-      [("served.block", "")
-      ,("served.block.latest", "")]
+      [("served.block", "This counter metric indicates how many blocks this node has served.")
+      ,("served.block.latest", "This counter metric indicates how many chain tip blocks this node has served.")]
 
     metricsDocFor _ = []
 
