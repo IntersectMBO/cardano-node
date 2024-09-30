@@ -45,7 +45,7 @@ import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
-import           Testnet.Start.Types (ShelleyTestnetOptions(..))
+import           Testnet.Start.Types (GenesisOptions(..))
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
@@ -79,7 +79,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = nDrepVotes
         }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic

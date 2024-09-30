@@ -24,7 +24,7 @@ import           Testnet.Types (readNodeLoggingFormat)
 optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
 optsTestnet envCli = CardanoTestnetCliOptions
   <$> pCardanoTestnetCliOptions envCli
-  <*> pShelleyTestnetOptions
+  <*> pGenesisOptions
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
@@ -96,9 +96,9 @@ parseNodeConfigFile = NodeConfigurationYaml <$>
                , "Or use num-pool-nodes to use cardano-testnet's default configuration."
                ]
 
-pShelleyTestnetOptions :: Parser ShelleyTestnetOptions
-pShelleyTestnetOptions =
-  ShelleyTestnetOptions
+pGenesisOptions :: Parser GenesisOptions
+pGenesisOptions =
+  GenesisOptions
     <$> pNetworkId
     <*> pEpochLength
     <*> pSlotLength
@@ -110,7 +110,7 @@ pShelleyTestnetOptions =
         <>  OA.help "Epoch length, in number of slots"
         <>  OA.metavar "SLOTS"
         <>  OA.showDefault
-        <>  OA.value (shelleyEpochLength def)
+        <>  OA.value (genesisEpochLength def)
         )
     pSlotLength =
       OA.option auto
@@ -118,7 +118,7 @@ pShelleyTestnetOptions =
         <>  OA.help "Slot length"
         <>  OA.metavar "SECONDS"
         <>  OA.showDefault
-        <>  OA.value (shelleySlotLength def)
+        <>  OA.value (genesisSlotLength def)
         )
     pActiveSlotCoeffs =
       OA.option auto
@@ -126,7 +126,7 @@ pShelleyTestnetOptions =
         <>  OA.help "Active slots co-efficient"
         <>  OA.metavar "DOUBLE"
         <>  OA.showDefault
-        <>  OA.value (shelleyActiveSlotsCoeff def)
+        <>  OA.value (genesisActiveSlotsCoeff def)
         )
 
 cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetCliOptions

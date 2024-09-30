@@ -202,8 +202,8 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
           ]
         }
       shelleyOptions = def
-        { shelleyEpochLength = 300
-        , shelleySlotLength = slotLen
+        { genesisEpochLength = 300
+        , genesisSlotLength = slotLen
         }
   testnetRuntime <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
   let allNodes' = poolNodes testnetRuntime
@@ -244,7 +244,7 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
   conf <- mkConf tempAbsBasePath'
 
   let fastTestnetOptions = def
-      shelleyOptions = def { shelleyEpochLength = 300 }
+      shelleyOptions = def { genesisEpochLength = 300 }
   testnetRuntime
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
   node@NodeRuntime{nodeProcessHandle} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime

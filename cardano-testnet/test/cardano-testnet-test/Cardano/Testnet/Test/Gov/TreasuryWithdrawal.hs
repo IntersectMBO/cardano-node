@@ -62,8 +62,8 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
       eraName = eraToString era
 
       fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { shelleyEpochLength = 200
-                           , shelleyActiveSlotsCoeff = 0.3
+      shelleyOptions = def { genesisEpochLength = 200
+                           , genesisActiveSlotsCoeff = 0.3
                            }
 
   TestnetRuntime

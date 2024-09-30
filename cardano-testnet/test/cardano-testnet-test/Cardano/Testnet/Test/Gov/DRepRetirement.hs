@@ -49,7 +49,7 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
 
   let cardanoNodeEra = AnyShelleyBasedEra sbe
       fastTestnetOptions = def { cardanoNodeEra }
-      shelleyOptions = def { shelleyEpochLength = 50 } -- 50 * (1/10s) length, i.e. 5 seconds
+      shelleyOptions = def { genesisEpochLength = 50 } -- 50 * (1/10s) length, i.e. 5 seconds
 
   TestnetRuntime
     { testnetMagic

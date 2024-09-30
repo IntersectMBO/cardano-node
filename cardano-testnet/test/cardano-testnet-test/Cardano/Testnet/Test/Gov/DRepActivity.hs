@@ -59,7 +59,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 1
         }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic

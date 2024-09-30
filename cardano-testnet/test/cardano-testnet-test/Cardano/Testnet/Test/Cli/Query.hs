@@ -69,7 +69,7 @@ import           Testnet.Process.Cli.Transaction (
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Start.Types (ShelleyTestnetOptions(..))
+import           Testnet.Start.Types (GenesisOptions(..))
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
 import           Testnet.Types
 
@@ -97,10 +97,10 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       eraName = eraToString era
       fastTestnetOptions = def { cardanoNodeEra = asbe }
       shelleyOptions = def
-        { shelleyEpochLength = 100
+        { genesisEpochLength = 100
         -- We change slotCoeff because epochLength must be equal to:
         -- securityParam * 10 / slotCoeff
-        , shelleyActiveSlotsCoeff = 0.5
+        , genesisActiveSlotsCoeff = 0.5
         }
 
   TestnetRuntime

@@ -68,7 +68,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def { cardanoNodeEra = asbe  }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
 

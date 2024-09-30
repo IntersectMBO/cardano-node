@@ -47,7 +47,7 @@ hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation"
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
-      shelleyOptions = def { shelleyEpochLength = 100 }
+      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic

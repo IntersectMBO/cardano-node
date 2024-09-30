@@ -48,7 +48,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 0
         }
-      shelleyOptions = def { shelleyEpochLength = 100 }
+      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic

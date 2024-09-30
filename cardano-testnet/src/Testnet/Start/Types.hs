@@ -13,7 +13,7 @@ module Testnet.Start.Types
   , TestnetNodeOptions(..)
   , extraSpoNodeCliArgs
   , cardanoDefaultTestnetNodeOptions
-  , ShelleyTestnetOptions(..)
+  , GenesisOptions(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -38,19 +38,19 @@ import qualified Hedgehog.Extras as H
 
 -- | Command line options for the @cardano-testnet@ executable. They are used
 -- in the parser, and then get split into 'CardanoTestnetOptions' and
--- 'ShelleyTestnetOptions'
+-- 'GenesisOptions'
 data CardanoTestnetCliOptions = CardanoTestnetCliOptions
   { cliTestnetOptions :: CardanoTestnetOptions
-  , cliShelleyOptions :: ShelleyTestnetOptions
+  , cliGenesisOptions :: GenesisOptions
   } deriving (Eq, Show)
 
 instance Default CardanoTestnetCliOptions where
   def = CardanoTestnetCliOptions
     { cliTestnetOptions = def
-    , cliShelleyOptions = def
+    , cliGenesisOptions = def
     }
 
--- | Options which, contrary to 'ShelleyTestnetOptions' are not implemented
+-- | Options which, contrary to 'GenesisOptions' are not implemented
 -- by tuning the genesis files.
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
@@ -58,7 +58,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
     cardanoNodes :: [TestnetNodeOptions]
   , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
-                               -- TODO move me to ShelleyTestnetOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
+                               -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
@@ -77,19 +77,19 @@ instance Default CardanoTestnetOptions where
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
-data ShelleyTestnetOptions = ShelleyTestnetOptions
-  { shelleyTestnetMagic :: Int -- TODO Use the NetworkMagic type from API
-  , shelleyEpochLength :: Int -- ^ An epoch's duration, in number of slots
-  , shelleySlotLength :: Double -- ^ Slot length, in seconds
-  , shelleyActiveSlotsCoeff :: Double
+data GenesisOptions = GenesisOptions
+  { genesisTestnetMagic :: Int -- TODO Use the NetworkMagic type from API
+  , genesisEpochLength :: Int -- ^ An epoch's duration, in number of slots
+  , genesisSlotLength :: Double -- ^ Slot length, in seconds
+  , genesisActiveSlotsCoeff :: Double
   } deriving (Eq, Show)
 
-instance Default ShelleyTestnetOptions where
-  def = ShelleyTestnetOptions
-    { shelleyTestnetMagic = 42
-    , shelleyEpochLength = 500
-    , shelleySlotLength = 0.1
-    , shelleyActiveSlotsCoeff = 0.05
+instance Default GenesisOptions where
+  def = GenesisOptions
+    { genesisTestnetMagic = 42
+    , genesisEpochLength = 500
+    , genesisSlotLength = 0.1
+    , genesisActiveSlotsCoeff = 0.05
     }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)

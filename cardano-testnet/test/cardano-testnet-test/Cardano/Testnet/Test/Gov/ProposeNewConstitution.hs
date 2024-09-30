@@ -74,7 +74,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = numVotes
         }
-      shelleyOptions = def { shelleyEpochLength = 200 }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic

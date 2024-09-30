@@ -47,8 +47,8 @@ hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-ch
 
   let fastTestnetOptions = def
       shelleyOptions = def
-        { shelleyEpochLength = 100
-        , shelleySlotLength = 0.1
+        { genesisEpochLength = 100
+        , genesisSlotLength = 0.1
         }
 
   TestnetRuntime{configurationFile, poolNodes}
