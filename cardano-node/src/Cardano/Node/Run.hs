@@ -495,7 +495,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
                   (readTVar useBootstrapVar)
-                  retry -- TODO: IMPLEMENT
+                  (return Nothing) -- retry -- TODO: IMPLEMENT
           in
           Node.run
             nodeArgs {
