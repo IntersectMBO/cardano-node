@@ -46,7 +46,7 @@ let
           pkg-config
           hlint
           ghcid
-          haskell-language-server
+          # haskell-language-server
           cabal
           actionlint
           shellcheck
