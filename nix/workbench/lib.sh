@@ -322,3 +322,19 @@ wait_internal () {
     return 0
   fi
 }
+
+# Function to acquire a lock on a file. This is meant to be called in a
+# subshell, so that the lock is released when the subshell exits. E.g.
+#
+# (
+#   acquire_lock /tmp/lockfile
+#   ...
+# )
+#
+acquire_lock() {
+  LOCKFILE=$1
+  info "waiting to acquire the lock on ${LOCKFILE}"
+  exec 4<>"$LOCKFILE"
+  flock 4
+  info "lock acquired"
+}
