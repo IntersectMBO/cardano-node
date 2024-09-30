@@ -159,7 +159,9 @@ library
                       , yaml
 
   default-language:     Haskell2010
-  default-extensions:   OverloadedStrings
+  default-extensions:   BlockArguments
+                        LambdaCase
+                        OverloadedStrings
 
 executable tx-generator
   import:               project-config

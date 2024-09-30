@@ -5,7 +5,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
@@ -91,9 +90,7 @@ setProtocolParameters s = case s of
 
 readSigningKey :: String -> SigningKeyFile In -> ActionM ()
 readSigningKey name filePath =
-  liftIO (readSigningKeyFile filePath) >>= \case
-    Left err -> liftTxGenError err
-    Right key -> setEnvKeys name key
+  setEnvKeys name =<< liftIOSafe (readSigningKeyFile filePath)
 
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys

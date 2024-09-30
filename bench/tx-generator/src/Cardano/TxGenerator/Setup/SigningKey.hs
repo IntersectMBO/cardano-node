@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 -- | This module provides convenience functions when dealing with signing keys.
 module Cardano.TxGenerator.Setup.SigningKey
