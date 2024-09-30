@@ -5,7 +5,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
@@ -93,25 +92,23 @@ setProtocolParameters s = case s of
 
 readSigningKey :: String -> SigningKeyFile In -> ActionM ()
 readSigningKey name filePath =
-  liftIO (readSigningKeyFile filePath) >>= \case
-    Left err -> liftTxGenError err
-    Right key -> setEnvKeys name key
+  setEnvKeys name =<< liftIOSafe (readSigningKeyFile filePath)
 
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys
 
 readDRepKeys :: FilePath -> ActionM ()
 readDRepKeys ncFile = do
-  genesis <- liftIO (mkNodeConfig ncFile) >>= either liftTxGenError (pure . getGenesisDirectory)
-  case genesis of
-    Nothing -> liftTxGenError $ TxGenError "readDRepKeys: no genesisDirectory could be retrieved from the node config"
-    -- "cache-entry" is a link or copy of the actual genesis folder created by "create-testnet-data"
-    -- in the workbench's run directory structure, this link or copy is created for each run - by workbench
-    Just d  -> liftIO (Genesis.genesisLoadDRepKeys (d </> "cache-entry")) >>= \case
-      Left err -> liftTxGenError err
-      Right ks -> do
-        setEnvDRepKeys ks
-        traceDebug $ "DRep SigningKeys loaded: " ++ show (length ks) ++ " from: " ++ d
+  genesis <- onNothing throwKeyErr $ getGenesisDirectory <$> liftIOSafe (mkNodeConfig ncFile)
+  -- "cache-entry" is a link or copy of the actual genesis folder created by "create-testnet-data"
+  -- in the workbench's run directory structure, this link or copy is created for each run - by workbench
+  ks <- liftIOSafe . Genesis.genesisLoadDRepKeys $ genesis </> "cache-entry"
+  setEnvDRepKeys ks
+  traceDebug $ "DRep SigningKeys loaded: " ++ show (length ks) ++ " from: " ++ genesis
+  where
+    throwKeyErr = liftTxGenError . TxGenError $
+      "readDRepKeys: no genesisDirectory could "
+        <> "be retrieved from the node config"
 
 addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
