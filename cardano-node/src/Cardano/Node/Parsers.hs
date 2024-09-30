@@ -20,7 +20,7 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
-import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ByteSize32 (..))
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
@@ -132,6 +132,9 @@ nodeRunParser = do
            , pncConsensusMode = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncConsensusMode = mempty
+           , pncMinBigLedgerPeersForTrustedState = mempty
+           , pncEnableNewTxSubmissionProtocol = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
@@ -217,7 +220,7 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
   where
     parseOverride :: Parser MempoolCapacityBytesOverride
     parseOverride =
-      MempoolCapacityBytesOverride . MempoolCapacityBytes <$>
+      MempoolCapacityBytesOverride . ByteSize32 <$>
       Opt.option (auto @Word32)
         (  long "mempool-capacity-override"
         <> metavar "BYTES"

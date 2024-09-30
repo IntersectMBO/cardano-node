@@ -59,6 +59,9 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
+import Ouroboros.Network.TxSubmission.Inbound.Types (TraceTxLogic (..))
+import Cardano.Tracing.OrphanInstances.Common (ToObject(..))
+import Cardano.Node.Tracing.Compat (fromDetailLevel)
 
 
 
@@ -778,7 +781,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor (Namespace [] ["DebugState"]) = Just
       "peer selection internal state"
     documentFor (Namespace [] ["VerifyPeerSnapshot"]) = Just
-      "Big ledger peer snapshot file failed integrity check against the ledger"
+      "Big ledger peer snapshot file verification result"
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["ChurnAction"]) =
@@ -1902,4 +1905,52 @@ instance MetaTrace NtN.AcceptConnectionsPolicyTrace where
         Namespace [] ["ConnectionRateLimiting"]
       , Namespace [] ["ConnectionHardLimit"]
       , Namespace [] ["ConnectionLimitResume"]
+      ]
+
+--------------------------------------------------------------------------------
+-- TxLogic Tracer
+--------------------------------------------------------------------------------
+
+instance ( ToJSON txid
+         , ToObject tx
+         , ToJSONKey peer
+         , ToJSONKey txid
+         , Show peer
+         , Show txid
+         , Show tx
+         ) => LogFormatting (TraceTxLogic peer txid tx)  where
+    forMachine dtal (TraceTxDecisions td) =
+      mconcat [ "kind" .= String "TxDecisions"
+              , "decisions" .= fmap (toObject (fromDetailLevel dtal)) td
+              ]
+    forMachine dtal (TraceSharedTxState s st) =
+      mconcat [ "kind" .= String "SharedTxState"
+              , "name" .= s
+              , "sharedState" .= toObject (fromDetailLevel dtal) st
+              ]
+    forHuman   = showT
+
+instance MetaTrace (TraceTxLogic peer txid tx) where
+    namespaceFor TraceTxDecisions {} =
+      Namespace [] ["TxDecisions"]
+    namespaceFor TraceSharedTxState {} =
+      Namespace [] ["SharedTxState"]
+
+    severityFor (Namespace _ ["TxDecisions"]) _ = Just Debug
+    severityFor (Namespace _ ["SharedTxState"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["TxDecisions"]) = Just $ mconcat
+      [ "Current decision made by the decision logic thread"
+      , " to guide the TX Submission protocol"
+      ]
+    documentFor (Namespace _ ["SharedTxState"]) = Just $ mconcat
+      [ "Shared state as seen by the decision logict thread."
+      , " This state guides the TX Submission protocol"
+      ]
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["TxDecisions"]
+      , Namespace [] ["SharedTxState"]
       ]

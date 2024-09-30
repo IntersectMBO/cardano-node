@@ -121,10 +121,13 @@ import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
 import           System.Posix.Types (FileMode)
-#else 
+#else
 import           System.Win32.File
 #endif
 import           Paths_cardano_node (version)
+import Data.Aeson (ToJSONKey)
+import Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
+import Ouroboros.Network.TxSubmission.Inbound.Server (EnableNewTxSubmissionProtocol (..))
 
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -197,6 +200,7 @@ installSigTermHandler = do
 handleNodeWithTracers
   :: ( TraceConstraints blk
      , Api.Protocol IO blk
+     , ToJSONKey (GenTxId blk)
      )
   => PartialNodeConfiguration
   -> NodeConfiguration
@@ -475,6 +479,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+              , rnEnableNewTxSubmissionProtocol = ncEnableNewTxSubmissionProtocol nc
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -566,6 +571,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
+                , rnEnableNewTxSubmissionProtocol = EnableNewTxSubmissionProtocol
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
@@ -900,7 +906,7 @@ mkP2PArguments NodeConfiguration {
                  ncSyncTargetOfKnownBigLedgerPeers,
                  ncSyncTargetOfEstablishedBigLedgerPeers,
                  ncSyncTargetOfActiveBigLedgerPeers,
-                 ncSyncMinTrusted,
+                 ncMinBigLedgerPeersForTrustedState,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
                  ncPeerSharing,
@@ -926,7 +932,7 @@ mkP2PArguments NodeConfiguration {
       , P2P.daBulkChurnInterval     = Configuration.defaultBulkChurnInterval
       , P2P.daOwnPeerSharing        = ncPeerSharing
       , P2P.daConsensusMode         = ncConsensusMode
-      , P2P.daMinBigLedgerPeersForTrustedState = ncSyncMinTrusted
+      , P2P.daMinBigLedgerPeersForTrustedState = ncMinBigLedgerPeersForTrustedState
       }
   where
     deadlineTargets = Configuration.defaultDeadlineTargets {

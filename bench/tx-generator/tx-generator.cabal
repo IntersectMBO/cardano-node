@@ -157,6 +157,7 @@ library
                       , transformers-except
                       , unordered-containers
                       , yaml
+                      , microlens
 
   default-language:     Haskell2010
   default-extensions:   OverloadedStrings

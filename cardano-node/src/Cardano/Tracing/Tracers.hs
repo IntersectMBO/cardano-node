@@ -71,7 +71,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool)
+                   LedgerSupportsMempool, ByteSize32 (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -116,7 +116,7 @@ import qualified Control.Concurrent.STM as STM
 import           Control.Monad (forM_, when)
 import           "contra-tracer" Control.Tracer
 import           Control.Tracer.Transformers
-import           Data.Aeson (ToJSON (..), Value (..))
+import           Data.Aeson (ToJSON (..), Value (..), ToJSONKey)
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Base16 as B16
 import           Data.Functor ((<&>))
@@ -318,6 +318,8 @@ mkTracers
   :: forall blk p2p.
      ( Consensus.RunNode blk
      , TraceConstraints blk
+     , ToJSON (GenTxId blk)
+     , ToJSONKey (GenTxId blk)
      )
   => BlockConfig blk
   -> TraceOptions
@@ -511,6 +513,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
       , Consensus.gsmTracer = nullTracer
+      , Consensus.txLogicTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -524,6 +527,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tBlockFetchTracer = nullTracer
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer
+      , NodeToNode.tTxLogicTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -723,6 +727,7 @@ mkConsensusTracers
      , Eq peer
      , LedgerQueries blk
      , ToJSON (GenTxId blk)
+     , ToJSONKey (GenTxId blk)
      , ToObject (ApplyTxErr blk)
      , ToObject (CannotForge blk)
      , ToObject (GenTx blk)
@@ -734,6 +739,7 @@ mkConsensusTracers
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
+     , ToJSONKey peer
      )
   => Maybe EKGDirect
   -> TraceSelection
@@ -795,6 +801,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
               TraceLabelPeer _ TraceTxInboundTerminated -> return ()
               TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
               TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundAddedToMempool _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundDecision _) -> return ()
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
@@ -811,6 +819,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
+    , Consensus.txLogicTracer = tracerOnOff (traceTxLogic trSel) verb "TxLogic" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1263,8 +1272,10 @@ mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
                     TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, tot0)
       logValue1 :: LOContent a
       logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
+
+      ByteSize32 w = msNumBytes tot
       logValue2 :: LOContent a
-      logValue2 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
+      logValue2 = LogValue "mempoolBytes" $ PureI $ fromIntegral w
   meta <- mkLOMeta Critical Confidential
   traceNamedObject tr' (meta, logValue1)
   traceNamedObject tr' (meta, logValue2)
@@ -1412,7 +1423,11 @@ nodeToNodeTracers'
      , ConvertTxId blk
      , HasTxs blk
      , Show peer
+     , ToJSONKey peer
      , ToObject peer
+     , ToObject (GenTx blk)
+     , ToJSON (GenTxId blk)
+     , ToJSONKey (GenTxId blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -1435,6 +1450,9 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tTxSubmission2Tracer =
       tracerOnOff (traceTxSubmissionProtocol trSel)
                   verb "TxSubmissionProtocol" tr
+  , NodeToNode.tTxLogicTracer =
+      tracerOnOff (traceTxLogic trSel)
+                  verb "TxLogic" tr
   }
 
 teeTraceBlockFetchDecision

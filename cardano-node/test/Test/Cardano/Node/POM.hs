@@ -18,6 +18,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnaps
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.Diffusion.Configuration
+import           Ouroboros.Network.TxSubmission.Inbound.Server (EnableNewTxSubmissionProtocol (..))
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -147,7 +148,9 @@ testPartialYamlConfig =
     , pncGenesisTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
-    , pncConsensusMode = Last (Just PraosMode)
+    , pncConsensusMode = mempty
+    , pncMinBigLedgerPeersForTrustedState = mempty
+    , pncEnableNewTxSubmissionProtocol = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -192,7 +195,9 @@ testPartialCliConfig =
     , pncGenesisTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
-    , pncConsensusMode = Last (Just GenesisMode)
+    , pncConsensusMode = Last (Just PraosMode)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just Configuration.defaultMinBigLedgerPeersForTrustedState)
+    , pncEnableNewTxSubmissionProtocol = Last (Just EnableNewTxSubmissionProtocol)
     }
 
 -- | Expected final NodeConfiguration
@@ -243,7 +248,9 @@ eExpectedConfig = do
     , ncGenesisTargetNumberOfActiveBigLedgerPeers = 30
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
-    , ncConsensusMode = GenesisMode
+    , ncConsensusMode = PraosMode
+    , ncMinBigLedgerPeersForTrustedState = Configuration.defaultMinBigLedgerPeersForTrustedState
+    , ncEnableNewTxSubmissionProtocol = EnableNewTxSubmissionProtocol
     }
 
 -- -----------------------------------------------------------------------------

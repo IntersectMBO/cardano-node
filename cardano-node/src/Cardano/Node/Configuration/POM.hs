@@ -38,6 +38,7 @@ import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
+import           Ouroboros.Network.TxSubmission.Inbound.Server (EnableNewTxSubmissionProtocol (..))
 
 import           Control.Monad (when)
 import           Data.Aeson
@@ -148,6 +149,13 @@ data NodeConfiguration
          -- | Node AcceptedConnectionsLimit
        , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
 
+         -- Used to determine which set of peer targets to use
+         -- by the diffusion layer when syncing
+       , ncConsensusMode :: !ConsensusMode
+         -- Minimum number of active big ledger peers we must be connected to
+         -- in Genesis mode
+       , ncMinBigLedgerPeersForTrustedState :: MinBigLedgerPeersForTrustedState
+
          -- P2P governor targets
        , ncDeadlineTargetOfRootPeers        :: !Int
        , ncDeadlineTargetOfKnownPeers       :: !Int
@@ -160,17 +168,15 @@ data NodeConfiguration
        , ncSyncTargetOfKnownBigLedgerPeers       :: !Int
        , ncSyncTargetOfEstablishedBigLedgerPeers :: !Int
        , ncSyncTargetOfActiveBigLedgerPeers      :: !Int
-       , ncSyncMinTrusted :: !MinBigLedgerPeersForTrustedState
-
-         -- Used to determine which set of peer targets to use
-         -- by the diffusion layer when syncing
-       , ncConsensusMode :: !ConsensusMode
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
 
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
+
+         -- Enable new TX Submission Protocol
+       , ncEnableNewTxSubmissionProtocol :: EnableNewTxSubmissionProtocol
        } deriving (Eq, Show)
 
 
@@ -220,6 +226,12 @@ data PartialNodeConfiguration
          -- AcceptedConnectionsLimit
        , pncAcceptedConnectionsLimit :: !(Last AcceptedConnectionsLimit)
 
+         -- Consensus mode for diffusion layer
+       , pncConsensusMode :: !(Last ConsensusMode)
+         -- Minimum number of active big ledger peers we must be connected to
+         -- in Genesis mode, otherwise syncing is halted temporarily
+       , pncMinBigLedgerPeersForTrustedState :: !(Last MinBigLedgerPeersForTrustedState)
+
          -- P2P governor targets
        , pncDeadlineTargetOfRootPeers        :: !(Last Int)
        , pncDeadlineTargetOfKnownPeers       :: !(Last Int)
@@ -232,16 +244,15 @@ data PartialNodeConfiguration
        , pncSyncTargetOfKnownBigLedgerPeers       :: !(Last Int)
        , pncSyncTargetOfEstablishedBigLedgerPeers :: !(Last Int)
        , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
-       , pncSyncMinTrusted :: !(Last MinBigLedgerPeersForTrustedState)
-
-         -- Consensus mode for diffusion layer
-       , pncConsensusMode :: !(Last ConsensusMode)
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
+
+         -- Enable new TX Submission Protocol
+       , pncEnableNewTxSubmissionProtocol :: !(Last EnableNewTxSubmissionProtocol)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -316,6 +327,8 @@ instance FromJSON PartialNodeConfiguration where
       pncAcceptedConnectionsLimit
         <- Last <$> v .:? "AcceptedConnectionsLimit"
 
+      pncConsensusMode <- Last <$> v .:? "ConsensusMode"
+
       -- P2P Governor parameters, with conservative defaults.
       pncDeadlineTargetOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
       pncDeadlineTargetOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
@@ -328,9 +341,7 @@ instance FromJSON PartialNodeConfiguration where
       pncSyncTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "SyncTargetNumberOfKnownBigLedgerPeers"
       pncSyncTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "SyncTargetNumberOfEstablishedBigLedgerPeers"
       pncSyncTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "SyncTargetNumberOfActiveBigLedgerPeers"
-      pncSyncMinTrusted <- Last <$> v .:? "SyncMinNumberOfBigLedgerPeersForTrustedState"
-
-      pncConsensusMode <- Last <$> v .:? "ConsensusMode"
+      pncMinBigLedgerPeersForTrustedState <- Last <$> v .:? "MinBigLedgerPeersForTrustedState"
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
@@ -345,6 +356,14 @@ instance FromJSON PartialNodeConfiguration where
       -- Peer Sharing
       -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just Configuration.PeerSharingDisabled
+
+      -- Enable new TX Submission Protocol
+      newTxSubmissionProtocol <- v .:? "EnableNewTxSubmissionProtocol"
+      let pncEnableNewTxSubmissionProtocol =
+            case newTxSubmissionProtocol of
+              Nothing -> Last $ Just EnableNewTxSubmissionProtocol -- defaultEnableNewTxSubmissionProtocol
+              Just False -> Last $ Just DisableNewTxSubmissionProtocol
+              Just True -> Last $ Just EnableNewTxSubmissionProtocol
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -382,10 +401,11 @@ instance FromJSON PartialNodeConfiguration where
            , pncSyncTargetOfKnownBigLedgerPeers
            , pncSyncTargetOfEstablishedBigLedgerPeers
            , pncSyncTargetOfActiveBigLedgerPeers
-           , pncSyncMinTrusted
+           , pncMinBigLedgerPeersForTrustedState
            , pncConsensusMode
            , pncEnableP2P
            , pncPeerSharing
+           , pncEnableNewTxSubmissionProtocol
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -564,10 +584,11 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
     , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
     , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
-    , pncSyncMinTrusted = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
     , pncConsensusMode = mempty
     , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just Configuration.PeerSharingDisabled)
+    , pncEnableNewTxSubmissionProtocol  = Last (Just EnableNewTxSubmissionProtocol) -- defaultEnableNewTxSubmissionProtocol)
     }
   where
     Configuration.PeerSelectionTargets {
@@ -637,9 +658,9 @@ makeNodeConfiguration pnc = do
   ncSyncTargetOfActiveBigLedgerPeers <-
     lastToEither "Missing SyncTargetNumberOfActiveBigLedgerPeers"
     $ pncSyncTargetOfActiveBigLedgerPeers pnc
-  ncSyncMinTrusted <-
-    lastToEither "Missing SyncMinNumberOfBigLedgerPeersForTrustedState"
-    $ pncSyncMinTrusted pnc
+  ncMinBigLedgerPeersForTrustedState <- 
+    lastToEither "Missing MinBigLedgerPeersForTrustedState"
+    $ pncMinBigLedgerPeersForTrustedState pnc
   ncConsensusMode <-
     lastToEither "Missing ConsensusMode"
     $ pncConsensusMode pnc
@@ -664,6 +685,10 @@ makeNodeConfiguration pnc = do
   ncPeerSharing <-
     lastToEither "Missing PeerSharing"
     $ pncPeerSharing pnc
+
+  ncEnableNewTxSubmissionProtocol <-
+    lastToEither "Missing EnableNewTxSubmissionProtocol"
+    $ pncEnableNewTxSubmissionProtocol pnc
 
   -- TODO: This is not mandatory
   experimentalProtocols <-
@@ -712,12 +737,13 @@ makeNodeConfiguration pnc = do
              , ncSyncTargetOfKnownBigLedgerPeers
              , ncSyncTargetOfEstablishedBigLedgerPeers
              , ncSyncTargetOfActiveBigLedgerPeers
-             , ncSyncMinTrusted
+             , ncMinBigLedgerPeersForTrustedState
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
              , ncConsensusMode
+             , ncEnableNewTxSubmissionProtocol
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
