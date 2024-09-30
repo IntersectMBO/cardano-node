@@ -334,7 +334,7 @@ wait_internal () {
 acquire_lock() {
   LOCKFILE=$1
   info "waiting to acquire the lock on ${LOCKFILE}"
-  exec 4<>"$LOCKFILE"
-  flock 4
+  exec {lock_fd}>"$LOCKFILE"
+  flock $lock_fd
   info "lock acquired"
 }
