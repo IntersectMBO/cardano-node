@@ -53,7 +53,8 @@ case "${op}" in
         ## 0. Generate:
         #
         mkdir -p                 "$outdir"
-        args=( --topology-output "$outdir"/topology.json
+        args=( make
+               --topology-output "$outdir"/topology.json
                --dot-output      "$outdir"/topology.dot
                "$topology_name"
                --size             $n_hosts
@@ -242,42 +243,37 @@ case "${op}" in
 
         case "$role" in
         local-bft | local-pool )
-            local jq_function
+            args=(pool
+                  --baseport $basePort
+                  --node-number $i
+                 )
             if jqtest ".node.verbatim.EnableP2P" <<<$prof
             then
-              jq_function="p2p_loopback_node_topology_from_nixops_topology"
-            else
-              jq_function="loopback_node_topology_from_nixops_topology"
+              args+=('--enable-p2p')
             fi
-            args=(-L$global_basedir
-                  --slurpfile topology "$topo_dir"/topology.json
-                  --argjson   basePort $basePort
-                  --argjson   i        $i
-                  --null-input
+        ;;
+        local-explorer )
+            args=(explorer
+                  --baseport $basePort
+                  --node-number $i
                  )
-            jq \
-                "include \"topology\"; $jq_function(\$topology[0]; \$i)" \
-                "${args[@]}"
         ;;
         local-proxy )
             local   name=$(jq '.name'   <<<$prof --raw-output)
             local preset=$(jq '.preset' <<<$prof --raw-output)
             local topo_proxy=$(profile preset-get-file "$preset" 'proxy topology' 'topology-proxy.json')
 
-            jq . "$topo_proxy";;
+            jq . "$topo_proxy"
+        ;;
         local-chaindb-server )
-            ## ChainDB servers are just that:
-            jq --null-input "{ Producers: [] }";;
-        local-explorer )
-            args=(-L$global_basedir
-                  --argjson   basePort     $basePort
-                 )
-            jq 'include "topology";
+            args=('chaindb-server');;
+        * )
+            fail "unhandled role for topology node '$i': '$role'"
+        ;;
+        esac
 
-            composition_explorer_topology_loopback(.composition; $basePort)
-            ' "${args[@]}" <<<$prof;;
-        * ) fail "unhandled role for topology node '$i': '$role'";;
-        esac;;
+        cardano-topology projection-for --topology-input "$topo_dir"/topology.json "${args[@]}"
+    ;;
 
     * ) usage_topology;; esac
 }

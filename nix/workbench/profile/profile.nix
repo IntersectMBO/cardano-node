@@ -10,6 +10,15 @@ let
   ;
 
   topologyFiles =
+# TODO:
+#    workbenchNix.runCardanoTopology "profile-${profileName}.json"
+#      ''
+#      mkdir $out
+#      make ${profileName}
+#      --topology-output "$outdir"/topology.json
+#      --dot-output      "$outdir"/topology.dot
+#      ''
+#  ;
     pkgs.runCommand "workbench-topology-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;

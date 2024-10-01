@@ -1,0 +1,16 @@
+{
+  "localRoots": [
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30001
+        }
+      ],
+      "advertise": false,
+      "valency": 1
+    }
+  ],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
+}
