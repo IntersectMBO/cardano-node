@@ -575,7 +575,7 @@ EOF
         (
           # This step is resource intensive so we use a lockfile to avoid
           # running it in parallel to a benchmark.
-          acquire_lock /tmp/workbench.lock
+          acquire_lock
           backend deploy-genesis "$dir"
         )
 
@@ -822,7 +822,7 @@ EOF
         (
           # This step is resource intensive so we use a lockfile to avoid
           # running it in parallel to a benchmark.
-          acquire_lock /tmp/workbench.lock
+          acquire_lock
           backend fetch-logs     "$dir"
         )
         backend stop-cluster   "$dir"

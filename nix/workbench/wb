@@ -223,7 +223,7 @@ start() {
             (
               # This step is resource intensive so we use a lockfile to avoid
               # running it in parallel to a benchmark.
-              acquire_lock /tmp/workbench.lock
+              acquire_lock
               workbench-prebuild-executables
             )
             prebuild_done=t

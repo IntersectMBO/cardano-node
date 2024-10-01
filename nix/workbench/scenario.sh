@@ -153,7 +153,7 @@ scenario_exit_trap() {
     (
       # This step is resource intensive so we use a lockfile to avoid
       # running it in parallel to a benchmark.
-      acquire_lock /tmp/workbench.lock
+      acquire_lock
       backend fetch-logs   "$__scenario_exit_trap_dir"
     )
     backend stop-cluster "$__scenario_exit_trap_dir"

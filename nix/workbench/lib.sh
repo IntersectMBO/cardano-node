@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+
 to_jsonlist() {
     for x in "$@"
     do echo "\"$x\""
@@ -327,14 +329,14 @@ wait_internal () {
 # subshell, so that the lock is released when the subshell exits. E.g.
 #
 # (
-#   acquire_lock /tmp/lockfile
+#   acquire_lock
 #   ...
 # )
 #
 acquire_lock() {
-  LOCKFILE=$1
-  info lockfile "$(white "waiting to acquire the lock on ${LOCKFILE}")"
-  exec {lock_fd}>"$LOCKFILE"
+  WORKBENCH_LOCKFILE=${WORKBENCH_LOCKFILE:-/tmp/workbench.lock}
+  info lockfile "$(white "waiting to acquire the lock on ${WORKBENCH_LOCKFILE}")"
+  exec {lock_fd}>"$WORKBENCH_LOCKFILE"
   flock $lock_fd
   info lockfile "$(green "lock acquired")"
 }
