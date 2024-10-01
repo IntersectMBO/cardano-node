@@ -207,12 +207,45 @@ let
       service       = evalServiceConfigToService serviceConfig;
 
       topology =
-        rec {
-          JSON  = workbenchNix.runWorkbench
-                    "topology-${name}.json"
-                    "topology projection-for local-${nodeSpec.kind} ${toString i} ${profileName} ${topologyFiles} ${toString backend.basePort}";
-          value = __fromJSON (__readFile JSON);
-        };
+        let kind = nodeSpec.kind;
+        in
+           # Proxy is a special case used only by "chainsync-*" profiles!
+           if kind == "proxy"
+           then rec {
+             JSON = ../profile/presets/${profile.preset}/topology-proxy.json;
+             value = __fromJSON (__readFile JSON);
+           }
+           # The others: "bft", "pools", "explorer".
+           # FIXME: Why is explorer a special case ?
+           else
+             let args = rec {
+                   explorer = [
+                     "--baseport"
+                     (toString backend.basePort)
+                     "--node-number"
+                     (toString i)
+                   ];
+                   pool = explorer ++ [
+                     (if profile.node ? verbatim && profile.node.verbatim ? EnableP2P && profile.node.verbatim.EnableP2P == true
+                      then "--enable-p2p"
+                      else ""
+                     )
+                   ];
+                   bft = pool;
+                   chaindb-server = [];
+                 };
+             in rec {
+               JSON  = workbenchNix.runCardanoTopology
+                 "topology-${name}.json"
+                 ''
+                 projection-for                                            \
+                   --topology-input ${topologyFiles}/topology.json         \
+                   ${kind} ${builtins.concatStringsSep " " args."${kind}"} \
+                 ''
+               ;
+               value = __fromJSON (__readFile JSON);
+             }
+      ;
 
       valency =
         let

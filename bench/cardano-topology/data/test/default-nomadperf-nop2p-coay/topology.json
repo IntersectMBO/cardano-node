@@ -8,33 +8,20 @@
       "producers": [
         "node-1",
         "node-2",
-        "node-4"
+        "node-3"
       ],
       "region": "eu-central-1",
       "stakePool": true
     },
     {
-      "name": "node-2",
-      "nodeId": 2,
+      "name": "node-3",
+      "nodeId": 3,
       "org": "IOHK",
       "pools": 1,
       "producers": [
-        "node-3",
         "node-4",
-        "node-0"
-      ],
-      "region": "eu-central-1",
-      "stakePool": true
-    },
-    {
-      "name": "node-4",
-      "nodeId": 4,
-      "org": "IOHK",
-      "pools": 1,
-      "producers": [
         "node-5",
-        "node-0",
-        "node-2"
+        "node-0"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -45,24 +32,37 @@
       "org": "IOHK",
       "pools": 1,
       "producers": [
+        "node-2",
         "node-0",
-        "node-3",
-        "node-5"
+        "node-4"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": true
     },
     {
-      "name": "node-3",
-      "nodeId": 3,
+      "name": "node-4",
+      "nodeId": 4,
       "org": "IOHK",
       "pools": 1,
       "producers": [
-        "node-2",
         "node-5",
+        "node-3",
         "node-1"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-2",
+      "nodeId": 2,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-0",
+        "node-1",
+        "node-5"
+      ],
+      "region": "ap-southeast-2",
       "stakePool": true
     },
     {
@@ -71,11 +71,11 @@
       "org": "IOHK",
       "pools": 1,
       "producers": [
+        "node-3",
         "node-4",
-        "node-1",
-        "node-3"
+        "node-2"
       ],
-      "region": "us-east-2",
+      "region": "ap-southeast-2",
       "stakePool": true
     }
   ],
