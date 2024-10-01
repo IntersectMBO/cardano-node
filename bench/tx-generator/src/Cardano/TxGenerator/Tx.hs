@@ -2,20 +2,23 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (LedgerProtocolParameters)
+import           Cardano.Api.Shelley (LedgerProtocolParameters, ShelleyLedgerEra,
+                   VotesMergingConflict (..), VotingProcedures)
 
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Api.Governance as L
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO (ToUTxOList)
 
-import           Data.Bifunctor (bimap, second)
+import           Data.Bifunctor (bimap, first, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
@@ -147,6 +150,14 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   split         = valueSplitter $ map getFundCoin inputFunds
   (outputs, _)  = toStore split
 
+instance Show (VotesMergingConflict era) where
+  showsPrec _ (VotesMergingConflict (voter, govActId)) = flip (<>) $
+    "(VotesMergingConflict (" <> showsPrec 0 voter ", " <>
+      showsPrec 0 govActId "))"
+
+instance Error (VotesMergingConflict era) where
+  prettyError = pretty . show
+
 -- | 'genTx' seems to mostly be a wrapper for
 -- 'Cardano.Api.TxBody.createTransactionBody', which uses
 -- the 'Either' convention in lieu of e.g.
@@ -173,6 +184,87 @@ genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
       (createTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
+  txBodyContent = defaultTxBodyContent sbe
+    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
+    & setTxInsCollateral collateral
+    & setTxOuts outputs
+    & setTxFee fee
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
+    & setTxMetadata metadata
+    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
+
+-- | 'genTxProposal' is a variant of 'genTx' specialized for @Proposals@.
+genTxProposal :: forall era. ()
+  => IsShelleyBasedEra era
+  => ShelleyBasedEra era
+  -> LedgerProtocolParameters era
+  -> (TxInsCollateral era, [Fund])
+  -> TxFee era
+  -> (L.ProposalProcedure (ShelleyLedgerEra era), Maybe (ScriptWitness WitCtxStake era))
+  -> TxMetadataInEra era
+  -> [Fund]
+  -> [TxOut CtxTx era]
+  -> Either TxGenError (Tx era, TxId)
+genTxProposal
+      sbe
+      ledgerParameters
+      (collateral, collFunds)
+      fee
+      proposal
+      metadata
+      inFunds
+      outputs = do
+  body <- first ApiError $ createTransactionBody sbe' txBodyContent
+  pure (signShelleyTransaction sbe' body allKeys, getTxId body)
+ where
+  sbe' = shelleyBasedEra @era
+  allKeys = mapMaybe (fmap WitnessPaymentKey . getFundKey) $ inFunds ++ collFunds
+  rawTxBodyContent = defaultTxBodyContent sbe
+    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
+    & setTxInsCollateral collateral
+    & setTxOuts outputs
+    & setTxFee fee
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
+    & setTxMetadata metadata
+    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
+  txBodyContent :: TxBodyContent BuildTx era
+    = rawTxBodyContent &
+        forEraInEon (cardanoEra @era) id
+           \eon -> setTxProposalProcedures . Just . Featured eon $
+                        mkTxProposalProcedures [proposal]
+
+-- | 'genTxVoting' is a variant of 'genTx' specialized for @Votes@.
+genTxVoting :: forall era. ()
+  => IsShelleyBasedEra era
+  => ShelleyBasedEra era
+  -> LedgerProtocolParameters era
+  -> (TxInsCollateral era, [Fund])
+  -> TxFee era
+  -> (VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))
+  -> TxMetadataInEra era
+  -> [Fund]
+  -> [TxOut CtxTx era]
+  -> Either TxGenError (Tx era, TxId)
+genTxVoting
+      sbe
+      ledgerParameters
+      (collateral, collFunds)
+      fee
+      vote
+      metadata
+      inFunds
+      outputs = do
+  vps <- first ApiError $ mkTxVotingProcedures [vote]
+  let bc = flip setTxVotingProcedures txBodyContent $
+             flip inEonForEraMaybe era \eon -> Featured eon vps
+  body <- first ApiError $ createTransactionBody sbe' bc
+  pure (signShelleyTransaction sbe' body allKeys, getTxId body)
+ where
+  era = cardanoEra @era
+  sbe' = shelleyBasedEra @era
+  allKeys = mapMaybe (fmap WitnessPaymentKey . getFundKey) $ inFunds ++ collFunds
   txBodyContent = defaultTxBodyContent sbe
     & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
     & setTxInsCollateral collateral
