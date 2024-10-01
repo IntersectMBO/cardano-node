@@ -70,12 +70,6 @@ let
       lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) pkgs.db-analyser
     );
 
-  runWorkbench =
-    name: command: # Name of the derivation and `wb` command to run.
-    pkgs.runCommand name {} ''
-      ${workbench}/bin/wb ${command} > $out
-    '';
-
   # Helper functions.
   ##############################################################################
 
@@ -99,7 +93,7 @@ let
 in pkgs.lib.fix (self: {
 
   inherit cardanoNodePackages;
-  inherit workbench' workbench runWorkbench;
+  inherit workbench' workbench;
   inherit runCardanoProfile;
   inherit profile-names-json profile-names;
 
