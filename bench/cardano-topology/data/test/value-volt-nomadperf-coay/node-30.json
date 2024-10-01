@@ -1,0 +1,66 @@
+{
+  "localRoots": [
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30031
+        }
+      ],
+      "advertise": false,
+      "valency": 6
+    },
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30032
+        }
+      ],
+      "advertise": false,
+      "valency": 6
+    },
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30033
+        }
+      ],
+      "advertise": false,
+      "valency": 6
+    },
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30027
+        }
+      ],
+      "advertise": false,
+      "valency": 6
+    },
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30048
+        }
+      ],
+      "advertise": false,
+      "valency": 6
+    },
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30012
+        }
+      ],
+      "advertise": false,
+      "valency": 6
+    }
+  ],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
+}
