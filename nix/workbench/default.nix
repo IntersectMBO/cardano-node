@@ -86,6 +86,13 @@ let
     ''
   ;
 
+  runCardanoTopology =
+    name: command: # Name of derivation and `cardano-profile` command to run.
+    pkgs.runCommand name {} ''
+      ${cardanoNodePackages.cardano-topology}/bin/cardano-topology ${command} > $out
+    ''
+  ;
+
   runJq =
     name: args: query:
     pkgs.runCommand name {} ''

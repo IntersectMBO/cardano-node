@@ -11,7 +11,8 @@
 import           Prelude hiding (id)
 
 import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy.Char8 as LBS
+-- Package: bytestring.
+import qualified Data.ByteString.Lazy.Char8 as BSL8
 import qualified Data.GraphViz as G
 import qualified Data.GraphViz.Attributes.Complete as G
 import qualified Data.GraphViz.Printing as G
@@ -19,24 +20,48 @@ import qualified Data.Text.Lazy.IO as T
 import           Options.Applicative
 
 import qualified Cardano.Benchmarking.Topology as Topo
+import qualified Cardano.Benchmarking.Topology.Projection as Projection
+
+--------------------------------------------------------------------------------
+
+data Cli =
+    Make (Topo.CoreNodesParams, FilePath, Maybe FilePath, Bool)
+  | ProjectionFor FilePath ProjectionFor
+
+data ProjectionFor =
+    BFT Int Int
+  | Pool Int Int
+  | Proxy
+  | ChaindbServer
+  | Explorer Int Int
+  deriving Show
 
 --------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
-  (coreNodesParams, topoJson, topoDot, withExplorer) <- execParser cliOpts
-  let cores = Topo.mkCoreNodes coreNodesParams
-      relays = [
-                   Topo.mkExplorer (Topo.AWS Topo.EU_CENTRAL_1) cores
-                 | withExplorer
-               ]
-  writeTopo cores relays topoJson
-  maybe (pure ()) (writeDot cores) topoDot
+  cli <- getOpts
+  case cli of
+    Make (coreNodesParams, topoJson, topoDot, withExplorer) -> do
+      let cores = Topo.mkCoreNodes coreNodesParams
+      let relays = [
+                       Topo.mkExplorer (Topo.AWS Topo.EU_CENTRAL_1) cores
+                     | withExplorer
+                   ]
+      writeTopo cores relays topoJson
+      maybe (pure ()) (writeDot cores) topoDot
+    (ProjectionFor topologyPath projectionFor) -> do
+      eitherTopology <- Aeson.eitherDecodeFileStrict topologyPath
+      let topology = case eitherTopology of
+                      (Left errorMsg) ->
+                        error $ "Not a valid topology: " ++ errorMsg
+                      (Right value) -> value
+      writeProjectionFor topology projectionFor
 
 --------------------------------------------------------------------------------
 
 -- | Locations from the CLI are parsed first using the "legacy mode" for
--- backward compatiblity, in this mode locations have a default AWS region that
+-- backward compatibility, in this mode locations have a default AWS region that
 -- are the ones cardano-ops is using. The new format is either "loopback" or a
 -- supported AWS Region.
 cliLocation :: String -> Either String Topo.Location
@@ -49,32 +74,47 @@ cliLocation = \case
   -- New format.
   str -> Aeson.eitherDecode
     -- Make the string JSON valid by enclosing it with quotes.
-    (LBS.pack $ "\"" ++  str ++ "\"")
+    (BSL8.pack $ "\"" ++  str ++ "\"")
 
+getOpts :: IO Cli
+getOpts = execParser $ info
+  (
+       (hsubparser $
+          command "make"
+          (info
+            (Make <$> cliParserMake)
+            (  fullDesc
+            <> header "make"
+            <> progDesc "Create a cluster topology"
+            )
+          )
+       <>
+          command "projection-for"
+          (info
+            (   ProjectionFor
+            <$> strOption
+                  (  long "topology-input"
+                  <> help "Topology file"
+                  <> metavar "INPUTFILE"
+                  )
+            <*> cliParserProjection
+            )
+            (  fullDesc
+            <> header "projection-for"
+            <> progDesc "Create an individual topology"
+            )
+          )
+       )
+  <**> helper
+  )
+  (  fullDesc
+  <> progDesc "Cardano topology generation for Performance & Tracing"
+  <> header "Cardano node topologies tool"
+  )
 
-cliOpts :: ParserInfo (Topo.CoreNodesParams, FilePath, Maybe FilePath, Bool)
-cliOpts = info (cliParser <**> helper)
-  ( fullDesc
-  <> progDesc "Cardano topology generator"
-  <> header "make-topology - generate Cardano node topologies" )
-  where
-   cliParser :: Parser (Topo.CoreNodesParams, FilePath, Maybe FilePath, Bool)
-   cliParser =
-     (,,,)
-     <$> subparser coreNodesParamsParser
-     <*> strOption
-        ( long "topology-output"
-       <> help "Topology file to write"
-       <> metavar "OUTFILE" )
-     <*> optional
-        (strOption
-        ( long "dot-output"
-       <> help "Dot file to write"
-       <> metavar "OUTFILE" ))
-     <*> flag False True
-         ( long "with-explorer"
-        <> help "Add an explorer to the topology")
-
+cliParserMake :: Parser (Topo.CoreNodesParams, FilePath, Maybe FilePath, Bool)
+cliParserMake =
+  let
    coreNodesParamsParser =
      command "line"
      (info
@@ -141,6 +181,80 @@ cliOpts = info (cliParser <**> helper)
            then Nothing -- The BFT node has no pools
            else Just 1  -- Dense pools are denoted by any amount >1
       _ ->      Just 2
+  in
+    (,,,)
+      <$> subparser coreNodesParamsParser
+      <*>  strOption
+           (  long "topology-output"
+           <> help "Topology file to write"
+           <> metavar "OUTFILE"
+           )
+      <*> optional
+         (strOption
+         ( long "dot-output"
+        <> help "Dot file to write"
+        <> metavar "OUTFILE" ))
+      <*> flag False True
+          ( long "with-explorer"
+         <> help "Add an explorer to the topology")
+
+cliParserProjection :: Parser ProjectionFor
+cliParserProjection =
+  let
+     parseBasePort =
+       option auto
+         (  long "baseport"
+         <> metavar "BASEPORT"
+         <> help "Base port"
+         )
+     parseNodeNumber =
+       option auto
+         (  long "node-number"
+         <> short 'i'
+         <> metavar "NODENUMBER"
+         <> help "Base port"
+         )
+  in subparser $
+         command "bft"
+           (info
+             (BFT <$> parseNodeNumber <*> parseBasePort)
+             (  progDesc "BFT"
+             <> fullDesc
+             <> header "Generate the topology file for a BFT node"
+             )
+           )
+      <> command "pool"
+           (info
+             (pure $ Pool 0 0)
+             (  progDesc "Pool"
+             <> fullDesc
+             <> header "Generate the topology file for a pool node"
+             )
+           )
+      <> command "proxy"
+           (info
+             (pure Proxy)
+             (  progDesc "Proxy"
+             <> fullDesc
+             <> header "Generate the topology file for a proxy node"
+             )
+           )
+      <> command "chaindb-server"
+           (info
+             (pure ChaindbServer)
+             (  progDesc "ChainDB Server"
+             <> fullDesc
+             <> header "Generate the topology file for a ChainDB server node"
+             )
+           )
+      <> command "explorer"
+           (info
+             (pure $ Explorer 0 0)
+             (  progDesc "Explorer"
+             <> fullDesc
+             <> header "Generate the topology file for an explorer node"
+             )
+           )
 
 --------------------------------------------------------------------------------
 
@@ -195,3 +309,16 @@ locationColor = \case
   (Topo.AWS Topo.US_EAST_1)      -> G.RGB 200 250 200
   (Topo.AWS Topo.US_EAST_2)      -> G.RGB 200 250 200
   Topo.Loopback                  -> G.RGB 200 200 250
+
+--------------------------------------------------------------------------------
+
+writeProjectionFor :: Topo.Topology -> ProjectionFor -> IO ()
+writeProjectionFor topology (BFT i basePort)  = writeProjectionBFTPool topology i basePort
+writeProjectionFor topology (Pool i basePort) = writeProjectionBFTPool topology i basePort
+writeProjectionFor topology Proxy = error $ show topology
+writeProjectionFor topology ChaindbServer = error $ show topology
+writeProjectionFor topology c@(Explorer _ _) = error $ "ERROR: " ++ show topology ++ " " ++ show c
+
+writeProjectionBFTPool :: Topo.Topology -> Int -> Int -> IO ()
+writeProjectionBFTPool topology i basePort =
+  BSL8.putStrLn $ Aeson.encode $ Projection.projectionP2P topology i basePort
