@@ -63,6 +63,15 @@ constraints:
 allow-newer:
   , katip:Win32
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 29b5d2147c81082e8a805eadd76d38fe05f4abc9
+  subdir:
+    ouroboros-consensus
+  --sha256: sha256-qX4gQOuOYUqX3ppSWHilpFL86ejYaJdDCynAF8X3c6A=
+
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
