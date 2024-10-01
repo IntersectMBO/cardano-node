@@ -70,12 +70,6 @@ let
       lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) pkgs.db-analyser
     );
 
-  runWorkbench =
-    name: command: # Name of the derivation and `wb` command to run.
-    pkgs.runCommand name {} ''
-      ${workbench}/bin/wb ${command} > $out
-    '';
-
   # Helper functions.
   ##############################################################################
 
@@ -83,6 +77,13 @@ let
     name: command: # Name of derivation and `cardano-profile` command to run.
     pkgs.runCommand name {} ''
       ${cardanoNodePackages.cardano-profile}/bin/cardano-profile ${command} > $out
+    ''
+  ;
+
+  runCardanoTopology =
+    name: command: # Name of derivation and `cardano-topology` command to run.
+    pkgs.runCommand name {} ''
+      ${cardanoNodePackages.cardano-topology}/bin/cardano-topology ${command} > $out
     ''
   ;
 
@@ -99,8 +100,8 @@ let
 in pkgs.lib.fix (self: {
 
   inherit cardanoNodePackages;
-  inherit workbench' workbench runWorkbench;
-  inherit runCardanoProfile;
+  inherit workbench' workbench;
+  inherit runCardanoProfile runCardanoTopology;
   inherit profile-names-json profile-names;
 
   # Return a profile attr with a `materialise-profile` function.
