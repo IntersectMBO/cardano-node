@@ -207,12 +207,57 @@ let
       service       = evalServiceConfigToService serviceConfig;
 
       topology =
-        rec {
-          JSON  = workbenchNix.runWorkbench
-                    "topology-${name}.json"
-                    "topology projection-for local-${nodeSpec.kind} ${toString i} ${profileName} ${topologyFiles} ${toString backend.basePort}";
-          value = __fromJSON (__readFile JSON);
-        };
+        let kind = nodeSpec.kind;
+        in
+           # Proxy is a special case used only by "chainsync-*" profiles!
+           if kind == "proxy"
+           then rec {
+             JSON = ../profile/presets/${profile.preset}/topology-proxy.json;
+             value = __fromJSON (__readFile JSON);
+           }
+           # The others: "bft", "pools", "explorer".
+           # FIXME: Why is explorer a special case ?
+           else
+             let args = rec {
+                   pool =
+                     [
+                      "--baseport"
+                      (toString backend.basePort)
+                      "--node-number"
+                      (toString i)
+                     ]
+                     ++
+                     [(if profile.node ? verbatim && profile.node.verbatim ? EnableP2P && profile.node.verbatim.EnableP2P == true
+                       then "--enable-p2p"
+                       else ""
+                     )]
+                   ;
+                   bft = pool;
+                   explorer = [
+                     "--baseport"
+                     (toString backend.basePort)
+                     "--nodes"
+                     (toString (
+                        profile.composition.n_bft_hosts
+                      + profile.composition.n_pool_hosts
+                      + (if profile.composition.with_proxy          or false then 1 else 0)
+                      + (if profile.composition.with_chaindb_server or false then 1 else 0)
+                    ))
+                   ];
+                   chaindb-server = [];
+                 };
+             in rec {
+               JSON  = workbenchNix.runCardanoTopology
+                 "topology-${name}.json"
+                 ''
+                 projection-for                                            \
+                   --topology-input ${topologyFiles}/topology.json         \
+                   ${kind} ${builtins.concatStringsSep " " args."${kind}"} \
+                 ''
+               ;
+               value = __fromJSON (__readFile JSON);
+             }
+      ;
 
       valency =
         let
