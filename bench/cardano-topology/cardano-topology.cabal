@@ -39,11 +39,15 @@ library
   import:               project-config
   hs-source-dirs:       src
   exposed-modules:      Cardano.Benchmarking.Topology
+                      , Cardano.Benchmarking.Topology.Projection
                       , Cardano.Benchmarking.Topology.Types
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
                       , text
+                      , network
+                      , iproute
+                      , dns
 
 executable cardano-topology
   import:               project-config
