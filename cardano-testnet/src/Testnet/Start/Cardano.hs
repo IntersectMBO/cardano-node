@@ -71,8 +71,8 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
-testnetMinimumConfigurationRequirements :: MonadTest m => NumPools -> m ()
-testnetMinimumConfigurationRequirements (NumPools n) =
+testnetMinimumConfigurationRequirements :: HasCallStack => MonadTest m => NumPools -> m ()
+testnetMinimumConfigurationRequirements (NumPools n) = withFrozenCallStack $
   when (n < 2) $ do
      H.noteShow_ ("Need at least two nodes to run a cluster, but got: " <> show n)
      H.failure
@@ -347,6 +347,8 @@ cardanoTestnet
     unless (null failedNodes) $ do
       H.noteShow_ . vsep $ prettyError <$> failedNodes
       H.failure
+
+    H.annotateShow $ nodeSprocket . poolRuntime <$> poolNodes
 
     -- FIXME: use foldEpochState waiting for chain extensions
     now <- H.noteShowIO DTC.getCurrentTime

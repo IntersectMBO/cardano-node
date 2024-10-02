@@ -228,11 +228,16 @@ let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
                   filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
                 in
+                # work around 104 chars socket path limit by using a different temporary directory
                 ''
                   ${exportCliPath}
                   ${exportNodePath}
                   ${exportChairmanPath}
                   export CARDANO_NODE_SRC=${filteredProjectBase}
+                  # unset TMPDIR, otherwise mktemp will use that as a base
+                  unset TMPDIR
+                  export TMPDIR=$(mktemp -d)
+                  export TMP=$TMPDIR
                 '';
               # cardano-testnet depends on cardano-node, cardano-cli, cardano-submit-api and some config files
               packages.cardano-node.components.tests.cardano-node-test.preCheck =
@@ -259,13 +264,13 @@ let
                   ${exportSubmitApiPath}
                   export CARDANO_NODE_SRC=${filteredProjectBase}
                 ''
-                # the cardano-testnet-tests, use sockets stored in a temporary directory
+                # the cardano-testnet-tests and chairman-tests, use sockets stored in a temporary directory
                 # however on macOS the socket path's max is 104 chars. The package name
                 # is already long, and as such the constructed socket path
                 #
                 #   /private/tmp/nix-build-cardano-testnet-test-cardano-testnet-tests-1.36.0-check.drv-1/chairman-test-93c5d9288dd8e6bc/socket/node-bft1
                 #
-                # exceeds taht limit easily. We therefore set a different tmp directory
+                # exceeds that limit easily. We therefore set a different tmp directory
                 # during the preBuild phase.
                 + ''
                   # unset TMPDIR, otherwise mktemp will use that as a base

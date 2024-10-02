@@ -68,7 +68,8 @@ test-suite chairman-tests
 
   type:                 exitcode-stdio-1.0
 
-  build-depends:        cardano-testnet
+  build-depends:      , cardano-api
+                      , cardano-testnet
                       , cardano-crypto-class ^>= 2.1.2
                       , data-default-class
                       , filepath
@@ -79,7 +80,6 @@ test-suite chairman-tests
                       , random
                       , resourcet
                       , tasty
-                      , tasty-hedgehog
                       , unliftio
 
   other-modules:        Spec.Chairman.Chairman
