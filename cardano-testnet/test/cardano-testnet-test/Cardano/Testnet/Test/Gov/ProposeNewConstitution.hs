@@ -70,6 +70,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
+      eraName = eraToString sbe
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = fromIntegral numVotes
@@ -114,11 +115,48 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
+      stakeCertFp = gov </> "stake.regcert"
 
   cliStakeAddressKeyGen
     $ KeyPair { verificationKey = File stakeVkeyFp
               , signingKey = File stakeSKeyFp
               }
+  -- Register stake address
+
+  void $ execCli' execConfig
+    [ eraName, "stake-address", "registration-certificate"
+    , "--stake-verification-key-file", stakeVkeyFp
+    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--out-file", stakeCertFp
+    ]
+
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", stakeSKeyFp
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
 
   -- Create constitution proposal
   guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
@@ -148,6 +186,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   txbodyFp <- H.note $ work </> "tx.body"
 
+  H.noteShowM_ $ waitForBlocks epochStateView 1
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   void $ execCli' execConfig

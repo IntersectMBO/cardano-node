@@ -59,6 +59,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
+      eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
       shelleyOptions = def { genesisEpochLength = 200 }
 
@@ -94,16 +95,54 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
 
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
+      stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File stakeVkeyFp
+                           , signingKey = File stakeSKeyFp
+                           }
 
-  cliStakeAddressKeyGen
-     $ KeyPair { verificationKey = File stakeVkeyFp
-               , signingKey= File stakeSKeyFp
-               }
+  cliStakeAddressKeyGen stakeKeys
+
+  -- Register stake address
+
+  void $ execCli' execConfig
+    [ eraName, "stake-address", "registration-certificate"
+    , "--stake-verification-key-file", stakeVkeyFp
+    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--out-file", stakeCertFp
+    ]
+
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", stakeSKeyFp
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
 
   -- Create info action proposal
 
   void $ execCli' execConfig
-    [ "conway", "governance", "action", "create-info"
+    [ eraName, "governance", "action", "create-info"
     , "--testnet"
     , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
@@ -118,7 +157,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   H.noteM_ $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
@@ -127,19 +166,19 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     ]
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "sign"
+    [ eraName, "transaction", "sign"
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
     , "--out-file", txbodySignedFp
     ]
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "submit"
+    [ eraName, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
 
   txidString <- mconcat . lines <$> execCli' execConfig
-    [ "transaction", "txid"
+    [ "latest", "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
 
@@ -153,7 +192,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   H.forConcurrently_ [1..3] $ \n -> do
     execCli' execConfig
-      [ "conway", "governance", "vote", "create"
+      [ eraName, "governance", "vote", "create"
       , "--yes"
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word16 governanceActionIndex
@@ -169,7 +208,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
 
   -- Submit votes
   void $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin3
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 3_000_000
@@ -182,7 +221,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
 
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "sign"
+    [ eraName, "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
@@ -192,7 +231,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     ]
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "submit"
+    [ eraName, "transaction", "submit"
     , "--tx-file", voteTxFp
     ]
 

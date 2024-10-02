@@ -84,7 +84,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   plutusSpendingScriptAddr <-
     execCli' execConfig
-      [ "address", "build"
+      [ "latest", "address", "build"
       , "--payment-script-file", plutusScript
       ]
 
@@ -99,7 +99,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   scriptdatumhash <- filter (/= '\n') <$>
     execCli' execConfig
-      [ "transaction", "hash-script-data"
+      [ "latest", "transaction", "hash-script-data"
       , "--script-data-value", "0"
       ]
 
@@ -127,14 +127,14 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   let sendAdaToScriptAddressTx = work </> "send-ada-to-script-address-tx"
   void $ execCli' execConfig
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", sendAdaToScriptAddressTxBody
     , "--signing-key-file", utxoSKeyFile
     , "--out-file", sendAdaToScriptAddressTx
     ]
 
   void $ execCli' execConfig
-    [ "transaction", "submit"
+    [ "latest", "transaction", "submit"
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
@@ -169,14 +169,14 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     ]
 
   void $ execCli' execConfig
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", spendScriptUTxOTxBody
     , "--signing-key-file", utxoSKeyFile2
     , "--out-file", spendScriptUTxOTx
     ]
 
   void $ execCli' execConfig
-    [ "transaction", "submit"
+    [ "latest", "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
     ]
   H.success
