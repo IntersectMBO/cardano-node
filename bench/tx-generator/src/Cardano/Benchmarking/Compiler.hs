@@ -7,9 +7,13 @@ module Cardano.Benchmarking.Compiler
 where
 
 import           Cardano.Api
+import           Cardano.Api.Shelley (createAnchor, toShelleyStakeCredential)
 
 import           Cardano.Benchmarking.Script.Types
+import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Credential as L
+import qualified Cardano.Ledger.Crypto as L
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
@@ -124,19 +128,29 @@ splittingPhase srcWallet = do
   splitSteps <- splitSequenceWalletNames srcWallet finalDest $
     unfoldSplitSequence (txParamFee txParams) minValuePerInput (tx_count * inputs_per_tx)
   isPlutus <- isAnyPlutusMode
-  forM_ (init splitSteps) $ createChange txParams False False era
-  createChange txParams True isPlutus era $ last splitSteps
+  forM_ (init splitSteps) $ createChange txParams finalDest False False era
+  createChange txParams finalDest True isPlutus era $ last splitSteps
   return finalDest
  where
-  createChange :: TxGenTxParams -> Bool -> Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
-  createChange txParams isLastStep isPlutus era (src, dst, split) = do
+  createChange :: TxGenTxParams -> DstWallet -> Bool -> Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
+  createChange txParams dstWallet isLastStep isPlutus era (src, dst, split) = do
     logMsg $ Text.pack $ "Splitting step: " ++ show split
     let valuePayMode = PayToAddr (if isLastStep then keyNameSplitPhase else keyNameBenchmarkInputs) dst
     payMode <- if isPlutus then plutusPayMode dst else return valuePayMode
     let generator = case split of
           SplitWithChange lovelace count -> Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
-    emit $ Submit era LocalSocket txParams generator
+        stakeCredential :: L.StakeCredential L.StandardCrypto
+        stakeCredential = toShelleyStakeCredential undefined
+        anchorUrl :: L.Url
+        anchorUrl = undefined `fromMaybe` L.textToUrl 1024 undefined
+        -- The anchorData ByteString is usually represented as Text
+        anchorData :: BS.ByteString
+        anchorData = undefined
+        anchor :: L.Anchor L.StandardCrypto
+        anchor = createAnchor anchorUrl anchorData
+        govActGen = Propose dstWallet payMode (L.Coin 1) stakeCredential anchor
+    emit . Submit era LocalSocket txParams $ RoundRobin [generator, govActGen]
     delay
     logMsg "Splitting step: Done"
 

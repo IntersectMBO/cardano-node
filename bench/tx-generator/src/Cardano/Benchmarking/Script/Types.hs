@@ -34,6 +34,9 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.Conway.Governance (GovActionId)
 import           Cardano.Ledger.Core (EraCrypto)
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Credential as Ledger
+
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
 import           Cardano.TxGenerator.Setup.SigningKey (SigningKeyFile)
@@ -156,6 +159,14 @@ data Generator where
   -- but it's difficult to tell what it's doing.
   NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe String -> Generator
+  -- | 'Propose' represents submitting a governance action proposal as
+  -- just a singleton.
+  Propose :: !String
+          -> !PayMode
+          -> !L.Coin
+          -> !(Ledger.StakeCredential L.StandardCrypto)
+          -> !(Ledger.Anchor L.StandardCrypto)
+          -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
   -- of a list of transaction series represented by 'Generator' itself,
   -- but the nesting is done by first translating to
