@@ -61,7 +61,7 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Bootstrap
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
+import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..), DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
                    PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
@@ -2050,6 +2050,8 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
+            , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
+            , "associationMode" .= dpssAssociationMode ds
             ]
   toObject _verb (TraceVerifyPeerSnapshot b) =
     mconcat [ "kind" .= String "VerifyPeerSnapshot"
@@ -2727,6 +2729,15 @@ instance FromJSON LedgerStateJudgement where
   parseJSON (String "YoungEnough") = pure YoungEnough
   parseJSON (String "TooOld")      = pure TooOld
   parseJSON _                      = fail "Invalid JSON for LedgerStateJudgement"
+
+instance ToJSON AssociationMode where
+  toJSON LocalRootsOnly = String "LocalRootsOnly"
+  toJSON Unrestricted   = String "Unrestricted"
+
+instance FromJSON AssociationMode where
+  parseJSON (String "LocalRootsOnly") = pure LocalRootsOnly
+  parseJSON (String "Unrestricted")   = pure Unrestricted
+  parseJSON _                      = fail "Invalid JSON for AssociationMode"
 
 instance ToJSON UseLedgerPeers where
   toJSON DontUseLedgerPeers                  = Number (-1)
