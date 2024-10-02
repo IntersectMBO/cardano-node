@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 {- HLINT ignore "Use map" -}
@@ -13,6 +14,7 @@ module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
   , genesisLoadDRepKeys
+  , genesisLoadStakeKeys
   , genesisTxInput
   , genesisExpenditure
   , genesisSecureInitialFund
@@ -28,16 +30,18 @@ import           Cardano.CLI.Types.Common (SigningKeyFile)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
 import           Cardano.TxGenerator.Fund
-import           Cardano.TxGenerator.Setup.SigningKey (readDRepKeyFile)
+import           Cardano.TxGenerator.Setup.SigningKey (readDRepKeyFile, readStakeKeyFile)
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
 
+import           Control.Monad.Extra (mapMaybeM)
 import           Data.Bifunctor (bimap, second)
 import           Data.Char (isDigit)
 import           Data.Function ((&))
-import           Data.List (find)
+import           Data.List (find, sortBy)
 import qualified Data.ListMap as ListMap (toList)
+import           Data.Ord (comparing)
 import           System.Directory (listDirectory)
 import           System.FilePath ((</>))
 
@@ -163,3 +167,20 @@ genesisLoadDRepKeys genesisDir = runExceptT $ do
       _                           -> False
 
     drepDir = genesisDir </> "drep-keys"
+
+genesisLoadStakeKeys :: FilePath -> IO (Either TxGenError [SigningKey StakeKey])
+genesisLoadStakeKeys genesisDir = runExceptT $ do
+    dirContents <- handleIOExceptT IOError $ listDirectory poolDir
+    map snd . sortBy (comparing fst) <$> mapMaybeM loadStakeKey dirContents
+  where
+    poolDir :: FilePath
+    poolDir = genesisDir </> "pools"
+    loadStakeKey :: FilePath -> ExceptT TxGenError IO (Maybe (Int, SigningKey StakeKey))
+    loadStakeKey dirEnt
+      | ("staking-reward", nr@(_:_)) <- splitAt 14 dirEnt
+      , [(n :: Int, _)] <- reads nr
+      , n > 0
+      , fullPath <- File $ poolDir </> dirEnt
+      = hoistEither =<< handleIOExceptT IOError do
+          second (Just . (n, )) <$> readStakeKeyFile fullPath
+      | otherwise = pure Nothing

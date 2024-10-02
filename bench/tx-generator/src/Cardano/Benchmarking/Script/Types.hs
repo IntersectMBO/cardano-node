@@ -41,6 +41,9 @@ import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Credential as Ledger
+
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
@@ -94,6 +97,11 @@ data Action where
   -- been created with cardano-cli create-testnet-data, and from
   -- where DRep signing keys can be loaded.
   ReadDRepKeys       :: !FilePath -> Action
+  -- | 'ReadStakeKeys' expects the path to a node config file. This
+  -- configuration is supposed to refer to a genesis which has
+  -- been created with cardano-cli create-testnet-data, and from
+  -- where stake keys can be loaded.
+  ReadStakeKeys      :: !FilePath -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
   -- | 'AddFund' is mostly a wrapper around
@@ -153,6 +161,14 @@ data Generator where
   -- but it's difficult to tell what it's doing.
   NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe String -> Generator
+  -- | 'Propose' represents submitting a governance action proposal as
+  -- just a singleton.
+  Propose :: !String
+          -> !PayMode
+          -> !L.Coin
+          -> !(Ledger.StakeCredential L.StandardCrypto)
+          -> !(Ledger.Anchor L.StandardCrypto)
+          -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
   -- of a list of transaction series represented by 'Generator' itself,
   -- but the nesting is done by first translating to

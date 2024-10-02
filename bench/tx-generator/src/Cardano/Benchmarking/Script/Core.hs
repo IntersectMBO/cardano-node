@@ -19,9 +19,11 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
-                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
-                   protocolParamPrices)
+import           Cardano.Api.Shelley (GovernanceAction (..), PlutusScriptOrReferenceInput (..),
+                   Proposal (..), ProtocolParameters, ShelleyLedgerEra,
+                   convertToLedgerProtocolParameters, createProposalProcedure,
+                   fromShelleyStakeCredential, protocolParamMaxTxExUnits, protocolParamPrices,
+                   toShelleyNetwork)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -40,7 +42,8 @@ import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Api as Ledger
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -64,8 +67,11 @@ import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import           Data.Either.Extra (eitherToMaybe)
+import           Data.Functor ((<&>))
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
+import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (unpack)
@@ -114,6 +120,18 @@ readDRepKeys ncFile = do
   where
     throwKeyErr = liftTxGenError . TxGenError $
       "readDRepKeys: no genesisDirectory could "
+        <> "be retrieved from the node config"
+
+-- This should be almost entirely analogous to readDRepKeys.
+readStakeKeys :: FilePath -> ActionM ()
+readStakeKeys ncFile = do
+  genesis <- onNothing throwKeyErr $ getGenesisDirectory <$> liftIOSafe (mkNodeConfig ncFile)
+  ks <- liftIOSafe . Genesis.genesisLoadStakeKeys $ genesis </> "cache-entry"
+  setEnvStakeKeys ks
+  traceDebug $ "Stake SigningKeys loaded: " ++ show (length ks) ++ " from: " ++ genesis
+  where
+    throwKeyErr = liftTxGenError . TxGenError $
+      "readStakeKeys: no genesisDirectory could "
         <> "be retrieved from the node config"
 
 addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
@@ -300,7 +318,7 @@ benchmarkTxStream txStream targetNodes tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads ctl
 
-evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator :: forall era . IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
@@ -386,6 +404,38 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
                 traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
               dumpBudgetSummaryIfExisting
 
+          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+        Propose walletName payMode coin stakeCredential anchor -> do
+          wallet <- getEnvWallets walletName
+          (toUTxO, _addressOut) <- interpretPayMode payMode
+          let txGenerator :: TxGenerator era
+              txGenerator = genTxProposal sbe ledgerParameters (TxInsCollateralNone, []) feeInEra (unProposal proposal, Nothing) TxMetadataNone
+              fundSource :: FundSource IO
+              fundSource = walletSource wallet 1
+              inToOut = Utils.inputsToOutputsWithFee fee 1
+              sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+              govAction :: GovernanceAction era
+              govAction = TreasuryWithdrawal [(network, stakeCredential', coin)] SNothing
+              proposal :: Proposal era
+              proposal = createProposalProcedure sbe network coin stakeCredential' govAction anchor
+              stakeCredential' :: StakeCredential
+              stakeCredential' = fromShelleyStakeCredential stakeCredential
+              sbe :: ShelleyBasedEra era
+              sbe = shelleyBasedEra
+              network :: Ledger.Network
+              network = toShelleyNetwork networkId
+          fundPreview <- liftIO $ walletPreview wallet 0
+          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
+            Right tx -> do
+              let
+                txSize = txSizeInBytes tx
+                txFeeEstimate = eitherToMaybe (toLedgerPParams shelleyBasedEra protocolParameters) <&>
+                  \ledgerPParams ->
+                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) 1 0 0
+              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
         Sequence l -> do
