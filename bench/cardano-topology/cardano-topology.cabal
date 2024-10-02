@@ -70,7 +70,8 @@ test-suite cardano-topology-test
   hs-source-dirs:       test/
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
-  other-modules:        Paths_cardano_topology
+  other-modules:        Cardano.Benchmarking.Topology.Projection.Tests
+                      , Paths_cardano_topology
   autogen-modules:      Paths_cardano_topology
   build-depends:        base
                       , aeson

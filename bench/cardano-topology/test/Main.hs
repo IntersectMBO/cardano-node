@@ -13,6 +13,7 @@ import qualified Test.Tasty           as Tasty
 import           Test.Tasty.HUnit
 
 import qualified Cardano.Benchmarking.Topology as Topo
+import qualified Cardano.Benchmarking.Topology.Projection.Tests as Projection
 import qualified Cardano.Benchmarking.Topology.Types as Types
 
 import qualified Paths_cardano_topology as Paths
@@ -27,6 +28,7 @@ tests =  Tasty.testGroup "cardano-topology"
   [
       topologyTypes
     , topology
+    , Projection.tests
   ]
 
 topologyTypes :: Tasty.TestTree
