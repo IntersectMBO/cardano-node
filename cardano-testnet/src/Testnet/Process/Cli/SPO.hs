@@ -61,13 +61,13 @@ checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp outputFp =
         oFpAbs = tempAbsPath' </> outputFp
 
     stakePoolId' <- filter ( /= '\n') <$>
-      execCli [ "stake-pool", "id"
+      execCli [ "latest", "stake-pool", "id"
                 , "--cold-verification-key-file", poolColdVkeyFp
                 ]
 
     -- Check to see if stake pool was registered
     void $ execCli' execConfig
-      [ "query", "stake-pools"
+      [ "latest", "query", "stake-pools"
       , "--out-file", oFpAbs
       ]
 
@@ -113,7 +113,7 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
       Right (_, dag) -> return dag
       Left e -> do
         void $ execCli' execConfig
-          [ "query", "stake-address-info"
+          [ "latest", "query", "stake-address-info"
           , "--address", stakeAddr
           , "--out-file", oFpAbs
           ]
@@ -284,7 +284,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
 
   poolownerstakeaddr <- filter (/= '\n')
                           <$> execCli
-                                [ "stake-address", "build"
+                                [ "latest", "stake-address", "build"
                                 , "--stake-verification-key-file", poolOwnerstakeVkeyFp
                                 , "--testnet-magic", show @Int testnetMag
                                 ]
@@ -296,7 +296,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
      $ KeyPair (File poolOwnerPaymentVkeyFp) (File poolOwnerPaymentSkeyFp)
 
   poolowneraddresswstakecred <-
-    execCli [ "address", "build"
+    execCli [ "latest", "address", "build"
               , "--payment-verification-key-file", poolOwnerPaymentVkeyFp
               , "--stake-verification-key-file",  poolOwnerstakeVkeyFp
               , "--testnet-magic", show @Int testnetMag
@@ -307,7 +307,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
       poolColdSkeyFp = spoReqDir </> "pool-cold.skey"
 
   execCli_
-    [ "node", "key-gen"
+    [ "latest", "node", "key-gen"
     , "--cold-verification-key-file", poolColdVkeyFp
     , "--cold-signing-key-file", poolColdSkeyFp
     , "--operational-certificate-issue-counter-file", spoReqDir </> "operator.counter"
@@ -362,7 +362,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
   let pledgeAndPoolRegistrationTx = workDir </> "pledger-and-pool-registration-cert.tx"
 
   void $ execCli
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", workDir </> "pledge-registration-cert.txbody"
     , "--testnet-magic", show @Int testnetMag
     , "--signing-key-file", fundingSigninKey
@@ -374,7 +374,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
   H.note_ "Submitting pool owner/pledger stake registration cert and funding stake pool owner address..."
 
   void $ execCli' execConfig
-           [ "transaction", "submit"
+           [ "latest", "transaction", "submit"
            , "--tx-file", pledgeAndPoolRegistrationTx
            ]
 

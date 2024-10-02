@@ -139,7 +139,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     ]
 
   txidString <- mconcat . lines <$> execCli' execConfig
-    [ "transaction", "txid"
+    [ "latest", "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
 

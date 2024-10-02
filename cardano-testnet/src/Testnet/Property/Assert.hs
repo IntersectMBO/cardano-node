@@ -89,7 +89,7 @@ assertExpectedSposInLedgerState
   -> m ()
 assertExpectedSposInLedgerState output (NumPools numExpectedPools) execConfig = withFrozenCallStack $ do
   void $ execCli' execConfig
-      [ "query", "stake-pools"
+      [ "latest", "query", "stake-pools"
       , "--out-file", output
       ]
 

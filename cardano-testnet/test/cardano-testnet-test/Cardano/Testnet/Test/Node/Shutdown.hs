@@ -113,7 +113,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 4. Create Shelley genesis
   execCli_
-    [ "genesis", "create"
+    [ "latest", "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic'
     , "--genesis-dir", shelleyDir
     , "--start-time", formatIso8601 startTime
