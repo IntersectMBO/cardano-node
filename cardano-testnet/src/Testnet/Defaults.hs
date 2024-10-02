@@ -79,8 +79,6 @@ import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
 import           Testnet.Start.Types
 import           Testnet.Types
 
-{- HLINT ignore "Use underscore" -}
-
 instance Api.Error AlonzoGenesisError where
   prettyError (AlonzoGenErrTooMuchPrecision r) =
     "Too much precision for bounded rational in Alonzo genesis: " <> pshow r
@@ -317,7 +315,7 @@ defaultYamlConfig =
     rotationObject =
       Aeson.Object $
         mconcat $ map (uncurry Aeson.singleton)
-          [ ("rpLogLimitBytes", Aeson.Number 5000000)
+          [ ("rpLogLimitBytes", Aeson.Number 5_000_000)
           , ("rpKeepFilesNum", Aeson.Number 3)
           , ("rpMaxAgeHours", Aeson.Number 24)
           ]
@@ -426,7 +424,7 @@ defaultMainnetTopology :: NetworkTopology
 defaultMainnetTopology =
   let single = RemoteAddress
          { raAddress  = "relays-new.cardano-mainnet.iohk.io"
-         , raPort     = 3001
+         , raPort     = 3_001
          , raValency  = 2
          }
   in RealNodeTopology [single]
