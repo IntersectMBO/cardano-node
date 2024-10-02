@@ -121,6 +121,7 @@ library
                       , cardano-ledger-conway
                       , cardano-node
                       , cardano-prelude
+                      , cardano-strict-containers
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
@@ -160,7 +161,7 @@ library
                       , time
                       , trace-dispatcher
                       , trace-forward
-                      , transformers
+                      , transformers >= 0.6.0.2
                       , transformers-except
                       , unordered-containers
                       , yaml
