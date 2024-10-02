@@ -121,6 +121,7 @@ library
                       , cardano-ledger-conway
                       , cardano-node
                       , cardano-prelude
+                      , cardano-strict-containers
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers

@@ -14,14 +14,17 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
-                   StakeCredential (..), convertToLedgerProtocolParameters,
-                   protocolParamMaxTxExUnits, protocolParamPrices)
+import           Cardano.Api.Shelley (GovernanceAction (..), LedgerProtocolParameters (..),
+                   PlutusScriptOrReferenceInput (..), Proposal (..), ProtocolParameters,
+                   ShelleyLedgerEra, StakeCredential (..), convertToLedgerProtocolParameters,
+                   createProposalProcedure, fromShelleyStakeCredential,
+                   protocolParamMaxTxExUnits, protocolParamPrices, toShelleyNetwork)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -41,6 +44,8 @@ import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Api as Ledger
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -61,8 +66,11 @@ import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import           Data.Either.Extra (eitherToMaybe)
+import           Data.Functor ((<&>))
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
+import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (unpack)
@@ -277,6 +285,72 @@ benchmarkTxStream txStream targetNodes tps txCount era = do
 noCollateral :: (TxInsCollateral era, [Fund])
 noCollateral = (TxInsCollateralNone, [])
 
+handlePreviewErr :: Env.Error -> ActionM ()
+handlePreviewErr err = traceDebug $ "Error creating Tx preview: " <> show err
+
+genTxProposal' :: forall era . ()
+  => IsShelleyBasedEra era
+  => LedgerProtocolParameters era
+  -> TxFee era
+  -> Ledger.ProposalProcedure (ShelleyLedgerEra era)
+  -> [Fund]
+  -> [TxOut CtxTx era]
+  -> Either TxGenError (Tx era, TxId)
+genTxProposal' lp fie pp =
+  genTxProposal sbe lp noCollateral fie (pp, Nothing) TxMetadataNone where
+    sbe = shelleyBasedEra
+
+data GovCaseEnv era = GovCaseEnv
+  { gcEnvEra          :: AsType era
+  , gcEnvFeeInEra     :: TxFee era
+  , gcEnvTxParams     :: TxGenTxParams
+  , gcEnvLedgerParams :: LedgerProtocolParameters era }
+
+data ProposeCase = ProposeCase
+  { pcWalletName   :: String
+  , pcPayMode      :: PayMode
+  , pcCoin         :: L.Coin
+  , pcGenStakeCred :: StakeCredential
+  , pcAnchor       :: Ledger.Anchor Ledger.StandardCrypto
+  } deriving Eq
+
+proposeCase :: forall era ledgerEra . ()
+  => IsShelleyBasedEra era
+  => ledgerEra ~ ShelleyLedgerEra era
+  => GovCaseEnv era
+  -> ProposeCase
+  -> ActionM (TxStream IO era)
+proposeCase GovCaseEnv {..} ProposeCase {..}
+  | TxGenTxParams {..} <- gcEnvTxParams
+  , sbe <- shelleyBasedEra @era
+  = do network :: Ledger.Network <- toShelleyNetwork <$> getEnvNetworkId
+       maybeLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
+         <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
+       wallet <- getEnvWallets pcWalletName
+       (toUTxO, _addressOut) <- interpretPayMode pcPayMode
+       let txGenerator :: TxGenerator era
+           txGenerator = genTxProposal' gcEnvLedgerParams gcEnvFeeInEra unProposal
+           mangledUTxOs :: CreateAndStoreList IO era [L.Coin]
+           mangledUTxOs = mangle $ repeat toUTxO
+           fundSource :: FundSource IO
+           fundSource = walletSource wallet 1
+           inToOut :: [L.Coin] -> [L.Coin]
+           inToOut = Utils.inputsToOutputsWithFee txParamFee 1
+           sourceToStore :: IO (Either TxGenError (Tx era))
+           sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
+           govAction :: GovernanceAction era
+           govAction = TreasuryWithdrawal [(network, pcGenStakeCred, pcCoin)] SNothing
+           Proposal {..} = createProposalProcedure sbe network pcCoin pcGenStakeCred govAction pcAnchor
+       fundPreview :: [Fund] <- liftIO $ walletPreview wallet 0
+       let sourcePreviewAction = sourceTransactionPreview txGenerator fundPreview inToOut mangledUTxOs
+       handleE handlePreviewErr do
+         txPreview <- hoistActionEither sourcePreviewAction
+         let txFeeEstimate = maybeLedgerPParams <&> \ledgerPParams ->
+               evaluateTransactionFee sbe ledgerPParams (getTxBody txPreview) 1 0 0
+         traceDebug $ "Projected Tx size in bytes: " <> show (txSizeInBytes txPreview)
+         traceDebug $ "Projected Tx fee in Coin: " <> show txFeeEstimate
+       pure . Streaming.effect $ Streaming.yield <$> sourceToStore
+
 evalGenerator :: forall era . IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{..} era = do
   networkId <- getEnvNetworkId
@@ -366,6 +440,20 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
               dumpBudgetSummaryIfExisting
 
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+        Propose pcWalletName pcPayMode pcCoin pcGenStakeCred' pcAnchor
+          | pcGenStakeCred <- fromShelleyStakeCredential pcGenStakeCred'
+          , args <- ProposeCase {..}
+          , env  <- GovCaseEnv
+                      { gcEnvEra = era
+                      , gcEnvTxParams = txParams
+                      , gcEnvLedgerParams = ledgerParameters
+                      , gcEnvFeeInEra = feeInEra }
+          , ce   <- cardanoEra :: CardanoEra era
+          , toThrow <- TxGenError $ "Proposal governance action unsupported "
+                                    <> "in era and/or protocol version."
+          -> forEraInEon ce (liftTxGenError toThrow) \case
+               ConwayEraOnwardsConway -> proposeCase env args
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
