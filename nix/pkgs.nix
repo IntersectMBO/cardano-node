@@ -54,20 +54,20 @@ in with final;
 
   # The ghc-hls point release compatibility table is documented at
   # https://haskell-language-server.readthedocs.io/en/latest/support/ghc-version-support.html
-  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
-    src = {
-      ghc8107 = haskell-nix.sources."hls-2.2";
-      ghc927 = haskell-nix.sources."hls-2.0";
-      ghc945 = haskell-nix.sources."hls-2.2";
-      ghc946 = haskell-nix.sources."hls-2.2";
-      ghc947 = haskell-nix.sources."hls-2.5";
-      ghc963 = haskell-nix.sources."hls-2.5";
-      ghc964 = haskell-nix.sources."hls-2.6";
-      ghc981 = haskell-nix.sources."hls-2.6";
-    }.${compiler-nix-name} or haskell-nix.sources."hls-2.9";
-    cabalProject = builtins.readFile (src + "/cabal.project");
-    sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
-  };
+  #haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
+  #  src = {
+  #    ghc8107 = haskell-nix.sources."hls-2.2";
+  #    ghc927 = haskell-nix.sources."hls-2.0";
+  #    ghc945 = haskell-nix.sources."hls-2.2";
+  #    ghc946 = haskell-nix.sources."hls-2.2";
+  #    ghc947 = haskell-nix.sources."hls-2.5";
+  #    ghc963 = haskell-nix.sources."hls-2.5";
+  #    ghc964 = haskell-nix.sources."hls-2.6";
+  #    ghc981 = haskell-nix.sources."hls-2.6";
+  #  }.${compiler-nix-name} or haskell-nix.sources."hls-2.9";
+  #  cabalProject = builtins.readFile (src + "/cabal.project");
+  #  sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
+  #};
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
