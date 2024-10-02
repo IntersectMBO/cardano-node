@@ -67,6 +67,7 @@ compileToScript = do
     emit $ ReadDRepKeys nc
     logMsg "Importing DRep SigningKeys. Done."
 
+  -- Can likely use genesisWallet for everything in voting workloads.
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet

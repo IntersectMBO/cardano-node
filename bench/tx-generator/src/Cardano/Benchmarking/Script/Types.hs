@@ -154,6 +154,46 @@ data Generator where
   -- but it's difficult to tell what it's doing.
   NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe String -> Generator
+  -- | 'Propose' represents submitting a governance action proposal as
+  -- just a singleton.
+  -- The direct arguments of Propose likely need to be calculated from
+  -- what's now being passed in order to avoid existentials etc. breaking
+  -- the derivation clauses.
+  -- RewardAccount has needed instances.
+  -- Anchor also.
+  -- GovAction is it, we only use TreasuryWithdrawals after splitting phase.
+  -- Representing donations could be worthwhile for the setup/splitting phase.
+  -- The era seems to need to be got rid of.
+  -- RewardAccount and Anchor can likely be computed from something
+  -- without the polymorphism, shouldn't be tough to find what.
+  -- The translation to RewardAccount and Anchor must be done outside
+  -- cardano-node.
+  -- StakeAddress for RewardAccount
+  -- createAnchor, unclear where Url and anchorData (ByteString) come from.
+  --
+  -- RewardAccount better represented as a Cardano address -- StakeAddress?
+  -- It would be simpler avoiding the StakeAddress and just using the Cardano address if possible.
+  --
+  -- Also be conscious of what the Anchor represents.
+  -- Wait, does Anchor actually have the instances?
+  -- *** Ping Aniket or Carlos. ***
+  Propose :: !String
+          -> !L.Coin
+          -- -> !(RewardAccount (L.EraCrypto era))
+          -- The RewardAccount is represented by a StakeAddress
+          -> !StakeAddress
+          -- -> !(GovAction era)
+          -- The GovAction can be recovered from the RewardAccount and
+          -- Coin at least if the hash can be computed or omitted as
+          -- Nothing with no negative consequences.
+          -- -> !(L.Anchor (L.EraCrypto era))
+          -- the Anchor can be recovered from the Url and AnchorData,
+          -- though it's unclear where the AnchorData ByteString comes
+          -- from just yet.
+          -- *** Check in with Carlos and/or Aniket. ***
+          -- Wait, genTxProposal didn't seem to need to use an anchor at all.
+          -- -> !(Url, ByteString)
+          -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
   -- of a list of transaction series represented by 'Generator' itself,
   -- but the nesting is done by first translating to

@@ -66,6 +66,7 @@ import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
+import qualified Data.Map.Strict as Map (fromList)
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (unpack)
@@ -386,6 +387,29 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
                 traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
               dumpBudgetSummaryIfExisting
 
+          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+        Propose walletName coin stakeAddr -> do
+          wallet <- getEnvWallets walletName
+          let txGenerator = genTxProposal shelleyBasedEra ledgerParameters (collateral, collFunds) fee proposal metadata inputs outputs
+              fundSource = walletSource wallet 1
+              inToOut = Utils.inputsToOutputsWithFee fee count
+              sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+              govAction = TreasuryWithdrawals (Map.fromList [(rewardAcct, coin)]) Nothing
+              rewardAcct = toShelleyStakeAddress stakeAddr
+          fundPreview <- liftIO $ walletPreview wallet inputs
+          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
+            Right tx -> do
+              let
+                txSize = txSizeInBytes tx
+                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
+                  Left{}              -> Nothing
+                  Right ledgerPParams -> Just $
+                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
+              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+              -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
         Sequence l -> do
