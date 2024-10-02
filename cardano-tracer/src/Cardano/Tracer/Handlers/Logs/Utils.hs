@@ -11,7 +11,7 @@ module Cardano.Tracer.Handlers.Logs.Utils
   ) where
 
 import           Cardano.Tracer.Configuration (LogFormat (..), LoggingParams (..))
-import           Cardano.Tracer.Types (HandleRegistry, NodeName)
+import           Cardano.Tracer.Types (HandleRegistry, HandleRegistryKey)
 import           Cardano.Tracer.Utils (modifyRegistry_)
 
 import           Control.Concurrent.Extra (Lock, withLock)
@@ -49,31 +49,29 @@ isItLog format pathToLog = hasProperPrefix && hasTimestamp && hasProperExt
 
 createEmptyLogRotation
   :: Lock
-  -> NodeName
-  -> LoggingParams
+  -> HandleRegistryKey
   -> HandleRegistry
   -> FilePath
-  -> LogFormat
   -> IO ()
-createEmptyLogRotation currentLogLock nodeName loggingParams registry subDirForLogs format = do
+createEmptyLogRotation currentLogLock key registry subDirForLogs = do
   -- The root directory (as a parent for subDirForLogs) will be created as well if needed.
   createDirectoryIfMissing True subDirForLogs
-  createOrUpdateEmptyLog currentLogLock nodeName loggingParams registry subDirForLogs format
+  createOrUpdateEmptyLog currentLogLock key registry subDirForLogs
 
 -- | Create an empty log file (with the current timestamp in the name).
-createOrUpdateEmptyLog :: Lock -> NodeName -> LoggingParams -> HandleRegistry -> FilePath -> LogFormat -> IO ()
-createOrUpdateEmptyLog currentLogLock nodeName loggingParams registry subDirForLogs format = do
+createOrUpdateEmptyLog :: Lock -> HandleRegistryKey -> HandleRegistry -> FilePath -> IO ()
+createOrUpdateEmptyLog currentLogLock key@(_, LoggingParams{logFormat = format}) registry subDirForLogs = do
   withLock currentLogLock do
     ts <- formatTime defaultTimeLocale timeStampFormat . systemToUTCTime <$> getSystemTime
     let pathToLog = subDirForLogs </> logPrefix <> ts <.> logExtension format
 
     modifyRegistry_ registry \handles -> do
 
-      for_ @Maybe (Map.lookup (nodeName, loggingParams) handles) \(handle, _filePath) ->
+      for_ @Maybe (Map.lookup key handles) \(handle, _filePath) ->
         hClose handle
 
       newHandle <- openFile pathToLog WriteMode
-      let newMap = Map.insert (nodeName, loggingParams) (newHandle, pathToLog) handles
+      let newMap = Map.insert key (newHandle, pathToLog) handles
       pure newMap
 
 getTimeStampFromLog :: FilePath -> Maybe UTCTime

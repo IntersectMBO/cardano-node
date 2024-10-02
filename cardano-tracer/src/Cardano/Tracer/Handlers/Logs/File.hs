@@ -49,16 +49,17 @@ writeTraceObjectsToFile registry loggingParams@LoggingParams{logRoot, logFormat}
 
   unless (null itemsToWrite) do
     readRegistry registry >>= \handleMap -> do
-      case Map.lookup (nodeName, loggingParams) handleMap of
+      let key = (nodeName, loggingParams)
+      case Map.lookup key handleMap of
         Nothing -> do
           rootDirAbs <- makeAbsolute logRoot
 
           let subDirForLogs :: FilePath
               subDirForLogs = rootDirAbs </> T.unpack nodeName
 
-          createEmptyLogRotation currentLogLock nodeName loggingParams registry subDirForLogs logFormat
+          createEmptyLogRotation currentLogLock key registry subDirForLogs
           handles <- readRegistry registry
-          let handle = fst (fromJust (Map.lookup (nodeName, loggingParams) handles))
+          let handle = fst (fromJust (Map.lookup key handles))
           BS8.hPutStr handle preparedLines
           hFlush handle
         Just (handle, _filePath) -> do

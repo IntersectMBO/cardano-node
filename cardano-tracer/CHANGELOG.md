@@ -2,6 +2,7 @@
 
 ## 0.3 (September 26, 2024)
 
+* Fix the creation of empty logs.
 * Abondon `snap` webserver in favour of `wai`/`warp` for Prometheus and EKG Monitoring.
 * Add dynamic routing to EKG stores of all connected nodes.
 * Derive URL compliant routes from connected node names (instead of plain node names).
