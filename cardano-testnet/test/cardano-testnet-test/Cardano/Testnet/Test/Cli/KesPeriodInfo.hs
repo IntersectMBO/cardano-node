@@ -122,7 +122,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   -- NB: We must include the stake credential
   testDelegatorPaymentAddr <- execCli
-                [ "address", "build"
+                [ "latest", "address", "build"
                 , "--testnet-magic", show @Int testnetMagic
                 , "--payment-verification-key-file", testDelegatorPaymentVKeyFp
                 , "--stake-verification-key-file", testDelegatorVkeyFp
@@ -130,7 +130,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   testDelegatorStakeAddress
     <- filter (/= '\n')
          <$> execCli
-               [ "stake-address", "build"
+               [ "latest", "stake-address", "build"
                , "--stake-verification-key-file", testDelegatorVkeyFp
                , "--testnet-magic", show @Int testnetMagic
                ]
@@ -183,7 +183,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   let delegRegTestDelegatorTxFp = work </> "deleg-register-test-delegator.tx"
   void $ execCli
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", delegRegTestDelegatorTxBodyFp
     , "--testnet-magic", show @Int testnetMagic
     , "--signing-key-file", utxoSKeyFile
@@ -194,7 +194,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.note_ "Submitting test delegator registration and delegation certificates..."
 
   void $ execCli' execConfig
-           [ "transaction", "submit"
+           [ "latest", "transaction", "submit"
            , "--tx-file", delegRegTestDelegatorTxFp
            ]
 
@@ -231,7 +231,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let testSpoOperationalCertFp = testSpoDir </> "node-operational.cert"
 
   void $ execCli' execConfig
-    [ "node", "new-counter"
+    [ "latest", "node", "new-counter"
     , "--cold-verification-key-file", stakePoolColdVKey
     , "--counter-value", "0"
     , "--operational-certificate-issue-counter-file", testSpoOperationalCertFp
@@ -239,7 +239,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
 
   void $ execCli' execConfig
-      [ "node", "issue-op-cert"
+      [ "latest", "node", "issue-op-cert"
       , "--kes-period", "0"
       , "--kes-verification-key-file", testSpoKesVKey
       , "--cold-signing-key-file", stakePoolColdSigningKey
@@ -265,20 +265,20 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   threadDelay 5_000_000
 
   stakeSnapshot1 <- execCli' execConfig
-     [ "query", "stake-snapshot"
+     [ "latest", "query", "stake-snapshot"
      , "--all-stake-pools"
      ]
   H.writeFile (work </> "stake-snapshot-1.json") stakeSnapshot1
 
   ledgerStateJson <- execCli' execConfig
-    [ "query", "ledger-state"
+    [ "latest", "query", "ledger-state"
     , "--cardano-mode"
     ]
   H.writeFile (work </> "ledger-state-1.json") ledgerStateJson
 
   let kesPeriodInfoOutput = testSpoDir </> "kes-period-info-expected-success.json"
   void $ execCli' execConfig
-    [ "query", "kes-period-info"
+    [ "latest", "query", "kes-period-info"
     , "--op-cert-file", testSpoOperationalCertFp
     , "--out-file", kesPeriodInfoOutput
     ]
@@ -294,7 +294,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     ]
 
   void $ execCli' execConfig
-    [ "query",  "tip"
+    [ "latest", "query",  "tip"
     , "--out-file", work </> "current-tip.json"
     ]
 
@@ -322,7 +322,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
 
   void $ execCli' execConfig
-    [ "query",  "tip"
+    [ "latest", "query",  "tip"
     , "--out-file", work </> "current-tip-2.json"
     ]
 
@@ -342,7 +342,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , " certificate is valid"
     ]
   stakeSnapshot2 <- execCli' execConfig
-     [ "query", "stake-snapshot"
+     [ "latest", "query", "stake-snapshot"
      , "--all-stake-pools"
      ]
 
@@ -350,7 +350,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.writeFile (work </> "stake-snapshot-2.json") stakeSnapshot2
 
   ledgerStateJson2 <- execCli' execConfig
-    [ "query", "ledger-state"
+    [ "latest", "query", "ledger-state"
     , "--cardano-mode"
     ]
   H.writeFile (work </> "ledger-state-2.json") ledgerStateJson2

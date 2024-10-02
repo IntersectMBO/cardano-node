@@ -264,7 +264,7 @@ cardanoTestnet
       let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
 
       execCli_
-        [ "address", "build"
+        [ "latest", "address", "build"
         , "--payment-verification-key-file", makeUTxOVKeyFp idx
         , "--testnet-magic", show testnetMagic
         , "--out-file", paymentAddrFile
@@ -374,7 +374,7 @@ cardanoTestnet
       H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
       utxos <- execCli' execConfig
-        [ "query", "utxo"
+        [ "latest", "query", "utxo"
         , "--address", Text.unpack $ paymentKeyInfoAddr wallet
         , "--cardano-mode"
         ]

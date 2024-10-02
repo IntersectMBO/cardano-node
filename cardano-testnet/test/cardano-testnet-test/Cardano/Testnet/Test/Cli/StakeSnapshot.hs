@@ -50,7 +50,7 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "stake-snapshot" $ \tempAbsBas
   void $ waitUntilEpoch configurationFile
                         (Api.File $ IO.sprocketSystemName poolSprocket1) (EpochNo 3)
 
-  json <- execCliStdoutToJson execConfig [ "query", "stake-snapshot", "--all-stake-pools" ]
+  json <- execCliStdoutToJson execConfig [ "latest", "query", "stake-snapshot", "--all-stake-pools" ]
 
   -- There are three stake pools so check that "pools" has three entries
   case json of
