@@ -22,6 +22,7 @@ import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Node (NetworkP2PMode)
 import           Ouroboros.Consensus.Node.GSM
@@ -35,6 +36,7 @@ import           Prelude
 
 import           "contra-tracer" Control.Tracer (traceWith)
 import           "trace-dispatcher" Control.Tracer (nullTracer)
+import           Data.Aeson (ToJSONKey)
 import           Data.Bifunctor (first)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
@@ -49,6 +51,7 @@ initTraceDispatcher ::
   , LogFormatting
     (TraceLabelPeer (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   , LogFormatting (TraceGsmEvent (Tip blk))
+  , ToJSONKey (GenTxId blk)
   )
   => NodeConfiguration
   -> SomeConsensusProtocol

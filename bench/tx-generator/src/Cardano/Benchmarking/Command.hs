@@ -57,6 +57,7 @@ import           GHC.Weak as Weak (deRefWeak)
 import           System.Posix.Signals as Sig (Handler (CatchInfo),
                    SignalInfo (..), SignalSpecificInfo (..), installHandler,
                    sigINT, sigTERM)
+import Foreign.C (Errno(..))
 #if MIN_VERSION_base(4,18,0)
 import           Data.Maybe as Maybe (fromMaybe)
 import           GHC.Conc.Sync as Conc (threadLabel)
@@ -64,6 +65,7 @@ import           GHC.Conc.Sync as Conc (threadLabel)
 #endif
 
 #ifdef UNIX
+deriving instance Show Errno
 deriving instance Show SignalInfo
 deriving instance Show SignalSpecificInfo
 #endif

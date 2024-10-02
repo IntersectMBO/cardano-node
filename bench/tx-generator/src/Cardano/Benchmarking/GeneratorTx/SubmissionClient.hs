@@ -11,8 +11,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -26,10 +24,11 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   ) where
 
 import           Cardano.Api hiding (Active)
-import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
+import           Cardano.Api.Shelley (Tx (..), fromShelleyTxId, toConsensusGenTx)
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
+import           Cardano.Ledger.Core (sizeTxF)
 import           Cardano.Logging
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
 import           Cardano.Tracing.OrphanInstances.Byron ()
@@ -40,7 +39,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import qualified Ouroboros.Consensus.Cardano.Block as Block
                    (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId, txInBlockSize)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
@@ -57,6 +56,8 @@ import qualified Data.List as L
 import qualified Data.List.Extra as L
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
+import           Lens.Micro.Extras (view)
+
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
 
 data SubmissionThreadStats
@@ -85,10 +86,9 @@ type LocalState era = (TxSource era, UnAcked (Tx era), SubmissionThreadStats)
 type EndOfProtocolCallback m = SubmissionThreadStats -> m ()
 
 txSubmissionClient
-  :: forall m era tx.
+  :: forall m era .
      ( MonadIO m, MonadFail m
      , IsShelleyBasedEra era
-     , tx      ~ Tx era
      )
   => Trace m NodeToNodeSubmissionTrace
   -> Trace m (TraceBenchTxSubmit TxId)
@@ -110,11 +110,11 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     traceWith bmtr $ SubmissionClientDiscardAcknowledged  (getTxId . getTxBody <$> acked)
     return (txSource, UnAcked stillUnacked, newStats)
 
-  queueNewTxs :: [tx] -> LocalState era -> LocalState era
+  queueNewTxs :: [Tx era] -> LocalState era -> LocalState era
   queueNewTxs newTxs (txSource, UnAcked unAcked, stats)
     = (txSource, UnAcked (newTxs <> unAcked), stats)
 
-  client ::LocalState era -> ClientStIdle (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
+  client :: LocalState era -> ClientStIdle (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
 
   client localState = ClientStIdle
     { recvMsgRequestTxIds = requestTxIds localState
@@ -177,11 +177,15 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
               , stsUnavailable =
                 stsUnavailable stats + Unav (length missIds)}))
 
-  txToIdSize :: tx -> (GenTxId CardanoBlock, SizeInBytes)
-  txToIdSize = (Mempool.txId &&& (SizeInBytes . txInBlockSize)) . toGenTx
+  txToIdSize :: Tx era -> (GenTxId CardanoBlock, SizeInBytes)
+  txToIdSize = (Mempool.txId . toGenTx) &&& (SizeInBytes . fromInteger . getTxSize)
+    where
+      getTxSize :: Tx era -> Integer
+      getTxSize (ShelleyTx sbe tx) =
+        shelleyBasedEraConstraints sbe $ view sizeTxF tx
 
-  toGenTx :: tx -> GenTx CardanoBlock
-  toGenTx tx = toConsensusGenTx $ TxInMode (shelleyBasedEra @era) tx
+  toGenTx :: Tx era -> GenTx CardanoBlock
+  toGenTx tx = toConsensusGenTx $ TxInMode shelleyBasedEra tx
 
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
