@@ -86,7 +86,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   runtime@TestnetRuntime
     { testnetMagic
-    , wallets=wallet0:_
+    , wallets=wallet0:wallet1:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
@@ -120,11 +120,50 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
       ccColdVKeyFp n = gov </> "cc-" <> show n <> "-cold.vkey"
       stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
+      stakeCertFp = gov </> "stake.regcert"
 
   cliStakeAddressKeyGen
     $ KeyPair { verificationKey = File stakeVkeyFp
               , signingKey = File stakeSKeyFp
               }
+
+  -- Register stake address
+
+  void $ execCli' execConfig
+    [ eraName, "stake-address", "registration-certificate"
+    , "--stake-verification-key-file", stakeVkeyFp
+    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--out-file", stakeCertFp
+    ]
+
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", stakeSKeyFp
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
+
 
   minGovActDeposit <- getMinGovActionDeposit epochStateView ceo
 
@@ -161,11 +200,11 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
          ccColdKeyFps
 
   txbodyFp <- H.note $ work </> "tx.body"
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+  txin1' <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
   void $ execCli' execConfig
     [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-in", Text.unpack $ renderTxIn txin1'
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
     , "--proposal-file", updateCommitteeFp
     , "--out-file", txbodyFp
