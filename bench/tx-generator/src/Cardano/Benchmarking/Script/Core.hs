@@ -19,9 +19,10 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
-                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
-                   protocolParamPrices)
+import           Cardano.Api.Shelley (GovernanceAction (..), PlutusScriptOrReferenceInput (..),
+                   Proposal (..), ProtocolParameters, ShelleyLedgerEra,
+                   convertToLedgerProtocolParameters, createProposalProcedure,
+                   fromShelleyStakeCredential, protocolParamMaxTxExUnits, protocolParamPrices)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -64,8 +65,11 @@ import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import           Data.Either.Extra (eitherToMaybe)
+import           Data.Functor ((<&>))
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
+import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (unpack)
@@ -300,7 +304,7 @@ benchmarkTxStream txStream targetNodes tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads ctl
 
-evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator :: forall era . IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
@@ -386,6 +390,36 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
                 traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
               dumpBudgetSummaryIfExisting
 
+          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+        Propose walletName payMode coin network stakeCredential anchor -> do
+          wallet <- getEnvWallets walletName
+          (toUTxO, _addressOut) <- interpretPayMode payMode
+          let txGenerator :: TxGenerator era
+              txGenerator = genTxProposal sbe ledgerParameters (TxInsCollateralNone, []) feeInEra (unProposal proposal, Nothing) TxMetadataNone
+              fundSource :: FundSource IO
+              fundSource = walletSource wallet 1
+              inToOut = Utils.inputsToOutputsWithFee fee 1
+              sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+              govAction :: GovernanceAction era
+              govAction = TreasuryWithdrawal [(network, stakeCredential', coin)] SNothing
+              proposal :: Proposal era
+              proposal = createProposalProcedure sbe network coin stakeCredential' govAction anchor
+              stakeCredential' :: StakeCredential
+              stakeCredential' = fromShelleyStakeCredential stakeCredential
+              sbe :: ShelleyBasedEra era
+              sbe = shelleyBasedEra
+          fundPreview <- liftIO $ walletPreview wallet 0
+          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
+            Right tx -> do
+              let
+                txSize = txSizeInBytes tx
+                txFeeEstimate = eitherToMaybe (toLedgerPParams shelleyBasedEra protocolParameters) <&>
+                  \ledgerPParams ->
+                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) 1 0 0
+              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
         Sequence l -> do

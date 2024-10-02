@@ -25,8 +25,8 @@ things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
-                Sequence, Split, SplitN, Take)
+        , Generator(Cycle, NtoM, OneOf, Propose, RoundRobin,
+                SecureGenesis, Sequence, Split, SplitN, Take)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
@@ -41,6 +41,9 @@ module Cardano.Benchmarking.Script.Types (
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
+
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Credential as Ledger
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
@@ -154,6 +157,15 @@ data Generator where
   -- but it's difficult to tell what it's doing.
   NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe String -> Generator
+  -- | 'Propose' represents submitting a governance action proposal as
+  -- just a singleton.
+  Propose :: !String
+          -> !PayMode
+          -> !L.Coin
+          -> !L.Network
+          -> !(Ledger.StakeCredential L.StandardCrypto)
+          -> !(Ledger.Anchor L.StandardCrypto)
+          -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
   -- of a list of transaction series represented by 'Generator' itself,
   -- but the nesting is done by first translating to
