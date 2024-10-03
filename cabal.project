@@ -69,8 +69,8 @@ allow-newer: katip:Win32
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 287da7f2b28fe2cc85bfc0b47c335418898c7e49
-  --sha256: 01q37w5s827zhxkrf0wl9sxx7i2450cwbqrb73qq13qpck7hbi2l
+  tag: f349ad23ad2236ea7963bce6723974c9d234a6ea
+  --sha256: 1n2wx8qf0mb10ndhvxplnqf99hya1f98dyxvd3i050lr86nv8p21
   subdir:
     ouroboros-consensus-cardano
     ouroboros-consensus-diffusion
