@@ -564,6 +564,13 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
     ) as $genesis_voltaire
+  |
+    ($genesis_voltaire
+      | .genesis.pparamsOverlays      as $ovls
+      | .genesis.pparamsOverlays      = $ovls + ["voting"]
+      | .genesis.utxo_keys            = 2
+      | .genesis.funds_balance        = 40000000000000
+    ) as $genesis_voting
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -914,6 +921,12 @@ def all_profile_variants:
     ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $valuevolt_nomadperf_template
   |
+  # P&T Nomad cluster: 52 nodes, P2P by default - value+voting workload
+  # Extra splits, benchmarking from 5th epoch (skip 0,1,2,3 / 533 min / 8.88 hs)
+    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voting *
+      {analysis: { filters: ["epoch5+", "size-full"] } }
+    ) as $valuevoting_nomadperf_template
+  |
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
     ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $plutusvolt_nomadperf_template
@@ -1252,6 +1265,22 @@ def all_profile_variants:
     { name: "plutus-volt-nomadperf"
     }
 
+## As "value" above with an extra voting workload
+  , $valuevoting_nomadperf_template * $dreps_large *
+    { name: "value-voting-volt-nomadperf"
+    , generator: {drep_voting: true}
+    , workload: [
+      {votes_per_tx: 1}
+    ]
+    }
+  , $valuevoting_nomadperf_template * $dreps_large *
+    { name: "value-voting-double-volt-nomadperf"
+    , generator: {drep_voting: true}
+    , workload: [
+      {votes_per_tx: 2}
+    ]
+    }
+
 ## P&T Nomad cluster: 52 nodes, PlutusV3 BLST and Plutus SECP workloads
   , $plutusv3blst_nomadperf_template *
     { name: "plutusv3-blst-nomadperf"
@@ -1487,8 +1516,11 @@ def all_profile_variants:
     }
 
   ## development profile for voting workload: PV9, Conway costmodel, 1000 DReps injected
-  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $dreps_small *
+  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voting * $dreps_small *
     { name: "development-voting"
+    , workload: [
+      {votes_per_tx: 2}
+    ]
     }
 
   ## Last, but not least, the profile used by "nix-shell -A devops":

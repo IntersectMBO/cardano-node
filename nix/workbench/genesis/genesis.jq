@@ -8,7 +8,7 @@ def profile_cli_args($p):
   { createStakedArgs:
     ([ "--testnet-magic",          $p.genesis.network_magic
      , "--supply",                 fmt_decimal_10_5($p.genesis.funds_balance)
-     , "--gen-utxo-keys",          1
+     , "--gen-utxo-keys",          $p.genesis.utxo_keys
      , "--gen-genesis-keys",       $p.composition.n_bft_hosts
      , "--supply-delegated",       fmt_decimal_10_5($p.derived.supply_delegated)
      , "--gen-pools",              $p.composition.n_pools
@@ -23,7 +23,7 @@ def profile_cli_args($p):
   , createTestnetDataArgs:
     ([ "--testnet-magic",          $p.genesis.network_magic
      , "--total-supply",           fmt_decimal_10_5($p.genesis.funds_balance + $p.derived.supply_delegated)
-     , "--utxo-keys",              1
+     , "--utxo-keys",              $p.genesis.utxo_keys
      , "--genesis-keys",           $p.composition.n_bft_hosts
      , "--delegated-supply",       fmt_decimal_10_5($p.derived.supply_delegated)
      , "--pools",                  $p.composition.n_pools
