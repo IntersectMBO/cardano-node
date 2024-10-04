@@ -292,7 +292,7 @@ in
 
       create-staked-args = concatStringsSep " " ([
         "--supply ${toString genesis.funds_balance}"
-        "--gen-utxo-keys 1"
+        "--gen-utxo-keys ${toString genesis.utxo_keys}"
         "--gen-genesis-keys ${toString composition.n_bft_hosts}"
         "--supply-delegated ${toString derived.supply_delegated}"
         "--gen-pools ${toString composition.n_pools}"
@@ -307,7 +307,7 @@ in
 
       create-testnet-data-args = concatStringsSep " " [
         "--total-supply ${toString genesis.total_supply}"
-        "--utxo-keys 1"
+        "--utxo-keys ${toString genesis.utxo_keys}"
         "--genesis-keys ${toString composition.n_bft_hosts}"
         "--delegated-supply ${toString derived.supply_delegated}"
         "--pools ${toString composition.n_pools}"
