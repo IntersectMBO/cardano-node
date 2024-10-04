@@ -227,10 +227,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "publicRoots" .= toJSON publicRoots
                , "useLedgerAfter" .= useLedgerPeers
                ]
-  forMachine _dtal NetworkConfigLegacy =
-      mconcat [ "kind" .= String "NetworkConfigLegacy"
-              , "message" .= String p2pNetworkConfigLegacyMessage
-              ]
   forMachine _dtal NonP2PWarning =
       mconcat [ "kind" .= String "NonP2PWarning"
                , "message" .= String nonP2PWarningMessage ]
@@ -313,8 +309,6 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigUpdateError"]
   namespaceFor NetworkConfig {}  =
     Namespace [] ["NetworkConfig"]
-  namespaceFor NetworkConfigLegacy {}  =
-    Namespace [] ["NetworkConfigLegacy"]
   namespaceFor NonP2PWarning {}  =
     Namespace [] ["NonP2PWarning"]
   namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
@@ -366,8 +360,6 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["NetworkConfigUpdateError"]) = Just
     ""
   documentFor (Namespace [] ["NetworkConfig"]) = Just
-    ""
-  documentFor (Namespace [] ["NetworkConfigLegacy"]) = Just
     ""
   documentFor (Namespace [] ["NonP2PWarning"]) = Just
     ""
@@ -427,7 +419,6 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
     , Namespace [] ["NetworkConfigUpdateError"]
     , Namespace [] ["NetworkConfig"]
-    , Namespace [] ["NetworkConfigLegacy"]
     , Namespace [] ["NonP2PWarning"]
     , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
     , Namespace [] ["WarningDevelopmentNodeToClientVersions"]
@@ -540,7 +531,6 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
       UseLedgerPeers Always         ->
         "Use ledger peers in any slot."
   ]
-ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 
@@ -581,15 +571,6 @@ nonP2PWarningMessage :: Text
 nonP2PWarningMessage =
       "You are using legacy networking stack, "
    <> "consider upgrading to the p2p network stack."
-
-p2pNetworkConfigLegacyMessage :: Text
-p2pNetworkConfigLegacyMessage =
-    pack
-  $ intercalate "\n"
-  [ "You are using legacy p2p topology file format."
-  , "See https://github.com/intersectmbo/cardano-node/issues/4559"
-  , "Note that the legacy p2p format will be removed in `1.37` release."
-  ]
 
 -- | Pretty print 'SocketOrSocketInfo'.
 --
