@@ -115,11 +115,16 @@ hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \te
     , "--out-file", txbodySignedFp
     ]
 
-  void $ execCli' execConfig
+  stdout <- execCli' execConfig
     [ anyEraToString cEra, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
 
+  txId <- if null stdout
+          then do
+            H.note_ "Expected output of \"transaction submit\" not to be empty"
+            H.failure
+          else pure $ last $ lines stdout
 
   H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
@@ -133,6 +138,12 @@ hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \te
     UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
     txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
     H.assert $ 15_000_003_000_000 `List.elem` txouts2
+
+    -- Check that the transaction output exists, when querying by id:
+    void $ execCli' execConfig
+      [ anyEraToString cEra, "query", "utxo"
+      , "--tx-in", txId <> "#0"
+      ]
 
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v
