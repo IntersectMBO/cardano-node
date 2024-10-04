@@ -564,6 +564,11 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
     ) as $genesis_voltaire
+  |
+    ($genesis_voltaire
+      | .genesis.pparamsOverlays      as $ovls
+      | .genesis.pparamsOverlays      = $ovls + ["voting"]
+    ) as $genesis_voltaire_10
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -1487,7 +1492,7 @@ def all_profile_variants:
     }
 
   ## development profile for voting workload: PV9, Conway costmodel, 1000 DReps injected
-  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $dreps_small *
+  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voltaire_10 * $dreps_small *
     { name: "development-voting"
     }
 
