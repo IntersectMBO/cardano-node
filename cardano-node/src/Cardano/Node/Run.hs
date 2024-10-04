@@ -121,7 +121,7 @@ import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
 import           System.Posix.Types (FileMode)
-#else 
+#else
 import           System.Win32.File
 #endif
 import           Paths_cardano_node (version)
@@ -435,7 +435,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         nt@TopologyP2P.RealNodeTopology
           { ntUseLedgerPeers
           , ntUseBootstrapPeers
-          } <- TopologyP2P.readTopologyFileOrError (startupTracer tracers) nc
+          } <- TopologyP2P.readTopologyFileOrError nc
         let (localRoots, publicRoots) = producerAddresses nt
         traceWith (startupTracer tracers)
                 $ NetworkConfig localRoots
@@ -764,7 +764,7 @@ updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
 updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
                             useBootsrapPeersVar = do
     traceWith startupTracer NetworkConfigUpdate
-    result <- try $ readTopologyFileOrError startupTracer nc
+    result <- try $ readTopologyFileOrError nc
     case result of
       Left (FatalError err) ->
         traceWith startupTracer
