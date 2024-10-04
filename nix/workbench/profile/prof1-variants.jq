@@ -1539,7 +1539,7 @@ def all_profile_variants:
     }
 
   ## development profile for voting workload: PV9, Conway costmodel, 1000 DReps injected
-  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $dreps_small *
+  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $dreps_small *
     { name: "development-voting"
     }
 
