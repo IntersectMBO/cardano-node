@@ -25,8 +25,8 @@ things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
-                Sequence, Split, SplitN, Take)
+        , Generator(Cycle, NtoM, OneOf, Propose, RoundRobin,
+                SecureGenesis, Sequence, Split, SplitN, Take)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
@@ -41,6 +41,9 @@ module Cardano.Benchmarking.Script.Types (
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
+
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Credential as Ledger
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
@@ -178,10 +181,17 @@ data Generator where
   -- Wait, does Anchor actually have the instances?
   -- *** Ping Aniket or Carlos. ***
   Propose :: !String
+          -> !PayMode
           -> !L.Coin
           -- -> !(RewardAccount (L.EraCrypto era))
           -- The RewardAccount is represented by a StakeAddress
-          -> !StakeAddress
+          -- StakeAddress might not be right either; TreasuryWithdrawal
+          -- takes [(Network, StakeCredential, Coin)]
+          --       (StrictMaybe (ScriptHash StandardCrypto))
+          -- -> !StakeAddress
+          -- For the moment, hope SNothing can fly and pass a singleton.
+          -> !L.Network
+          -> !(Ledger.StakeCredential L.StandardCrypto)
           -- -> !(GovAction era)
           -- The GovAction can be recovered from the RewardAccount and
           -- Coin at least if the hash can be computed or omitted as
@@ -192,7 +202,7 @@ data Generator where
           -- from just yet.
           -- *** Check in with Carlos and/or Aniket. ***
           -- Wait, genTxProposal didn't seem to need to use an anchor at all.
-          -- -> !(Url, ByteString)
+          -> !(Ledger.Anchor L.StandardCrypto)
           -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
   -- of a list of transaction series represented by 'Generator' itself,

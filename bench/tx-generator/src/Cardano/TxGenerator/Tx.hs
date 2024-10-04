@@ -203,9 +203,10 @@ genTxProposal :: forall era. ()
   -> TxFee era
   -> (L.ProposalProcedure (ShelleyLedgerEra era), Maybe (ScriptWitness WitCtxStake era))
   -> TxMetadataInEra era
-  -> [Fund]
-  -> [TxOut CtxTx era]
-  -> Either TxGenError (Tx era, TxId)
+  -> TxGenerator era
+  -- -> [Fund]
+  -- -> [TxOut CtxTx era]
+  -- -> Either TxGenError (Tx era, TxId)
 genTxProposal
       sbe
       ledgerParameters
