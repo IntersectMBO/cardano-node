@@ -6,8 +6,10 @@ module Cardano.TxGenerator.Setup.SigningKey
        , parseSigningKeyBase16
        , readDRepKeyFile
        , readSigningKeyFile
+       , readStakeKeyFile
        , PaymentKey
        , SigningKey
+       , StakeKey
        )
        where
 
@@ -43,6 +45,9 @@ readSigningKeyFile f = first ApiError <$> readFileTextEnvelopeAnyOf acceptedType
 
 readDRepKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey DRepKey))
 readDRepKeyFile f = first ApiError <$> readKeyFileTextEnvelope (AsSigningKey AsDRepKey) f
+
+readStakeKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey StakeKey))
+readStakeKeyFile f = first ApiError <$> readKeyFileTextEnvelope (AsSigningKey AsStakeKey) f
 
 acceptedTypes :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
 acceptedTypes =

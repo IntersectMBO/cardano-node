@@ -66,6 +66,8 @@ compileToScript = do
   whenM (fromMaybe False <$> askNixOption _nix_drep_voting) do
     emit $ ReadDRepKeys nc
     logMsg "Importing DRep SigningKeys. Done."
+    emit $ ReadStakeKeys nc
+    logMsg "Importing Stake Keys. Done."
 
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
@@ -123,19 +125,20 @@ splittingPhase srcWallet = do
   splitSteps <- splitSequenceWalletNames srcWallet finalDest $
     unfoldSplitSequence (txParamFee txParams) minValuePerInput (tx_count * inputs_per_tx)
   isPlutus <- isAnyPlutusMode
-  forM_ (init splitSteps) $ createChange txParams False False era
-  createChange txParams True isPlutus era $ last splitSteps
+  forM_ (init splitSteps) $ createChange txParams finalDest False False era
+  createChange txParams finalDest True isPlutus era $ last splitSteps
   return finalDest
  where
-  createChange :: TxGenTxParams -> Bool -> Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
-  createChange txParams isLastStep isPlutus era (src, dst, split) = do
+  createChange :: TxGenTxParams -> DstWallet -> Bool -> Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
+  createChange txParams dstWallet isLastStep isPlutus era (src, dst, split) = do
     logMsg $ Text.pack $ "Splitting step: " ++ show split
     let valuePayMode = PayToAddr (if isLastStep then keyNameSplitPhase else keyNameBenchmarkInputs) dst
     payMode <- if isPlutus then plutusPayMode dst else return valuePayMode
     let generator = case split of
           SplitWithChange lovelace count -> Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
-    emit $ Submit era LocalSocket txParams generator
+        govActGen = Propose dstWallet payMode (L.Coin 1) undefined (undefined {- StakeCredential -}) (undefined {- Anchor -})
+    emit . Submit era LocalSocket txParams $ RoundRobin [generator, govActGen]
     delay
     logMsg "Splitting step: Done"
 

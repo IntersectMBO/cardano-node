@@ -120,6 +120,18 @@ readDRepKeys ncFile = do
       "readDRepKeys: no genesisDirectory could "
         <> "be retrieved from the node config"
 
+-- This should be almost entirely analogous to readDRepKeys.
+readStakeKeys :: FilePath -> ActionM ()
+readStakeKeys ncFile = do
+  genesis <- onNothing throwKeyErr $ getGenesisDirectory <$> liftIOSafe (mkNodeConfig ncFile)
+  ks <- liftIOSafe . Genesis.genesisLoadStakeKeys $ genesis </> "cache-entry"
+  setEnvStakeKeys ks
+  traceDebug $ "Stake SigningKeys loaded: " ++ show (length ks) ++ " from: " ++ genesis
+  where
+    throwKeyErr = liftTxGenError . TxGenError $
+      "readStakeKeys: no genesisDirectory could "
+        <> "be retrieved from the node config"
+
 addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
