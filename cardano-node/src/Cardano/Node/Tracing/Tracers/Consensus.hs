@@ -1013,10 +1013,11 @@ instance (ToJSON txid, ToObject tx) => LogFormatting (TraceTxSubmissionInbound t
       [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
-  forMachine _dtal (TraceTxInboundAddedToMempool txids) =
+  forMachine _dtal (TraceTxInboundAddedToMempool txids duration) =
     mconcat
       [ "kind" .= String "TraceTxInboundAddedToMempool"
       , "txids" .= txids
+      , "duration" .= (realToFrac duration :: Double)
       ]
   forMachine dtal (TraceTxInboundDecision td) =
     mconcat

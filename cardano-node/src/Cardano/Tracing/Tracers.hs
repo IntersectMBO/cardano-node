@@ -761,6 +761,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   tSubmissionsCollected <- STM.newTVarIO 0
   tSubmissionsAccepted <- STM.newTVarIO 0
   tSubmissionsRejected <- STM.newTVarIO 0
+  tSubmissionsMempoolDuration <- STM.newTVarIO 0
   tBlockDelayM <- STM.newTVarIO Pq.empty
   tBlockDelayCDF1s <- STM.newTVarIO $ CdfCounter 0
   tBlockDelayCDF3s <- STM.newTVarIO $ CdfCounter 0
@@ -801,7 +802,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
               TraceLabelPeer _ TraceTxInboundTerminated -> return ()
               TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
               TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
-              TraceLabelPeer _ (TraceTxInboundAddedToMempool _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundAddedToMempool _ duration) -> do
+                traceD trmet meta "submissions.mempool.duration" =<<
+                  STM.modifyReadTVarIO tSubmissionsMempoolDuration (+ (realToFrac duration))
               TraceLabelPeer _ (TraceTxInboundDecision _) -> return ()
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
