@@ -31,9 +31,10 @@ module Cardano.Benchmarking.Script.Env (
         , emptyEnv
         , newEnvConsts
         , runActionMEnv
-        , hoistActionEither
         , liftTxGenError
         , liftIOSafe
+        , hoistActionEither
+        , hoistActionM
         , upgradeTxGenError
         , askIOManager
         , askNixSvcOpts
@@ -92,7 +93,7 @@ import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readT
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.Trans.Except.Extra (hoistEither)
 import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import           Data.Map.Strict (Map)
@@ -179,6 +180,9 @@ upgradeTxGenError = withExceptT Cardano.Benchmarking.Script.Env.TxGenError
 
 hoistActionEither :: Either Cardano.TxGenerator.Types.TxGenError t -> ActionM t
 hoistActionEither = upgradeTxGenError . hoistEither
+
+hoistActionM :: ActionM (Either Cardano.TxGenerator.Types.TxGenError t) -> ActionM t
+hoistActionM act = hoistActionEither =<< act
 
 -- | The safety comes from the invocation of `throwE`
 -- instead of just using the constructor for `ExceptT`

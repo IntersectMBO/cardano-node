@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -30,6 +30,7 @@ module Cardano.Benchmarking.Script.Types (
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
+import qualified Cardano.Ledger.Api as L
 import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.Conway.Governance (GovActionId)
@@ -133,8 +134,7 @@ data Action where
   -- | 'LogMsg' logs its message calling
   -- 'Cardano.Benchmarking.GeneratorTx.traceDebug' i.e. via the tracer.
   LogMsg             :: !Text -> Action
-  deriving (Show, Eq)
-deriving instance Generic Action
+  deriving (Eq, Generic, Show)
 
 deriving instance Eq (SigningKey DRepKey)
 
@@ -187,16 +187,30 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
+  -- 'Vote issues a transaction to vote on a governance action proposal.
+  Vote :: !String
+       -> !PayMode
+       -> !(L.GovActionId L.StandardCrypto)
+       -> !Vote
+       -> !(L.Credential 'L.DRepRole L.StandardCrypto)
+       -> Maybe (Ledger.Url, Text)
+       -> Generator
   -- | 'EmptyStream' will yield an empty stream. For testing only.
   EmptyStream :: Generator
-  deriving (Show, Eq)
-deriving instance Generic Generator
+  deriving (Eq, Generic, Show)
+
+deriving instance Generic Vote
+deriving instance FromJSON Vote
+deriving instance ToJSON Vote
+
+deriving instance FromJSON L.GovActionIx
+
+deriving instance FromJSON (L.GovActionId L.StandardCrypto)
 
 data ProtocolParametersSource where
   QueryLocalNode :: ProtocolParametersSource
   UseLocalProtocolFile :: !FilePath -> ProtocolParametersSource
-  deriving (Show, Eq)
-deriving instance Generic ProtocolParametersSource
+  deriving (Eq, Generic, Show)
 
 type TargetNodes = NonEmpty NodeDescription
 
@@ -206,20 +220,17 @@ data SubmitMode where
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
-  deriving (Show, Eq)
-deriving instance Generic SubmitMode
+  deriving (Eq, Generic, Show)
 
 data PayMode where
   PayToAddr :: !String -> !String -> PayMode
   PayToScript :: !ScriptSpec -> !String -> PayMode
-  deriving (Show, Eq)
-deriving instance Generic PayMode
+  deriving (Eq, Generic, Show)
 
 data ScriptBudget where
   StaticScriptBudget :: !FilePath -> !FilePath -> !ExecutionUnits -> !Bool -> ScriptBudget
   AutoScript :: !FilePath -> !Int -> ScriptBudget
-  deriving (Show, Eq)
-deriving instance Generic ScriptBudget
+  deriving (Eq, Generic, Show)
 
 data ScriptSpec = ScriptSpec
   {
@@ -227,8 +238,7 @@ data ScriptSpec = ScriptSpec
   , scriptSpecBudget :: !ScriptBudget
   , scriptSpecPlutusType :: !TxGenPlutusType
   }
-  deriving (Show, Eq)
-deriving instance Generic ScriptSpec
+  deriving (Eq, Generic, Show)
 
 newtype TxList era = TxList [Tx era]
 

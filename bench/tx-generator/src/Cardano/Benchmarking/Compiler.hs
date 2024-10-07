@@ -7,12 +7,12 @@ module Cardano.Benchmarking.Compiler
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (createAnchor, toShelleyStakeCredential)
+import           Cardano.Api.Shelley (createAnchor)
 
 import           Cardano.Benchmarking.Script.Types
 import qualified Cardano.Ledger.BaseTypes as L
-import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Crypto as L
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
@@ -138,10 +138,11 @@ splittingPhase srcWallet = do
     let valuePayMode = PayToAddr (if isLastStep then keyNameSplitPhase else keyNameBenchmarkInputs) dst
     payMode <- if isPlutus then plutusPayMode dst else return valuePayMode
     let generator = case split of
-          SplitWithChange lovelace count -> Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
+          SplitWithChange lovelace count ->
+            Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
         stakeCredential :: L.StakeCredential L.StandardCrypto
-        stakeCredential = toShelleyStakeCredential undefined
+        stakeCredential = undefined
         anchorUrl :: L.Url
         anchorUrl = undefined `fromMaybe` L.textToUrl 1024 undefined
         -- The anchorData ByteString is usually represented as Text
