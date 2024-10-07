@@ -675,7 +675,7 @@ instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
 
 instance (ToJSON txid, ToObject tx) => Transformable Text IO (TraceTxSubmissionInbound txid tx) where
   trTransformer = trStructured
-instance (Show txid, Show tx) => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
+instance (Show txid) => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
   formatText a _ = pack (show a)
 
 
@@ -1286,12 +1286,11 @@ instance ToObject (AnyMessageAndAgency ps)
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
 instance (ToJSON txid, ToObject tx) => ToObject (TxDecision txid tx) where
-    toObject verb (TxDecision idsToAck idsToReq pipeline txsToReq txsToMempool) =
+    toObject _verb (TxDecision idsToAck idsToReq pipeline txsToReq) =
         mconcat [ "txIdsToAcknowledge" .= getNumTxIdsToAck idsToAck
                 , "txIdsToRequest"     .= getNumTxIdsToReq idsToReq
                 , "pipelineTxIds"      .= pipeline
                 , "txsToRequest"       .= txsToReq
-                , "txsToMempool"       .= toJSON (map (toObject verb) txsToMempool)
                 ]
 
 instance (ToJSON txid, ToObject tx) => ToObject (TraceTxSubmissionInbound txid tx) where
@@ -1305,6 +1304,7 @@ instance (ToJSON txid, ToObject tx) => ToObject (TraceTxSubmissionInbound txid t
       [ "kind" .= String "TxSubmissionProcessed"
       , "accepted" .= toJSON (ptxcAccepted processed)
       , "rejected" .= toJSON (ptxcRejected processed)
+      , "score"    .= toJSON (ptxcScore processed)
       ]
   toObject _verb TraceTxInboundTerminated =
     mconcat
@@ -1320,10 +1320,11 @@ instance (ToJSON txid, ToObject tx) => ToObject (TraceTxSubmissionInbound txid t
       [ "kind" .= String "TxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
-  toObject _verb (TraceTxInboundAddedToMempool txids) =
+  toObject _verb (TraceTxInboundAddedToMempool txids duration) =
     mconcat
       [ "kind" .= String "TxInboundAddedToMempool"
       , "txids" .= txids
+      , "duration" .= (realToFrac duration :: Double)
       ]
   toObject verb (TraceTxInboundDecision td) =
     mconcat
