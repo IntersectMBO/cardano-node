@@ -307,7 +307,7 @@ in
 
       create-testnet-data-args = concatStringsSep " " [
         "--total-supply ${toString genesis.total_supply}"
-        "--utxo-keys 1"
+        "--utxo-keys 2"
         "--genesis-keys ${toString composition.n_bft_hosts}"
         "--delegated-supply ${toString derived.supply_delegated}"
         "--pools ${toString composition.n_pools}"
