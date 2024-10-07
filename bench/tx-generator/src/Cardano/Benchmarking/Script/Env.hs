@@ -32,7 +32,17 @@ module Cardano.Benchmarking.Script.Env (
         , newEnvConsts
         , runActionMEnv
         , liftTxGenError
+        , throwTxGenError
+        , throwApiError
+        , throwProtocolError
+        , throwPlutusError
+        , throwIOError
+        , throwUserError
+        , throwWalletError
         , liftIOSafe
+        , hoistActionEither
+        , upgradeTxGenError
+        , hoistActionM
         , askIOManager
         , askNixSvcOpts
         , askEnvThreads
@@ -65,6 +75,7 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvSummary
 ) where
 
+import qualified Cardano.Api (Error)
 import           Cardano.Api (File (..), DRepKey, SocketPath, StakeKey)
 
 import           Cardano.Benchmarking.GeneratorTx
@@ -85,9 +96,11 @@ import           Prelude
 
 import           Control.Concurrent.STM (STM)
 import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
+import           Control.Exception (IOException)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except.Extra (hoistEither)
 import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import           Data.Map.Strict (Map)
@@ -163,6 +176,38 @@ deriving instance Show Error
 -- | This throws a `TxGenError` in the `ActionM` monad.
 liftTxGenError :: TxGenError -> ActionM a
 liftTxGenError = throwE . Cardano.Benchmarking.Script.Env.TxGenError
+
+throwTxGenError :: String -> ActionM a
+throwTxGenError = liftTxGenError . Cardano.TxGenerator.Types.TxGenError
+
+throwApiError :: Cardano.Api.Error e => e -> ActionM a
+throwApiError = liftTxGenError . Cardano.TxGenerator.Types.ApiError
+
+throwProtocolError :: Cardano.Api.Error e => e -> ActionM a
+throwProtocolError = liftTxGenError . Cardano.TxGenerator.Types.ProtocolError
+
+throwPlutusError :: Show e => e -> ActionM a
+throwPlutusError = liftTxGenError . Cardano.TxGenerator.Types.PlutusError
+
+throwIOError :: IOException -> ActionM a
+throwIOError = liftTxGenError . Cardano.TxGenerator.Types.IOError
+
+throwUserError :: String -> ActionM a
+throwUserError = throwE . Cardano.Benchmarking.Script.Env.UserError
+
+throwWalletError :: String -> ActionM a
+throwWalletError = throwE . Cardano.Benchmarking.Script.Env.WalletError
+
+upgradeTxGenError :: Monad monad
+  => ExceptT Cardano.TxGenerator.Types.TxGenError monad t
+  -> ExceptT Error monad t
+upgradeTxGenError = withExceptT Cardano.Benchmarking.Script.Env.TxGenError
+
+hoistActionEither :: Either Cardano.TxGenerator.Types.TxGenError t -> ActionM t
+hoistActionEither = upgradeTxGenError . hoistEither
+
+hoistActionM :: ActionM (Either Cardano.TxGenerator.Types.TxGenError t) -> ActionM t
+hoistActionM act = hoistActionEither =<< act
 
 -- | The safety comes from the invocation of `throwE`
 -- instead of just using the constructor for `ExceptT`

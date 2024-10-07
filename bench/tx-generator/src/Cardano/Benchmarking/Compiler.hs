@@ -8,18 +8,18 @@ module Cardano.Benchmarking.Compiler
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (createAnchor, toShelleyStakeCredential)
+import           Cardano.Api.Shelley (createAnchor, fromShelleyStakeCredential)
 
 import           Cardano.Benchmarking.Script.Types
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Crypto as L
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
-import           Prelude
+import qualified Prelude ((^))
+import           Prelude hiding ((^))
 
 import           Control.Monad
 import           Control.Monad.Extra
@@ -31,11 +31,15 @@ import           Data.Functor ((<&>))
 import           Data.Maybe
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Numeric.Natural
 
 data CompileError where
   SomeCompilerError :: String -> CompileError
   deriving (Show)
 type Compiler a = RWST NixServiceOptions (DList Action) Int (Except CompileError) a
+
+(^) :: Num number => number -> Natural -> number
+(^) = (Prelude.^)
 
 throwCompileError :: CompileError -> Compiler a
 throwCompileError = lift . throwE
@@ -140,12 +144,13 @@ splittingPhase srcWallet = do
     let valuePayMode = PayToAddr (if isLastStep then keyNameSplitPhase else keyNameBenchmarkInputs) dst
     payMode <- if isPlutus then plutusPayMode dst else return valuePayMode
     let generator = case split of
-          SplitWithChange lovelace count -> Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
+          SplitWithChange lovelace count ->
+            Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
-        stakeCredential :: L.StakeCredential L.StandardCrypto
-        stakeCredential = toShelleyStakeCredential undefined
+        stakeCredential :: GeneratorStakeCredential
+        stakeCredential = GeneratorStakeCredential $ fromShelleyStakeCredential undefined
         anchorUrl :: L.Url
-        anchorUrl = undefined `fromMaybe` L.textToUrl 1024 undefined
+        anchorUrl = undefined `fromMaybe` L.textToUrl (2^10) undefined
         -- The anchorData ByteString is usually represented as Text
         anchorData :: BS.ByteString
         anchorData = undefined

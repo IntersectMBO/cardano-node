@@ -123,6 +123,7 @@ library
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
+                      , constraints
                       , constraints-extras
                       , directory
                       , dlist

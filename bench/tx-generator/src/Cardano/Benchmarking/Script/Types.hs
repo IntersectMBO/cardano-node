@@ -1,14 +1,25 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-error=missing-methods #-}
+{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
+{-# OPTIONS_GHC -Wno-error=unused-top-binds #-}
 
 {-|
 Module      : Cardano.Benchmarking.Script.Types
@@ -26,6 +37,10 @@ things one might do with the connexion.
 module Cardano.Benchmarking.Script.Types (
           Action(..)
         , Generator(..)
+        , GeneratorDRepCredential (..)
+        , GeneratorDRepCredentialBody
+        , GeneratorDRepCredentialConstraints
+        , GeneratorStakeCredential (..)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
@@ -41,8 +56,15 @@ import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
+import qualified Cardano.Crypto.DSIGN as Crypto
+import qualified Cardano.Crypto.Hash as Crypto
+import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Crypto.KES as Crypto
+import qualified Cardano.Crypto.VRF as Crypto
+
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Credential as Ledger
+import qualified Cardano.Ledger.Hashes as Ledger
+import qualified Cardano.Ledger.Keys as Ledger
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
@@ -51,10 +73,16 @@ import           Cardano.TxGenerator.Types
 
 import           Prelude
 
+import           Data.Aeson (FromJSON (..), ToJSON (..))
+import qualified Data.ByteString.Short as SBS (ShortByteString)
+import           Data.Constraint (type (&), Constraint)
 import           Data.Function (on)
+import           Data.Kind (Type)
 import           Data.List.NonEmpty
 import           Data.Text (Text)
+import           Data.Typeable
 import           GHC.Generics
+import           GHC.Show
 
 
 -- FIXME: temporary workaround instance until Action ADT is refactored
@@ -166,7 +194,7 @@ data Generator where
   Propose :: !String
           -> !PayMode
           -> !L.Coin
-          -> !(Ledger.StakeCredential L.StandardCrypto)
+          -> !GeneratorStakeCredential
           -> !(Ledger.Anchor L.StandardCrypto)
           -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
@@ -189,10 +217,103 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
+  -- 'Vote issues a transaction to vote on a governance action proposal.
+  Vote :: !String
+       -> !PayMode
+       -> !Vote
+       -> !GeneratorDRepCredential
+       -> Maybe (Ledger.Url, Text)
+       -> Generator
   -- | 'EmptyStream' will yield an empty stream. For testing only.
   EmptyStream :: Generator
-  deriving (Show, Eq)
+  deriving (Eq, Show)
 deriving instance Generic Generator
+
+deriving instance Generic Vote
+deriving instance FromJSON Vote
+deriving instance ToJSON Vote
+
+newtype GeneratorStakeCredential = GeneratorStakeCredential
+  { unGeneratorStakeCredential :: StakeCredential
+  } deriving (Eq, Show, Generic, ToJSON)
+
+instance FromJSON GeneratorStakeCredential where
+  parseJSON value = do
+    ledgerStakeCredential <- parseJSON value
+    pure . GeneratorStakeCredential $
+      fromShelleyStakeCredential ledgerStakeCredential
+
+type GeneratorDRepCredentialConstraints :: Type -> Constraint
+type GeneratorDRepCredentialConstraints ty =
+  ( (L.Crypto ty)
+  & (Typeable ty)
+  & (Crypto.HashAlgorithm (Crypto.HASH ty))
+  & (Crypto.HashAlgorithm (Crypto.ADDRHASH ty))
+  & (Crypto.DSIGNAlgorithm (Crypto.DSIGN ty))
+  & (Crypto.KESAlgorithm (Crypto.KES ty))
+  & (Crypto.VRFAlgorithm (Crypto.VRF ty))
+  & ((Crypto.ContextDSIGN (Crypto.DSIGN ty)) ~ ())
+  & ((Crypto.ContextKES (Crypto.KES ty)) ~ ())
+  & ((Crypto.ContextVRF (Crypto.VRF ty)) ~ ())
+  )
+
+type GeneratorDRepCredentialBody :: Type -> Type
+type GeneratorDRepCredentialBody c = L.Credential 'L.DRepRole c
+
+-- Somehow dropping the constraints made things build.
+-- forall c . GeneratorDRepCredentialConstraints c =>
+data GeneratorDRepCredential =
+  GeneratorDRepCredential
+    { unGeneratorDRepCredential :: GeneratorDRepCredentialBody L.StandardCrypto }
+
+type GeneratorDRepCredentialKeyHash :: Type -> Type
+type GeneratorDRepCredentialKeyHash c = L.KeyHash 'L.DRepRole c
+
+type GeneratorDRepCredentialScriptHash :: Type -> Type
+type GeneratorDRepCredentialScriptHash c = Ledger.ScriptHash c
+
+instance Eq GeneratorDRepCredential where
+  GeneratorDRepCredential            (leftDRep  :: GeneratorDRepCredentialBody c)
+          == GeneratorDRepCredential (rightDRep :: GeneratorDRepCredentialBody c')
+    | ( L.KeyHashObj (leftObj  :: GeneratorDRepCredentialKeyHash c)
+      , L.KeyHashObj (rightObj :: GeneratorDRepCredentialKeyHash c'))
+              <- (leftDRep, rightDRep)
+    , ( Ledger.KeyHash (leftHash  :: Crypto.Hash Crypto.Blake2b_224 (Crypto.VerKeyDSIGN Crypto.Ed25519DSIGN))
+    ,   Ledger.KeyHash (rightHash :: Crypto.Hash Crypto.Blake2b_224 (Crypto.VerKeyDSIGN Crypto.Ed25519DSIGN)))
+              <- (leftObj, rightObj)
+    , ( Crypto.UnsafeHash (leftBytes  :: SBS.ShortByteString)
+    ,   Crypto.UnsafeHash (rightBytes :: SBS.ShortByteString))
+              <- (leftHash, rightHash)
+    = leftBytes == rightBytes
+    | ( L.ScriptHashObj (leftObj  :: Ledger.ScriptHash Crypto.StandardCrypto)
+      , L.ScriptHashObj (rightObj :: Ledger.ScriptHash Crypto.StandardCrypto))
+              <- (leftDRep, rightDRep)
+    , ( Ledger.ScriptHash (leftHash  :: Crypto.Hash Crypto.Blake2b_224 Ledger.EraIndependentScript)
+    ,   Ledger.ScriptHash (rightHash :: Crypto.Hash Crypto.Blake2b_224 Ledger.EraIndependentScript))
+              <- (leftObj, rightObj)
+    , (Crypto.UnsafeHash (leftBytes :: SBS.ShortByteString), Crypto.UnsafeHash (rightBytes :: SBS.ShortByteString))
+              <- (leftHash, rightHash)
+    = leftBytes == rightBytes
+    | otherwise = False
+
+instance Show GeneratorDRepCredential where
+  showsPrec n GeneratorDRepCredential {..} =
+      header . showSpace . showParen True body where
+    header :: ShowS
+    header =  showString "GeneratorDRepCredential"
+    body   :: ShowS
+    body   =  showsPrec n unGeneratorDRepCredential
+
+instance Generic GeneratorDRepCredential where
+
+instance ToJSON GeneratorDRepCredential where
+  toJSON GeneratorDRepCredential {..} = toJSON unGeneratorDRepCredential
+
+instance FromJSON GeneratorDRepCredential where
+  parseJSON value = do
+    ledgerDRepCredential :: GeneratorDRepCredentialBody L.StandardCrypto
+            <- parseJSON value
+    pure $ GeneratorDRepCredential ledgerDRepCredential
 
 data ProtocolParametersSource where
   QueryLocalNode :: ProtocolParametersSource
