@@ -125,7 +125,6 @@ library
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
-                      , constraints-extras
                       , directory
                       , dlist
                       , extra
@@ -208,7 +207,7 @@ test-suite tx-generator-apitest
                       , cardano-cli
                       , cardano-node
                       , plutus-tx
-                      , transformers
+                      , transformers >= 0.6.0.2
                       , transformers-except
                       , tx-generator
 
