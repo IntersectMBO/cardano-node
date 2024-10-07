@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -26,7 +28,7 @@ things one might do with the connexion.
 module Cardano.Benchmarking.Script.Types (
           Action(..)
         , Generator(Cycle, NtoM, OneOf, Propose, RoundRobin,
-                SecureGenesis, Sequence, Split, SplitN, Take)
+                SecureGenesis, Sequence, Split, SplitN, Take, Vote)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
@@ -44,6 +46,7 @@ import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Credential as Ledger
+import qualified Cardano.Ledger.Keys as Ledger
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
@@ -191,8 +194,19 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
+  -- 'Vote issues a transaction to vote on a governance action proposal.
+  Vote :: !String
+       -> !PayMode
+       -> !Vote
+       -> !(Ledger.Credential 'Ledger.DRepRole L.StandardCrypto)
+       -> Maybe (Ledger.Url, Text)
+       -> Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
+
+deriving instance Generic Vote
+deriving instance FromJSON Vote
+deriving instance ToJSON Vote
 
 data ProtocolParametersSource where
   QueryLocalNode :: ProtocolParametersSource

@@ -20,9 +20,10 @@ where
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (GovernanceAction (..), PlutusScriptOrReferenceInput (..),
-                   Proposal (..), ProtocolParameters, ShelleyLedgerEra,
-                   convertToLedgerProtocolParameters, createProposalProcedure,
-                   fromShelleyStakeCredential, protocolParamMaxTxExUnits, protocolParamPrices)
+                   Proposal (..), ProtocolParameters, ShelleyLedgerEra, Vote (..), Voter (..),
+                   VotingProcedure (..), VotingProcedures (..), convertToLedgerProtocolParameters,
+                   createProposalProcedure, createVotingProcedure, fromShelleyStakeCredential,
+                   protocolParamMaxTxExUnits, protocolParamPrices)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -41,7 +42,9 @@ import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Api as Ledger
 import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -69,6 +72,7 @@ import           Data.Either.Extra (eitherToMaybe)
 import           Data.Functor ((<&>))
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
@@ -421,6 +425,42 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
               stakeCredential' = fromShelleyStakeCredential stakeCredential
               sbe :: ShelleyBasedEra era
               sbe = shelleyBasedEra
+          fundPreview <- liftIO $ walletPreview wallet 0
+          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
+            Right tx -> do
+              let
+                txSize = txSizeInBytes tx
+                txFeeEstimate = eitherToMaybe (toLedgerPParams shelleyBasedEra protocolParameters) <&>
+                  \ledgerPParams ->
+                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) 1 0 0
+              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+        Vote walletName payMode yesOrNo voterCredential anchor -> do
+          wallet <- getEnvWallets walletName
+          (toUTxO, _addressOut) <- interpretPayMode payMode
+          let txGenerator :: TxGenerator era
+              txGenerator = genTxVoting sbe ledgerParameters (TxInsCollateralNone, []) feeInEra (vote, Nothing) TxMetadataNone
+              -- GovActionId { gaidTxId = txId, gaidGovActionIx = GovActionIx 0 }
+              -- unclear
+              fundSource :: FundSource IO
+              fundSource = walletSource wallet 1
+              inToOut = Utils.inputsToOutputsWithFee fee 1
+              sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+              procedure :: VotingProcedure era
+              procedure = createVotingProcedure cbe yesOrNo anchor
+              govActionId :: Ledger.GovActionId (Ledger.EraCrypto era) -- Ledger.StandardCrypto
+              govActionId = undefined
+              voter :: Ledger.Voter (Ledger.EraCrypto era) -- Ledger.StandardCrypto
+              voter = Ledger.DRepVoter voterCredential
+              vote :: VotingProcedures era
+              vote = VotingProcedures . Ledger.VotingProcedures $ Map.fromList [(voter, Map.fromList [(govActionId, unVotingProcedure procedure)])]
+              sbe :: ShelleyBasedEra era
+              sbe = shelleyBasedEra
+              cbe :: ConwayEraOnwards era
+              cbe = conwayBasedEra
           fundPreview <- liftIO $ walletPreview wallet 0
           case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
             Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
