@@ -150,7 +150,12 @@ scenario_exit_trap() {
     echo >&2
     msg "scenario:  $(with_color yellow exit trap triggered)"
     backend stop-all     "$__scenario_exit_trap_dir"
-    backend fetch-logs   "$__scenario_exit_trap_dir"
+    (
+      # This step is resource intensive so we use a lockfile to avoid
+      # running it in parallel to a benchmark.
+      acquire_lock
+      backend fetch-logs   "$__scenario_exit_trap_dir"
+    )
     backend stop-cluster "$__scenario_exit_trap_dir"
     msg "scenario:  $(with_color yellow exit trap finished)"
 }

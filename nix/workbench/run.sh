@@ -572,7 +572,12 @@ EOF
 
         ## 8. deploy genesis
         progress "run | genesis" "deploying.."
-        backend deploy-genesis "$dir"
+        (
+          # This step is resource intensive so we use a lockfile to avoid
+          # running it in parallel to a benchmark.
+          acquire_lock
+          backend deploy-genesis "$dir"
+        )
 
         ## 9. everything needed to start-[tracers|nodes|generator] should be
         ##    ready
@@ -814,7 +819,12 @@ EOF
         local scenario=${scenario_override:-$(jq -r .scenario "$dir"/profile.json)}
         scenario "$scenario" "$dir"
 
-        backend fetch-logs     "$dir"
+        (
+          # This step is resource intensive so we use a lockfile to avoid
+          # running it in parallel to a benchmark.
+          acquire_lock
+          backend fetch-logs     "$dir"
+        )
         backend stop-cluster   "$dir"
 
         run compat-meta-fixups "$run"

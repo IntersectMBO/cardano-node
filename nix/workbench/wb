@@ -219,7 +219,13 @@ start() {
     for ((top_i=0; top_i<iterations; top_i++))
     do newline
        if test -n "$cabal_mode" -a -z "$prebuild_done"
-       then workbench-prebuild-executables
+       then
+            (
+              # This step is resource intensive so we use a lockfile to avoid
+              # running it in parallel to a benchmark.
+              acquire_lock
+              workbench-prebuild-executables
+            )
             prebuild_done=t
        fi
 

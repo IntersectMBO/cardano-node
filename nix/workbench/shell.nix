@@ -129,6 +129,7 @@ in project.shellFor {
     pkgs.moreutils
     pkgs.pstree
     pkgs.time
+    pkgs.util-linux
     workbench-runner.workbench-interactive-start
     workbench-runner.workbench-interactive-stop
     workbench-runner.workbench-interactive-restart

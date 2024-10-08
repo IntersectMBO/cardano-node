@@ -128,10 +128,9 @@ let
       ];
     };
     instanceDbPath = cfg.databasePath i;
-    utxoLmdbParams = ["--v1-lmdb-ledger-db-backend"]
+    utxoLmdbParams = ["--utxos-on-disk"]
       ++ lib.optionals (cfg.lmdbDatabasePath i != null)
-        [ "--ssd-database-dir ${cfg.lmdbDatabasePath i}"
-          # "--ssd-snapshot-tables"
+        [ "--utxos-database-path ${cfg.lmdbDatabasePath i}"
         ];
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"

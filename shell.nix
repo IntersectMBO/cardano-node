@@ -121,6 +121,7 @@ let
       cardanolib-py
       pstree
       pkgs.time
+      pkgs.util-linux
       workbench.workbench
       workbench-runner.workbench-interactive-start
       workbench-runner.workbench-interactive-stop

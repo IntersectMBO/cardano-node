@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+
 to_jsonlist() {
     for x in "$@"
     do echo "\"$x\""
@@ -321,4 +323,20 @@ wait_internal () {
   else
     return 0
   fi
+}
+
+# Function to acquire a lock on a file. This is meant to be called in a
+# subshell, so that the lock is released when the subshell exits. E.g.
+#
+# (
+#   acquire_lock
+#   ...
+# )
+#
+acquire_lock() {
+  WB_LOCKFILE=${WB_LOCKFILE:-/tmp/workbench.lock}
+  info lockfile "$(white "waiting to acquire the lock on ${WB_LOCKFILE}")"
+  exec {lock_fd}>"$WB_LOCKFILE"
+  flock $lock_fd
+  info lockfile "$(green "lock acquired")"
 }

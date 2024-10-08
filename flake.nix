@@ -203,11 +203,11 @@
 
             ## This is a very light profile, no caching&pinning needed.
             workbench-ci-test =
-              workbenchTest { profileName        = "ci-test-hydra-bage";
+              workbenchTest { profileName        = "ci-test-hydra-coay";
                               workbenchStartArgs = [ "--create-testnet-data" ];
                             };
             workbench-ci-test-trace =
-              workbenchTest { profileName        = "ci-test-hydra-bage";
+              workbenchTest { profileName        = "ci-test-hydra-coay";
                               workbenchStartArgs = [ "--create-testnet-data" "--trace" ];
                             };
 
