@@ -396,6 +396,8 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
 
         OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
 
+        EmptyStream -> return mempty
+
   where
     feeInEra = Utils.mkTxFee fee
 

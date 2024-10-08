@@ -70,7 +70,7 @@ data Command
   = Json FilePath
   | JsonHL FilePath (Maybe FilePath) (Maybe FilePath)
   | Compile FilePath
-  | Selftest (Maybe FilePath)
+  | Selftest Bool (Maybe FilePath)          -- True for selftesting the voting workload; specifying an optional file for dumping txns via Show
   | VersionCmd
 
 runCommand :: IO ()
@@ -81,7 +81,7 @@ runCommand' iocp = do
   envConsts <- installSignalHandler
   cmd <- customExecParser
            (prefs showHelpOnEmpty)
-           (info commandParser mempty)
+           (info commandParser fullDesc)
   case cmd of
     Json actionFile -> do
       script <- parseScriptFileAeson actionFile
@@ -105,7 +105,7 @@ runCommand' iocp = do
       case compileOptions o of
         Right script -> BSL.putStr $ prettyPrint script
         Left err -> die $ "tx-generator:Cardano.Command.runCommand Compile: " ++ show err
-    Selftest outFile -> runSelftest emptyEnv envConsts outFile >>= handleError
+    Selftest doVoting outFile -> runSelftest emptyEnv envConsts doVoting outFile >>= handleError
     VersionCmd -> runVersionCommand
   where
   handleError :: Show a => Either a b -> IO ()
@@ -210,14 +210,14 @@ commandParser
        cmdParser "json" jsonCmd "Run a generic benchmarking script."
     <> cmdParser "json_highlevel" jsonHLCmd "Run the tx-generator using a flat config."
     <> cmdParser "compile" compileCmd "Compile flat-options to benchmarking script."
-    <> cmdParser "selftest" selfTestCmd "Run a build-in selftest."
+    <> cmdParser "selftest" selfTestCmd "Run a built-in selftest."
     <> cmdParser "version" versionCmd "Show the tx-generator version"
        )
  where
-  cmdParser cmd parser description = command cmd $ info parser $ progDesc description
+  cmdParser cmd parser description = command cmd $ info (parser <**> helper) $ progDesc description
 
   filePath :: String -> Parser String
-  filePath helpMsg = strArgument (metavar "FILEPATH" <> help helpMsg)
+  filePath helpMsg = strArgument (metavar "FILE" <> completer (bashCompleter "file") <> help helpMsg)
 
   jsonCmd :: Parser Command
   jsonCmd = Json <$> filePath "low-level benchmarking script"
@@ -229,13 +229,16 @@ commandParser
   compileCmd :: Parser Command
   compileCmd = Compile <$> filePath "benchmarking options"
 
-  selfTestCmd = Selftest <$> optional (filePath "output file")
+  selfTestCmd = Selftest
+                  <$> switch (short 'v' <> long "voting" <> help "run voting selftest, not value split (default)")
+                  <*> optional (filePath "output file")
 
   nodeConfigOpt :: Parser (Maybe FilePath)
   nodeConfigOpt = option (Just <$> str)
     ( long "nodeConfig"
       <> short 'n'
-      <> metavar "FILENAME"
+      <> metavar "FILE"
+      <> completer (bashCompleter "file")
       <> value Nothing
       <> help "the node configfile"
     )
