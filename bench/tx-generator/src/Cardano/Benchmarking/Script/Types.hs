@@ -164,6 +164,8 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
+  -- | 'EmptyStream' will yield an empty stream. For testing only.
+  EmptyStream :: Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
 

@@ -280,7 +280,7 @@ newWallet n = do
 -- we assume the hardcoded base16 keys to successfully evaluate to a SigningKey PaymentKey
 parseKey :: BS.ByteString -> SigningKey PaymentKey
 parseKey k
-  = let ~(Right k') = parseSigningKeyBase16 k in k'
+  = let ~(Right k') = parsePaymentKeyBase16 k in k'
 
 keyNameGenesisInputFund :: String
 keyNameGenesisInputFund = "GenesisInputFund"

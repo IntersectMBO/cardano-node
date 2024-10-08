@@ -89,7 +89,7 @@ setProtocolParameters s = case s of
 
 readSigningKey :: String -> SigningKeyFile In -> ActionM ()
 readSigningKey name filePath =
-  setEnvKeys name =<< liftIOSafe (readSigningKeyFile filePath)
+  setEnvKeys name =<< liftIOSafe (readPaymentKeyFile filePath)
 
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys
@@ -356,6 +356,8 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           error "return $ foldr1 Streaming.interleaves gList"
 
         OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+
+        EmptyStream -> return mempty
 
   where
     feeInEra = Utils.mkTxFee fee
