@@ -7,8 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Cardano
-  ( ForkPoint(..)
-  , CardanoTestnetCliOptions(..)
+  ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
   , extraSpoNodeCliArgs
   , TestnetNodeOptions(..)
@@ -76,12 +75,6 @@ testnetMinimumConfigurationRequirements (NumPools n) = withFrozenCallStack $
   when (n < 2) $ do
      H.noteShow_ ("Need at least two nodes to run a cluster, but got: " <> show n)
      H.failure
-
-data ForkPoint
-  = AtVersion Int
-  | AtEpoch Int
-  deriving (Show, Eq, Read)
-
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
