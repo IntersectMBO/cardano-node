@@ -53,12 +53,14 @@ let
           active_slots="$(${jq}/bin/jq --null-input -r    \
             "''${epoch_length} * ''${active_slots_coeff}" \
           )"
+          with_explorer="$(${jq}/bin/jq      .composition.with_explorer  ../profile.json)"
           ${coreutils}/bin/echo "profile.json:"
           ${coreutils}/bin/echo "- network_magic:      ''${network_magic}"
           ${coreutils}/bin/echo "- slot_duration:      ''${slot_duration}"
           ${coreutils}/bin/echo "- epoch_length:       ''${epoch_length}"
           ${coreutils}/bin/echo "- active_slots_coeff: ''${active_slots_coeff}"
           ${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
+          ${coreutils}/bin/echo "- with_explorer:      ''${with_explorer}"
 
           # Fetch all defined node names (Including "explorer" nodes)
           ###########################################################
@@ -149,6 +151,27 @@ let
                 ${coreutils}/bin/sleep 1
               done
               msg "Node "\"''${node}\"" is now synced!"
+
+          ######################################################################
+          ######################################################################
+          if test "''${node}" = "node-0"
+          then
+            ${coreutils}/bin/echo "governance_create_constitution"
+            governance_create_constitution "''${node}"              \
+              "../genesis/cache-entry/utxo-keys/utxo2.vkey"         \
+              "../genesis/cache-entry/utxo-keys/utxo2.skey"
+            ${coreutils}/bin/sleep 60
+            governance_vote_all "''${node}" "''${node#node-}"
+          else
+            while true
+            do
+              governance_vote_all "''${node}" "''${node#node-}"
+              ${coreutils}/bin/sleep 10
+            done
+          fi
+          ######################################################################
+          ######################################################################
+
             done
 
             # This is an "explorer" node (only one node and generator).
@@ -223,7 +246,7 @@ let
               # If the ping fails the whole script must fail!
               ${cardano-cli}/bin/cardano-cli ping \
                 --magic "''${network_magic}"      \
-                --count 3                         \
+                --count 1                         \
                 --json                            \
                 --host "''${host}"                \
                 --port "''${port}"
@@ -934,6 +957,12 @@ let
                 "${coreutils}/bin/echo -e \"$(${coreutils}/bin/date --rfc-3339=seconds): $1\" | ${coreutils}/bin/tee /dev/stderr"
             exit 22
           }
+
+          ######################################################################
+          # Conway/governance functions! #######################################
+          ######################################################################
+
+          ${import ./voting.nix {inherit pkgs profile nodeSpecs;}}
 
           if test -n "''${NOMAD_DEBUG:-}"
           then
