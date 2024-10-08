@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">{- |
+Support for special characters
+
+Gnuplot has no universal Unicode escaping mechanism,
+you can only work with encodings.
+However, not all terminals support all encodings,
+not all terminals even support utf-8.
+Some terminals seem to support only one encoding.
+E.g. WX seems to support only UTF-8,
+X11 seems to support only Latin-1.
+Postscript, SVG, PNG seem to support both UTF-8 and Latin-1.
+
+The @gnuplot@ Haskell bindings
+always write using the system-wide default encoding.
+Thus it is better not to set an encoding other than 'locale' explicitly.
+However, if you write the files yourself in a certain encoding
+you should use the @encoding@ option of the according terminal.
+-}</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.Gnuplot.Encoding</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Private.Encoding.html#T"><span class="hs-identifier">T</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#locale"><span class="hs-identifier">locale</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#deflt"><span class="hs-identifier">deflt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_1"><span class="hs-identifier">iso_8859_1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_15"><span class="hs-identifier">iso_8859_15</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_2"><span class="hs-identifier">iso_8859_2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_9"><span class="hs-identifier">iso_8859_9</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#koi8r"><span class="hs-identifier">koi8r</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#koi8u"><span class="hs-identifier">koi8u</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp437"><span class="hs-identifier">cp437</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp850"><span class="hs-identifier">cp850</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp852"><span class="hs-identifier">cp852</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp950"><span class="hs-identifier">cp950</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp1250"><span class="hs-identifier">cp1250</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp1251"><span class="hs-identifier">cp1251</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp1254"><span class="hs-identifier">cp1254</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#sjis"><span class="hs-identifier">sjis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#utf8"><span class="hs-identifier">utf8</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.Encoding.html"><span class="hs-identifier">Graphics.Gnuplot.Private.Encoding</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Private.Encoding.html#T"><span class="hs-identifier">T</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier">Cons</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#locale"><span class="hs-identifier hs-type">locale</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#deflt"><span class="hs-identifier hs-type">deflt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_1"><span class="hs-identifier hs-type">iso_8859_1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_15"><span class="hs-identifier hs-type">iso_8859_15</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_2"><span class="hs-identifier hs-type">iso_8859_2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#iso_8859_9"><span class="hs-identifier hs-type">iso_8859_9</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#koi8r"><span class="hs-identifier hs-type">koi8r</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#koi8u"><span class="hs-identifier hs-type">koi8u</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp437"><span class="hs-identifier hs-type">cp437</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp850"><span class="hs-identifier hs-type">cp850</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp852"><span class="hs-identifier hs-type">cp852</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp950"><span class="hs-identifier hs-type">cp950</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp1250"><span class="hs-identifier hs-type">cp1250</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp1251"><span class="hs-identifier hs-type">cp1251</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#cp1254"><span class="hs-identifier hs-type">cp1254</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#sjis"><span class="hs-identifier hs-type">sjis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Encoding.html#utf8"><span class="hs-identifier hs-type">utf8</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.Encoding.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span id="locale"><span class="annot"><span class="annottext">locale :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#locale"><span class="hs-identifier hs-var hs-var">locale</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;locale&quot;</span></span><span>
+</span><span id="line-38"></span><span id="deflt"><span class="annot"><span class="annottext">deflt :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#deflt"><span class="hs-identifier hs-var hs-var">deflt</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;default&quot;</span></span><span>
+</span><span id="line-39"></span><span id="iso_8859_1"><span class="annot"><span class="annottext">iso_8859_1 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#iso_8859_1"><span class="hs-identifier hs-var hs-var">iso_8859_1</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;iso_8859_1&quot;</span></span><span>
+</span><span id="line-40"></span><span id="iso_8859_15"><span class="annot"><span class="annottext">iso_8859_15 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#iso_8859_15"><span class="hs-identifier hs-var hs-var">iso_8859_15</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;iso_8859_15&quot;</span></span><span>
+</span><span id="line-41"></span><span id="iso_8859_2"><span class="annot"><span class="annottext">iso_8859_2 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#iso_8859_2"><span class="hs-identifier hs-var hs-var">iso_8859_2</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;iso_8859_2&quot;</span></span><span>
+</span><span id="line-42"></span><span id="iso_8859_9"><span class="annot"><span class="annottext">iso_8859_9 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#iso_8859_9"><span class="hs-identifier hs-var hs-var">iso_8859_9</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;iso_8859_9&quot;</span></span><span>
+</span><span id="line-43"></span><span id="koi8r"><span class="annot"><span class="annottext">koi8r :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#koi8r"><span class="hs-identifier hs-var hs-var">koi8r</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;koi8r&quot;</span></span><span>
+</span><span id="line-44"></span><span id="koi8u"><span class="annot"><span class="annottext">koi8u :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#koi8u"><span class="hs-identifier hs-var hs-var">koi8u</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;koi8u&quot;</span></span><span>
+</span><span id="line-45"></span><span id="cp437"><span class="annot"><span class="annottext">cp437 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#cp437"><span class="hs-identifier hs-var hs-var">cp437</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cp437&quot;</span></span><span>
+</span><span id="line-46"></span><span id="cp850"><span class="annot"><span class="annottext">cp850 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#cp850"><span class="hs-identifier hs-var hs-var">cp850</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cp850&quot;</span></span><span>
+</span><span id="line-47"></span><span id="cp852"><span class="annot"><span class="annottext">cp852 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#cp852"><span class="hs-identifier hs-var hs-var">cp852</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cp852&quot;</span></span><span>
+</span><span id="line-48"></span><span id="cp950"><span class="annot"><span class="annottext">cp950 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#cp950"><span class="hs-identifier hs-var hs-var">cp950</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cp950&quot;</span></span><span>
+</span><span id="line-49"></span><span id="cp1250"><span class="annot"><span class="annottext">cp1250 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#cp1250"><span class="hs-identifier hs-var hs-var">cp1250</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cp1250&quot;</span></span><span>
+</span><span id="line-50"></span><span id="cp1251"><span class="annot"><span class="annottext">cp1251 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#cp1251"><span class="hs-identifier hs-var hs-var">cp1251</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cp1251&quot;</span></span><span>
+</span><span id="line-51"></span><span id="cp1254"><span class="annot"><span class="annottext">cp1254 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#cp1254"><span class="hs-identifier hs-var hs-var">cp1254</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cp1254&quot;</span></span><span>
+</span><span id="line-52"></span><span id="sjis"><span class="annot"><span class="annottext">sjis :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#sjis"><span class="hs-identifier hs-var hs-var">sjis</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;sjis&quot;</span></span><span>
+</span><span id="line-53"></span><span id="utf8"><span class="annot"><span class="annottext">utf8 :: T
+</span><a href="Graphics.Gnuplot.Encoding.html#utf8"><span class="hs-identifier hs-var hs-var">utf8</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.Encoding.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;utf8&quot;</span></span><span>
+</span><span id="line-54"></span></pre></body></html>
