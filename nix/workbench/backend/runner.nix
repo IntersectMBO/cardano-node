@@ -117,6 +117,7 @@ in
               moreutils
               nix
               pstree
+              pkgs.util-linux
               workbench
               zstd
             ]
