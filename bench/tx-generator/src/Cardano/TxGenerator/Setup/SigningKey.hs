@@ -2,7 +2,8 @@
 
 -- | This module provides convenience functions when dealing with signing keys.
 module Cardano.TxGenerator.Setup.SigningKey
-       ( parseSigningKeyTE
+       ( parseDRepKeyBase16
+       , parseSigningKeyTE
        , parseSigningKeyBase16
        , readDRepKeyFile
        , readSigningKeyFile
@@ -36,6 +37,19 @@ parseSigningKeyBase16 k
           teType = "PaymentSigningKeyShelley_ed25519"
         , teDescription = "Payment Signing Key"
         , teRawCBOR = addr
+        }
+
+parseDRepKeyBase16 ::  BS.ByteString -> Either TxGenError (SigningKey DRepKey)
+parseDRepKeyBase16 k
+  = either
+    (const $ Left $ TxGenError "parseSigningKeyBase16: ill-formed base16 encoding")
+    (first ApiError . deserialiseFromTextEnvelope (AsSigningKey AsDRepKey) . asTE)
+    (Base16.decode k)
+  where
+    asTE k' = TextEnvelope {
+          teType = TextEnvelopeType "DRepSigningKey_ed25519"
+        , teDescription = "Delegated Representative Signing Key"
+        , teRawCBOR = k'
         }
 
 readSigningKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey PaymentKey))
