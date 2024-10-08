@@ -25,8 +25,7 @@ things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
-                Sequence, Split, SplitN, Take)
+        , Generator(..)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
@@ -90,6 +89,11 @@ data Action where
   -- drops it into a state variable via
   -- 'Cardano.Benchmarking.Script.Env.setEnvKeys'.
   ReadSigningKey     :: !String -> !(SigningKeyFile In) -> Action
+  -- | 'ReadDRepKeys' expects the path to a node config file. This
+  -- configuration is supposed to refer to a genesis which has
+  -- been created with cardano-cli create-testnet-data, and from
+  -- where DRep signing keys can be loaded.
+  ReadDRepKeys       :: !FilePath -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
   -- | 'AddFund' is mostly a wrapper around
@@ -169,6 +173,8 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
+  -- | 'EmptyStream' will yield an empty stream. For testing only.
+  EmptyStream :: Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
 

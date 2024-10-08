@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 module Cardano.Benchmarking.TpsThrottle
 where
 

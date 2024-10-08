@@ -85,7 +85,7 @@ main
       ncFile <- hoistMaybe (TxGenError "nodeConfigFile not specified") $
         getNodeConfigFile nixService
       nc :: NodeConfiguration <-
-        hoistEither =<< handleIOExceptT (TxGenError . show) (mkNodeConfig ncFile)
+        hoistEither =<< handleIOExceptT IOError (mkNodeConfig ncFile)
 
       GenesisFile sgFile <- hoistMaybe (TxGenError "npcShelleyGenesisFile not specified") $
         getGenesisPath nc
@@ -95,20 +95,22 @@ main
         genesisValidate genesis
 
       sigKey :: SigningKey PaymentKey <-
-        hoistEither =<< handleIOExceptT (TxGenError . show) (readSigningKeyFile $ _nix_sigKey nixService)
+        hoistEither =<< handleIOExceptT IOError (readSigningKeyFile $ _nix_sigKey nixService)
 
       pure (nixService, nc, genesis, sigKey)
 
     case setup of
       Left err -> die (show err)
-      Right (nixService, _nc, genesis, sigKey) -> do
+      Right (nixService, nc, genesis, sigKey) -> do
         putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ checkFund nixService genesis sigKey
-        putStrLn "* Can I pre-execute a plutus script?"
         let plutus = _nix_plutus nixService
         case plutusType <$> plutus of
           Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath
-          Just{}                    -> checkPlutusLoop protoParamPath plutus
-          Nothing                   -> putStrLn "--> no Plutus configuration found - skipping"
+          Just{}                    -> putStrLn "* Can I pre-execute the plutus script?" >> checkPlutusLoop protoParamPath plutus
+          Nothing
+            | _nix_drep_voting nixService == Just True
+                                    -> checkLoadDReps nc
+            | otherwise             -> putStrLn "--> no runnable test configuration found - skipping"
         exitSuccess
 
 -- The type annotations within patterns or expressions that would be
@@ -267,6 +269,13 @@ checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
 checkPlutusLoop _ _
   = putStrLn "--> No plutus script defined."
 
+
+checkLoadDReps :: NodeConfiguration -> IO ()
+checkLoadDReps nc = case getGenesisDirectory nc of
+  Nothing -> putStrLn "--> getGenesisDirectory: no directory could be retrieved from NodeConfiguration"
+  Just d  -> genesisLoadDRepKeys (d </> "cache-entry") >>= \case
+    Right keys -> putStrLn $ "--> successfully loaded " ++ show (length keys) ++ " DRep SigningKeys"
+    Left err   -> error    $ "--> error loading DRep keys: " ++ show err
 
 --
 -- helpers
