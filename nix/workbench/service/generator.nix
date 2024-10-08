@@ -129,6 +129,24 @@ let
         value = ''
           #!${pkgs.stdenv.shell}
 
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+          ${import ./voting.nix {inherit pkgs profile nodeSpecs;}}
+          ${pkgs.coreutils}/bin/echo "governance_funds_producers ........"
+          governance_funds_producers                                              \
+            ${if profile.composition.with_explorer then "explorer" else "node-0"} \
+            "../genesis/cache-entry/utxo-keys/utxo2.vkey"                         \
+            "../genesis/cache-entry/utxo-keys/utxo2.skey"
+          ${pkgs.coreutils}/bin/echo "governance_create_constitution  ..."
+          governance_create_constitution                                          \
+            ${if profile.composition.with_explorer then "explorer" else "node-0"} \
+            "../genesis/cache-entry/utxo-keys/utxo2.vkey"                         \
+            "../genesis/cache-entry/utxo-keys/utxo2.skey"
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+
           ${service.script}
           '';
         JSON = pkgs.writeScript "startup-generator.sh" value;
