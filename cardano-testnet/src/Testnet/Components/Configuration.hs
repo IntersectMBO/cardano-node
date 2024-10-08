@@ -182,8 +182,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply
     , "--spec-conway",  inputGenesisConwayFp
     , "--testnet-magic", show testnetMagic
     , "--pools", show numPoolNodes
-    , "--total-supply",     show maxSupply
-    , "--delegated-supply", show (maxSupply `div` 2) -- Required until https://github.com/IntersectMBO/cardano-cli/pull/874 is integrated
+    , "--total-supply",     show maxSupply -- Half of this will be delegated, see https://github.com/IntersectMBO/cardano-cli/pull/874
     , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
     , "--drep-keys", show numDelReps
