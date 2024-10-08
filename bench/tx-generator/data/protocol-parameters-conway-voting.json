@@ -610,7 +610,7 @@
             1
         ]
     },
-    "decentralization": null,
+    "decentralization": 0,
     "executionUnitPrices": {
         "priceMemory": 5.77e-2,
         "priceSteps": 7.21e-5
@@ -630,7 +630,7 @@
     "maxTxSize": 16384,
     "maxValueSize": 5000,
     "minPoolCost": 340000000,
-    "minUTxOValue": null,
+    "minUTxOValue": 4310,
     "monetaryExpansion": 3.0e-3,
     "poolPledgeInfluence": 0.3,
     "poolRetireMaxEpoch": 18,

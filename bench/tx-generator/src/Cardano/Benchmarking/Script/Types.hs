@@ -25,8 +25,7 @@ things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
-                Sequence, Split, SplitN, Take)
+        , Generator(..)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
@@ -174,6 +173,8 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
+  -- | 'EmptyStream' will yield an empty stream. For testing only.
+  EmptyStream :: Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
 
