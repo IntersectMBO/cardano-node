@@ -675,7 +675,7 @@ instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
 
 instance (ToJSON txid, ToObject tx) => Transformable Text IO (TraceTxSubmissionInbound txid tx) where
   trTransformer = trStructured
-instance (Show txid) => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
+instance (Show txid, Show tx) => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
   formatText a _ = pack (show a)
 
 
@@ -1286,11 +1286,12 @@ instance ToObject (AnyMessageAndAgency ps)
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
 instance (ToJSON txid, ToObject tx) => ToObject (TxDecision txid tx) where
-    toObject _verb (TxDecision idsToAck idsToReq pipeline txsToReq) =
+    toObject verb (TxDecision idsToAck idsToReq pipeline txsToReq txsToMempool) =
         mconcat [ "txIdsToAcknowledge" .= getNumTxIdsToAck idsToAck
                 , "txIdsToRequest"     .= getNumTxIdsToReq idsToReq
                 , "pipelineTxIds"      .= pipeline
                 , "txsToRequest"       .= txsToReq
+                , "txsToMempool"       .= toJSON (map (toObject verb) txsToMempool)
                 ]
 
 instance (ToJSON txid, ToObject tx) => ToObject (TraceTxSubmissionInbound txid tx) where
