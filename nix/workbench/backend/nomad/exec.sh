@@ -221,6 +221,13 @@ deploy-genesis-nomadexec() {
     msg "$(blue Reusing) already running local $(yellow "HTTP server")"
   fi
   msg "$(blue Creating) $(yellow "\"${nomad_job_name}.tar.zst\"") ..."
+################################################################################
+################################################################################
+################################################################################
+  cp /tmp/guardrails-script.plutus "$dir"/genesis/guardrails-script.plutus
+################################################################################
+################################################################################
+################################################################################
   if ! wb_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
   then
     if test "${nomad_agents_were_already_running}" = "false"
