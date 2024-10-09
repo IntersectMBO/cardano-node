@@ -40,7 +40,6 @@ import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
 import qualified Data.List as L
-import           Data.Maybe
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
 import           Data.Time.Clock (NominalDiffTime)
@@ -185,6 +184,10 @@ cardanoTestnet
       startTime = sgSystemStart shelleyGenesis
       testnetMagic = fromIntegral $ sgNetworkMagic shelleyGenesis
       numPoolNodes = length $ cardanoNodes testnetOptions
+      -- TODO @smelc Honor the @Maybe NodeConfigurationYaml@ part of 'nodesTuning'
+      -- This can be done once we use @check-node-configuration --fix@ (see https://github.com/IntersectMBO/cardano-cli/pull/923)
+      -- to augment the configuration file automatically
+      nodesTuning = cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
   AnyShelleyBasedEra sbe <- pure asbe
@@ -194,201 +197,192 @@ cardanoTestnet
 
   H.note_ OS.os
 
-  if all isJust [mconfig | TestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
-  then
-    -- TODO: We need a very simple non-obscure way of generating the files necessary
-    -- to run a testnet. "create-staked" is not a good way to do this especially because it
-    -- makes assumptions about where things should go and where genesis template files should be.
-    -- See all of the ad hoc file creation/renaming/dir creation etc below.
-    H.failMessage GHC.callStack "Specifying node configuration files per node not supported yet."
-  else do
-    H.lbsWriteFile (tmpAbsPath </> "byron.genesis.spec.json")
-      . encode $ Defaults.defaultByronProtocolParamsJsonValue
+  H.lbsWriteFile (tmpAbsPath </> "byron.genesis.spec.json")
+    . encode $ Defaults.defaultByronProtocolParamsJsonValue
 
-    -- Because in Conway the overlay schedule and decentralization parameter
-    -- are deprecated, we must use the "create-staked" cli command to create
-    -- SPOs in the ShelleyGenesis
-    Byron.createByronGenesis
-      testnetMagic
-      startTime
-      Byron.byronDefaultGenesisOptions
-      (tmpAbsPath </> "byron.genesis.spec.json")
-      (tmpAbsPath </> "byron-gen-command")
+  -- Because in Conway the overlay schedule and decentralization parameter
+  -- are deprecated, we must use the "create-staked" cli command to create
+  -- SPOs in the ShelleyGenesis
+  Byron.createByronGenesis
+    testnetMagic
+    startTime
+    Byron.byronDefaultGenesisOptions
+    (tmpAbsPath </> "byron.genesis.spec.json")
+    (tmpAbsPath </> "byron-gen-command")
 
-    -- Write specification files. Those are the same as the genesis files
-    -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
-    -- They are used by benchmarking: as templates to CLI commands,
-    -- as evidence of what was run, and as cache keys.
-    writeGenesisSpecFile "alonzo" alonzoGenesis
-    writeGenesisSpecFile "conway" conwayGenesis
+  -- Write specification files. Those are the same as the genesis files
+  -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
+  -- They are used by benchmarking: as templates to CLI commands,
+  -- as evidence of what was run, and as cache keys.
+  writeGenesisSpecFile "alonzo" alonzoGenesis
+  writeGenesisSpecFile "conway" conwayGenesis
 
-    configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
+  _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
-    _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+  -- TODO: This should come from the configuration!
+  let poolKeyDir :: Int -> FilePath
+      poolKeyDir i = "pools-keys" </> mkNodeName i
+      mkNodeName :: Int -> String
+      mkNodeName i = "pool" <> show i
 
-    -- TODO: This should come from the configuration!
-    let poolKeyDir :: Int -> FilePath
-        poolKeyDir i = "pools-keys" </> mkNodeName i
-        mkNodeName :: Int -> String
-        mkNodeName i = "pool" <> show i
+  poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
+    -- TODO: use Testnet.Defaults.defaultSpoKeys here
+    PoolNodeKeys
+      { poolNodeKeysCold =
+        KeyPair
+          { verificationKey = File $ tmpAbsPath </> poolKeyDir n </> "cold.vkey"
+          , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "cold.skey"
+          }
+      , poolNodeKeysVrf =
+        KeyPair
+          { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.vkey"
+          , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.skey"
+          }
+      , poolNodeKeysStaking =
+        KeyPair
+          { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.vkey"
+          , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.skey"
+          }
+      }
 
-    poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
-      -- TODO: use Testnet.Defaults.defaultSpoKeys here
-      PoolNodeKeys
-        { poolNodeKeysCold =
-          KeyPair
-            { verificationKey = File $ tmpAbsPath </> poolKeyDir n </> "cold.vkey"
-            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "cold.skey"
+  let makeUTxOVKeyFp :: Int -> FilePath
+      makeUTxOVKeyFp n = tmpAbsPath </> "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
+
+      makeUTxOSkeyFp :: Int -> FilePath
+      makeUTxOSkeyFp n = tmpAbsPath </> "utxo-keys" </> "utxo" <> show n </> "utxo.skey"
+
+  wallets <- forM [1..3] $ \idx -> do
+    let paymentSKeyFile = makeUTxOSkeyFp idx
+    let paymentVKeyFile = makeUTxOVKeyFp idx
+    let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
+
+    execCli_
+      [ "address", "build"
+      , "--payment-verification-key-file", makeUTxOVKeyFp idx
+      , "--testnet-magic", show testnetMagic
+      , "--out-file", paymentAddrFile
+      ]
+
+    paymentAddr <- H.readFile paymentAddrFile
+
+    pure $ PaymentKeyInfo
+      { paymentKeyInfoPair = KeyPair
+        { signingKey = File paymentSKeyFile
+        , verificationKey = File paymentVKeyFile
+        }
+      , paymentKeyInfoAddr = Text.pack paymentAddr
+      }
+
+  _delegators <- forM [1..3] $ \(idx :: Int) -> do
+    pure $ Delegator
+      { paymentKeyPair = KeyPair
+        { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".skey"
+        , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".vkey"
+        }
+      , stakingKeyPair = KeyPair
+        { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".skey"
+        , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
+        }
+      }
+
+  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+  config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+
+  configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
+  H.evalIO $ LBS.writeFile (unFile configurationFile) config
+
+  portNumbers <- replicateM numPoolNodes $ H.randomPort testnetDefaultIpv4Address
+  -- Byron related
+  forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
+    let iStr = printf "%03d" (i - 1)
+    H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
+    H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
+    H.writeFile (tmpAbsPath </> poolKeyDir i </> "port") (show portNumber)
+
+  -- Make topology files
+  forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do
+    let producers = flip map (filter (/= myPortNumber) portNumbers) $ \otherProducerPort ->
+          RemoteAddress
+            { raAddress = showIpv4Address testnetDefaultIpv4Address
+            , raPort = otherProducerPort
+            , raValency = 1
             }
-        , poolNodeKeysVrf =
-          KeyPair
-            { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.vkey"
-            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.skey"
-            }
-        , poolNodeKeysStaking =
-          KeyPair
-            { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.vkey"
-            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.skey"
-            }
+
+    H.lbsWriteFile (tmpAbsPath </> poolKeyDir i </> "topology.json") . encode $
+      RealNodeTopology producers
+
+  let nodesData = L.zip4 [1..] poolKeys portNumbers (map (\(TestnetNodeOptions _ cfg) -> cfg) nodesTuning)
+  ePoolNodes <- H.forConcurrently nodesData $ \(i, key, port, cmdArgs) -> do
+    let nodeName = mkNodeName i
+        keyDir = tmpAbsPath </> poolKeyDir i
+    H.note_ $ "Node name: " <> nodeName
+    eRuntime <- runExceptT . retryOnAddressInUseError $
+      startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic $
+        [ "run"
+        , "--config", unFile configurationFile
+        , "--topology", keyDir </> "topology.json"
+        , "--database-path", keyDir </> "db"
+        , "--shelley-kes-key", keyDir </> "kes.skey"
+        , "--shelley-vrf-key", keyDir </> "vrf.skey"
+        , "--byron-delegation-certificate", keyDir </> "byron-delegation.cert"
+        , "--byron-signing-key", keyDir </> "byron-delegate.key"
+        , "--shelley-operational-certificate", keyDir </> "opcert.cert"
+        ] ++ cmdArgs
+    pure $ flip PoolNode key <$> eRuntime
+
+  let (failedNodes, poolNodes) = partitionEithers ePoolNodes
+  unless (null failedNodes) $ do
+    H.noteShow_ . vsep $ prettyError <$> failedNodes
+    H.failure
+
+  H.annotateShow $ nodeSprocket . poolRuntime <$> poolNodes
+
+  -- FIXME: use foldEpochState waiting for chain extensions
+  now <- H.noteShowIO DTC.getCurrentTime
+  deadline <- H.noteShow $ DTC.addUTCTime 45 now
+  forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
+    assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
+
+  H.noteShowIO_ DTC.getCurrentTime
+
+  forM_ wallets $ \wallet -> do
+    H.cat . signingKeyFp $ paymentKeyInfoPair wallet
+    H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
+
+  let runtime = TestnetRuntime
+        { configurationFile
+        , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
+        , testnetMagic
+        , poolNodes
+        , wallets
+        , delegators = []
         }
 
-    let makeUTxOVKeyFp :: Int -> FilePath
-        makeUTxOVKeyFp n = tmpAbsPath </> "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
+  let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
-        makeUTxOSkeyFp :: Int -> FilePath
-        makeUTxOSkeyFp n = tmpAbsPath </> "utxo-keys" </> "utxo" <> show n </> "utxo.skey"
+  node1sprocket <- H.headM $ poolSprockets runtime
+  execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
-    wallets <- forM [1..3] $ \idx -> do
-      let paymentSKeyFile = makeUTxOSkeyFp idx
-      let paymentVKeyFile = makeUTxOVKeyFp idx
-      let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
+  forM_ wallets $ \wallet -> do
+    H.cat . signingKeyFp $ paymentKeyInfoPair wallet
+    H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
-      execCli_
-        [ "address", "build"
-        , "--payment-verification-key-file", makeUTxOVKeyFp idx
-        , "--testnet-magic", show testnetMagic
-        , "--out-file", paymentAddrFile
-        ]
+    utxos <- execCli' execConfig
+      [ "query", "utxo"
+      , "--address", Text.unpack $ paymentKeyInfoAddr wallet
+      , "--cardano-mode"
+      ]
 
-      paymentAddr <- H.readFile paymentAddrFile
+    H.note_ utxos
 
-      pure $ PaymentKeyInfo
-        { paymentKeyInfoPair = KeyPair
-          { signingKey = File paymentSKeyFile
-          , verificationKey = File paymentVKeyFile
-          }
-        , paymentKeyInfoAddr = Text.pack paymentAddr
-        }
+  stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
-    _delegators <- forM [1..3] $ \(idx :: Int) -> do
-      pure $ Delegator
-        { paymentKeyPair = KeyPair
-          { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".skey"
-          , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".vkey"
-          }
-        , stakingKeyPair = KeyPair
-          { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".skey"
-          , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
-          }
-        }
+  assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
-    -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+  when newEpochStateLogging $
+    TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
 
-    H.evalIO $ LBS.writeFile (unFile configurationFile) config
-
-    portNumbers <- replicateM numPoolNodes $ H.randomPort testnetDefaultIpv4Address
-    -- Byron related
-    forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
-      let iStr = printf "%03d" (i - 1)
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
-      H.writeFile (tmpAbsPath </> poolKeyDir i </> "port") (show portNumber)
-
-    -- Make topology files
-    forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do
-      let producers = flip map (filter (/= myPortNumber) portNumbers) $ \otherProducerPort ->
-            RemoteAddress
-              { raAddress = showIpv4Address testnetDefaultIpv4Address
-              , raPort = otherProducerPort
-              , raValency = 1
-              }
-
-      H.lbsWriteFile (tmpAbsPath </> poolKeyDir i </> "topology.json") . encode $
-        RealNodeTopology producers
-
-    let keysWithPorts = L.zip3 [1..] poolKeys portNumbers
-    ePoolNodes <- H.forConcurrently keysWithPorts $ \(i, key, port) -> do
-      let nodeName = mkNodeName i
-          keyDir = tmpAbsPath </> poolKeyDir i
-      H.note_ $ "Node name: " <> nodeName
-      eRuntime <- runExceptT . retryOnAddressInUseError $
-        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic
-          [ "run"
-          , "--config", unFile configurationFile
-          , "--topology", keyDir </> "topology.json"
-          , "--database-path", keyDir </> "db"
-          , "--shelley-kes-key", keyDir </> "kes.skey"
-          , "--shelley-vrf-key", keyDir </> "vrf.skey"
-          , "--byron-delegation-certificate", keyDir </> "byron-delegation.cert"
-          , "--byron-signing-key", keyDir </> "byron-delegate.key"
-          , "--shelley-operational-certificate", keyDir </> "opcert.cert"
-          ]
-      pure $ flip PoolNode key <$> eRuntime
-
-    let (failedNodes, poolNodes) = partitionEithers ePoolNodes
-    unless (null failedNodes) $ do
-      H.noteShow_ . vsep $ prettyError <$> failedNodes
-      H.failure
-
-    H.annotateShow $ nodeSprocket . poolRuntime <$> poolNodes
-
-    -- FIXME: use foldEpochState waiting for chain extensions
-    now <- H.noteShowIO DTC.getCurrentTime
-    deadline <- H.noteShow $ DTC.addUTCTime 45 now
-    forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
-      assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
-
-    H.noteShowIO_ DTC.getCurrentTime
-
-    forM_ wallets $ \wallet -> do
-      H.cat . signingKeyFp $ paymentKeyInfoPair wallet
-      H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
-
-    let runtime = TestnetRuntime
-          { configurationFile
-          , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
-          , testnetMagic
-          , poolNodes
-          , wallets
-          , delegators = []
-          }
-
-    let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
-
-    node1sprocket <- H.headM $ poolSprockets runtime
-    execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
-
-    forM_ wallets $ \wallet -> do
-      H.cat . signingKeyFp $ paymentKeyInfoPair wallet
-      H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
-
-      utxos <- execCli' execConfig
-        [ "query", "utxo"
-        , "--address", Text.unpack $ paymentKeyInfoAddr wallet
-        , "--cardano-mode"
-        ]
-
-      H.note_ utxos
-
-    stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
-
-    assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
-
-    when newEpochStateLogging $
-      TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
-
-    pure runtime
+  pure runtime
   where
     writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => String -> a -> m ()
     writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do

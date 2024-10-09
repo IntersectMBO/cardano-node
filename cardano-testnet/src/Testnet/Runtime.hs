@@ -114,7 +114,8 @@ startNode
   -> Int
   -- ^ Testnet magic
   -> [String]
-  -- ^ The command --socket-path will be added automatically.
+  -- ^ The command to execute to start the node.
+  -- @--socket-path@, @--port@, and @--host-addr@ gets added automatically.
   -> ExceptT NodeStartFailure m NodeRuntime
 startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
