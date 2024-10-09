@@ -11,7 +11,6 @@ module Testnet.Start.Types
   , eraToString
 
   , TestnetNodeOptions(..)
-  , extraSpoNodeCliArgs
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
 
@@ -98,10 +97,6 @@ data TestnetNodeOptions
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   deriving (Eq, Show)
-
-extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
-extraSpoNodeCliArgs (TestnetNodeOptions _ args) = args
-
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =

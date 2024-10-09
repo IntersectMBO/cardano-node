@@ -73,29 +73,6 @@ pNumSpoNodes =
      <>  OA.value (cardanoNodes def)
      )
 
-_pSpo :: Parser TestnetNodeOptions
-_pSpo =
-  TestnetNodeOptions . Just
-    <$> parseNodeConfigFile
-    <*> pure [] -- TODO: Consider adding support for extra args
-
-parseNodeConfigFile :: Parser NodeConfigurationYaml
-parseNodeConfigFile = NodeConfigurationYaml <$>
-  strOption
-    (mconcat
-       [ long "configuration-file"
-       , metavar "NODE-CONFIGURATION"
-       , help helpText
-       , completer (bashCompleter "file")
-       ]
-    )
- where
-   helpText = unwords
-               [ "Configuration file for the cardano-node(s)."
-               , "Specify a configuration file per node you want to have in the cluster."
-               , "Or use num-pool-nodes to use cardano-testnet's default configuration."
-               ]
-
 pGenesisOptions :: Parser GenesisOptions
 pGenesisOptions =
   GenesisOptions

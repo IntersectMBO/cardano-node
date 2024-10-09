@@ -9,7 +9,6 @@
 module Testnet.Start.Cardano
   ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
-  , extraSpoNodeCliArgs
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetNodeOptions
 
