@@ -39,11 +39,15 @@ library
   import:               project-config
   hs-source-dirs:       src
   exposed-modules:      Cardano.Benchmarking.Topology
+                      , Cardano.Benchmarking.Topology.Projection
                       , Cardano.Benchmarking.Topology.Types
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
                       , text
+                      , network
+                      , iproute
+                      , dns
 
 executable cardano-topology
   import:               project-config
@@ -66,7 +70,8 @@ test-suite cardano-topology-test
   hs-source-dirs:       test/
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
-  other-modules:        Paths_cardano_topology
+  other-modules:        Cardano.Benchmarking.Topology.Projection.Tests
+                      , Paths_cardano_topology
   autogen-modules:      Paths_cardano_topology
   build-depends:        base
                       , aeson

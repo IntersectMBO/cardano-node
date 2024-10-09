@@ -1,0 +1,26 @@
+{
+  "node-0": {
+    "i": 0,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-0",
+    "isProducer": true,
+    "port": 30000,
+    "region": "loopback",
+    "shutdown_on_slot_synced": null,
+    "shutdown_on_block_synced": 3
+  },
+  "node-1": {
+    "i": 1,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-1",
+    "isProducer": true,
+    "port": 30001,
+    "region": "loopback",
+    "shutdown_on_slot_synced": null,
+    "shutdown_on_block_synced": 3
+  }
+}
