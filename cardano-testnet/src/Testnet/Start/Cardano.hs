@@ -286,7 +286,7 @@ cardanoTestnet
       }
 
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+  config <- createConfigJson (TmpAbsolutePath tmpAbsPath) (Right sbe)
 
   configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
   H.evalIO $ LBS.writeFile (unFile configurationFile) config

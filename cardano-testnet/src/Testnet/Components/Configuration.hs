@@ -43,7 +43,7 @@ import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as A
 import           Data.Aeson.Key hiding (fromString)
-import           Data.Aeson.KeyMap hiding (map)
+import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as L
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -69,27 +69,32 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
--- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
+-- | Returns the node's configuration file, encoded as JSON; with the hashes
+-- of the genesis files.
 createConfigJson :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
-  -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
+  -> Either (Aeson.KeyMap Aeson.Value) (ShelleyBasedEra era)
+     -- ^ The node configuration to use. If omitted, a default
+    -- one is generated (with 'defaultYamlHardforkViaConfig') using the given era
   -> m LBS.ByteString
-createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
+createConfigJson (TmpAbsolutePath tempAbsPath) configOrSbe = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
 
   pure . A.encodePretty . Object
-    $ mconcat [ byronGenesisHash
-              , shelleyGenesisHash
-              , alonzoGenesisHash
-              , conwayGenesisHash
-              , defaultYamlHardforkViaConfig sbe
-              ]
+    $ mconcat $ [ byronGenesisHash
+                , shelleyGenesisHash
+                , alonzoGenesisHash
+                , conwayGenesisHash
+                ]
+                ++ [(case configOrSbe of
+                      Left config -> config
+                      Right sbe -> defaultYamlHardforkViaConfig sbe)]
    where
-    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
+    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (Aeson.KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
 
 
@@ -98,22 +103,22 @@ createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ d
 getByronGenesisHash
   :: (H.MonadTest m, MonadIO m)
   => FilePath
-  -> m (KeyMap Aeson.Value)
+  -> m (Aeson.KeyMap Aeson.Value)
 getByronGenesisHash path = do
   e <- runExceptT $ readGenesisData path
   (_, genesisHash) <- H.leftFail e
   let genesisHash' = unGenesisHash genesisHash
-  pure . singleton "ByronGenesisHash" $ toJSON genesisHash'
+  pure . Aeson.singleton "ByronGenesisHash" $ toJSON genesisHash'
 
 getShelleyGenesisHash
   :: (H.MonadTest m, MonadIO m)
   => FilePath
   -> Text
-  -> m (KeyMap Aeson.Value)
+  -> m (Aeson.KeyMap Aeson.Value)
 getShelleyGenesisHash path key = do
   content <- H.evalIO  $ BS.readFile path
   let genesisHash = Crypto.hashWith id content :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString
-  pure . singleton (fromText key) $ toJSON genesisHash
+  pure . Aeson.singleton (fromText key) $ toJSON genesisHash
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
