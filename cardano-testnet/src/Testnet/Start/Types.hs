@@ -94,20 +94,20 @@ instance Default GenesisOptions where
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
 data TestnetNodeOptions
-  = SpoTestnetNodeOptions (Maybe NodeConfigurationYaml) [String]
+  = TestnetNodeOptions (Maybe NodeConfigurationYaml) [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   deriving (Eq, Show)
 
 extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
-extraSpoNodeCliArgs (SpoTestnetNodeOptions _ args) = args
+extraSpoNodeCliArgs (TestnetNodeOptions _ args) = args
 
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =
-  [ SpoTestnetNodeOptions Nothing []
-  , SpoTestnetNodeOptions Nothing []
-  , SpoTestnetNodeOptions Nothing []
+  [ TestnetNodeOptions Nothing []
+  , TestnetNodeOptions Nothing []
+  , TestnetNodeOptions Nothing []
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
