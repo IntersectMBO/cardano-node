@@ -194,7 +194,7 @@ cardanoTestnet
 
   H.note_ OS.os
 
-  if all isJust [mconfig | SpoTestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
+  if all isJust [mconfig | TestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
   then
     -- TODO: We need a very simple non-obscure way of generating the files necessary
     -- to run a testnet. "create-staked" is not a good way to do this especially because it

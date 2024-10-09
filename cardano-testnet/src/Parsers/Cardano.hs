@@ -65,7 +65,7 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
   OA.option
-     ((`L.replicate` SpoTestnetNodeOptions Nothing []) <$> auto)
+     ((`L.replicate` TestnetNodeOptions Nothing []) <$> auto)
      (   OA.long "num-pool-nodes"
      <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
      <>  OA.metavar "COUNT"
@@ -75,7 +75,7 @@ pNumSpoNodes =
 
 _pSpo :: Parser TestnetNodeOptions
 _pSpo =
-  SpoTestnetNodeOptions . Just
+  TestnetNodeOptions . Just
     <$> parseNodeConfigFile
     <*> pure [] -- TODO: Consider adding support for extra args
 
