@@ -129,6 +129,14 @@ let
         value = ''
           #!${pkgs.stdenv.shell}
 
+          ${import ./voting.nix {inherit pkgs profile nodeSpecs;}}
+
+          ${pkgs.coreutils}/bin/echo "governance_workload_funds"
+          governance_workload_funds                                               \
+            ${if profile.composition.with_explorer then "explorer" else "node-0"} \
+            "../genesis/cache-entry/utxo-keys/utxo2.vkey"                         \
+            "../genesis/cache-entry/utxo-keys/utxo2.skey"
+
           ${service.script}
           '';
         JSON = pkgs.writeScript "startup-generator.sh" value;

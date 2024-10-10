@@ -183,10 +183,10 @@ scenario_watcher() {
   if ! test -f "${run_dir}"/flag/cluster-stopping
   then
     echo >&2
-    touch "${run_dir}"/flag/cluster-stopping
+#    touch "${run_dir}"/flag/cluster-stopping
     msg "scenario:  $(yellow end of time reached) for:  $(red $(jq '.meta.tag' -r ${__scenario_exit_trap_dir}/meta.json))"
-    msg      "scenario:  $(red signalled termination)"
-    progress "scenario" "now:  $(yellow $(date))"
+    msg      "scenario:  $(red I DONT CARE, KEEP RUNNING ......)"
+#    progress "scenario" "now:  $(yellow $(date))"
   fi
 }
 
