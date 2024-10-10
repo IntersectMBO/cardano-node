@@ -85,7 +85,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcConwayGenesisFileHash
                            }
                            npc@NodeHardForkProtocolConfiguration {
-                            npcExperimentalHardForksEnabled,
+                            -- npcExperimentalHardForksEnabled,
                             -- During testing of the Alonzo era, we conditionally declared that we
                             -- knew about the Alonzo era. We do so only when a config option for
                             -- testing development/unstable eras is used. This lets us include
@@ -172,10 +172,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
-      , Consensus.cardanoProtocolVersion =
-            if npcExperimentalHardForksEnabled
-            then ProtVer (natVersion @10) 0
-            else ProtVer (natVersion @9) 1
+      , Consensus.cardanoProtocolVersion = ProtVer (natVersion @10) 0
         -- The remaining arguments specify the parameters needed to transition between two eras
       , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
@@ -200,7 +197,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                -- Version 6 is Alonzo (intra era hardfork)
                -- Version 7 is Babbage
                -- Version 8 is Babbage (intra era hardfork)
-               -- Version 9 is Conway
+               -- Version 9 is Conway (bootstrap era)
+               -- Version 10 is Conway + 1   
                --
                -- But we also provide an override to allow for simpler test setups
                -- such as triggering at the 0 -> 1 transition .
