@@ -127,7 +127,6 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 -- > ├── byron-gen-command
 -- > │   └── genesis-keys.00{0,1,2}.key
 -- > ├── byron.genesis.spec.json
--- > ├── configuration.yaml
 -- > ├── current-stake-pools.json
 -- > ├── delegate-keys
 -- > │   ├── delegate{1,2,3}
@@ -148,6 +147,7 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 -- > │   ├── pool{1,2,3}
 -- > │   │   ├── byron-delegate.key
 -- > │   │   ├── byron-delegation.cert
+-- > │   │   ├── configuration.json
 -- > │   │   ├── cold.{skey,vkey}
 -- > │   │   ├── kes.{skey,vkey}
 -- > │   │   ├── opcert.{cert,counter}
@@ -221,7 +221,8 @@ cardanoTestnet
 
   -- TODO: This should come from the configuration!
   let poolKeyDir :: Int -> FilePath
-      poolKeyDir i = "pools-keys" </> mkNodeName i
+      poolKeyDir i = "pools-keys" </> mkNodeName i -- This is poorly named, since this also contains the topology file
+                                                   -- and the configuration file. But probably a hassle if we rename it.
       mkNodeName :: Int -> String
       mkNodeName i = "pool" <> show i
 
@@ -285,11 +286,12 @@ cardanoTestnet
         }
       }
 
-  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  config <- createConfigJson (TmpAbsolutePath tmpAbsPath) (Right sbe)
-
-  configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
-  H.evalIO $ LBS.writeFile (unFile configurationFile) config
+  -- Make configuration files
+  forM_ (zip [1..] (map (\(TestnetNodeOptions cfg _) -> cfg) nodesTuning)) $ \(i, mConfig) -> do
+    -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+    config <- createConfigJson (TmpAbsolutePath $ tmpAbsPath </> poolKeyDir i) (Right sbe)
+    configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.json"
+    H.evalIO $ LBS.writeFile (unFile configurationFile) config
 
   portNumbers <- replicateM numPoolNodes $ H.randomPort testnetDefaultIpv4Address
   -- Byron related
