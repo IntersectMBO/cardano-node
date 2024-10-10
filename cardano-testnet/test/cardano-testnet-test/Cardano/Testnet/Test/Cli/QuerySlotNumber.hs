@@ -63,7 +63,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
     H.note_ "Try to retrieve slot 5s before genesis"
     testTime <- H.note . formatTime $ (-5) `DT.addUTCTime` startTime
     (result, _) <- H.runTestT $ execCli' execConfig
-      [ "query", "slot-number"
+      [ "latest", "query", "slot-number"
       , testTime
       ]
     H.assertWith result isLeft
@@ -73,7 +73,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
     testTime <- H.note $ formatTime startTime
     let expectedSlot = 0
     slot <- H.readNoteM =<< execCli' execConfig
-      [ "query", "slot-number"
+      [ "latest", "query", "slot-number"
       , testTime
       ]
     H.assertWithinTolerance slot expectedSlot slotPrecision
@@ -84,7 +84,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
         passedTime = fromIntegral expectedSlot * slotLength
     testTime <- H.note . formatTime $ passedTime `DT.addUTCTime` startTime
     slot <- H.readNoteM @Int =<< execCli' execConfig
-      [ "query", "slot-number"
+      [ "latest", "query", "slot-number"
       , testTime
       ]
     H.assertWithinTolerance slot expectedSlot slotPrecision
@@ -98,7 +98,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
         passedTime = fromIntegral expectedSlot * slotLength
     testTime <- H.note . formatTime $ passedTime `DT.addUTCTime` startTime
     slot <- H.readNoteM @Int =<< execCli' execConfig
-      [ "query", "slot-number"
+      [ "latest", "query", "slot-number"
       , testTime
       ]
     H.assertWithinTolerance slot expectedSlot slotPrecision
@@ -108,7 +108,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
     let timeOffset = slotLength * fromIntegral epochSize * 2
     testTime <- H.note . formatTime $ timeOffset `DT.addUTCTime` startTime
     (result, _) <- H.runTestT $ execCli' execConfig
-      [ "query", "slot-number"
+      [ "latest", "query", "slot-number"
       , testTime
       ]
     H.assertWith result isLeft

@@ -2,7 +2,7 @@ module Parsers.Cardano
   ( cmdCardano
   ) where
 
-import           Cardano.Api (EraInEon (..), bounded, AnyShelleyBasedEra (AnyShelleyBasedEra))
+import           Cardano.Api (EraInEon (..), AnyShelleyBasedEra (AnyShelleyBasedEra))
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)

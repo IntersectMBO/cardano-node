@@ -20,7 +20,7 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
-import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
@@ -211,12 +211,12 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
   where
     parseOverride :: Parser MempoolCapacityBytesOverride
     parseOverride =
-      MempoolCapacityBytesOverride . MempoolCapacityBytes <$>
-      Opt.option (auto @Word32)
-        (  long "mempool-capacity-override"
-        <> metavar "BYTES"
-        <> help "[DEPRECATED: Set it in config file with key MempoolCapacityBytesOverride] The number of bytes"
-        )
+      MempoolCapacityBytesOverride . ByteSize32 <$>
+        Opt.option (auto @Word32)
+          (  long "mempool-capacity-override"
+          <> metavar "BYTES"
+          <> help "[DEPRECATED: Set it in config file with key MempoolCapacityBytesOverride] The number of bytes"
+          )
     parseNoOverride :: Parser MempoolCapacityBytesOverride
     parseNoOverride =
       flag' NoMempoolCapacityBytesOverride
