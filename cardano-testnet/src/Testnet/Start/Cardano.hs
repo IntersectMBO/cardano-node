@@ -9,7 +9,6 @@
 module Testnet.Start.Cardano
   ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
-  , extraSpoNodeCliArgs
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetNodeOptions
 
@@ -185,6 +184,10 @@ cardanoTestnet
       startTime = sgSystemStart shelleyGenesis
       testnetMagic = fromIntegral $ sgNetworkMagic shelleyGenesis
       numPoolNodes = length $ cardanoNodes testnetOptions
+      -- TODO @smelc Honor the @Maybe NodeConfigurationYaml@ part of 'nodesTuning'
+      -- This can be done once we use @check-node-configuration --fix@ (see https://github.com/IntersectMBO/cardano-cli/pull/923)
+      -- to augment the configuration file automatically
+      nodesTuning = cardanoNodes testnetOptions
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
   AnyShelleyBasedEra sbe <- pure asbe
@@ -194,7 +197,7 @@ cardanoTestnet
 
   H.note_ OS.os
 
-  if all isJust [mconfig | SpoTestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
+  if all isJust [mconfig | TestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
   then
     -- TODO: We need a very simple non-obscure way of generating the files necessary
     -- to run a testnet. "create-staked" is not a good way to do this especially because it
@@ -221,8 +224,6 @@ cardanoTestnet
     -- as evidence of what was run, and as cache keys.
     writeGenesisSpecFile "alonzo" alonzoGenesis
     writeGenesisSpecFile "conway" conwayGenesis
-
-    configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
 
     _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
@@ -295,6 +296,7 @@ cardanoTestnet
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
     config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
 
+    configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
     H.evalIO $ LBS.writeFile (unFile configurationFile) config
 
     portNumbers <- replicateM numPoolNodes $ H.randomPort testnetDefaultIpv4Address
@@ -317,13 +319,13 @@ cardanoTestnet
       H.lbsWriteFile (tmpAbsPath </> poolKeyDir i </> "topology.json") . encode $
         RealNodeTopology producers
 
-    let keysWithPorts = L.zip3 [1..] poolKeys portNumbers
-    ePoolNodes <- H.forConcurrently keysWithPorts $ \(i, key, port) -> do
+    let nodesData = L.zip4 [1..] poolKeys portNumbers (map (\(TestnetNodeOptions _ cfg) -> cfg) nodesTuning)
+    ePoolNodes <- H.forConcurrently nodesData $ \(i, key, port, cmdArgs) -> do
       let nodeName = mkNodeName i
           keyDir = tmpAbsPath </> poolKeyDir i
       H.note_ $ "Node name: " <> nodeName
       eRuntime <- runExceptT . retryOnAddressInUseError $
-        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic
+        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic $
           [ "run"
           , "--config", unFile configurationFile
           , "--topology", keyDir </> "topology.json"
@@ -333,7 +335,7 @@ cardanoTestnet
           , "--byron-delegation-certificate", keyDir </> "byron-delegation.cert"
           , "--byron-signing-key", keyDir </> "byron-delegate.key"
           , "--shelley-operational-certificate", keyDir </> "opcert.cert"
-          ]
+          ] ++ cmdArgs
       pure $ flip PoolNode key <$> eRuntime
 
     let (failedNodes, poolNodes) = partitionEithers ePoolNodes

@@ -65,36 +65,15 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
   OA.option
-     ((`L.replicate` SpoTestnetNodeOptions Nothing []) <$> auto)
+     -- We don't support passing custom node configurations files on the CLI.
+     -- So we use a default node configuration all nodes.
+     ((`L.replicate` TestnetNodeOptions Nothing []) <$> auto)
      (   OA.long "num-pool-nodes"
      <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
      <>  OA.metavar "COUNT"
      <>  OA.showDefault
      <>  OA.value (cardanoNodes def)
      )
-
-_pSpo :: Parser TestnetNodeOptions
-_pSpo =
-  SpoTestnetNodeOptions . Just
-    <$> parseNodeConfigFile
-    <*> pure [] -- TODO: Consider adding support for extra args
-
-parseNodeConfigFile :: Parser NodeConfigurationYaml
-parseNodeConfigFile = NodeConfigurationYaml <$>
-  strOption
-    (mconcat
-       [ long "configuration-file"
-       , metavar "NODE-CONFIGURATION"
-       , help helpText
-       , completer (bashCompleter "file")
-       ]
-    )
- where
-   helpText = unwords
-               [ "Configuration file for the cardano-node(s)."
-               , "Specify a configuration file per node you want to have in the cluster."
-               , "Or use num-pool-nodes to use cardano-testnet's default configuration."
-               ]
 
 pGenesisOptions :: Parser GenesisOptions
 pGenesisOptions =
