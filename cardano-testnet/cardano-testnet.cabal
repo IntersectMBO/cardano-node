@@ -65,6 +65,7 @@ library
                       , hedgehog-extras ^>= 0.6.4
                       , lens-aeson
                       , microlens
+                      , mono-traversable
                       , mtl
                       , network
                       , network-mux

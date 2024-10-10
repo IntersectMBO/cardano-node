@@ -2,7 +2,7 @@ module Parsers.Cardano
   ( cmdCardano
   ) where
 
-import           Cardano.Api (EraInEon (..), bounded, AnyShelleyBasedEra (AnyShelleyBasedEra))
+import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), bounded)
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
@@ -64,19 +64,20 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
-  OA.option
-     ((`L.replicate` SpoTestnetNodeOptions Nothing []) <$> auto)
-     (   OA.long "num-pool-nodes"
-     <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
-     <>  OA.metavar "COUNT"
-     <>  OA.showDefault
-     <>  OA.value (cardanoNodes def)
-     )
+  (`L.replicate` defaultSpoOptions) <$>
+    OA.option auto
+    (   OA.long "num-pool-nodes"
+    <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
+    <>  OA.metavar "COUNT"
+    <>  OA.showDefault
+    <>  OA.value 1)
+  where
+    defaultSpoOptions = TestnetNodeOptions TestnetNodeRoleSpo Nothing []
 
 _pSpo :: Parser TestnetNodeOptions
 _pSpo =
-  SpoTestnetNodeOptions . Just
-    <$> parseNodeConfigFile
+  TestnetNodeOptions TestnetNodeRoleSpo -- TODO add parser for node roles
+    . Just <$> parseNodeConfigFile
     <*> pure [] -- TODO: Consider adding support for extra args
 
 parseNodeConfigFile :: Parser NodeConfigurationYaml

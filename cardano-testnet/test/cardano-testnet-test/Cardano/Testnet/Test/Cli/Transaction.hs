@@ -21,8 +21,8 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
-import qualified Data.List as List
 import           Data.Default.Class
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Lens.Micro
@@ -44,7 +44,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/simple transaction build/"'@
 hprop_transaction :: Property
-hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -60,12 +60,12 @@ hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \te
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:_
     } <- cardanoTestnetDefault options def conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  poolNode1 <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
 

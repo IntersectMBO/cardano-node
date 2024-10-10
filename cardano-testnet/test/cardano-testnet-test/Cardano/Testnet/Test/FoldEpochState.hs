@@ -35,7 +35,7 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
   runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options def conf
 
   socketPathAbs <- do
-    socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
+    socketPath' <- H.sprocketArgumentName <$> H.headM (testnetSprockets runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   let handler :: ()
