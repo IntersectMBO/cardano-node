@@ -36,7 +36,7 @@ import qualified Hedgehog.Internal.Property as H
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
 hprop_querySlotNumber :: Property
-hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_querySlotNumber = integrationRetryWorkspace 0 "query-slot-number" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf <- mkConf tempAbsBasePath'
 
@@ -44,7 +44,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
 
   tr@TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     } <- cardanoTestnetDefault def def conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
   startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
@@ -55,8 +55,8 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
       slotPrecision = round $ 1 / slotLength
       epochSize = fromIntegral (unEpochSize sgEpochLength) :: Int
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  poolNode1 <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath' poolSprocket1 testnetMagic
 
   id do

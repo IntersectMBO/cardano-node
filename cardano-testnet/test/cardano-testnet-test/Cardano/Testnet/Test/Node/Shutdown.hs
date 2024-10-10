@@ -61,7 +61,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 --
 -- TODO: Use cardanoTestnet in hprop_shutdown
 hprop_shutdown :: Property
-hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_shutdown = integrationRetryWorkspace 0 "shutdown" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf <- mkConf tempAbsBasePath'
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
       tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
@@ -187,7 +187,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
 
 hprop_shutdownOnSlotSynced :: Property
-hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_shutdownOnSlotSynced = integrationRetryWorkspace 0 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
@@ -196,9 +196,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
       slotLen = 0.01
   let fastTestnetOptions = def
         { cardanoNodes =
-          [ SpoTestnetNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
-          , SpoTestnetNodeOptions Nothing []
-          , SpoTestnetNodeOptions Nothing []
+          [ TestnetNodeOptions TestnetNodeRoleSpo Nothing ["--shutdown-on-slot-synced", show maxSlot]
           ]
         }
       shelleyOptions = def
@@ -206,10 +204,10 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
         , genesisSlotLength = slotLen
         }
   testnetRuntime <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
-  let allNodes' = poolNodes testnetRuntime
-  H.note_ $ "All nodes: " <>  show (map (nodeName . poolRuntime) allNodes')
+  let allNodes' = testnetNodes testnetRuntime
+  H.note_ $ "All nodes: " <>  show (map (nodeName . testnetNodeRuntime) allNodes')
 
-  node <- H.headM $ poolRuntime <$> allNodes'
+  node <- H.headM $ testnetNodeRuntime <$> allNodes'
   H.note_ $ "Node name: " <> nodeName node
 
   -- Wait for the node to exit
@@ -238,7 +236,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
 -- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ShutdownOnSigint/"'@
 hprop_shutdownOnSigint :: Property
-hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_shutdownOnSigint = integrationRetryWorkspace 0 "shutdown-on-sigint" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
@@ -247,7 +245,7 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
       shelleyOptions = def { genesisEpochLength = 300 }
   testnetRuntime
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
-  node@NodeRuntime{nodeProcessHandle} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
+  node@NodeRuntime{nodeProcessHandle} <- H.headM $ testnetNodeRuntime <$> testnetNodes testnetRuntime
 
   -- send SIGINT
   H.evalIO $ interruptProcessGroupOf nodeProcessHandle

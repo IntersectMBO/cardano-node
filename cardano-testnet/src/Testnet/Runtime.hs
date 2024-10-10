@@ -49,7 +49,7 @@ import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
 import           Testnet.Types (NodeRuntime (NodeRuntime), TestnetRuntime (configurationFile),
-                   poolSprockets, showIpv4Address)
+                   showIpv4Address, testnetSprockets)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -190,7 +190,7 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
         NodeExecutableError . hsep $
           ["Socket", pretty socketAbsPath, "was not created after 120 seconds. There was no output on stderr. Exception:", prettyException ioex])
       $ hoistEither eSprocketError
-      
+
     -- Ping node and fail on error
     Ping.pingNode (fromIntegral testnetMagic) sprocket
        >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
@@ -286,7 +286,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       H.note_ $ "Epoch states logging to " <> logFile <> " is already started."
     False -> do
       H.evalIO $ appendFile logFile ""
-      socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
+      socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (testnetSprockets testnetRuntime)
 
       _ <- H.asyncRegister_ . runExceptT $
         foldEpochState
