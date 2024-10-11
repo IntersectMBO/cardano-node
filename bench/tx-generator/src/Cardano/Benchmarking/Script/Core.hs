@@ -565,7 +565,7 @@ evalGenerator :: forall era . ()
   -> TxGenTxParams
   -> AsType era
   -> ActionM (TxStream IO era)
-evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
+evalGenerator generator txParams@TxGenTxParams{..} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
   -- Hmm? hoistActionM seems rather apt here.
@@ -603,7 +603,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         -- then be used while partially applied as the @valueSplitter@
         -- in 'sourceToStoreTransactionNew'.
         Split walletName payMode payModeChange coins
-          | inToOut <- Utils.includeChange fee coins
+          | inToOut <- Utils.includeChange txParamFee coins
           -> do fundSource <- flip walletSource 1 <$> getEnvWallets walletName
                 (toUTxO, addressOut) <- interpretPayMode payMode
                 traceDebug $ "split output address : " <> addressOut
@@ -626,7 +626,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           traceDebug $ "SplitN output address : " ++ addressOut
           let
             fundSource = walletSource wallet 1
-            inToOut = Utils.inputsToOutputsWithFee fee count
+            inToOut = Utils.inputsToOutputsWithFee txParamFee count
             txGenerator = genTx shelleyBasedEra ledgerParameters noCollateral feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
@@ -640,7 +640,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           fundPreview <- liftIO $ walletPreview wallet inputs
           let maybeLedgerPParams = eitherToMaybe $
                 toLedgerPParams shelleyBasedEra protocolParameters
-              inToOut = Utils.inputsToOutputsWithFee fee outputs
+              inToOut = Utils.inputsToOutputsWithFee txParamFee outputs
               txGenerator = genTx' collaterals $ toMetadata metadataSize
           handleE handlePreviewErr do
             (size, maybeFeeEstimate)
@@ -733,7 +733,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         EmptyStream -> return mempty
   where
     sbe = shelleyBasedEra
-    feeInEra = Utils.mkTxFee fee
+    feeInEra = Utils.mkTxFee txParamFee
     evalGenerator' = uncurry3 evalGenerator . (, txParams, era)
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
