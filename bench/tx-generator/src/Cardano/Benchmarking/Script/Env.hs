@@ -55,6 +55,8 @@ module Cardano.Benchmarking.Script.Env (
         , setProtoParamMode
         , getEnvSocketPath
         , setEnvSocketPath
+        , getEnvStakeCredentials
+        , setEnvStakeCredentials
         , getEnvThreads
         , setEnvThreads
         , getEnvWallets
@@ -63,7 +65,7 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvSummary
 ) where
 
-import           Cardano.Api (File (..), DRepKey, SocketPath)
+import           Cardano.Api (DRepKey, File (..), SocketPath, StakeCredential)
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
@@ -109,6 +111,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envWallets :: Map String WalletRef
                , envSummary :: Maybe PlutusBudgetSummary
                , envDRepKeys :: [SigningKey DRepKey]
+               , envStakeCredentials :: [StakeCredential]
                }
 -- | `Env` uses `Maybe` to represent values that might be uninitialized.
 -- This being empty means `Nothing` is used across the board, along with
@@ -123,6 +126,7 @@ emptyEnv = Env { protoParams = Nothing
                , envWallets = Map.empty
                , envSummary = Nothing
                , envDRepKeys = []
+               , envStakeCredentials = []
                }
 
 newEnvConsts :: IOManager -> Maybe Nix.NixServiceOptions -> STM Tracer.EnvConsts
@@ -202,6 +206,9 @@ setEnvKeys key val = modifyEnv (\e -> e { envKeys = Map.insert key val (envKeys 
 setEnvDRepKeys :: [SigningKey DRepKey] -> ActionM ()
 setEnvDRepKeys val = modifyEnv (\e -> e { envDRepKeys = val })
 
+setEnvStakeCredentials :: [StakeCredential] -> ActionM ()
+setEnvStakeCredentials val = modifyEnv (\e -> e { envStakeCredentials = val })
+
 -- | Write accessor for `envProtocol`.
 setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
 setEnvProtocol val = modifyEnv (\e -> e { envProtocol = Just val })
@@ -280,6 +287,9 @@ getEnvKeys = getEnvMap envKeys
 
 getEnvDRepKeys :: ActionM [SigningKey DRepKey]
 getEnvDRepKeys = lift $ RWS.gets envDRepKeys
+
+getEnvStakeCredentials :: ActionM [StakeCredential]
+getEnvStakeCredentials = lift $ RWS.gets envStakeCredentials
 
 -- | Read accessor for `envNetworkId`.
 getEnvNetworkId :: ActionM NetworkId

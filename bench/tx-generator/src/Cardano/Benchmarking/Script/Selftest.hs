@@ -96,7 +96,7 @@ testScript protocolFile submitMode =
   ]
   where
     skey = fromRight (error "could not parse hardcoded signing key") $
-      parseSigningKeyTE $
+      parsePaymentKeyTE $
         TextEnvelope {
             teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
           , teDescription = fromString "Genesis Initial UTxO Signing Key"
@@ -124,6 +124,8 @@ testScriptVoting protocolFile submitMode =
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
     (L.Coin 90000000000000) key
 
+  , DefineStakeKey stakeKey
+
   -- TODO: manually inject an (unnamed) DRep key into the Env by means of a new Action constructor
   -- DefineDRepKey _drepKey
 
@@ -141,7 +143,7 @@ testScriptVoting protocolFile submitMode =
   where
     skey :: SigningKey PaymentKey
     skey = fromRight (error "could not parse hardcoded signing key") $
-      parseSigningKeyTE $
+      parsePaymentKeyTE $
         TextEnvelope {
             teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
           , teDescription = fromString "Genesis Initial UTxO Signing Key"
@@ -151,6 +153,10 @@ testScriptVoting protocolFile submitMode =
     _drepKey :: SigningKey DRepKey
     _drepKey = fromRight (error "could not parse hardcoded drep key") $
       parseDRepKeyBase16 "5820aa7f780a2dcd099762ebc31a43860c1373970c2e2062fcd02cceefe682f39ed8"
+
+    stakeKey :: VerificationKey StakeKey
+    stakeKey = fromRight (error "could not parse hardcoded stake key") $
+      parseStakeKeyBase16 "5820bbbfe3f3b71b00d1d61f4fe2a82526597740f61a0aa06f1324557925803c7d3e"
 
     era = AnyCardanoEra ConwayEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
