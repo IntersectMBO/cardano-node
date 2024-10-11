@@ -72,22 +72,22 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       cEra = AnyCardanoEra era
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = numVotes
+        , cardanoNumDReps = fromIntegral numVotes
         }
       shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath testnetNodeRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -195,7 +195,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   length (filter ((== L.VoteYes) . snd) votes) === 4
   length (filter ((== L.VoteNo) . snd) votes) === 3
   length (filter ((== L.Abstain) . snd) votes) === 2
-  length votes === numVotes
+  length votes === fromIntegral numVotes
 
   -- We check that constitution was succcessfully ratified
   void . H.leftFailM . evalIO . runExceptT $

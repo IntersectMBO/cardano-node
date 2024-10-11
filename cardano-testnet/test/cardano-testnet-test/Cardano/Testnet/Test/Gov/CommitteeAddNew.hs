@@ -44,10 +44,11 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types (GenesisOptions (..), cardanoNumPools)
 import           Testnet.Types
-import           Testnet.Start.Types (GenesisOptions(..))
 
 import           Hedgehog
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
 -- | Execute me with:
@@ -62,37 +63,38 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   -- how many votes to cast
   let drepVotes, spoVotes :: [(String, Int)]
-      drepVotes = zip (concatMap (uncurry replicate) [(5, "yes"), (3, "no"), (2, "abstain")]) [1..]
-      spoVotes = zip (concatMap (uncurry replicate) [(1, "yes")]) [1..]
-  H.noteShow_ drepVotes
-
-  let nDrepVotes :: Int
+      drepVotes = mkVotes [(5, "yes"), (3, "no"), (2, "abstain")]
+      spoVotes = mkVotes [(nSpos, "yes")]
+      -- replicate votes requested number of times
+      mkVotes :: [(Int, String)] -- ^ [(count, vote)]
+              -> [(String, Int)] -- ^ [(vote, ordering number)]
+      mkVotes votes = zip (concatMap (uncurry replicate) votes) [1..]
       nDrepVotes = length drepVotes
-  H.noteShow_ nDrepVotes
-
-  let ceo = ConwayEraOnwardsConway
+      nSpos = fromIntegral $ cardanoNumPools fastTestnetOptions
+      ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
-        , cardanoNumDReps = nDrepVotes
+        , cardanoNumDReps = fromIntegral nDrepVotes
         }
       shelleyOptions = def { genesisEpochLength = 200 }
+  H.annotateShow drepVotes
+  H.noteShow_ nDrepVotes
 
-  TestnetRuntime
+  runtime@TestnetRuntime
     { testnetMagic
-    , poolNodes
     , wallets=wallet0:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime, poolKeys} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  TestnetNode{testnetNodeRuntime, poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
+  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath testnetNodeRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

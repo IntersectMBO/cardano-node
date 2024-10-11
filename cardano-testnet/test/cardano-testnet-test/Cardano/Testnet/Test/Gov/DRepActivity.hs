@@ -34,8 +34,8 @@ import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Types
 import           Testnet.Start.Types
+import           Testnet.Types
 
 import           Hedgehog (MonadTest, Property, annotateShow)
 import qualified Hedgehog.Extras as H
@@ -63,16 +63,16 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath testnetNodeRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

@@ -54,21 +54,28 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoNodes =
+          [ SpoNodeOptions Nothing []
+          , SpoNodeOptions Nothing []
+          , SpoNodeOptions Nothing []
+          ]
+        }
       shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath testnetNodeRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

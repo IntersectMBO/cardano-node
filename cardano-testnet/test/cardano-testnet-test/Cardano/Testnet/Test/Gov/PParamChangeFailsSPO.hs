@@ -58,16 +58,16 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_wallet2:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath testnetNodeRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -82,7 +82,11 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
 
 
   let propVotes :: [(String, Int)]
-      propVotes = zip (concatMap (uncurry replicate) [(1, "yes")]) [1..]
+      propVotes = mkVotes [(1, "yes")]
+      -- replicate votes requested number of times
+      mkVotes :: [(Int, String)] -- ^ [(count, vote)]
+              -> [(String, Int)] -- ^ [(vote, ordering number)]
+      mkVotes votes = zip (concatMap (uncurry replicate) votes) [1..]
   annotateShow propVotes
 
   (governanceActionTxId, governanceActionIndex) <-
