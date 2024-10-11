@@ -19,8 +19,8 @@ where
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
-                   convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
-                   protocolParamPrices)
+                   StakeCredential (..), convertToLedgerProtocolParameters,
+                   protocolParamMaxTxExUnits, protocolParamPrices)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -94,6 +94,9 @@ readSigningKey name filePath =
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys
 
+defineStakeCredential :: VerificationKey StakeKey -> ActionM ()
+defineStakeCredential = setEnvStakeCredentials . (: []) . StakeCredentialByKey . verificationKeyHash
+
 readDRepKeys :: FilePath -> ActionM ()
 readDRepKeys ncFile = do
   genesis <- onNothing throwKeyErr $ getGenesisDirectory <$> liftIOSafe (mkNodeConfig ncFile)
@@ -104,8 +107,19 @@ readDRepKeys ncFile = do
   traceDebug $ "DRep SigningKeys loaded: " ++ show (length ks) ++ " from: " ++ genesis
   where
     throwKeyErr = liftTxGenError . TxGenError $
-      "readDRepKeys: no genesisDirectory could "
-        <> "be retrieved from the node config"
+      "readDRepKeys: no genesisDirectory could be retrieved from the node config"
+
+readStakeCredentials :: FilePath -> ActionM ()
+readStakeCredentials ncFile = do
+  genesis <- onNothing throwKeyErr $ getGenesisDirectory <$> liftIOSafe (mkNodeConfig ncFile)
+  -- "cache-entry" is a link or copy of the actual genesis folder created by "create-testnet-data"
+  -- in the workbench's run directory structure, this link or copy is created for each run - by workbench
+  ks <- liftIOSafe . Genesis.genesisLoadStakeKeys $ genesis
+  setEnvStakeCredentials $ map (StakeCredentialByKey . verificationKeyHash) ks
+  traceDebug $ "StakeCredentials loaded: " ++ show (length ks) ++ " from: " ++ genesis
+  where
+    throwKeyErr = liftTxGenError . TxGenError $
+      "readStakeCredentials: no genesisDirectory could be retrieved from the node config"
 
 addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do

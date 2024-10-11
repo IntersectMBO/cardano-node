@@ -99,8 +99,8 @@ testScript protocolFile submitMode =
       parsePaymentKeyTE TextEnvelope
           { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
           , teDescription = fromString "Genesis Initial UTxO Signing Key"
-          , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"
-          }
+          , teRawCBOR =  "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h"
+                      <> "\153\171\SI/m\186\242D\228\NAK\182(&\162" }
     era = AnyCardanoEra AllegraEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
     genesisWallet = "genesisWallet"
@@ -122,6 +122,8 @@ testScriptVoting protocolFile submitMode =
   , AddFund era genesisWallet
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
     (L.Coin 90000000000000) key
+
+  , DefineStakeKey stakeKey
 
   -- TODO: manually inject an (unnamed) DRep key into the Env by means of a new Action constructor
   -- DefineDRepKey _drepKey
@@ -149,6 +151,10 @@ testScriptVoting protocolFile submitMode =
     _drepKey :: SigningKey DRepKey
     _drepKey = error "could not parse hardcoded drep key" `fromRight`
       parseDRepKeyBase16 "5820aa7f780a2dcd099762ebc31a43860c1373970c2e2062fcd02cceefe682f39ed8"
+
+    stakeKey :: VerificationKey StakeKey
+    stakeKey = fromRight (error "could not parse hardcoded stake key") $
+      parseStakeKeyBase16 "5820bbbfe3f3b71b00d1d61f4fe2a82526597740f61a0aa06f1324557925803c7d3e"
 
     era = AnyCardanoEra ConwayEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}

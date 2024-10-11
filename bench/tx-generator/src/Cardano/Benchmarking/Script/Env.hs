@@ -57,6 +57,8 @@ module Cardano.Benchmarking.Script.Env (
         , setProtoParamMode
         , getEnvSocketPath
         , setEnvSocketPath
+        , getEnvStakeCredentials
+        , setEnvStakeCredentials
         , getEnvThreads
         , setEnvThreads
         , getEnvWallets
@@ -209,6 +211,9 @@ setEnvKeys key val = modifyEnv (\e -> e { envKeys = Map.insert key val (envKeys 
 setEnvDRepKeys :: [SigningKey DRepKey] -> ActionM ()
 setEnvDRepKeys val = modifyEnv (\e -> e { envDRepKeys = val })
 
+setEnvStakeCredentials :: [StakeCredential] -> ActionM ()
+setEnvStakeCredentials val = modifyEnv (\e -> e { envStakeCredentials = val })
+
 -- | Write accessor for `envProtocol`.
 setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
 setEnvProtocol val = modifyEnv (\e -> e { envProtocol = Just val })
@@ -290,6 +295,9 @@ getEnvKeys = getEnvMap envKeys
 
 getEnvDRepKeys :: ActionM [SigningKey DRepKey]
 getEnvDRepKeys = lift $ RWS.gets envDRepKeys
+
+getEnvStakeCredentials :: ActionM [StakeCredential]
+getEnvStakeCredentials = lift $ RWS.gets envStakeCredentials
 
 -- | Read accessor for `envNetworkId`.
 getEnvNetworkId :: ActionM NetworkId

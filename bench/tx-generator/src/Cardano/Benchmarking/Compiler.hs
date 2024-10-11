@@ -65,7 +65,8 @@ compileToScript = do
 
   whenM (fromMaybe False <$> askNixOption _nix_drep_voting) do
     emit $ ReadDRepKeys nc
-    logMsg "Importing DRep SigningKeys. Done."
+    emit $ ReadStakeKeys nc
+    logMsg "Importing DRep SigningKeys and StakeCredentials. Done."
 
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
