@@ -65,7 +65,8 @@ compileToScript = do
 
   whenM (fromMaybe False <$> askNixOption _nix_drep_voting) do
     emit $ ReadDRepKeys nc
-    logMsg "Importing DRep SigningKeys. Done."
+    emit $ ReadStakeKeys nc
+    logMsg "Importing DRep SigningKeys and StakeCredentials. Done."
 
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
@@ -280,7 +281,7 @@ newWallet n = do
 -- we assume the hardcoded base16 keys to successfully evaluate to a SigningKey PaymentKey
 parseKey :: BS.ByteString -> SigningKey PaymentKey
 parseKey k
-  = let ~(Right k') = parseSigningKeyBase16 k in k'
+  = let ~(Right k') = parsePaymentKeyBase16 k in k'
 
 keyNameGenesisInputFund :: String
 keyNameGenesisInputFund = "GenesisInputFund"

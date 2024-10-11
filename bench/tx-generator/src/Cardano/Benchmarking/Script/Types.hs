@@ -94,8 +94,15 @@ data Action where
   -- been created with cardano-cli create-testnet-data, and from
   -- where DRep signing keys can be loaded.
   ReadDRepKeys       :: !FilePath -> Action
+  -- | 'ReadDRepKeys' expects the path to a node config file. This
+  -- configuration is supposed to refer to a genesis which has
+  -- been created with cardano-cli create-testnet-data, and from
+  -- where stake verification keys can be loaded.
+  ReadStakeKeys       :: !FilePath -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
+  -- | inject a singleton StakeCredential into the environment
+  DefineStakeKey      :: !(VerificationKey StakeKey) -> Action
   -- | 'AddFund' is mostly a wrapper around
   -- 'Cardano.Benchmarking.Wallet.walletRefInsertFund' which in turn
   -- is just 'Control.Concurrent.modifyMVar' around

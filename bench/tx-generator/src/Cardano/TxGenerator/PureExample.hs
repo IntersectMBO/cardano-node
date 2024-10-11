@@ -61,7 +61,7 @@ demo' parametersFile = do
       return newState
 
 signingKey :: SigningKey PaymentKey
-signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyData
+signingKey = fromRight (error "signingKey: parseError") $ parsePaymentKeyTE keyData
   where
     keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
