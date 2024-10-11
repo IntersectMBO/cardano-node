@@ -274,15 +274,21 @@ benchmarkTxStream txStream targetNodes tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads ctl
 
-evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
-evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
+noCollateral :: (TxInsCollateral era, [Fund])
+noCollateral = (TxInsCollateralNone, [])
+
+evalGenerator :: forall era . IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator generator txParams@TxGenTxParams{..} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
-
-  case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
+  case convertToLedgerProtocolParameters sbe protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
-    Right ledgerParameters ->
-      case generator of
+    Right ledgerParameters
+      | feeInEra <- Utils.mkTxFee txParamFee
+      , mangleUTxOs <- mangle . repeat
+      , txGenDefault <- genTx sbe ledgerParameters noCollateral feeInEra TxMetadataNone
+      , evalGenerator' <- uncurry3 evalGenerator . (, txParams, era)
+      -> case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
           genesis  <- getEnvGenesis
           destKey  <- getEnvKeys destKeyName
@@ -309,9 +315,8 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           traceDebug $ "split change address : " ++ addressChange
           let
             fundSource = walletSource wallet 1
-            inToOut = Utils.includeChange fee coins
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
+            inToOut = Utils.includeChange txParamFee coins
+            sourceToStore = sourceToStoreTransactionNew txGenDefault fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
@@ -325,9 +330,8 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           traceDebug $ "SplitN output address : " ++ addressOut
           let
             fundSource = walletSource wallet 1
-            inToOut = Utils.inputsToOutputsWithFee fee count
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+            inToOut = Utils.inputsToOutputsWithFee txParamFee count
+            sourceToStore = sourceToStoreTransactionNew txGenDefault fundSource inToOut $ mangleUTxOs toUTxO
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
@@ -337,20 +341,20 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           traceDebug $ "NtoM output address : " ++ addressOut
           let
             fundSource = walletSource wallet inputs
-            inToOut = Utils.inputsToOutputsWithFee fee outputs
-            txGenerator = genTx shelleyBasedEra ledgerParameters collaterals feeInEra (toMetadata metadataSize)
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+            inToOut = Utils.inputsToOutputsWithFee txParamFee outputs
+            txGenerator = genTx sbe ledgerParameters collaterals feeInEra (toMetadata metadataSize)
+            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleUTxOs toUTxO
 
           fundPreview <- liftIO $ walletPreview wallet inputs
-          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+          case sourceTransactionPreview txGenerator fundPreview inToOut $ mangleUTxOs toUTxO of
             Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
             Right tx -> do
               let
                 txSize = txSizeInBytes tx
-                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
+                txFeeEstimate = case toLedgerPParams sbe protocolParameters of
                   Left{}              -> Nothing
                   Right ledgerPParams -> Just $
-                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
+                    evaluateTransactionFee sbe ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
               traceDebug $ "Projected Tx size in bytes: " ++ show txSize
               traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
               -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
@@ -413,13 +417,12 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
 
         EmptyStream -> return mempty
   where
-    feeInEra = Utils.mkTxFee fee
-    evalGenerator' = uncurry3 evalGenerator . (, txParams, era)
+    sbe = shelleyBasedEra @era
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe String
   -> ActionM (TxInsCollateral era, [FundQueue.Fund])
-selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
+selectCollateralFunds Nothing = pure noCollateral
 selectCollateralFunds (Just walletName) = do
   cw <- getEnvWallets walletName
   collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
