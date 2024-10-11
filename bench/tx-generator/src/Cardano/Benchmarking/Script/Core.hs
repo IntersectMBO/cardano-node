@@ -19,7 +19,7 @@ where
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
-                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
+                   convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
                    protocolParamPrices)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
@@ -29,17 +29,17 @@ import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.LogTypes as Core (AsyncBenchmarkControl (..),
                    TraceBenchTxSubmit (..), btConnect_, btN2N_, btSubmission2_, btTxSubmit_)
-import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
-                   makeLocalConnectInfo, protocolToCodecConfig)
+import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx,
+                   protocolToCodecConfig)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
+import           Cardano.Benchmarking.Script.Queries
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -52,9 +52,6 @@ import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import qualified Cardano.TxGenerator.Utils as Utils
 import           Cardano.TxGenerator.UTxO
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
-
-import           Prelude
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
@@ -171,43 +168,6 @@ cancelBenchmark = do
   liftIO abcShutdown
   waitBenchmarkCore abc
 
-getLocalConnectInfo :: ActionM LocalNodeConnectInfo
-getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
-
-queryEra :: ActionM AnyCardanoEra
-queryEra = do
-  localNodeConnectInfo <- getLocalConnectInfo
-  chainTip  <- getLocalChainTip localNodeConnectInfo
-  mapExceptT liftIO .
-    modifyError (Env.TxGenError . TxGenError . show) $
-      queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
-
-queryRemoteProtocolParameters :: ActionM ProtocolParameters
-queryRemoteProtocolParameters = do
-  localNodeConnectInfo <- getLocalConnectInfo
-  chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  era <- queryEra
-  let
-    callQuery :: forall era.
-                 QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
-              -> ActionM ProtocolParameters
-    callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
-      pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
-          queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
-      let pp' = fromLedgerPParams shelleyEra pp
-          pparamsFile = "protocol-parameters-queried.json"
-      liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
-      traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
-      return pp'
-  case era of
-    AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
-    AnyCardanoEra ShelleyEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
-    AnyCardanoEra AllegraEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
-    AnyCardanoEra MaryEra    -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
-    AnyCardanoEra AlonzoEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
-    AnyCardanoEra BabbageEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
-    AnyCardanoEra ConwayEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
-
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do
   getProtoParamMode  >>= \case
@@ -298,6 +258,7 @@ evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType e
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
+
   case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
     Right ledgerParameters ->

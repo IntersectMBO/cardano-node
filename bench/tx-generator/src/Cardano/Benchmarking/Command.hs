@@ -24,6 +24,7 @@ import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Env (emptyEnv, newEnvConsts)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
+import           Cardano.Benchmarking.Script.Queries (debugDumpProposalsPeriodically)
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.TxGenerator.PlutusContext (readScriptData)
 import           Cardano.TxGenerator.Setup.NixService
@@ -96,6 +97,8 @@ runCommand' iocp = do
         "\n--> final options:\n" ++ show finalOpts
 
       quickTestPlutusDataOrDie finalOpts
+
+      debugDumpProposalsPeriodically finalOpts
 
       case compileOptions finalOpts of
         Right script -> runScript emptyEnv script consts >>= handleError . fst

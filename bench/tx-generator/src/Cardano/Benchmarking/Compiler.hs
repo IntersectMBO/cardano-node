@@ -17,6 +17,7 @@ import           Cardano.TxGenerator.Types
 import           Prelude
 
 import           Control.Monad
+import           Control.Monad.Extra (whenM)
 import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)

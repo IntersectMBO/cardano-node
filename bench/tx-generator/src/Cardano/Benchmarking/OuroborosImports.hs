@@ -10,8 +10,7 @@ module Cardano.Benchmarking.OuroborosImports
   , LoggingLayer
   , PaymentKey
   , ShelleyGenesis
-  , SigningKey
-  , SigningKeyFile
+  -- , SigningKey
   , StandardShelley
   , NetworkId
   -- , getGenesis
@@ -22,8 +21,13 @@ module Cardano.Benchmarking.OuroborosImports
   , submitTxToNodeLocal
   ) where
 
-import           Prelude
+import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlots (..),
+                   LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SocketPath, TxInMode,
+                   TxValidationErrorInCardanoMode, protocolInfo, submitTxToNodeLocal)
 
+import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
+import           Cardano.Node.Configuration.Logging (LoggingLayer)
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configCodec)
@@ -32,15 +36,7 @@ import           Ouroboros.Consensus.Node (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
-import           Cardano.Node.Configuration.Logging (LoggingLayer)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-
-import           Cardano.CLI.Types.Common (SigningKeyFile)
-
-import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlots (..),
-                   LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, SocketPath,
-                   TxInMode, TxValidationErrorInCardanoMode, protocolInfo, submitTxToNodeLocal)
-import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
+import           Prelude
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 

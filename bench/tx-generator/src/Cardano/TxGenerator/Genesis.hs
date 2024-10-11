@@ -24,11 +24,10 @@ import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyPaymentCredential,
                    fromShelleyStakeReference)
 
-import           Cardano.CLI.Types.Common (SigningKeyFile)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
 import           Cardano.TxGenerator.Fund
-import           Cardano.TxGenerator.Setup.SigningKey (readDRepKeyFile)
+import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
