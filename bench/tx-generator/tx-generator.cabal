@@ -67,6 +67,7 @@ library
                         Cardano.Benchmarking.Script.Aeson
                         Cardano.Benchmarking.Script.Core
                         Cardano.Benchmarking.Script.Env
+                        Cardano.Benchmarking.Script.Queries
                         Cardano.Benchmarking.Script.Selftest
                         Cardano.Benchmarking.Script.Types
                         Cardano.Benchmarking.TpsThrottle
@@ -117,6 +118,7 @@ library
                       , cardano-ledger-api
                       , cardano-ledger-byron
                       , cardano-ledger-core
+                      , cardano-ledger-conway
                       , cardano-node
                       , cardano-prelude
                       , contra-tracer
@@ -131,6 +133,7 @@ library
                       , generic-monoid
                       , ghc-prim
                       , io-classes
+                      , microlens
                       , mtl
                       , network
                       , network-mux

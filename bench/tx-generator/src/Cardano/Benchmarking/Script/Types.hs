@@ -24,32 +24,24 @@ transactions as interchangeable, and focuses more on the variety of
 things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
-          Action(..)
-        , Generator(..)
-        , PayMode(PayToAddr, PayToScript)
-        , ProtocolParameterMode(..)
-        , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
-        , ScriptBudget(AutoScript, StaticScriptBudget)
-        , ScriptSpec(..)
-        , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
-                NodeToNode)
-        , TargetNodes
-        , TxList(..)
+       module Cardano.Benchmarking.Script.Types
+
 ) where
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
-import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
+import           Cardano.Ledger.Conway.Governance (GovActionId)
+import           Cardano.Ledger.Core (EraCrypto)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
+import           Cardano.TxGenerator.Setup.SigningKey (SigningKeyFile)
 import           Cardano.TxGenerator.Types
-
-import           Prelude
 
 import           Data.Function (on)
 import           Data.List.NonEmpty
+import           Data.Ratio (Ratio)
 import           Data.Text (Text)
 import           GHC.Generics
 
@@ -228,3 +220,15 @@ newtype TxList era = TxList [Tx era]
 data ProtocolParameterMode where
   ProtocolParameterQuery :: ProtocolParameterMode
   ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode
+
+data GovernanceActionIds where
+  GovernanceActionIds ::
+    forall era. () => ShelleyBasedEra era
+                   -> [GovActionId (EraCrypto (ShelleyLedgerEra era))]
+                   -> GovernanceActionIds
+
+data GovStateSummary = GovStateSummary
+  { govGovActionDeposit                 :: !L.Coin
+  , govDRepThresholdTreasuryWithdrawal  :: !(Ratio Int)
+  , govProposals                        :: !GovernanceActionIds
+  }

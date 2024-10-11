@@ -45,6 +45,8 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvDRepKeys
         , getEnvGenesis
         , setEnvGenesis
+        , getEnvGovSummary
+        , setEnvGovSummary
         , getEnvKeys
         , setEnvKeys
         , getEnvNetworkId
@@ -65,12 +67,11 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvSummary
 ) where
 
-import           Cardano.Api (DRepKey, File (..), SocketPath, StakeCredential)
+import           Cardano.Api (DRepKey, File (..), ShelleyBasedEra (..), SocketPath, StakeCredential)
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
-import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, ShelleyGenesis,
-                   SigningKey)
+import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, ShelleyGenesis)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -78,6 +79,7 @@ import           Cardano.Logging
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService as Nix (NixServiceOptions)
+import           Cardano.TxGenerator.Setup.SigningKey (SigningKey)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 import           Ouroboros.Network.NodeToClient (IOManager)
 
@@ -92,6 +94,7 @@ import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Ratio
 import qualified Data.Text as Text
 import qualified System.IO as IO (hPutStrLn, stderr)
 
@@ -112,6 +115,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envSummary :: Maybe PlutusBudgetSummary
                , envDRepKeys :: [SigningKey DRepKey]
                , envStakeCredentials :: [StakeCredential]
+               , envGovStateSummary :: GovStateSummary
                }
 -- | `Env` uses `Maybe` to represent values that might be uninitialized.
 -- This being empty means `Nothing` is used across the board, along with
@@ -127,6 +131,7 @@ emptyEnv = Env { protoParams = Nothing
                , envSummary = Nothing
                , envDRepKeys = []
                , envStakeCredentials = []
+               , envGovStateSummary = GovStateSummary 1 (1 % 2) (GovernanceActionIds ShelleyBasedEraConway [])
                }
 
 newEnvConsts :: IOManager -> Maybe Nix.NixServiceOptions -> STM Tracer.EnvConsts
@@ -235,6 +240,9 @@ setEnvWallets key val = modifyEnv (\e -> e { envWallets = Map.insert key val (en
 setEnvSummary :: PlutusBudgetSummary -> ActionM ()
 setEnvSummary val = modifyEnv (\e -> e { envSummary = Just val })
 
+setEnvGovSummary :: GovStateSummary -> ActionM ()
+setEnvGovSummary val = modifyEnv (\e -> e { envGovStateSummary = val })
+
 -- | Read accessor helper for `Maybe` record fields of `Env`.
 getEnvVal :: (Env -> Maybe t) -> String -> ActionM t
 getEnvVal acc s = do
@@ -316,6 +324,9 @@ getEnvWallets = getEnvMap envWallets
 -- | Read accessor for `envSummary`.
 getEnvSummary :: ActionM (Maybe PlutusBudgetSummary)
 getEnvSummary = lift (RWS.gets envSummary)
+
+getEnvGovSummary :: ActionM GovStateSummary
+getEnvGovSummary = lift (RWS.gets envGovStateSummary)
 
 -- | Helper to make submissions to the `Tracer.BenchTracers`.
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
