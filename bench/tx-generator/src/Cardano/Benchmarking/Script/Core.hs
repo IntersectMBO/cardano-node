@@ -31,10 +31,10 @@ where
 import           Cardano.Api
 import           Cardano.Api.Shelley (GovernanceAction (..), LedgerProtocolParameters (..),
                    PlutusScriptOrReferenceInput (..), Proposal (..), ProtocolParameters,
-                   ShelleyLedgerEra, Vote (..), VotingProcedure (..),
-                   VotingProcedures (..), convertToLedgerProtocolParameters,
-                   createProposalProcedure, createVotingProcedure,
-                   protocolParamMaxTxExUnits, protocolParamPrices, toShelleyNetwork)
+                   ShelleyLedgerEra, Vote (..), VotingProcedure (..), VotingProcedures (..),
+                   convertToLedgerProtocolParameters, createProposalProcedure,
+                   createVotingProcedure, protocolParamMaxTxExUnits, protocolParamPrices,
+                   toShelleyNetwork)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -52,9 +52,9 @@ import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
-import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Api as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -536,22 +536,20 @@ data VoteCase = VoteCase
   , vcAnchor      :: Maybe (Ledger.Url, Text.Text) }
 
 voteCase :: forall era ledgerEra crypto eon eraInEon . ()
-  => IsShelleyBasedEra era
-  => IsConwayBasedEra era
   => ledgerEra ~ ShelleyLedgerEra era
-  => crypto ~ Ledger.EraCrypto ledgerEra
-  => crypto ~ Ledger.StandardCrypto
-  => Eon eon
+  -- => crypto ~ Ledger.EraCrypto ledgerEra
+  -- => crypto ~ Ledger.StandardCrypto
   -- => eraInEon ~ era -- This must be wrong.
-  => GovCaseEnv eraInEon
+  => GovCaseEnv era
   -> VoteCase
-  -> eon eraInEon
+  -> ConwayEraOnwards era
   -> ActionM (TxStream IO era)
-voteCase GovCaseEnv {..} VoteCase {..} eraInEon
+voteCase GovCaseEnv {..} VoteCase {..} eon
   | GeneratorDRepCredential (drepGenCred :: GeneratorDRepCredentialBody Ledger.StandardCrypto)
       <- vcGenDRepCred
   , TxGenTxParams {..} <- gcEnvTxParams
-  = do maybeLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
+  = conwayEraOnwardsConstraints eon $ do
+       maybeLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets vcWalletName
        (toUTxO, _addressOut) <- interpretPayMode vcPayMode
@@ -563,16 +561,16 @@ voteCase GovCaseEnv {..} VoteCase {..} eraInEon
            mangledUTxOs = mangle $ repeat toUTxO
            inToOut :: [L.Coin] -> [L.Coin]
            inToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           VotingProcedure {..} = createVotingProcedure eraInEon vcVote vcAnchor
+           VotingProcedure {..} = createVotingProcedure eon vcVote vcAnchor
            -- What is the right sequence for staging the build-up of the
            -- tx and ga? Also, it seems like more should be getting done
            -- with the ga than what's been done here.
-           govActionId :: Ledger.GovActionId crypto
+           -- govActionId :: Ledger.GovActionId crypto
            -- govActionId = undefined
-           govActionId = Ledger.GovActionId
-             { gaidTxId = Ledger.txIdTx undefined
+           govActionId = conwayEraOnwardsConstraints eon $ Ledger.GovActionId
+             { gaidTxId = Ledger.txIdTx (undefined :: Ledger.Tx ledgerEra)
              , gaidGovActionIx = Ledger.GovActionIx 0 }
-           voter :: Ledger.Voter crypto
+           -- voter :: Ledger.Voter crypto
            voter = Ledger.DRepVoter drepGenCred
            vote :: VotingProcedures era
            vote = VotingProcedures . Ledger.VotingProcedures $
@@ -588,8 +586,8 @@ voteCase GovCaseEnv {..} VoteCase {..} eraInEon
        pure . Streaming.effect $ Streaming.yield <$>
            sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
   where
-    sbe :: _
-    sbe = conwayEraOnwardsToShelleyBasedEra eraInEon
+    sbe :: ShelleyBasedEra era
+    sbe = conwayEraOnwardsToShelleyBasedEra eon
 
 evalGenerator :: forall era . ()
   => IsShelleyBasedEra era
@@ -704,11 +702,11 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
 
         Vote vcWalletName vcPayMode vcVote vcGenDRepCred vcAnchor
           | args <- VoteCase {..}
-          -> let voteAction :: forall eraInEon . ()
-                   => ConwayEraOnwards eraInEon
-                   -> ActionM (TxStream IO eraInEon)
+          -> let voteAction :: ()
+                   => ConwayEraOnwards era
+                   -> ActionM (TxStream IO era)
                  voteAction eraInEonVal =
-                   let env = GovCaseEnv { gcEnvEra = eraInEonVal
+                   let env = GovCaseEnv { gcEnvEra = era
                                         , gcEnvTxParams = txParams
                                         , gcEnvLedgerParams = ledgerParameters
                                         , gcEnvFeeInEra = feeInEra }
@@ -717,11 +715,10 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                  errorAction = liftTxGenError . TxGenError $
                        "Voting governance action unsupported "
                             <> "in era and/or protocol version."
-                 cbeVal = ConwayEraOnwardsConway
-                 sbeVal = conwayEraOnwardsToShelleyBasedEra cbeVal
+                 -- cbeVal = ConwayEraOnwardsConway
+                 sbeVal = shelleyBasedEra @era -- conwayEraOnwardsToShelleyBasedEra cbeVal
                  ce :: CardanoEra era = cardanoEra
-             in conwayEraOnwardsConstraints cbeVal
-                  $ forShelleyBasedEraInEon sbeVal errorAction voteAction
+             in forShelleyBasedEraInEon sbeVal errorAction (\ceo -> conwayEraOnwardsConstraints ceo $ voteAction ceo)
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
