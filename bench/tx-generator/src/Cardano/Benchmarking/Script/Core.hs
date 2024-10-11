@@ -397,6 +397,30 @@ handlePreviewErr err = traceDebug $ "Error creating Tx preview: " <> show err
 noCollateral :: (TxInsCollateral era, [Fund])
 noCollateral = (TxInsCollateralNone, [])
 
+genTxProposal' :: forall era . ()
+  => IsShelleyBasedEra era
+  => LedgerProtocolParameters era
+  -> TxFee era
+  -> Ledger.ProposalProcedure (ShelleyLedgerEra era)
+  -> [Fund]
+  -> [TxOut CtxTx era]
+  -> Either TxGenError (Tx era, TxId)
+genTxProposal' lp fie pp =
+  genTxProposal sbe lp noCollateral fie (pp, Nothing) TxMetadataNone where
+    sbe = shelleyBasedEra
+
+genTxVoting' :: forall era . ()
+  => IsShelleyBasedEra era
+  => LedgerProtocolParameters era
+  -> TxFee era
+  -> VotingProcedures era
+  -> [Fund]
+  -> [TxOut CtxTx era]
+  -> Either TxGenError (Tx era, TxId)
+genTxVoting' lp fie vote =
+  genTxVoting sbe lp noCollateral fie (vote, Nothing) TxMetadataNone where
+    sbe = shelleyBasedEra
+
 data PreviewTxData era = PreviewTxData
   { ptxInputs       :: NumberOfInputsPerTx
   , ptxTxGen        :: TxGenerator era
@@ -464,8 +488,9 @@ data ProposeCase = ProposeCase
   , pcAnchor       :: Ledger.Anchor Ledger.StandardCrypto
   } deriving Eq
 
-proposeCase :: forall era . ()
+proposeCase :: forall era ledgerEra . ()
   => IsShelleyBasedEra era
+  => ledgerEra ~ ShelleyLedgerEra era
   => GovCaseEnv era
   -> ProposeCase
   -> ActionM (TxStream IO era)
@@ -473,12 +498,12 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
   | GeneratorStakeCredential {..} <- pcGenStakeCred
   , TxGenTxParams {..} <- gcEnvTxParams
   = do network :: Ledger.Network <- toShelleyNetwork <$> getEnvNetworkId
-       maybeLedgerPParams :: Maybe (Ledger.PParams (ShelleyLedgerEra era))
+       maybeLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets pcWalletName
        (toUTxO, _addressOut) <- interpretPayMode pcPayMode
        let txGenerator :: TxGenerator era
-           txGenerator = genTxProposal sbe gcEnvLedgerParams noCollateral gcEnvFeeInEra (unProposal, Nothing) TxMetadataNone
+           txGenerator = genTxProposal' gcEnvLedgerParams gcEnvFeeInEra unProposal
            mangledUTxOs :: CreateAndStoreList IO era [L.Coin]
            mangledUTxOs = mangle $ repeat toUTxO
            fundSource :: FundSource IO
@@ -510,11 +535,12 @@ data VoteCase = VoteCase
   -- anchor can likely be assumed Nothing at all times
   , vcAnchor      :: Maybe (Ledger.Url, Text.Text) }
 
-voteCase :: forall era ledgerEra . ()
+voteCase :: forall era ledgerEra crypto . ()
   => IsShelleyBasedEra era
   => IsConwayBasedEra era
   => ledgerEra ~ ShelleyLedgerEra era
-  => Ledger.EraCrypto ledgerEra ~ Ledger.StandardCrypto
+  => crypto ~ Ledger.EraCrypto ledgerEra
+  => crypto ~ Ledger.StandardCrypto
   => GovCaseEnv era
   -> VoteCase
   -> ActionM (TxStream IO era)
@@ -527,7 +553,7 @@ voteCase GovCaseEnv {..} VoteCase {..}
        wallet <- getEnvWallets vcWalletName
        (toUTxO, _addressOut) <- interpretPayMode vcPayMode
        let txGenerator :: TxGenerator era
-           txGenerator = genTxVoting sbe gcEnvLedgerParams noCollateral gcEnvFeeInEra (vote, Nothing) TxMetadataNone
+           txGenerator = genTxVoting' gcEnvLedgerParams gcEnvFeeInEra vote
            fundSource :: FundSource IO
            fundSource = walletSource wallet 1
            mangledUTxOs :: CreateAndStoreList IO era [L.Coin]
@@ -537,7 +563,7 @@ voteCase GovCaseEnv {..} VoteCase {..}
            VotingProcedure {..} = createVotingProcedure cbe vcVote vcAnchor
            govActionId :: Ledger.GovActionId crypto
            govActionId = undefined
-           voter :: Ledger.Voter Ledger.StandardCrypto
+           voter :: Ledger.Voter crypto
            voter = Ledger.DRepVoter drepGenCred
            vote :: VotingProcedures era
            vote = VotingProcedures . Ledger.VotingProcedures $
