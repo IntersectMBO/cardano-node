@@ -17,8 +17,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# OPTIONS_GHC -Wno-error=missing-methods #-}
-{-# OPTIONS_GHC -Wno-error=partial-type-signatures #-}
 {-# OPTIONS_GHC -Wno-error=unused-top-binds #-}
 
 {-|
@@ -40,6 +38,7 @@ module Cardano.Benchmarking.Script.Types (
         , GeneratorDRepCredential (..)
         , GeneratorDRepCredentialBody
         , GeneratorDRepCredentialConstraints
+        , GeneratorDRepCredentialScriptHash
         , GeneratorStakeCredential (..)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
@@ -304,7 +303,7 @@ instance Show GeneratorDRepCredential where
     body   :: ShowS
     body   =  showsPrec n unGeneratorDRepCredential
 
-instance Generic GeneratorDRepCredential where
+deriving instance Generic GeneratorDRepCredential
 
 instance ToJSON GeneratorDRepCredential where
   toJSON GeneratorDRepCredential {..} = toJSON unGeneratorDRepCredential
