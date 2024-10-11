@@ -13,6 +13,7 @@ module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
   , genesisLoadDRepKeys
+  , genesisLoadStakeKeys
   , genesisTxInput
   , genesisExpenditure
   , genesisSecureInitialFund
@@ -24,11 +25,11 @@ import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyPaymentCredential,
                    fromShelleyStakeReference)
 
-import           Cardano.CLI.Types.Common (SigningKeyFile)
+import           Cardano.CLI.Types.Common (SigningKeyFile, VerificationKeyFile)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
 import           Cardano.TxGenerator.Fund
-import           Cardano.TxGenerator.Setup.SigningKey (readDRepKeyFile)
+import           Cardano.TxGenerator.Setup.SigningKey (readDRepKeyFile, readStakeKeyFile)
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
@@ -36,7 +37,7 @@ import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
 import           Data.Bifunctor (bimap, second)
 import           Data.Char (isDigit)
 import           Data.Function ((&))
-import           Data.List (find)
+import           Data.List (find, isPrefixOf, isSuffixOf)
 import qualified Data.ListMap as ListMap (toList)
 import           System.Directory (listDirectory)
 import           System.FilePath ((</>))
@@ -163,3 +164,17 @@ genesisLoadDRepKeys genesisDir = runExceptT $ do
       _                           -> False
 
     drepDir = genesisDir </> "drep-keys"
+
+genesisLoadStakeKeys :: FilePath -> IO (Either TxGenError [VerificationKey StakeKey])
+genesisLoadStakeKeys genesisDir = runExceptT $ do
+    dirContents <- handleIOExceptT IOError (listDirectory poolsDir)
+    let fs = filter (\f -> "staking-reward" `isPrefixOf` f && ".vkey" `isSuffixOf` f) dirContents
+    mapM loadFile fs
+  where
+    asVerificationKeyFile :: FilePath -> VerificationKeyFile In
+    asVerificationKeyFile = File
+
+    loadFile f = hoistEither =<< handleIOExceptT IOError
+      (readStakeKeyFile $ asVerificationKeyFile $ poolsDir </> f)
+
+    poolsDir = genesisDir </> "pools"

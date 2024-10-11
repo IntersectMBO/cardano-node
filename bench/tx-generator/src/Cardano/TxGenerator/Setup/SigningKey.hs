@@ -1,12 +1,16 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This module provides convenience functions when dealing with signing keys.
 module Cardano.TxGenerator.Setup.SigningKey
        ( parseDRepKeyBase16
-       , parseSigningKeyTE
-       , parseSigningKeyBase16
+       , parsePaymentKeyBase16
+       , parseStakeKeyBase16
+       , parsePaymentKeyTE
        , readDRepKeyFile
-       , readSigningKeyFile
+       , readPaymentKeyFile
+       , readStakeKeyFile
        , PaymentKey
        , SigningKey
        )
@@ -14,7 +18,7 @@ module Cardano.TxGenerator.Setup.SigningKey
 
 import           Cardano.Api
 
-import           Cardano.CLI.Types.Common (SigningKeyFile)
+import           Cardano.CLI.Types.Common (SigningKeyFile, VerificationKeyFile)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
 import           Data.Bifunctor (first)
@@ -22,41 +26,68 @@ import qualified Data.ByteString as BS (ByteString)
 import           Data.ByteString.Base16 as Base16 (decode)
 
 
-parseSigningKeyTE :: TextEnvelope -> Either TxGenError (SigningKey PaymentKey)
-parseSigningKeyTE
+parsePaymentKeyTE :: TextEnvelope -> Either TxGenError (SigningKey PaymentKey)
+parsePaymentKeyTE
   = first ApiError . deserialiseFromTextEnvelopeAnyOf acceptedTypes
 
-parseSigningKeyBase16 :: BS.ByteString -> Either TxGenError (SigningKey PaymentKey)
-parseSigningKeyBase16 k
-  = either
-    (const $ Left $ TxGenError "parseSigningKeyBase16: ill-formed base16 encoding")
-    (parseSigningKeyTE . asTE)
-    (Base16.decode k)
+parsePaymentKeyBase16 :: BS.ByteString -> Either TxGenError (SigningKey PaymentKey)
+parsePaymentKeyBase16 k
+  = parseSigningKeyBase16 AsPaymentKey acceptedTypes k teTemplate
   where
-    asTE addr = TextEnvelope {
-          teType = "PaymentSigningKeyShelley_ed25519"
-        , teDescription = "Payment Signing Key"
-        , teRawCBOR = addr
-        }
+    teTemplate = TextEnvelope {
+        teType = "PaymentSigningKeyShelley_ed25519"
+      , teDescription = "Payment Signing Key"
+      , teRawCBOR = ""
+      }
 
 parseDRepKeyBase16 ::  BS.ByteString -> Either TxGenError (SigningKey DRepKey)
 parseDRepKeyBase16 k
-  = either
-    (const $ Left $ TxGenError "parseSigningKeyBase16: ill-formed base16 encoding")
-    (first ApiError . deserialiseFromTextEnvelope (AsSigningKey AsDRepKey) . asTE)
-    (Base16.decode k)
+  = parseSigningKeyBase16 AsDRepKey [] k teTemplate
   where
-    asTE k' = TextEnvelope {
-          teType = TextEnvelopeType "DRepSigningKey_ed25519"
-        , teDescription = "Delegated Representative Signing Key"
-        , teRawCBOR = k'
-        }
+    teTemplate = TextEnvelope {
+        teType = TextEnvelopeType "DRepSigningKey_ed25519"
+      , teDescription = "Delegated Representative Signing Key"
+      , teRawCBOR = ""
+      }
 
-readSigningKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey PaymentKey))
-readSigningKeyFile f = first ApiError <$> readFileTextEnvelopeAnyOf acceptedTypes f
+parseStakeKeyBase16 ::  BS.ByteString -> Either TxGenError (VerificationKey StakeKey)
+parseStakeKeyBase16 key
+  = do
+      key' <- parseBase16 key
+      first ApiError $
+        deserialiseFromTextEnvelope (AsVerificationKey AsStakeKey) (teTemplate key')
+  where
+    teTemplate k = TextEnvelope {
+        teType = TextEnvelopeType "StakeVerificationKeyShelley_ed25519"
+      , teDescription = "Stake Verification Key"
+      , teRawCBOR = k
+      }
+
+parseBase16 :: BS.ByteString -> Either TxGenError BS.ByteString
+parseBase16
+  = first (const $ TxGenError "parseBase16: ill-formed base16 encoding")
+  . Base16.decode
+
+parseSigningKeyBase16
+  :: HasTextEnvelope (SigningKey k)
+  => AsType k
+  -> [FromSomeType HasTextEnvelope (SigningKey k)]
+  -> BS.ByteString -> TextEnvelope -> Either TxGenError (SigningKey k)
+parseSigningKeyBase16 k paymentKeys key te = do
+  key' <- parseBase16 key
+  let te' = te {teRawCBOR = key'}
+  first ApiError $ if null paymentKeys
+    then deserialiseFromTextEnvelope (AsSigningKey k) te'
+    else deserialiseFromTextEnvelopeAnyOf paymentKeys te'
+
+readPaymentKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey PaymentKey))
+readPaymentKeyFile f = first ApiError <$> readFileTextEnvelopeAnyOf acceptedTypes f
 
 readDRepKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey DRepKey))
 readDRepKeyFile f = first ApiError <$> readKeyFileTextEnvelope (AsSigningKey AsDRepKey) f
+
+readStakeKeyFile :: VerificationKeyFile In -> IO (Either TxGenError (VerificationKey StakeKey))
+readStakeKeyFile f = first ApiError <$> readKeyFileTextEnvelope (AsVerificationKey AsStakeKey) f
 
 acceptedTypes :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
 acceptedTypes =
