@@ -5,11 +5,11 @@
       "port": 3001
     },
     {
-      "address": "backbone.mainnet.emurgornd.com",
+      "address": "backbone.mainnet.cardanofoundation.org",
       "port": 3001
     },
     {
-      "address": "backbone.mainnet.cardanofoundation.org",
+      "address": "backbone.mainnet.emurgornd.com",
       "port": 3001
     }
   ],
