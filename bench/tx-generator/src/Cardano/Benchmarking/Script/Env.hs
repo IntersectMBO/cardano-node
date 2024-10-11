@@ -69,8 +69,7 @@ import           Cardano.Api (DRepKey, File (..), SocketPath, StakeCredential)
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
-import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, ShelleyGenesis,
-                   SigningKey)
+import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, ShelleyGenesis)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -78,6 +77,7 @@ import           Cardano.Logging
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService as Nix (NixServiceOptions)
+import           Cardano.TxGenerator.Setup.SigningKey (SigningKey)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 import           Ouroboros.Network.NodeToClient (IOManager)
 
