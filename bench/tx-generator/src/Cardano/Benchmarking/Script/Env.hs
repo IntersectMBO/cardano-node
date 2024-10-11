@@ -119,6 +119,8 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envSummary :: Maybe PlutusBudgetSummary
                , envDRepKeys :: [SigningKey DRepKey]
                , envStakeCredentials :: [StakeCredential]
+               -- | `envGovStateSummary` tracks the pending proposals in
+               -- order to avoid issuing queries for fidelity to workloads in the field.
                , envGovStateSummary :: GovStateSummary
                }
 -- | `Env` uses `Maybe` to represent values that might be uninitialized.

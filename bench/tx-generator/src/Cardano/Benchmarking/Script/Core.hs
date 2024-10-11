@@ -51,11 +51,11 @@ import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
-import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Api as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -86,6 +86,7 @@ import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (Text, unpack)
+import           Data.Tuple.Extra (dupe)
 import           System.FilePath ((</>))
 
 import           Streaming
@@ -459,7 +460,7 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
        pure . Streaming.effect $ Streaming.yield <$>
            sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
 
-data VoteCase = VoteCase
+data VoteCase crypto = VoteCase
   { vcWalletName  :: String
   , vcPayMode     :: PayMode
   , vcGovActId    :: Int
@@ -467,56 +468,62 @@ data VoteCase = VoteCase
   --   It should retrieve something of type
   --   @Ledger.GovActionId Ledger.StandardCrypto@
   , vcVote        :: Api.Vote -- yesOrNo
-  , vcGenDRepCred :: Ledger.Credential 'Ledger.DRepRole Ledger.StandardCrypto
+  , vcGenDRepCred :: Ledger.Credential 'Ledger.DRepRole crypto
   -- anchor can likely be assumed Nothing at all times
   , vcAnchor      :: Maybe (Ledger.Url, Text.Text) }
 
+unsuppErr :: String -> ActionM t
+unsuppErr s = liftTxGenError . TxGenError $
+  s <> " governance action unsupported "
+  <> "in era and/or protocol version."
+
 voteCase :: forall era ledgerEra crypto . ()
-  => IsShelleyBasedEra era
-  => IsConwayBasedEra era
+  -- These equality constraints are for the sake of abbreviation.
   => ledgerEra ~ ShelleyLedgerEra era
   => crypto ~ Ledger.EraCrypto ledgerEra
   => crypto ~ Ledger.StandardCrypto
   => GovCaseEnv era
-  -> VoteCase
+  -> VoteCase crypto
+  -> ConwayEraOnwards era
   -> ActionM (TxStream IO era)
-voteCase GovCaseEnv {..} VoteCase {..}
+voteCase GovCaseEnv {..} VoteCase {..} eon
   | TxGenTxParams {..} <- gcEnvTxParams
-  , sbe <- shelleyBasedEra @era
-  , cbe <- conwayBasedEra @era
+  , VotingProcedure {..} <- createVotingProcedure eon vcVote vcAnchor
+  , sbe <- conwayEraOnwardsToShelleyBasedEra eon
   , insufReadyProps :: Env.Error
       <- Env.TxGenError $ TxGenError "insufficient ready proposals"
-  = do ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
+  , ptxInToOut :: [L.Coin] -> [L.Coin]
+      <- Utils.inputsToOutputsWithFee txParamFee 1
+  , voter :: Ledger.Voter crypto
+      <- Ledger.DRepVoter vcGenDRepCred
+  = conwayEraOnwardsConstraints eon do
+       ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
-       wallet <- getEnvWallets vcWalletName
+       (wallet, fundSource)
+         <- second (flip walletSource 1) . dupe <$> getEnvWallets vcWalletName
        (toUTxO, _addressOut) :: (CreateAndStore IO era, String)
          <- interpretPayMode vcPayMode
+       ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
        GovStateSummary { govProposals = GovernanceActionIds _govEra govIds }
          <- getEnvGovSummary
        govActId :: Ledger.GovActionId crypto
          <- insufReadyProps `hoistMaybe` (govIds !? vcGovActId)
        let ptxTxGen :: TxGenerator era
            ptxTxGen = genTxVoting' gcEnvLedgerParams gcEnvFeeInEra vote
-           fundSource :: FundSource IO
-           fundSource = walletSource wallet 1
            ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
            ptxMangledUTxOs = mangle $ repeat toUTxO
-           ptxInToOut :: [L.Coin] -> [L.Coin]
-           ptxInToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           VotingProcedure {..} = createVotingProcedure cbe vcVote vcAnchor
-           voter :: Ledger.Voter crypto
-           voter = Ledger.DRepVoter vcGenDRepCred
            vote :: VotingProcedures era
-           vote = singletonVotingProcedures cbe voter govActId unVotingProcedure
-       ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
-       handleE handlePreviewErr . void $ previewTx PreviewTxData
-         { ptxInputs = 0, .. }
+           vote = singletonVotingProcedures eon voter govActId unVotingProcedure
+       handleE handlePreviewErr . void $
+         previewTx PreviewTxData { ptxInputs = 0, .. }
        pure . Streaming.effect $ Streaming.yield <$>
-           sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
+         sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
 
-evalGenerator :: forall era . ()
+evalGenerator :: forall era ledgerEra crypto . ()
   => IsShelleyBasedEra era
-  => Ledger.EraCrypto (ShelleyLedgerEra era) ~ Ledger.StandardCrypto
+  => ledgerEra ~ ShelleyLedgerEra era
+  => crypto ~ Ledger.EraCrypto ledgerEra
+  => crypto ~ Ledger.StandardCrypto
   => Generator
   -> TxGenTxParams
   -> AsType era
@@ -604,24 +611,16 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                       , gcEnvTxParams = txParams
                       , gcEnvLedgerParams = ledgerParameters
                       , gcEnvFeeInEra = feeInEra }
-          , ce   <- cardanoEra :: CardanoEra era
-          , toThrow <- TxGenError $ "Proposal governance action unsupported "
-                                    <> "in era and/or protocol version."
-          -> forEraInEon ce (liftTxGenError toThrow) \case
+          -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") \case
                ConwayEraOnwardsConway -> proposeCase env args
 
         Vote vcWalletName vcPayMode vcGovActId vcVote vcGenDRepCred vcAnchor
           | args <- VoteCase {..}
-          , env  <- GovCaseEnv
-                      { gcEnvEra = era
-                      , gcEnvTxParams = txParams
-                      , gcEnvLedgerParams = ledgerParameters
-                      , gcEnvFeeInEra = feeInEra }
-          , ce   <- cardanoEra :: CardanoEra era
-          , toThrow <- TxGenError $ "Voting governance action unsupported "
-                                    <> "in era and/or protocol version."
-          -> forEraInEon ce (liftTxGenError toThrow) \case
-               ConwayEraOnwardsConway -> voteCase env args
+          , env  <- GovCaseEnv { gcEnvEra = era
+                               , gcEnvTxParams = txParams
+                               , gcEnvLedgerParams = ledgerParameters
+                               , gcEnvFeeInEra = feeInEra }
+          -> forShelleyBasedEraInEon sbe (unsuppErr "Vote") $ voteCase env args
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
