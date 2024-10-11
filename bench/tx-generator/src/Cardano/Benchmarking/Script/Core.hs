@@ -535,16 +535,19 @@ data VoteCase = VoteCase
   -- anchor can likely be assumed Nothing at all times
   , vcAnchor      :: Maybe (Ledger.Url, Text.Text) }
 
-voteCase :: forall era ledgerEra crypto . ()
+voteCase :: forall era ledgerEra crypto eon eraInEon . ()
   => IsShelleyBasedEra era
   => IsConwayBasedEra era
   => ledgerEra ~ ShelleyLedgerEra era
   => crypto ~ Ledger.EraCrypto ledgerEra
   => crypto ~ Ledger.StandardCrypto
-  => GovCaseEnv era
+  => Eon eon
+  -- => eraInEon ~ era -- This must be wrong.
+  => GovCaseEnv eraInEon
   -> VoteCase
+  -> eon eraInEon
   -> ActionM (TxStream IO era)
-voteCase GovCaseEnv {..} VoteCase {..}
+voteCase GovCaseEnv {..} VoteCase {..} eraInEon
   | GeneratorDRepCredential (drepGenCred :: GeneratorDRepCredentialBody Ledger.StandardCrypto)
       <- vcGenDRepCred
   , TxGenTxParams {..} <- gcEnvTxParams
@@ -560,9 +563,15 @@ voteCase GovCaseEnv {..} VoteCase {..}
            mangledUTxOs = mangle $ repeat toUTxO
            inToOut :: [L.Coin] -> [L.Coin]
            inToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           VotingProcedure {..} = createVotingProcedure cbe vcVote vcAnchor
+           VotingProcedure {..} = createVotingProcedure eraInEon vcVote vcAnchor
+           -- What is the right sequence for staging the build-up of the
+           -- tx and ga? Also, it seems like more should be getting done
+           -- with the ga than what's been done here.
            govActionId :: Ledger.GovActionId crypto
-           govActionId = undefined
+           -- govActionId = undefined
+           govActionId = Ledger.GovActionId
+             { gaidTxId = Ledger.txIdTx undefined
+             , gaidGovActionIx = Ledger.GovActionIx 0 }
            voter :: Ledger.Voter crypto
            voter = Ledger.DRepVoter drepGenCred
            vote :: VotingProcedures era
@@ -579,10 +588,8 @@ voteCase GovCaseEnv {..} VoteCase {..}
        pure . Streaming.effect $ Streaming.yield <$>
            sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
   where
-    sbe :: ShelleyBasedEra era
-    sbe = shelleyBasedEra
-    cbe :: ConwayEraOnwards era
-    cbe = conwayBasedEra
+    sbe :: _
+    sbe = conwayEraOnwardsToShelleyBasedEra eraInEon
 
 evalGenerator :: forall era . ()
   => IsShelleyBasedEra era
@@ -697,16 +704,24 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
 
         Vote vcWalletName vcPayMode vcVote vcGenDRepCred vcAnchor
           | args <- VoteCase {..}
-          , env  <- GovCaseEnv
-                      { gcEnvEra = era
-                      , gcEnvTxParams = txParams
-                      , gcEnvLedgerParams = ledgerParameters
-                      , gcEnvFeeInEra = feeInEra }
-          , ce   <- cardanoEra :: CardanoEra era
-          , toThrow <- TxGenError $ "Voting governance action unsupported "
-                                    <> "in era and/or protocol version."
-          -> forEraInEon ce (liftTxGenError toThrow) \case
-               ConwayEraOnwardsConway -> voteCase env args
+          -> let voteAction :: forall eraInEon . ()
+                   => ConwayEraOnwards eraInEon
+                   -> ActionM (TxStream IO eraInEon)
+                 voteAction eraInEonVal =
+                   let env = GovCaseEnv { gcEnvEra = eraInEonVal
+                                        , gcEnvTxParams = txParams
+                                        , gcEnvLedgerParams = ledgerParameters
+                                        , gcEnvFeeInEra = feeInEra }
+                     in voteCase env args eraInEonVal
+                 errorAction :: ActionM (TxStream IO era)
+                 errorAction = liftTxGenError . TxGenError $
+                       "Voting governance action unsupported "
+                            <> "in era and/or protocol version."
+                 cbeVal = ConwayEraOnwardsConway
+                 sbeVal = conwayEraOnwardsToShelleyBasedEra cbeVal
+                 ce :: CardanoEra era = cardanoEra
+             in conwayEraOnwardsConstraints cbeVal
+                  $ forShelleyBasedEraInEon sbeVal errorAction voteAction
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
