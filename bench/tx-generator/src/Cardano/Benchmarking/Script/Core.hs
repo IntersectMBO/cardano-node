@@ -70,13 +70,13 @@ import           Cardano.TxGenerator.UTxO
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import           Control.Monad.Extra (whenJust)
 import qualified Control.Monad.Random as Random (getRandom)
 import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Either.Extra (eitherToMaybe)
-import           Data.Functor ((<&>))
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
 import           Data.Kind (Type)
@@ -360,6 +360,59 @@ genTxVoting' lp fie vote =
   genTxVoting sbe lp noCollateral fie (vote, Nothing) TxMetadataNone where
     sbe = shelleyBasedEra
 
+data PreviewTxData era = PreviewTxData
+  { ptxInputs       :: NumberOfInputsPerTx
+  , ptxTxGen        :: TxGenerator era
+  , ptxFund         :: [Fund]
+  , ptxInToOut      :: [L.Coin] -> [L.Coin]
+  , ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
+  , ptxLedgerPParams :: Maybe (Ledger.PParams (ShelleyLedgerEra era)) }
+
+previewTx :: forall era . ()
+  => IsShelleyBasedEra era
+  => PreviewTxData era
+  -> ActionM (Int, Maybe L.Coin)
+previewTx PreviewTxData {..}
+  | inputs' <- fromIntegral $ ptxInputs + 1
+  = do
+      tx <- hoistActionEither $
+        sourceTransactionPreview ptxTxGen ptxFund ptxInToOut ptxMangledUTxOs
+      let size = txSizeInBytes tx
+      -- 1 key witness per tx input + 1 collateral
+          maybeFeeEstimate = txFeeHelper inputs' tx <$> ptxLedgerPParams
+      traceDebug $ "Projected Tx size in bytes: " <> show size
+      whenJust maybeFeeEstimate \feeEstimate ->
+        traceDebug $ "Projected Tx fee in Coin: " <> show feeEstimate
+      -- TODO: possibly emit a warning when (Just txFeeEstimate) is
+      -- lower than specified by config in TxGenTxParams.txFee
+      pure (size, maybeFeeEstimate)
+
+txFeeHelper :: forall era ledgerEra . ()
+  => IsShelleyBasedEra era
+  => ledgerEra ~ ShelleyLedgerEra era
+  => NumberOfInputsPerTx
+  -> Tx era
+  -> Ledger.PParams ledgerEra
+  -> L.Coin
+txFeeHelper inputs tx pparams
+          | sbe <- shelleyBasedEra
+          , body <- getTxBody tx
+          , inputs' <- fromIntegral $ inputs + 1
+          = evaluateTransactionFee sbe pparams body inputs' 0 0
+
+summarizeTx :: Int -> Maybe L.Coin -> ActionM ()
+summarizeTx size maybeFeeEstimate = do
+  fmap updateSummary <$> getEnvSummary >>=
+    mapM_ \summary -> do
+      setEnvSummary summary
+      traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary
+  dumpBudgetSummaryIfExisting
+  where
+    updateSummary :: PlutusBudgetSummary -> PlutusBudgetSummary
+    updateSummary summary =
+      summary { projectedTxSize = Just size
+              , projectedTxFee = maybeFeeEstimate }
+
 data GovCaseEnv era = GovCaseEnv
   { gcEnvEra          :: AsType era
   , gcEnvFeeInEra     :: TxFee era
@@ -384,32 +437,26 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
   | TxGenTxParams {..} <- gcEnvTxParams
   , sbe <- shelleyBasedEra @era
   = do network :: Ledger.Network <- toShelleyNetwork <$> getEnvNetworkId
-       maybeLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
+       ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets pcWalletName
        (toUTxO, _addressOut) <- interpretPayMode pcPayMode
-       let txGenerator :: TxGenerator era
-           txGenerator = genTxProposal' gcEnvLedgerParams gcEnvFeeInEra unProposal
-           mangledUTxOs :: CreateAndStoreList IO era [L.Coin]
-           mangledUTxOs = mangle $ repeat toUTxO
+       let ptxTxGen :: TxGenerator era
+           ptxTxGen = genTxProposal' gcEnvLedgerParams gcEnvFeeInEra unProposal
+           ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
+           ptxMangledUTxOs = mangle $ repeat toUTxO
            fundSource :: FundSource IO
            fundSource = walletSource wallet 1
-           inToOut :: [L.Coin] -> [L.Coin]
-           inToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           sourceToStore :: IO (Either TxGenError (Tx era))
-           sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
+           ptxInToOut :: [L.Coin] -> [L.Coin]
+           ptxInToOut = Utils.inputsToOutputsWithFee txParamFee 1
            govAction :: GovernanceAction era
            govAction = TreasuryWithdrawal [(network, pcGenStakeCred, pcCoin)] SNothing
            Proposal {..} = createProposalProcedure sbe network pcCoin pcGenStakeCred govAction pcAnchor
-       fundPreview :: [Fund] <- liftIO $ walletPreview wallet 0
-       let sourcePreviewAction = sourceTransactionPreview txGenerator fundPreview inToOut mangledUTxOs
-       handleE handlePreviewErr do
-         txPreview <- hoistActionEither sourcePreviewAction
-         let txFeeEstimate = maybeLedgerPParams <&> \ledgerPParams ->
-               evaluateTransactionFee sbe ledgerPParams (getTxBody txPreview) 1 0 0
-         traceDebug $ "Projected Tx size in bytes: " <> show (txSizeInBytes txPreview)
-         traceDebug $ "Projected Tx fee in Coin: " <> show txFeeEstimate
-       pure . Streaming.effect $ Streaming.yield <$> sourceToStore
+       ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
+       handleE handlePreviewErr . void $ previewTx PreviewTxData
+         { ptxInputs = 0, .. }
+       pure . Streaming.effect $ Streaming.yield <$>
+           sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
 
 data VoteCase = VoteCase
   { vcWalletName  :: String
@@ -433,35 +480,29 @@ voteCase GovCaseEnv {..} VoteCase {..}
   | TxGenTxParams {..} <- gcEnvTxParams
   , sbe <- shelleyBasedEra @era
   , cbe <- conwayBasedEra @era
-  = do maybeLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
+  = do ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets vcWalletName
        (toUTxO, _addressOut) <- interpretPayMode vcPayMode
-       let txGenerator :: TxGenerator era
-           txGenerator = genTxVoting' gcEnvLedgerParams gcEnvFeeInEra vote
+       let ptxTxGen :: TxGenerator era
+           ptxTxGen = genTxVoting' gcEnvLedgerParams gcEnvFeeInEra vote
            fundSource :: FundSource IO
            fundSource = walletSource wallet 1
-           mangledUTxOs :: CreateAndStoreList IO era [L.Coin]
-           mangledUTxOs = mangle $ repeat toUTxO
-           inToOut :: [L.Coin] -> [L.Coin]
-           inToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           sourceToStore :: IO (Either TxGenError (Tx era))
-           sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
+           ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
+           ptxMangledUTxOs = mangle $ repeat toUTxO
+           ptxInToOut :: [L.Coin] -> [L.Coin]
+           ptxInToOut = Utils.inputsToOutputsWithFee txParamFee 1
            VotingProcedure {..} = createVotingProcedure cbe vcVote vcAnchor
            voter :: Ledger.Voter crypto
            voter = Ledger.DRepVoter vcGenDRepCred
            vote :: VotingProcedures era
            vote = VotingProcedures . Ledger.VotingProcedures $
                     Map.fromList [(voter, Map.fromList [(vcGovActId, unVotingProcedure)])]
-       fundPreview :: [Fund] <- liftIO $ walletPreview wallet 0
-       let sourcePreviewAction = sourceTransactionPreview txGenerator fundPreview inToOut mangledUTxOs
-       handleE handlePreviewErr do
-         txPreview <- hoistActionEither sourcePreviewAction
-         let txFeeEstimate = maybeLedgerPParams <&> \ledgerPParams ->
-               evaluateTransactionFee sbe ledgerPParams (getTxBody txPreview) 1 0 0
-         traceDebug $ "Projected Tx size in bytes: " <> show (txSizeInBytes txPreview)
-         traceDebug $ "Projected Tx fee in Coin: " <> show txFeeEstimate
-       pure . Streaming.effect $ Streaming.yield <$> sourceToStore
+       ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
+       handleE handlePreviewErr . void $ previewTx PreviewTxData
+         { ptxInputs = 0, .. }
+       pure . Streaming.effect $ Streaming.yield <$>
+           sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
 
 evalGenerator :: forall era . ()
   => IsShelleyBasedEra era
@@ -479,7 +520,8 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
     Right ledgerParameters
       | feeInEra <- Utils.mkTxFee txParamFee
       , mangleUTxOs <- mangle . repeat
-      , txGenDefault <- genTx sbe ledgerParameters noCollateral feeInEra TxMetadataNone
+      , genTx' <- \collateralPair -> genTx sbe ledgerParameters collateralPair feeInEra
+      , txGenDefault <- genTx' noCollateral TxMetadataNone
       , evalGenerator' <- uncurry3 evalGenerator . (, txParams, era)
       -> case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
@@ -500,65 +542,49 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
         -- type conditionally sent back by 'Utils.includeChange', to
         -- then be used while partially applied as the @valueSplitter@
         -- in 'sourceToStoreTransactionNew'.
-        Split walletName payMode payModeChange coins -> do
-          wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode payMode
-          traceDebug $ "split output address : " ++ addressOut
-          (toUTxOChange, addressChange) <- interpretPayMode payModeChange
-          traceDebug $ "split change address : " ++ addressChange
-          let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.includeChange txParamFee coins
-            sourceToStore = sourceToStoreTransactionNew txGenDefault fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+        Split walletName payMode payModeChange coins
+          | inToOut <- Utils.includeChange txParamFee coins
+          -> do fundSource <- flip walletSource 1 <$> getEnvWallets walletName
+                (toUTxO, addressOut) <- interpretPayMode payMode
+                traceDebug $ "split output address : " <> addressOut
+                (mangledUTxOChange, addressChange)
+                  <- first (flip mangleWithChange toUTxO) <$>
+                        interpretPayMode payModeChange
+                traceDebug $ "split change address : " <> addressChange
+                pure . Streaming.effect $ Streaming.yield <$>
+                      sourceToStoreTransactionNew txGenDefault fundSource inToOut mangledUTxOChange
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
         -- The division is done in 'Utils.inputsToOutputsWithFee'
         -- but things are threaded through
         -- 'Cardano.Benchmarking.Wallet.mangle' and packed into
         -- the transaction assembled by 'sourceToStoreTransactionNew'.
-        SplitN walletName payMode count -> do
-          wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode payMode
-          traceDebug $ "SplitN output address : " ++ addressOut
-          let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.inputsToOutputsWithFee txParamFee count
-            sourceToStore = sourceToStoreTransactionNew txGenDefault fundSource inToOut $ mangleUTxOs toUTxO
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+        SplitN walletName payMode count
+          | inToOut <- Utils.inputsToOutputsWithFee txParamFee count
+          -> do fundSource <- flip walletSource 1 <$> getEnvWallets walletName
+                (mangledUTxOs, addressOut)
+                  <- first mangleUTxOs <$> interpretPayMode payMode
+                traceDebug $ "SplitN output address : " <> addressOut
+                pure . Streaming.effect $ Streaming.yield <$>
+                  sourceToStoreTransactionNew txGenDefault fundSource inToOut mangledUTxOs
 
-        NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
-          wallet <- getEnvWallets walletName
-          collaterals <- selectCollateralFunds collateralWallet
-          (toUTxO, addressOut) <- interpretPayMode payMode
-          traceDebug $ "NtoM output address : " ++ addressOut
-          let
-            fundSource = walletSource wallet inputs
-            inToOut = Utils.inputsToOutputsWithFee txParamFee outputs
-            txGenerator = genTx sbe ledgerParameters collaterals feeInEra (toMetadata metadataSize)
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleUTxOs toUTxO
-
-          fundPreview <- liftIO $ walletPreview wallet inputs
-          case sourceTransactionPreview txGenerator fundPreview inToOut $ mangleUTxOs toUTxO of
-            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
-            Right tx -> do
-              let
-                txSize = txSizeInBytes tx
-                txFeeEstimate = case toLedgerPParams sbe protocolParameters of
-                  Left{}              -> Nothing
-                  Right ledgerPParams -> Just $
-                    evaluateTransactionFee sbe ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
-              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
-              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
-              -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
-              summary_ <- getEnvSummary
-              forM_ summary_ $ \summary -> do
-                let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
-                setEnvSummary summary'
-                traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
-              dumpBudgetSummaryIfExisting
-
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+        NtoM walletName payMode ptxInputs outputs metadataSize collateralWallet
+          | ptxInToOut <- Utils.inputsToOutputsWithFee txParamFee outputs
+          , ptxLedgerPParams <- eitherToMaybe $
+                toLedgerPParams sbe protocolParameters
+          -> do wallet <- getEnvWallets walletName
+                collaterals <- selectCollateralFunds collateralWallet
+                (ptxMangledUTxOs, addressOut)
+                  <- first mangleUTxOs <$> interpretPayMode payMode
+                traceDebug $ "NtoM output address : " <> addressOut
+                ptxFund <- liftIO $ walletPreview wallet ptxInputs
+                let ptxTxGen = genTx' collaterals $ toMetadata metadataSize
+                handleE handlePreviewErr do
+                  (size, maybeFeeEstimate) <- previewTx PreviewTxData {..}
+                  summarizeTx size maybeFeeEstimate
+                let fundSource = walletSource wallet ptxInputs
+                pure . Streaming.effect $ Streaming.yield <$>
+                  sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
 
         Propose pcWalletName pcPayMode pcCoin pcGenStakeCred' pcAnchor
           | pcGenStakeCred <- fromShelleyStakeCredential pcGenStakeCred'
