@@ -40,7 +40,6 @@ import           Data.Type.Equality
 import           Data.Word (Word8)
 import           GHC.Stack as GHC
 
-import           Testnet.Components.Configuration (NumPools(..))
 import           Testnet.Process.Run
 import           Testnet.Start.Types
 

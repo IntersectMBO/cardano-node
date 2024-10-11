@@ -8,16 +8,23 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Testnet.Types
   ( LeadershipSlot(..)
   , NodeLoggingFormat(..)
   , PaymentKeyInfo(..)
   , TestnetRuntime(..)
+  , allNodes
+  , spoNodes
+  , relayNodes
+  , testnetSprockets
   , NodeRuntime(..)
   , nodeSocketPath
-  , PoolNode(..)
-  , PoolNodeKeys(..)
+  , TestnetNode(..)
+  , isTestnetNodeSpo
+  , testnetNodeStdout
+  , SpoNodeKeys(..)
   , Delegator(..)
   , KeyPair(..)
   , verificationKeyFp
@@ -31,9 +38,6 @@ module Testnet.Types
   , PaymentKey
   , DRepKey
   , SpoColdKey
-  , allNodes
-  , poolSprockets
-  , poolNodeStdout
   , readNodeLoggingFormat
   , ShelleyGenesis(..)
   , shelleyGenesis
@@ -58,6 +62,8 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as A
 import           Data.List (intercalate)
+import           Data.Maybe
+import           Data.MonoTraversable (Element, MonoFunctor (..))
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Exts (IsString (..))
@@ -78,6 +84,13 @@ data KeyPair k = KeyPair
   { verificationKey :: forall dir. (File (VKey k) dir)
   , signingKey :: forall dir. (File (SKey k) dir)
   }
+
+type instance Element (KeyPair k) = FilePath
+instance MonoFunctor (KeyPair k) where
+  omap f (KeyPair vk sk) = KeyPair (f' vk) (f' sk)
+    where
+      f' :: File k' d -> File k' d
+      f' = File . f . unFile
 
 deriving instance Show (KeyPair k)
 deriving instance Eq (KeyPair k)
@@ -101,22 +114,35 @@ data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
   , testnetMagic :: !Int
-  , poolNodes :: ![PoolNode]
+  , testnetNodes :: ![TestnetNode]
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
   }
 
-poolSprockets :: TestnetRuntime -> [Sprocket]
-poolSprockets = fmap (nodeSprocket . poolRuntime) . poolNodes
+testnetSprockets :: TestnetRuntime -> [Sprocket]
+testnetSprockets = fmap (nodeSprocket . testnetNodeRuntime) . testnetNodes
 
-data PoolNode = PoolNode
-  { poolRuntime :: NodeRuntime
-  , poolKeys :: PoolNodeKeys
+allNodes :: TestnetRuntime -> [NodeRuntime]
+allNodes = fmap testnetNodeRuntime . testnetNodes
+
+spoNodes :: TestnetRuntime -> [NodeRuntime]
+spoNodes = fmap testnetNodeRuntime . filter isTestnetNodeSpo . testnetNodes
+
+relayNodes :: TestnetRuntime -> [NodeRuntime]
+relayNodes = fmap testnetNodeRuntime . filter (not . isTestnetNodeSpo) . testnetNodes
+
+data TestnetNode = TestnetNode
+  { testnetNodeRuntime :: !NodeRuntime
+  , poolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
   }
 
-poolNodeStdout :: PoolNode -> FilePath
-poolNodeStdout = nodeStdout . poolRuntime
+testnetNodeStdout :: TestnetNode -> FilePath
+testnetNodeStdout = nodeStdout . testnetNodeRuntime
 
+isTestnetNodeSpo :: TestnetNode -> Bool
+isTestnetNodeSpo = isJust . poolKeys
+
+-- | Node process runtime parameters
 data NodeRuntime = NodeRuntime
   { nodeName :: !String
   , nodeIpv4 :: !HostAddress
@@ -135,11 +161,15 @@ data ColdPoolKey
 data StakingKey
 data SpoColdKey
 
-data PoolNodeKeys = PoolNodeKeys
+data SpoNodeKeys = SpoNodeKeys
   { poolNodeKeysCold :: KeyPair SpoColdKey
   , poolNodeKeysVrf :: KeyPair VrfKey
   , poolNodeKeysStaking :: KeyPair StakingKey
   } deriving (Eq, Show)
+
+type instance Element SpoNodeKeys = FilePath
+instance MonoFunctor SpoNodeKeys where
+  omap f (SpoNodeKeys cold vrf staking) = SpoNodeKeys (omap f cold) (omap f vrf) (omap f staking)
 
 data PaymentKeyInfo = PaymentKeyInfo
   { paymentKeyInfoPair :: KeyPair PaymentKey
@@ -193,8 +223,6 @@ readNodeLoggingFormat = \case
   "text" -> Right NodeLoggingFormatAsText
   s -> Left $ "Unrecognised node logging format: " <> show s <> ".  Valid options: \"json\", \"text\""
 
-allNodes :: TestnetRuntime -> [NodeRuntime]
-allNodes tr = fmap poolRuntime (poolNodes tr)
 
 -- | Hardcoded testnet IPv4 address pointing to the local host
 testnetDefaultIpv4Address :: HostAddress

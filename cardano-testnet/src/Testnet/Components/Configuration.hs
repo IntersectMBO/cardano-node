@@ -1,5 +1,5 @@
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,11 +12,6 @@ module Testnet.Components.Configuration
 
   , getByronGenesisHash
   , getShelleyGenesisHash
-
-  , NumPools(..)
-  , numPools
-  , NumDReps
-  , numDReps
 
   , anyEraToString
   , eraToString
@@ -61,7 +56,8 @@ import           System.FilePath.Posix (takeDirectory, (</>))
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
-import           Testnet.Start.Types (CardanoTestnetOptions (..), anyEraToString, anyShelleyBasedEraToString, eraToString)
+import           Testnet.Start.Types (NumDReps (..), NumPools (..), anyEraToString,
+                   anyShelleyBasedEraToString, eraToString)
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -118,16 +114,6 @@ getShelleyGenesisHash path key = do
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
 
-newtype NumPools = NumPools Int
-
-numPools :: CardanoTestnetOptions -> NumPools
-numPools CardanoTestnetOptions { cardanoNodes } = NumPools $ length cardanoNodes
-
-newtype NumDReps = NumDReps Int
-
-numDReps :: CardanoTestnetOptions -> NumDReps
-numDReps CardanoTestnetOptions { cardanoNumDReps } = NumDReps cardanoNumDReps
-
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => NumPools -- ^ The number of pools to make
@@ -139,7 +125,7 @@ createSPOGenesisAndFiles
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply sbe shelleyGenesis
+createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply sbe shelleyGenesis
                          alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
@@ -158,7 +144,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply
   let testnetMagic = sgNetworkMagic shelleyGenesis
       -- At least there should be a delegator per DRep
       -- otherwise some won't be representing anybody
-      numStakeDelegators = max 3 numDelReps :: Int
+      numStakeDelegators = max 3 (fromIntegral nDelReps) :: Int
       startTime = sgSystemStart shelleyGenesis
 
  -- TODO: Remove this rewrite.
@@ -171,8 +157,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply
   -- TODO: create-testnet-data should have arguments for
   -- Alonzo and Conway genesis that are optional and if not
   -- supplised the users get a default
-  H.note_ $ "Number of pools: " <> show numPoolNodes
-  H.note_ $ "Number of stake delegators: " <> show numPoolNodes
+  H.note_ $ "Number of pools: " <> show nPoolNodes
+  H.note_ $ "Number of stake delegators: " <> show nPoolNodes
   H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
 
   execCli_
@@ -181,11 +167,11 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) maxSupply
     , "--spec-alonzo",  inputGenesisAlonzoFp
     , "--spec-conway",  inputGenesisConwayFp
     , "--testnet-magic", show testnetMagic
-    , "--pools", show numPoolNodes
+    , "--pools", show nPoolNodes
     , "--total-supply",     show maxSupply -- Half of this will be delegated, see https://github.com/IntersectMBO/cardano-cli/pull/874
     , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
-    , "--drep-keys", show numDelReps
+    , "--drep-keys", show nDelReps
     , "--start-time", DTC.formatIso8601 startTime
     , "--out-dir", tempAbsPath
     ]

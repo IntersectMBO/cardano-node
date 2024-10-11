@@ -407,7 +407,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
 -- TODO: unify with DRep.generateVoteFiles
-generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
+generateVoteFiles :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m)
   => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the
                           -- transaction will be constructed.
   -> H.ExecConfig -- ^ Specifies the CLI execution configuration.
@@ -417,7 +417,7 @@ generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
             -- the output voting files.
   -> String -- ^ Transaction ID string of the governance action.
   -> Word16 -- ^ Index of the governance action.
-  -> [(PoolNodeKeys, [Char])] -- ^ List of tuples where each tuple contains a 'PoolNodeKeys'
+  -> [(SpoNodeKeys, [Char])] -- ^ List of tuples where each tuple contains a 'SpoNodeKeys'
                               -- representing the SPO keys and a 'String' representing the
                               -- vote type (i.e: "yes", "no", or "abstain").
   -> m [File VoteFile In]
