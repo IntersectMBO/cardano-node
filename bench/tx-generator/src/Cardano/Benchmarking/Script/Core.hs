@@ -74,6 +74,7 @@ import qualified Prelude
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import           Control.Monad.Extra (whenJust)
 import qualified Control.Monad.Random as Random (getRandom)
 import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
@@ -81,7 +82,6 @@ import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Constraint (type (&))
 import           Data.Either.Extra (eitherToMaybe)
-import           Data.Functor ((<&>))
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
 import           Data.Kind (Constraint, Type)
@@ -397,6 +397,59 @@ handlePreviewErr err = traceDebug $ "Error creating Tx preview: " <> show err
 noCollateral :: (TxInsCollateral era, [Fund])
 noCollateral = (TxInsCollateralNone, [])
 
+data PreviewTxData era = PreviewTxData
+  { ptxInputs       :: NumberOfInputsPerTx
+  , ptxTxGen        :: TxGenerator era
+  , ptxFund         :: [Fund]
+  , ptxInToOut      :: [L.Coin] -> [L.Coin]
+  , ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
+  , ptxLedgerPParams :: Maybe (Ledger.PParams (ShelleyLedgerEra era)) }
+
+previewTx :: forall era . ()
+  => IsShelleyBasedEra era
+  => PreviewTxData era
+  -> ActionM (Int, Maybe L.Coin)
+previewTx PreviewTxData {..}
+  | inputs' <- fromIntegral $ ptxInputs + 1
+  = do
+      tx <- hoistActionEither $
+        sourceTransactionPreview ptxTxGen ptxFund ptxInToOut ptxMangledUTxOs
+      let size = txSizeInBytes tx
+      -- 1 key witness per tx input + 1 collateral
+          maybeFeeEstimate = txFeeHelper inputs' tx <$> ptxLedgerPParams
+      traceDebug $ "Projected Tx size in bytes: " <> show size
+      whenJust maybeFeeEstimate \feeEstimate ->
+        traceDebug $ "Projected Tx fee in Coin: " <> show feeEstimate
+      -- TODO: possibly emit a warning when (Just txFeeEstimate) is
+      -- lower than specified by config in TxGenTxParams.txFee
+      pure (size, maybeFeeEstimate)
+
+txFeeHelper :: forall era ledgerEra . ()
+  => IsShelleyBasedEra era
+  => ledgerEra ~ ShelleyLedgerEra era
+  => NumberOfInputsPerTx
+  -> Tx era
+  -> Ledger.PParams ledgerEra
+  -> L.Coin
+txFeeHelper inputs tx pparams
+          | sbe <- shelleyBasedEra
+          , body <- getTxBody tx
+          , inputs' <- fromIntegral $ inputs + 1
+          = evaluateTransactionFee sbe pparams body inputs' 0 0
+
+summarizeTx :: Int -> Maybe L.Coin -> ActionM ()
+summarizeTx size maybeFeeEstimate = do
+  fmap updateSummary <$> getEnvSummary >>=
+    mapM_ \summary -> do
+      setEnvSummary summary
+      traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary
+  dumpBudgetSummaryIfExisting
+  where
+    updateSummary :: PlutusBudgetSummary -> PlutusBudgetSummary
+    updateSummary summary =
+      summary { projectedTxSize = Just size
+              , projectedTxFee = maybeFeeEstimate }
+
 data GovCaseEnv era = GovCaseEnv
   { gcEnvEra          :: AsType era
   , gcEnvFeeInEra     :: TxFee era
@@ -432,20 +485,19 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
            fundSource = walletSource wallet 1
            inToOut :: [L.Coin] -> [L.Coin]
            inToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           sourceToStore :: IO (Either TxGenError (Tx era))
-           sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
            govAction :: GovernanceAction era
            govAction = TreasuryWithdrawal [(network, unGeneratorStakeCredential, pcCoin)] SNothing
            Proposal {..} = createProposalProcedure sbe network pcCoin unGeneratorStakeCredential govAction pcAnchor
        fundPreview :: [Fund] <- liftIO $ walletPreview wallet 0
-       let sourcePreviewAction = sourceTransactionPreview txGenerator fundPreview inToOut mangledUTxOs
-       handleE handlePreviewErr do
-         txPreview <- hoistActionEither sourcePreviewAction
-         let txFeeEstimate = maybeLedgerPParams <&> \ledgerPParams ->
-               evaluateTransactionFee sbe ledgerPParams (getTxBody txPreview) 1 0 0
-         traceDebug $ "Projected Tx size in bytes: " <> show (txSizeInBytes txPreview)
-         traceDebug $ "Projected Tx fee in Coin: " <> show txFeeEstimate
-       pure . Streaming.effect $ Streaming.yield <$> sourceToStore
+       handleE handlePreviewErr . void $ previewTx PreviewTxData
+         { ptxInputs = 0
+         , ptxLedgerPParams = maybeLedgerPParams
+         , ptxTxGen = txGenerator
+         , ptxFund = fundPreview
+         , ptxInToOut = inToOut
+         , ptxMangledUTxOs = mangledUTxOs }
+       pure . Streaming.effect $ Streaming.yield <$>
+           sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
   where
     sbe :: ShelleyBasedEra era
     sbe = shelleyBasedEra
@@ -482,8 +534,6 @@ voteCase GovCaseEnv {..} VoteCase {..}
            mangledUTxOs = mangle $ repeat toUTxO
            inToOut :: [L.Coin] -> [L.Coin]
            inToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           sourceToStore :: IO (Either TxGenError (Tx era))
-           sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
            VotingProcedure {..} = createVotingProcedure cbe vcVote vcAnchor
            govActionId :: Ledger.GovActionId crypto
            govActionId = undefined
@@ -493,14 +543,15 @@ voteCase GovCaseEnv {..} VoteCase {..}
            vote = VotingProcedures . Ledger.VotingProcedures $
                     Map.fromList [(voter, Map.fromList [(govActionId, unVotingProcedure)])]
        fundPreview :: [Fund] <- liftIO $ walletPreview wallet 0
-       let sourcePreviewAction = sourceTransactionPreview txGenerator fundPreview inToOut mangledUTxOs
-       handleE handlePreviewErr do
-         txPreview <- hoistActionEither sourcePreviewAction
-         let txFeeEstimate = maybeLedgerPParams <&> \ledgerPParams ->
-               evaluateTransactionFee sbe ledgerPParams (getTxBody txPreview) 1 0 0
-         traceDebug $ "Projected Tx size in bytes: " <> show (txSizeInBytes txPreview)
-         traceDebug $ "Projected Tx fee in Coin: " <> show txFeeEstimate
-       pure . Streaming.effect $ Streaming.yield <$> sourceToStore
+       handleE handlePreviewErr . void $ previewTx PreviewTxData
+         { ptxInputs = 0
+         , ptxLedgerPParams = maybeLedgerPParams
+         , ptxTxGen = txGenerator
+         , ptxFund = fundPreview
+         , ptxInToOut = inToOut
+         , ptxMangledUTxOs = mangledUTxOs }
+       pure . Streaming.effect $ Streaming.yield <$>
+           sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
   where
     sbe :: ShelleyBasedEra era
     sbe = shelleyBasedEra
@@ -520,7 +571,18 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   -- Hmm? hoistActionM seems rather apt here.
   case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
-    Right ledgerParameters ->
+    Right ledgerParameters -> do
+      let genTx' :: (TxInsCollateral era, [Fund])
+                 -> TxMetadataInEra era
+                 -> [Fund]
+                 -> [TxOut CtxTx era]
+                 -> Either TxGenError (Tx era, TxId)
+                 -- the last 2 arguments are consumed as
+                 -- -> TxGenerator era
+          genTx' collateralPair = genTx sbe ledgerParameters collateralPair feeInEra
+          -- txGenDefault could also be typed as :: TxGenerator era
+          txGenDefault :: [Fund] -> [TxOut CtxTx era] -> Either TxGenError (Tx era, TxId)
+          txGenDefault = genTx' noCollateral TxMetadataNone
       case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
           genesis  <- getEnvGenesis
@@ -540,18 +602,17 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         -- type conditionally sent back by 'Utils.includeChange', to
         -- then be used while partially applied as the @valueSplitter@
         -- in 'sourceToStoreTransactionNew'.
-        Split walletName payMode payModeChange coins -> do
-          wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode payMode
-          traceDebug $ "split output address : " ++ addressOut
-          (toUTxOChange, addressChange) <- interpretPayMode payModeChange
-          traceDebug $ "split change address : " ++ addressChange
-          let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.includeChange fee coins
-            txGenerator = genTx shelleyBasedEra ledgerParameters noCollateral feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+        Split walletName payMode payModeChange coins
+          | inToOut <- Utils.includeChange fee coins
+          -> do fundSource <- flip walletSource 1 <$> getEnvWallets walletName
+                (toUTxO, addressOut) <- interpretPayMode payMode
+                traceDebug $ "split output address : " <> addressOut
+                (mangledUTxOChange, addressChange)
+                  <- first (flip mangleWithChange toUTxO) <$>
+                        interpretPayMode payModeChange
+                traceDebug $ "split change address : " <> addressChange
+                pure . Streaming.effect $ Streaming.yield <$>
+                      sourceToStoreTransactionNew txGenDefault fundSource inToOut mangledUTxOChange
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
         -- The division is done in 'Utils.inputsToOutputsWithFee'
@@ -560,47 +621,40 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         -- the transaction assembled by 'sourceToStoreTransactionNew'.
         SplitN walletName payMode count -> do
           wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode payMode
+          (mangledUTxOs, addressOut)
+            <- first (mangle . repeat) <$> interpretPayMode payMode
           traceDebug $ "SplitN output address : " ++ addressOut
           let
             fundSource = walletSource wallet 1
             inToOut = Utils.inputsToOutputsWithFee fee count
             txGenerator = genTx shelleyBasedEra ledgerParameters noCollateral feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
           wallet <- getEnvWallets walletName
           collaterals <- selectCollateralFunds collateralWallet
-          (toUTxO, addressOut) <- interpretPayMode payMode
+          (mangledUTxOs, addressOut)
+            <- first (mangle . repeat) <$> interpretPayMode payMode
           traceDebug $ "NtoM output address : " ++ addressOut
-          let
-            fundSource = walletSource wallet inputs
-            inToOut = Utils.inputsToOutputsWithFee fee outputs
-            txGenerator = genTx shelleyBasedEra ledgerParameters collaterals feeInEra (toMetadata metadataSize)
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
-
           fundPreview <- liftIO $ walletPreview wallet inputs
-          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
-            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
-            Right tx -> do
-              let
-                txSize = txSizeInBytes tx
-                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
-                  Left{}              -> Nothing
-                  Right ledgerPParams -> Just $
-                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
-              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
-              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
-              -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
-              summary_ <- getEnvSummary
-              forM_ summary_ $ \summary -> do
-                let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
-                setEnvSummary summary'
-                traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
-              dumpBudgetSummaryIfExisting
-
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          let maybeLedgerPParams = eitherToMaybe $
+                toLedgerPParams shelleyBasedEra protocolParameters
+              inToOut = Utils.inputsToOutputsWithFee fee outputs
+              txGenerator = genTx' collaterals $ toMetadata metadataSize
+          handleE handlePreviewErr do
+            (size, maybeFeeEstimate)
+              <- previewTx PreviewTxData
+                             { ptxInputs = inputs
+                             , ptxLedgerPParams = maybeLedgerPParams
+                             , ptxTxGen = txGenerator
+                             , ptxFund = fundPreview
+                             , ptxInToOut = inToOut
+                             , ptxMangledUTxOs = mangledUTxOs }
+            summarizeTx size maybeFeeEstimate
+          let fundSource = walletSource wallet inputs
+          pure . Streaming.effect $ Streaming.yield <$>
+            sourceToStoreTransactionNew txGenerator fundSource inToOut mangledUTxOs
 
         Propose pcWalletName pcPayMode pcCoin pcGenStakeCred pcAnchor
           | args <- ProposeCase {..}
@@ -678,6 +732,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
 
         EmptyStream -> return mempty
   where
+    sbe = shelleyBasedEra
     feeInEra = Utils.mkTxFee fee
     evalGenerator' = uncurry3 evalGenerator . (, txParams, era)
 
