@@ -391,6 +391,12 @@ benchmarkTxStream txStream targetNodes tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads ctl
 
+handlePreviewErr :: Env.Error -> ActionM ()
+handlePreviewErr err = traceDebug $ "Error creating Tx preview: " <> show err
+
+noCollateral :: (TxInsCollateral era, [Fund])
+noCollateral = (TxInsCollateralNone, [])
+
 data GovCaseEnv era = GovCaseEnv
   { gcEnvEra          :: AsType era
   , gcEnvFeeInEra     :: TxFee era
@@ -441,12 +447,8 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
          traceDebug $ "Projected Tx fee in Coin: " <> show txFeeEstimate
        pure . Streaming.effect $ Streaming.yield <$> sourceToStore
   where
-    handlePreviewErr :: Env.Error -> ActionM ()
-    handlePreviewErr err = traceDebug $ "Error creating Tx preview: " <> show err
     sbe :: ShelleyBasedEra era
     sbe = shelleyBasedEra
-    noCollateral :: (TxInsCollateral era, [Fund])
-    noCollateral = (TxInsCollateralNone, [])
 
 data VoteCase = VoteCase
   { vcWalletName  :: String
@@ -500,14 +502,10 @@ voteCase GovCaseEnv {..} VoteCase {..}
          traceDebug $ "Projected Tx fee in Coin: " <> show txFeeEstimate
        pure . Streaming.effect $ Streaming.yield <$> sourceToStore
   where
-    handlePreviewErr :: Env.Error -> ActionM ()
-    handlePreviewErr err = traceDebug $ "Error creating Tx preview: " <> show err
     sbe :: ShelleyBasedEra era
     sbe = shelleyBasedEra
     cbe :: ConwayEraOnwards era
     cbe = conwayBasedEra
-    noCollateral :: (TxInsCollateral era, [Fund])
-    noCollateral = (TxInsCollateralNone, [])
 
 evalGenerator :: forall era . ()
   => IsShelleyBasedEra era
@@ -551,7 +549,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet 1
             inToOut = Utils.includeChange fee coins
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            txGenerator = genTx shelleyBasedEra ledgerParameters noCollateral feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -567,7 +565,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet 1
             inToOut = Utils.inputsToOutputsWithFee fee count
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            txGenerator = genTx shelleyBasedEra ledgerParameters noCollateral feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
