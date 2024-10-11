@@ -13,12 +13,13 @@ module Cardano.TxGenerator.Setup.SigningKey
        , readStakeKeyFile
        , PaymentKey
        , SigningKey
+       , module CLI
        )
        where
 
 import           Cardano.Api
 
-import           Cardano.CLI.Types.Common (SigningKeyFile, VerificationKeyFile)
+import           Cardano.CLI.Types.Common as CLI (SigningKeyFile, VerificationKeyFile)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
 import           Data.Bifunctor (first)
