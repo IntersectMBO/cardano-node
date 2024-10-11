@@ -60,7 +60,7 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
-  | ExecutableRelatedFailure ExecutableError
+  | ExecutableRelatedFailure SomeException
   | FileRelatedFailure IOException
   | NodeExecutableError (Doc Ann)
   | NodeAddressAlreadyInUseError (Doc Ann)
@@ -144,8 +144,8 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     let socketAbsPath = H.sprocketSystemName sprocket
 
     nodeProcess
-      <- firstExceptT ExecutableRelatedFailure
-           $ hoistExceptT liftIO $ procNode $ mconcat
+      <- newExceptT . fmap (first ExecutableRelatedFailure) . try
+           $ procNode $ mconcat
                          [ nodeCmd
                          , [ "--socket-path", H.sprocketArgumentName sprocket
                            , "--port", show port
