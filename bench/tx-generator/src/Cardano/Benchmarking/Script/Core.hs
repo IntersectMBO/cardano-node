@@ -31,7 +31,8 @@ import           Cardano.Api.Shelley (GovernanceAction (..), LedgerProtocolParam
                    ShelleyLedgerEra, StakeCredential (..), VotingProcedure (..),
                    VotingProcedures (..), convertToLedgerProtocolParameters,
                    createProposalProcedure, createVotingProcedure, fromShelleyStakeCredential,
-                   protocolParamMaxTxExUnits, protocolParamPrices, toShelleyNetwork)
+                   protocolParamMaxTxExUnits, protocolParamPrices, singletonVotingProcedures,
+                   toShelleyNetwork)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -50,11 +51,11 @@ import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
-import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Api as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -80,7 +81,6 @@ import           Data.Either.Extra (eitherToMaybe)
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
 import           Data.Kind (Type)
-import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
@@ -465,19 +465,19 @@ data VoteCase = VoteCase
   , vcAnchor      :: Maybe (Ledger.Url, Text.Text) }
 
 voteCase :: forall era ledgerEra crypto . ()
-  => IsShelleyBasedEra era
-  => IsConwayBasedEra era
+  -- These equality constraints are for the sake of abbreviation.
   => ledgerEra ~ ShelleyLedgerEra era
   => crypto ~ Ledger.EraCrypto ledgerEra
   => crypto ~ Ledger.StandardCrypto
   => GovCaseEnv era
   -> VoteCase
+  -> ConwayEraOnwards era
   -> ActionM (TxStream IO era)
-voteCase GovCaseEnv {..} VoteCase {..}
+voteCase GovCaseEnv {..} VoteCase {..} eon
   | TxGenTxParams {..} <- gcEnvTxParams
-  , sbe <- shelleyBasedEra @era
-  , cbe <- conwayBasedEra @era
-  = do ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
+  , sbe <- conwayEraOnwardsToShelleyBasedEra eon
+  = conwayEraOnwardsConstraints eon do
+       ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets vcWalletName
        (toUTxO, _addressOut) <- interpretPayMode vcPayMode
@@ -489,12 +489,11 @@ voteCase GovCaseEnv {..} VoteCase {..}
            ptxMangledUTxOs = mangle $ repeat toUTxO
            ptxInToOut :: [L.Coin] -> [L.Coin]
            ptxInToOut = Utils.inputsToOutputsWithFee txParamFee 1
-           VotingProcedure {..} = createVotingProcedure cbe vcVote vcAnchor
+           VotingProcedure {..} = createVotingProcedure eon vcVote vcAnchor
            voter :: Ledger.Voter crypto
            voter = Ledger.DRepVoter vcGenDRepCred
            vote :: VotingProcedures era
-           vote = VotingProcedures . Ledger.VotingProcedures $
-                    Map.fromList [(voter, Map.fromList [(vcGovActId, unVotingProcedure)])]
+           vote = singletonVotingProcedures eon voter vcGovActId unVotingProcedure
        ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
        handleE handlePreviewErr . void $ previewTx PreviewTxData
          { ptxInputs = 0, .. }
@@ -591,24 +590,22 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                       , gcEnvTxParams = txParams
                       , gcEnvLedgerParams = ledgerParameters
                       , gcEnvFeeInEra = feeInEra }
-          , ce   <- cardanoEra :: CardanoEra era
-          , toThrow <- TxGenError $ "Proposal governance action unsupported "
-                                    <> "in era and/or protocol version."
-          -> forEraInEon ce (liftTxGenError toThrow) \case
+          , unsuppErr <- liftTxGenError . TxGenError $
+                             "Proposal governance action unsupported "
+                                 <> "in era and/or protocol version."
+          -> forShelleyBasedEraInEon sbe unsuppErr \case
                ConwayEraOnwardsConway -> proposeCase env args
 
         Vote vcWalletName vcPayMode vcGovActId vcVote vcGenDRepCred vcAnchor
           | args <- VoteCase {..}
-          , env  <- GovCaseEnv
-                      { gcEnvEra = era
-                      , gcEnvTxParams = txParams
-                      , gcEnvLedgerParams = ledgerParameters
-                      , gcEnvFeeInEra = feeInEra }
-          , ce   <- cardanoEra :: CardanoEra era
-          , toThrow <- TxGenError $ "Voting governance action unsupported "
-                                    <> "in era and/or protocol version."
-          -> forEraInEon ce (liftTxGenError toThrow) \case
-               ConwayEraOnwardsConway -> voteCase env args
+          , env  <- GovCaseEnv { gcEnvEra = era
+                               , gcEnvTxParams = txParams
+                               , gcEnvLedgerParams = ledgerParameters
+                               , gcEnvFeeInEra = feeInEra }
+          , unsuppErr <- liftTxGenError . TxGenError $
+                             "Voting governance action unsupported "
+                                 <> "in era and/or protocol version."
+          -> forShelleyBasedEraInEon sbe unsuppErr $ voteCase env args
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
