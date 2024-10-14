@@ -1291,7 +1291,7 @@ instance (ToJSON txid, ToObject tx) => ToObject (TxDecision txid tx) where
                 , "txIdsToRequest"     .= getNumTxIdsToReq idsToReq
                 , "pipelineTxIds"      .= pipeline
                 , "txsToRequest"       .= txsToReq
-                , "txsToMempool"       .= toJSON (map (toObject verb) txsToMempool)
+                , "txsToMempool"       .= toJSON (map (toObject verb . snd ) txsToMempool)
                 ]
 
 instance (ToJSON txid, ToObject tx) => ToObject (TraceTxSubmissionInbound txid tx) where
