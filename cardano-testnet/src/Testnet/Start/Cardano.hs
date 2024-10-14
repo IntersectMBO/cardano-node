@@ -145,7 +145,7 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 -- > │   └── README.md
 -- > ├── drep-keys
 -- > │   ├── drep{1,2,3}
--- > │   │   └── drep.{skey,drep.vkey}
+-- > │   │   └── drep.{skey,vkey}
 -- > │   └── README.md
 -- > ├── genesis-keys
 -- > │   ├── genesis{1,2,3}
@@ -234,9 +234,6 @@ cardanoTestnet
   H.lbsWriteFile (tmpAbsPath </> "byron.genesis.spec.json")
     . encode $ Defaults.defaultByronProtocolParamsJsonValue
 
-  -- Because in Conway the overlay schedule and decentralization parameter
-  -- are deprecated, we must use the "create-staked" cli command to create
-  -- SPOs in the ShelleyGenesis
   Byron.createByronGenesis
     testnetMagic
     startTime

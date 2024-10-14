@@ -64,6 +64,8 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
+  -- We don't support passing custom node configurations files on the CLI.
+  -- So we use a default node configuration for all nodes.
   (`L.replicate` defaultSpoOptions) <$>
     OA.option auto
     (   OA.long "num-pool-nodes"
