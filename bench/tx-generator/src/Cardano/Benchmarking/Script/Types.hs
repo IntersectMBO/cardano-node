@@ -93,6 +93,8 @@ data Action where
   ReadStakeKeys       :: !FilePath -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
+  -- | inject a singleton DRepCredential into the environment
+  DefineDRepKey      :: !(SigningKey DRepKey) -> Action
   -- | inject a singleton StakeCredential into the environment
   DefineStakeKey      :: !(VerificationKey StakeKey) -> Action
   -- | 'AddFund' is mostly a wrapper around
@@ -130,6 +132,8 @@ data Action where
   LogMsg             :: !Text -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
+
+deriving instance Eq (SigningKey DRepKey)
 
 -- | 'Generator' is interpreted by
 -- 'Cardano.Bencmarking.Script.Core.evalGenerator' as a series of
