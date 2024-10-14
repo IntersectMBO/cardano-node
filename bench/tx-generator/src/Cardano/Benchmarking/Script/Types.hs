@@ -96,6 +96,8 @@ data Action where
   ReadStakeKeys       :: !FilePath -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
+  -- | inject a singleton DRepCredential into the environment
+  DefineDRepKey      :: !(SigningKey DRepKey) -> Action
   -- | inject a singleton StakeCredential into the environment
   DefineStakeKey      :: !(VerificationKey StakeKey) -> Action
   -- | 'AddFund' is mostly a wrapper around
@@ -197,6 +199,9 @@ data Generator where
 deriving instance Generic Vote
 deriving instance FromJSON Vote
 deriving instance ToJSON Vote
+
+deriving instance Eq (SigningKey DRepKey)
+deriving instance Generic (SigningKey DRepKey)
 
 deriving instance FromJSON L.GovActionIx
 

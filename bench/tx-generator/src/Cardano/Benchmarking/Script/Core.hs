@@ -140,6 +140,9 @@ readSigningKey name filePath =
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys
 
+defineDRepCredential :: SigningKey DRepKey -> ActionM ()
+defineDRepCredential = setEnvDRepKeys . (: [])
+
 defineStakeCredential :: VerificationKey StakeKey -> ActionM ()
 defineStakeCredential = setEnvStakeCredentials . (: []) . StakeCredentialByKey . verificationKeyHash
 

@@ -73,6 +73,26 @@ instance FromJSON (SigningKey PaymentKey) where
       Left err  -> fail $ show err
 
 -- FIXME: workaround instance
+instance ToJSON (SigningKey DRepKey) where
+  toJSON = toJSON . serialiseToTextEnvelope Nothing
+instance FromJSON (SigningKey DRepKey) where
+  parseJSON o = do
+    te <- parseJSON o
+    case deserialiseFromTextEnvelope (AsSigningKey AsDRepKey) te of
+      Right k   -> pure k
+      Left err  -> fail $ show err
+
+-- FIXME: workaround instance
+instance ToJSON (VerificationKey DRepKey) where
+  toJSON = toJSON . serialiseToTextEnvelope Nothing
+instance FromJSON (VerificationKey DRepKey) where
+  parseJSON o = do
+    te <- parseJSON o
+    case deserialiseFromTextEnvelope (AsVerificationKey AsDRepKey) te of
+      Right k   -> pure k
+      Left err  -> fail $ show err
+
+-- FIXME: workaround instance
 instance ToJSON (VerificationKey StakeKey) where
   toJSON = toJSON . serialiseToTextEnvelope Nothing
 instance FromJSON (VerificationKey StakeKey) where
