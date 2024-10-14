@@ -24,17 +24,8 @@ transactions as interchangeable, and focuses more on the variety of
 things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
-          Action(..)
-        , Generator(..)
-        , PayMode(PayToAddr, PayToScript)
-        , ProtocolParameterMode(..)
-        , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
-        , ScriptBudget(AutoScript, StaticScriptBudget)
-        , ScriptSpec(..)
-        , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
-                NodeToNode)
-        , TargetNodes
-        , TxList(..)
+       module Cardano.Benchmarking.Script.Types
+
 ) where
 
 import           Cardano.Api
@@ -228,3 +219,14 @@ newtype TxList era = TxList [Tx era]
 data ProtocolParameterMode where
   ProtocolParameterQuery :: ProtocolParameterMode
   ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode
+{-}
+data SomeGovernanceActionId where
+  SomeGovernanceActionId ::
+    forall era. => [L.]
+                -> SomeGovernanceActionId
+-}
+data GovStateSummary era = GovStateSummary
+  { govGovActionDeposit                 :: !Int
+  , govDRepThresholdTreasuryWithdrawal  :: !Int
+  , govProposals                        :: ![GovernanceActionId era]
+  }
