@@ -1231,6 +1231,12 @@ instance
       , "mempoolSize" .= forMachine dtal mpSz
       ]
 
+  forMachine _dtal (TraceMempoolSynced et) =
+    mconcat
+      [ "kind" .= String "TraceMempoolSynced"
+      , "enclosingTime" .= et
+      ]
+
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral w)
@@ -1263,6 +1269,13 @@ instance
       where
         ByteSize32 w = msNumBytes mpSz
 
+  asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
+    [ IntM "txsSyncDuration" (round $ 1000 * duration)
+    ]
+
+  asMetrics (TraceMempoolSynced RisingEdge) = []
+
+
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
     mconcat
@@ -1276,11 +1289,13 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolRejectedTx {} = Namespace [] ["RejectedTx"]
     namespaceFor TraceMempoolRemoveTxs {} = Namespace [] ["RemoveTxs"]
     namespaceFor TraceMempoolManuallyRemovedTxs {} = Namespace [] ["ManuallyRemovedTxs"]
+    namespaceFor TraceMempoolSynced {} = Namespace [] ["Synced"]
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
     severityFor (Namespace _ ["RemoveTxs"]) _ = Just Info
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Info
+    severityFor (Namespace _ ["Synced"]) _ = Just Info
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1300,6 +1315,11 @@ instance MetaTrace (TraceEventMempool blk) where
       , ("mempoolBytes", "Byte size of the mempool")
       , ("txsProcessedNum", "")
       ]
+
+    metricsDocFor (Namespace _ ["Synced"]) =
+      [ ("txsSyncDuration", "Time to sync the mempool in ms after block adoption")
+      ]
+
     metricsDocFor _ = []
 
     documentFor (Namespace _ ["AddedTx"]) = Just
