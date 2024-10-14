@@ -126,8 +126,8 @@ testScriptVoting protocolFile submitMode =
 
   , DefineStakeKey stakeKey
 
-  -- TODO: manually inject an (unnamed) DRep key into the Env by means of a new Action constructor
-  -- DefineDRepKey _drepKey
+  -- manually inject an (unnamed) DRep key into the Env by means of an Action constructor
+  , DefineDRepKey drepKey
 
   , Submit era submitMode txParams
       EmptyStream
@@ -150,8 +150,8 @@ testScriptVoting protocolFile submitMode =
           , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"
           }
 
-    _drepKey :: SigningKey DRepKey
-    _drepKey = fromRight (error "could not parse hardcoded drep key") $
+    drepKey :: SigningKey DRepKey
+    drepKey = error "could not parse hardcoded drep key" `fromRight`
       parseDRepKeyBase16 "5820aa7f780a2dcd099762ebc31a43860c1373970c2e2062fcd02cceefe682f39ed8"
 
     stakeKey :: VerificationKey StakeKey

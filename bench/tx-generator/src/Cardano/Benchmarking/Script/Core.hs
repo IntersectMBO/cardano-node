@@ -94,8 +94,11 @@ readSigningKey name filePath =
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys
 
-defineStakeCrendential :: VerificationKey StakeKey -> ActionM ()
-defineStakeCrendential = setEnvStakeCredentials . (: []) . StakeCredentialByKey . verificationKeyHash
+defineDRepCredential :: SigningKey DRepKey -> ActionM ()
+defineDRepCredential = setEnvDRepKeys . (: [])
+
+defineStakeCredential :: VerificationKey StakeKey -> ActionM ()
+defineStakeCredential = setEnvStakeCredentials . (: []) . StakeCredentialByKey . verificationKeyHash
 
 readDRepKeys :: FilePath -> ActionM ()
 readDRepKeys ncFile = do
