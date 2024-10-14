@@ -48,7 +48,7 @@ import qualified System.Process as IO
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
-import           Testnet.Types (NodeRuntime (NodeRuntime), TestnetRuntime (configurationFile),
+import           Testnet.Types (TestnetNode (..), TestnetRuntime (configurationFile),
                    showIpv4Address, testnetSprockets)
 
 import           Hedgehog (MonadTest)
@@ -115,7 +115,7 @@ startNode
   -- ^ Testnet magic
   -> [String]
   -- ^ The command --socket-path will be added automatically.
-  -> ExceptT NodeStartFailure m NodeRuntime
+  -> ExceptT NodeStartFailure m TestnetNode
 startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
@@ -195,7 +195,17 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     Ping.pingNode (fromIntegral testnetMagic) sprocket
        >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
 
-    pure $ NodeRuntime node ipv4 port sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
+    pure $ TestnetNode
+      { nodeName = node
+      , poolKeys = Nothing -- they're set in the function caller, if present
+      , nodeIpv4 = ipv4
+      , nodePort = port
+      , nodeSprocket = sprocket
+      , nodeStdinHandle = stdIn
+      , nodeStdout = nodeStdoutFile
+      , nodeStderr = nodeStderrFile
+      , nodeProcessHandle = hProcess
+      }
   where
     -- close provided list of handles when 'ExceptT' throws an error
     closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a

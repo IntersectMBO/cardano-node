@@ -222,7 +222,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.createDirectoryIfMissing_ testSpoDir
   let valency = 1
       topology = RealNodeTopology $
-        flip map testnetNodes $ \TestnetNode{testnetNodeRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
+        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
           RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
   let testSpoKesVKey = work </> "kes.vkey"

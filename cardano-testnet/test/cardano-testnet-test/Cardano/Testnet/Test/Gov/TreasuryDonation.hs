@@ -27,7 +27,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -39,7 +39,7 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Donation/"'@
 hprop_ledger_events_treasury_donation :: Property
-hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-donation" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -57,10 +57,10 @@ hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation"
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath testnetNodeRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

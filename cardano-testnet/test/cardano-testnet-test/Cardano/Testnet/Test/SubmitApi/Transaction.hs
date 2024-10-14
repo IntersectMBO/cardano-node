@@ -74,7 +74,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
 
   poolNode1 <- H.headM testnetNodes
 
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
 
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 

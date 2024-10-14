@@ -26,7 +26,6 @@ import           System.FilePath ((</>))
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
-import           Testnet.Types
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
@@ -50,8 +49,8 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
   TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- cardanoTestnetDefault options shelleyOptions conf
 
   (execConfig, socketPathAbs) <- do
-    TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-    poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+    TestnetNode{nodeSprocket} <- H.headM testnetNodes
+    poolSprocket1 <- H.noteShow nodeSprocket
     let socketPath' = H.sprocketArgumentName poolSprocket1
     socketPathAbs <- Api.File <$> H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
     execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic

@@ -25,7 +25,6 @@ import           Testnet.Process.Cli.DRep (makeActivityChangeProposal)
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types
-import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
@@ -59,10 +58,10 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath testnetNodeRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

@@ -65,14 +65,14 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , wallets=wallet0:wallet1:_
     } <- cardanoTestnetDefault options def conf
 
-  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
       utxoSKeyFile2 = signingKeyFp $ paymentKeyInfoPair wallet1
-      socketPath = nodeSocketPath testnetNodeRuntime
+      socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0

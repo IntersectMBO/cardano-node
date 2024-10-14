@@ -43,8 +43,7 @@ import qualified Testnet.Property.Util as H
 import           Testnet.Start.Types
 import           Testnet.Types (KeyPair (..),
                    PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
-                   SomeKeyPair (SomeKeyPair), StakingKey, TestnetNode (..), TestnetRuntime (..),
-                   nodeSocketPath)
+                   SomeKeyPair (SomeKeyPair), StakingKey)
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
@@ -90,10 +89,10 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath testnetNodeRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
