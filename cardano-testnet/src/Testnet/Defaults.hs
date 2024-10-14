@@ -21,19 +21,24 @@ module Testnet.Defaults
   , defaultDRepSkeyFp
   , defaultDRepKeyPair
   , defaultDelegatorStakeKeyPair
+  , defaultNodeName
+  , defaultNodeDataDir
   , defaultSpoColdKeyPair
-  , defaultSPOColdVKeyFp
-  , defaultSPOColdSKeyFp
+  , defaultSpoColdVKeyFp
+  , defaultSpoColdSKeyFp
   , defaultSpoKeys
+  , defaultSpoKeysDir
+  , defaultSpoName
   , defaultShelleyGenesis
   , defaultGenesisFilepath
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
+  , defaultUtxoKeys
   , plutusV3Script
   ) where
 
-import           Cardano.Api (CardanoEra (..), File (..), pshow, ShelleyBasedEra (..),
-                   toCardanoEra, unsafeBoundedRational, AnyShelleyBasedEra (..))
+import           Cardano.Api (AnyShelleyBasedEra (..), CardanoEra (..), File (..),
+                   ShelleyBasedEra (..), pshow, toCardanoEra, unsafeBoundedRational)
 import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Ledger.Alonzo.Core (PParams (..))
@@ -256,7 +261,7 @@ defaultYamlHardforkViaConfig sbe =
     , (proxyName (Proxy @TraceTxOutbound), False)
     , (proxyName (Proxy @TraceTxSubmissionProtocol), False)
     ]
-    
+
 defaultYamlConfig :: Aeson.KeyMap Aeson.Value
 defaultYamlConfig =
   Aeson.fromList
@@ -468,12 +473,28 @@ defaultCommitteeKeyPair n =
     }
 
 -- | The relative path to SPO cold verification key in directories created by cardano-testnet
-defaultSPOColdVKeyFp :: Int -> FilePath
-defaultSPOColdVKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.vkey"
+defaultSpoColdVKeyFp :: Int -> FilePath
+defaultSpoColdVKeyFp n = defaultSpoKeysDir n </> "cold.vkey"
 
 -- | The relative path to SPO cold secret key in directories created by cardano-testnet
-defaultSPOColdSKeyFp :: Int -> FilePath
-defaultSPOColdSKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.skey"
+defaultSpoColdSKeyFp :: Int -> FilePath
+defaultSpoColdSKeyFp n = defaultSpoKeysDir n </> "cold.skey"
+
+-- | The name of a SPO, used in file system operations
+defaultSpoName :: Int -> String
+defaultSpoName n = "pool" <> show n
+
+-- | The name of a node (which doesn't have to be a SPO)
+defaultNodeName :: Int -> String
+defaultNodeName n = "node" <> show n
+
+-- | The relative path of the node data dir, where the database is stored
+defaultNodeDataDir :: Int -> String
+defaultNodeDataDir n = "node-data" </> defaultNodeName n
+
+-- | The relative path where the SPO keys for the node are stored
+defaultSpoKeysDir :: Int -> String
+defaultSpoKeysDir n = "pools-keys" </> defaultSpoName n
 
 -- | The relative path to SPO keys in directories created by cardano-testnet
 defaultSpoColdKeyPair
@@ -481,24 +502,24 @@ defaultSpoColdKeyPair
   -> KeyPair SpoColdKey
 defaultSpoColdKeyPair n =
   KeyPair
-    { verificationKey = File $ "pools-keys" </> "pool" <> show n </> "cold.vkey"
-    , signingKey = File $ "pools-keys" </> "pool" <> show n </> "cold.skey"
+    { verificationKey = File $ defaultSpoKeysDir n </> "cold.vkey"
+    , signingKey = File $ defaultSpoKeysDir n </> "cold.skey"
     }
 
 -- | The relative path to SPO key pairs in directories created by cardano-testnet
-defaultSpoKeys :: Int -> PoolNodeKeys
+defaultSpoKeys :: Int -> SpoNodeKeys
 defaultSpoKeys n =
-  PoolNodeKeys
+  SpoNodeKeys
     { poolNodeKeysCold = defaultSpoColdKeyPair n
     , poolNodeKeysVrf =
       KeyPair
-        { verificationKey = File $ "pools-keys" </> "pool" ++ show n </> "vrf.vkey"
-        , signingKey = File $ "pools-keys" </> "pool" ++ show n </> "vrf.skey"
+        { verificationKey = File $ defaultSpoKeysDir n </> "vrf.vkey"
+        , signingKey = File $ defaultSpoKeysDir n </> "vrf.skey"
         }
     , poolNodeKeysStaking =
       KeyPair
-        { verificationKey = File $ "pools-keys" </> "pool" ++ show n </> "staking-reward.vkey"
-        , signingKey = File $ "pools-keys" </> "pool" ++ show n </> "staking-reward.skey"
+        { verificationKey = File $ defaultSpoKeysDir n </> "staking-reward.vkey"
+        , signingKey = File $ defaultSpoKeysDir n </> "staking-reward.skey"
         }
     }
 
@@ -508,6 +529,14 @@ defaultDelegatorStakeKeyPair n =
   KeyPair
     { verificationKey = File $ "stake-delegators" </> ("delegator" <> show n) </> "staking.vkey"
     , signingKey = File $ "stake-delegators" </> ("delegator" <> show n) </> "staking.skey"
+    }
+
+-- | The relative path to UTXO keys
+defaultUtxoKeys :: Int -> KeyPair PaymentKey
+defaultUtxoKeys n =
+  KeyPair
+    { verificationKey = File $ "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
+    , signingKey = File $ "utxo-keys" </> "utxo" <> show n </> "utxo.skey"
     }
 
 -- | Default plutus script that always succeeds

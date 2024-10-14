@@ -1,23 +1,34 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
   ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
+  , NumDReps(..)
+  , NumPools(..)
+  , NumRelays(..)
+  , cardanoNumPools
+  , cardanoNumRelays
 
   , anyEraToString
   , anyShelleyBasedEraToString
   , eraToString
 
   , TestnetNodeOptions(..)
-  , extraSpoNodeCliArgs
+  , testnetNodeCfgFile
+  , testnetNodeExtraCliArgs
+  , isSpoNodeOptions
+  , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
-  , NodeConfigurationYaml(..)
+  , NodeConfiguration
+  , NodeConfigurationYaml
   , mkConf
   ) where
 
@@ -61,9 +72,29 @@ data CardanoTestnetOptions = CardanoTestnetOptions
                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
-  , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
+  , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   } deriving (Eq, Show)
+
+cardanoNumPools :: CardanoTestnetOptions -> NumPools
+cardanoNumPools CardanoTestnetOptions{cardanoNodes} =
+  NumPools . length $ filter isSpoNodeOptions cardanoNodes
+
+cardanoNumRelays :: CardanoTestnetOptions -> NumRelays
+cardanoNumRelays CardanoTestnetOptions{cardanoNodes} =
+  NumRelays . length $ filter isRelayNodeOptions cardanoNodes
+
+-- | Number of stake pool nodes
+newtype NumPools = NumPools Int
+  deriving (Show, Read, Eq, Enum, Ord, Num, Real, Integral) via Int
+
+-- | Number of relay nodes
+newtype NumRelays = NumRelays Int
+  deriving (Show, Read, Eq, Enum, Ord, Num, Real, Integral) via Int
+
+-- | Number of Delegate Represenatives
+newtype NumDReps = NumDReps Int
+  deriving (Show, Read, Eq, Enum, Ord, Num, Real, Integral) via Int
 
 instance Default CardanoTestnetOptions where
   def = CardanoTestnetOptions
@@ -92,30 +123,44 @@ instance Default GenesisOptions where
     , genesisActiveSlotsCoeff = 0.05
     }
 
--- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
+-- | Specify a SPO (Shelley era onwards only) or a Relay node
 data TestnetNodeOptions
-  = SpoTestnetNodeOptions (Maybe NodeConfigurationYaml) [String]
+  = SpoNodeOptions (Maybe NodeConfigurationYaml) [String]
+  | RelayNodeOptions (Maybe NodeConfigurationYaml) [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   deriving (Eq, Show)
 
-extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
-extraSpoNodeCliArgs (SpoTestnetNodeOptions _ args) = args
+-- | Get extra CLI arguments passed to the node executable
+testnetNodeExtraCliArgs :: TestnetNodeOptions -> [String]
+testnetNodeExtraCliArgs (SpoNodeOptions _ args) = args
+testnetNodeExtraCliArgs (RelayNodeOptions _ args) = args
 
+-- | Get node-specific configuration file path
+testnetNodeCfgFile :: TestnetNodeOptions -> Maybe NodeConfigurationYaml
+testnetNodeCfgFile (SpoNodeOptions mFp _) = mFp
+testnetNodeCfgFile (RelayNodeOptions mFp _) = mFp
+
+isSpoNodeOptions :: TestnetNodeOptions -> Bool
+isSpoNodeOptions SpoNodeOptions{} = True
+isSpoNodeOptions RelayNodeOptions{} = False
+
+isRelayNodeOptions :: TestnetNodeOptions -> Bool
+isRelayNodeOptions SpoNodeOptions{} = False
+isRelayNodeOptions RelayNodeOptions{} = True
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =
-  [ SpoTestnetNodeOptions Nothing []
-  , SpoTestnetNodeOptions Nothing []
-  , SpoTestnetNodeOptions Nothing []
+  [ SpoNodeOptions Nothing []
+  , RelayNodeOptions Nothing []
+  , RelayNodeOptions Nothing []
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
+data NodeConfiguration
 
-newtype NodeConfigurationYaml = NodeConfigurationYaml
-  { unYamlFilePath :: FilePath
-  } deriving (Eq, Show)
+type NodeConfigurationYaml = File NodeConfiguration InOut
 
 newtype Conf = Conf
   { tempAbsPath :: TmpAbsolutePath

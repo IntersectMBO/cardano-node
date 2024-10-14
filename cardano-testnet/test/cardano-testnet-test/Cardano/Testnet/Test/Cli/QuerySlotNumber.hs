@@ -44,7 +44,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
 
   tr@TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     } <- cardanoTestnetDefault def def conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
   startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
@@ -55,8 +55,8 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
       slotPrecision = round $ 1 / slotLength
       epochSize = fromIntegral (unEpochSize sgEpochLength) :: Int
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  poolNode1 <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath' poolSprocket1 testnetMagic
 
   id do

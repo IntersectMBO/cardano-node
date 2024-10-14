@@ -68,16 +68,16 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath testnetNodeRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

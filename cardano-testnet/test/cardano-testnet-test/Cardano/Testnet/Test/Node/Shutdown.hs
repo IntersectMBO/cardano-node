@@ -196,9 +196,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
       slotLen = 0.01
   let fastTestnetOptions = def
         { cardanoNodes =
-          [ SpoTestnetNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
-          , SpoTestnetNodeOptions Nothing []
-          , SpoTestnetNodeOptions Nothing []
+          [ SpoNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
           ]
         }
       shelleyOptions = def
@@ -206,10 +204,10 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
         , genesisSlotLength = slotLen
         }
   testnetRuntime <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
-  let allNodes' = poolNodes testnetRuntime
-  H.note_ $ "All nodes: " <>  show (map (nodeName . poolRuntime) allNodes')
+  let allNodes' = testnetNodes testnetRuntime
+  H.note_ $ "All nodes: " <>  show (map (nodeName . testnetNodeRuntime) allNodes')
 
-  node <- H.headM $ poolRuntime <$> allNodes'
+  node <- H.headM $ testnetNodeRuntime <$> allNodes'
   H.note_ $ "Node name: " <> nodeName node
 
   -- Wait for the node to exit
@@ -247,7 +245,7 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
       shelleyOptions = def { genesisEpochLength = 300 }
   testnetRuntime
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
-  node@NodeRuntime{nodeProcessHandle} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
+  node@NodeRuntime{nodeProcessHandle} <- H.headM $ testnetNodeRuntime <$> testnetNodes testnetRuntime
 
   -- send SIGINT
   H.evalIO $ interruptProcessGroupOf nodeProcessHandle

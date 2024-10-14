@@ -38,12 +38,12 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tem
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , configurationFile
     } <- cardanoTestnetDefault def def conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  poolNode1 <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
   void $ waitUntilEpoch configurationFile

@@ -69,9 +69,9 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     { configurationFile
     , testnetMagic
     , wallets=wallet0:_
-    , poolNodes
+    , testnetNodes
     } <- cardanoTestnetDefault cTestnetOptions def conf
-  node1sprocket <- H.headM $ poolSprockets runTime
+  node1sprocket <- H.headM $ testnetSprockets runTime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
@@ -98,9 +98,9 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
          testnetMagic
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)
-  
-  H.noteShow_ $ "Test SPO stake pool id: " <> stakePoolId 
-  
+
+  H.noteShow_ $ "Test SPO stake pool id: " <> stakePoolId
+
   -- Create test stake address to delegate to the new stake pool
   -- NB: We need to fund the payment credential of the overall address
   --------------------------------------------------------------
@@ -215,7 +215,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.createDirectoryIfMissing_ testSpoDir
   let valency = 1
       topology = RealNodeTopology $
-        flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
+        flip map testnetNodes $ \TestnetNode{testnetNodeRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
             RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
