@@ -64,10 +64,10 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath testnetNodeRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

@@ -15,15 +15,12 @@ module Testnet.Types
   , NodeLoggingFormat(..)
   , PaymentKeyInfo(..)
   , TestnetRuntime(..)
-  , allNodes
   , spoNodes
   , relayNodes
   , testnetSprockets
-  , NodeRuntime(..)
-  , nodeSocketPath
   , TestnetNode(..)
+  , nodeSocketPath
   , isTestnetNodeSpo
-  , testnetNodeStdout
   , SpoNodeKeys(..)
   , Delegator(..)
   , KeyPair(..)
@@ -120,31 +117,17 @@ data TestnetRuntime = TestnetRuntime
   }
 
 testnetSprockets :: TestnetRuntime -> [Sprocket]
-testnetSprockets = fmap (nodeSprocket . testnetNodeRuntime) . testnetNodes
+testnetSprockets = fmap nodeSprocket . testnetNodes
 
-allNodes :: TestnetRuntime -> [NodeRuntime]
-allNodes = fmap testnetNodeRuntime . testnetNodes
+spoNodes :: TestnetRuntime -> [TestnetNode]
+spoNodes = filter isTestnetNodeSpo . testnetNodes
 
-spoNodes :: TestnetRuntime -> [NodeRuntime]
-spoNodes = fmap testnetNodeRuntime . filter isTestnetNodeSpo . testnetNodes
-
-relayNodes :: TestnetRuntime -> [NodeRuntime]
-relayNodes = fmap testnetNodeRuntime . filter (not . isTestnetNodeSpo) . testnetNodes
+relayNodes :: TestnetRuntime -> [TestnetNode]
+relayNodes = filter (not . isTestnetNodeSpo) . testnetNodes
 
 data TestnetNode = TestnetNode
-  { testnetNodeRuntime :: !NodeRuntime
-  , poolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
-  }
-
-testnetNodeStdout :: TestnetNode -> FilePath
-testnetNodeStdout = nodeStdout . testnetNodeRuntime
-
-isTestnetNodeSpo :: TestnetNode -> Bool
-isTestnetNodeSpo = isJust . poolKeys
-
--- | Node process runtime parameters
-data NodeRuntime = NodeRuntime
   { nodeName :: !String
+  , poolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
   , nodeIpv4 :: !HostAddress
   , nodePort :: !PortNumber
   , nodeSprocket :: !Sprocket
@@ -154,7 +137,10 @@ data NodeRuntime = NodeRuntime
   , nodeProcessHandle :: !IO.ProcessHandle
   }
 
-nodeSocketPath :: NodeRuntime -> SocketPath
+isTestnetNodeSpo :: TestnetNode -> Bool
+isTestnetNodeSpo = isJust . poolKeys
+
+nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 
 data ColdPoolKey

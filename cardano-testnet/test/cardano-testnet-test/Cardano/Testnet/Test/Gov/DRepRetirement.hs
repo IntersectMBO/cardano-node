@@ -59,10 +59,10 @@ hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbs
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath testnetNodeRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

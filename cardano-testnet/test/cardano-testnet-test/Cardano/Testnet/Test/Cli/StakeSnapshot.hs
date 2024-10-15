@@ -22,7 +22,6 @@ import qualified System.Info as SYS
 
 import           Testnet.Process.Run (execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -45,7 +44,7 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "stake-snapshot" $ \tempAbsBas
 
   let nSpoNodes = length $ spoNodes runtime
   poolNode1 <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
   void $ waitUntilEpoch configurationFile

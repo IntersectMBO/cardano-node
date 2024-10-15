@@ -56,7 +56,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
       epochSize = fromIntegral (unEpochSize sgEpochLength) :: Int
 
   poolNode1 <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath' poolSprocket1 testnetMagic
 
   id do

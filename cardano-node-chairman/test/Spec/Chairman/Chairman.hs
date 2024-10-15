@@ -20,7 +20,7 @@ import           System.FilePath.Posix ((</>))
 import qualified System.IO as IO
 import qualified System.Process as IO
 
-import           Testnet.Types (NodeRuntime, nodeSocketPath)
+import           Testnet.Types (TestnetNode, nodeSocketPath)
 
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Test.Base (Integration)
@@ -30,7 +30,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 
 {- HLINT ignore "Redundant <&>" -}
 
-chairmanOver :: HasCallStack => Int -> Int -> H.Conf -> [NodeRuntime] -> Integration ()
+chairmanOver :: HasCallStack => Int -> Int -> H.Conf -> [TestnetNode] -> Integration ()
 chairmanOver timeoutSeconds requiredProgress H.Conf {H.tempAbsPath} allNodes = do
   maybeChairman <- H.evalIO $ IO.lookupEnv "DISABLE_CHAIRMAN"
   let tempAbsPath' = H.unTmpAbsPath tempAbsPath

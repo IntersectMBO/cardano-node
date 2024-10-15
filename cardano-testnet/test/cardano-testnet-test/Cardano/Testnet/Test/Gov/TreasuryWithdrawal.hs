@@ -49,7 +49,7 @@ import           Hedgehog
 import qualified Hedgehog.Extras as H
 
 hprop_ledger_events_treasury_withdrawal:: Property
-hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury-withdrawal" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury-withdrawal" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -74,10 +74,10 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node@TestnetNode{nodeSprocket} <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow nodeSprocket
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath testnetNodeRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

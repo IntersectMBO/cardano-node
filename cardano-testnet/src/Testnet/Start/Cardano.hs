@@ -41,6 +41,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
+import           Data.Functor
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
 import qualified Data.Text as Text
@@ -350,19 +351,19 @@ cardanoTestnet
         ]
         <> spoNodeCliArgs
         <> testnetNodeExtraCliArgs nodeOptions
-    pure $ flip TestnetNode mKeys <$> eRuntime
+    pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
   let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
   unless (null failedNodes) $ do
     H.noteShow_ . vsep $ prettyError <$> failedNodes
     H.failure
 
-  H.annotateShow $ nodeSprocket . testnetNodeRuntime <$> testnetNodes'
+  H.annotateShow $ nodeSprocket <$> testnetNodes'
 
   -- FIXME: use foldEpochState waiting for chain extensions
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 45 now
-  forM_ (map (nodeStdout . testnetNodeRuntime) testnetNodes') $ \nodeStdoutFile -> do
+  forM_ (map nodeStdout testnetNodes') $ \nodeStdoutFile -> do
     assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime

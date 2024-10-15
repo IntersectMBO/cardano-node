@@ -215,7 +215,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.createDirectoryIfMissing_ testSpoDir
   let valency = 1
       topology = RealNodeTopology $
-        flip map testnetNodes $ \TestnetNode{testnetNodeRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
+        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
             RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
@@ -260,7 +260,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
         , "--shelley-vrf-key", testSpoVrfSKey
         , "--shelley-operational-certificate", testSpoOperationalCertFp
         ]
-  NodeRuntime{ nodeStdout } <- H.evalEither eRuntime
+  TestnetNode{nodeStdout} <- H.evalEither eRuntime
 
   threadDelay 5_000_000
 

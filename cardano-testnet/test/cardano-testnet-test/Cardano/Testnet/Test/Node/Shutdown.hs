@@ -41,7 +41,6 @@ import           Testnet.Process.Run (execCli_, initiateProcess, procNode)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Byron
 import           Testnet.Start.Types
-import           Testnet.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -204,10 +203,10 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
         , genesisSlotLength = slotLen
         }
   testnetRuntime <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
-  let allNodes' = testnetNodes testnetRuntime
-  H.note_ $ "All nodes: " <>  show (map (nodeName . testnetNodeRuntime) allNodes')
+  let allNodes = testnetNodes testnetRuntime
+  H.note_ $ "All nodes: " <>  show (map nodeName allNodes)
 
-  node <- H.headM $ testnetNodeRuntime <$> allNodes'
+  node <- H.headM allNodes
   H.note_ $ "Node name: " <> nodeName node
 
   -- Wait for the node to exit
@@ -245,7 +244,7 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
       shelleyOptions = def { genesisEpochLength = 300 }
   testnetRuntime
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
-  node@NodeRuntime{nodeProcessHandle} <- H.headM $ testnetNodeRuntime <$> testnetNodes testnetRuntime
+  TestnetNode{nodeProcessHandle, nodeStdout, nodeStderr} <- H.headM $ testnetNodes testnetRuntime
 
   -- send SIGINT
   H.evalIO $ interruptProcessGroupOf nodeProcessHandle
@@ -255,13 +254,13 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
 
   -- Check results
   when (isRight mExitCodeRunning) $ do
-    H.cat (nodeStdout node)
-    H.cat (nodeStderr node)
+    H.cat nodeStdout
+    H.cat nodeStderr
   case mExitCodeRunning of
     Right (ExitFailure _) -> H.success
     other -> H.failMessage callStack $ "Unexpected exit status for the testnet process: " <> show other
 
-  logs <- H.readFile (nodeStdout node)
+  logs <- H.readFile nodeStdout
   case mapMaybe parseMsg $ reverse $ lines logs of
     [] -> H.failMessage callStack "Could not find close DB message."
     (Left err):_ -> H.failMessage callStack err

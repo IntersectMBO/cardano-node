@@ -17,7 +17,6 @@ import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
 import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Types
 
 import           Hedgehog ((===))
 import qualified Hedgehog as H

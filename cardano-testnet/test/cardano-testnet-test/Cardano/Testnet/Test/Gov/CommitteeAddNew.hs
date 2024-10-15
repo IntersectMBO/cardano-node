@@ -91,10 +91,10 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     }
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  TestnetNode{testnetNodeRuntime, poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
-  poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
+  node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath testnetNodeRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 

@@ -37,9 +37,14 @@ module Cardano.Testnet (
   waitForEpochs,
 
   -- * Runtime
-  NodeRuntime(..),
-  allNodes,
+  TestnetRuntime(..),
+  testnetSprockets,
+  spoNodes,
+  relayNodes,
 
+  TestnetNode(..),
+  isTestnetNodeSpo,
+  nodeSocketPath,
   ) where
 
 import           Testnet.Components.Query
