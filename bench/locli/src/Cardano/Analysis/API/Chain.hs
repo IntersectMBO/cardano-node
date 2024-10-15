@@ -40,6 +40,9 @@ slotStart Genesis{..} =
   . fromIntegral
   . unSlotNo
 
+-- | `impliedSlot` calculates slot numbers from timestamps and genesis
+--   parameters. The fields `systemStart` time and `slotLength` are
+--   both fields of the `Genesis` record.
 impliedSlot :: Genesis -> UTCTime -> SlotNo
 impliedSlot Genesis{..} =
   SlotNo
