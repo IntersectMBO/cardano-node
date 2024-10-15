@@ -174,7 +174,7 @@ jobs:
         TMP: ${{ runner.temp }}
       run: |
         cd $TMP
-        find . -name 'module' -type f -exec dirname {} \; | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
+        find . -name 'module' -type f -exec dirname {} \; | xargs -I "{}" basename "{}" | sort -u | xargs -I "{}" tar -czvf workspaces.tgz "{}"
 
     - name: Upload workspaces on tests failure
       if: ${{ failure() }}
