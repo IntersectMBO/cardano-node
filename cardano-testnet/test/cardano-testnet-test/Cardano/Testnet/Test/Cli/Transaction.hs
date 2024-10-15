@@ -44,7 +44,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/simple transaction build/"'@
 hprop_transaction :: Property
-hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 0 "simple transaction build" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
