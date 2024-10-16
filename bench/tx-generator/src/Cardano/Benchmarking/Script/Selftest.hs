@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-|
 Module      : Cardano.Benchmarking.Script.Selftest
 Description : Run self-tests using statically-defined data.
@@ -18,10 +20,15 @@ import           Cardano.Benchmarking.Script.Env as Env (Env (..))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error, runActionMEnv, setBenchTracers)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
+import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Credential as L
+import qualified Cardano.Ledger.Crypto as L
+import qualified Cardano.Ledger.Keys as L
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
+import           Cardano.Prelude (encodeUtf8)
 import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
@@ -29,6 +36,7 @@ import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.List as List (unwords)
+import           Data.Maybe (fromJust)
 import           Data.String
 
 import           Paths_tx_generator
@@ -121,17 +129,15 @@ testScriptVoting protocolFile submitMode =
   , DefineSigningKey key skey
   , AddFund era genesisWallet
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
-    (L.Coin 90000000000000) key
+    fundCoins key
 
   , DefineStakeKey stakeKey
 
   -- manually inject an (unnamed) DRep key into the Env by means of an Action constructor
   , DefineDRepKey drepKey
 
-  , Submit era submitMode txParams
-      EmptyStream
-      -- TODO: instead, create 4(?) proposal transactions using the new constructor for Generator
-      -- $ Take 4 $ Cycle $ <Proposal constructor>
+  , Submit era submitMode txParams . Take nrProposals . Cycle $
+      Propose genesisWallet payMode proposalCoins stakeCred anchor
 
   , Submit era submitMode txParams
       EmptyStream
@@ -140,6 +146,11 @@ testScriptVoting protocolFile submitMode =
 
   ]
   where
+    fundAmount = 90000000000000
+    fundCoins  = L.Coin fundAmount
+    nrProposals :: Int = 4
+    proposalCoins = L.Coin $ fundAmount `div` fromIntegral nrProposals
+    payMode = PayToAddr "pass-partout" genesisWallet
     skey :: SigningKey PaymentKey
     skey = error "could not parse hardcoded signing key" `fromRight`
       parsePaymentKeyTE TextEnvelope
@@ -152,9 +163,17 @@ testScriptVoting protocolFile submitMode =
     drepKey = error "could not parse hardcoded drep key" `fromRight`
       parseDRepKeyBase16 "5820aa7f780a2dcd099762ebc31a43860c1373970c2e2062fcd02cceefe682f39ed8"
 
+    stakeCred :: L.Credential 'L.Staking L.StandardCrypto
+    stakeCred = L.KeyHashObj . L.hashKey $ unStakeVerificationKey stakeKey
+
     stakeKey :: VerificationKey StakeKey
-    stakeKey = fromRight (error "could not parse hardcoded stake key") $
+    stakeKey = error "could not parse hardcoded stake key" `fromRight`
       parseStakeKeyBase16 "5820bbbfe3f3b71b00d1d61f4fe2a82526597740f61a0aa06f1324557925803c7d3e"
+
+    anchor :: L.Anchor L.StandardCrypto
+    anchor = L.Anchor
+      { anchorUrl = fromJust $ L.textToUrl 999 "example.com"
+      , anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 . L.urlToText $ L.anchorUrl anchor }
 
     era = AnyCardanoEra ConwayEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
