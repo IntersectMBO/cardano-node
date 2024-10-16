@@ -916,7 +916,7 @@ def all_profile_variants:
     ) as $plutus_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - value-only workload
-    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire
+    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire_10
     ) as $valuevolt_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
@@ -1252,6 +1252,8 @@ def all_profile_variants:
 ## P&T Nomad cluster: same, but new Voltaire era baseline with 10k DReps, updated cost models and protocol version 9
   , $valuevolt_nomadperf_template * $dreps_large *
     { name: "value-volt-nomadperf"
+    , genesis:   {funds_balance: 40000000000000}
+    , generator: {drep_voting: true}
     }
   , $plutusvolt_nomadperf_template * $dreps_large *
     { name: "plutus-volt-nomadperf"
