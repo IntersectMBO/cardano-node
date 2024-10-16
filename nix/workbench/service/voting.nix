@@ -9,6 +9,7 @@ let
   ##########
   bashInteractive    = pkgs.bashInteractive;
   coreutils          = pkgs.coreutils;
+  flock              = pkgs.flock;
   jq                 = pkgs.jq;
   cardano-cli        = pkgs.cardanoNodePackages.cardano-cli;
 
@@ -115,7 +116,7 @@ function get_socket_lock {
   local lockfile_path="''${socket_path}".lock
 
   exec 200>"''${lockfile_path}"
-  flock 200
+  ${flock}/bin/flock 200
   ${coreutils}/bin/echo "''${socket_path}"
 }
 
@@ -139,7 +140,7 @@ function release_socket_lock {
   > ../"''${nodeName}"/"''${addr}".utxo
 
   # A mystery!
-  flock -u 200 2>/dev/null || true
+  ${flock}/bin/flock -u 200 2>/dev/null || true
   exec 200>&-
 }
 
