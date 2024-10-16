@@ -117,16 +117,16 @@ let
             profile.node.verbatim);
 
       extraArgs =
-        [ "+RTS" "-scardano-node.gcstats" "-RTS" ];
-#        ++
-#        optionals (nodeSpec.shutdown_on_block_synced != null) [
-#          "--shutdown-on-block-synced"
-#          (toString nodeSpec.shutdown_on_block_synced)
-#        ] ++
-#        optionals (nodeSpec.shutdown_on_slot_synced != null) [
-#          "--shutdown-on-slot-synced"
-#          (toString nodeSpec.shutdown_on_slot_synced)
-#        ];
+        [ "+RTS" "-scardano-node.gcstats" "-RTS" ]
+        ++
+        optionals (nodeSpec.shutdown_on_block_synced != null) [
+          "--shutdown-on-block-synced"
+          (toString nodeSpec.shutdown_on_block_synced)
+        ] ++
+        optionals (nodeSpec.shutdown_on_slot_synced != null) [
+          "--shutdown-on-slot-synced"
+          (toString nodeSpec.shutdown_on_slot_synced)
+        ];
     } // optionalAttrs (profiling != "none") {
       inherit profiling;
     } // optionalAttrs (profiling == "none") {
