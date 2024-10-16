@@ -78,6 +78,12 @@ let
           flake-output = "legacyPackages.x86_64-linux.coreutils";
           installable = null;
         };
+        flock = {
+          nix-store-path  = pkgs.flock;
+          flake-reference = "github:intersectmbo/cardano-node";
+          flake-output = "legacyPackages.x86_64-linux.flock";
+          installable = null;
+        };
         bashInteractive = {
           nix-store-path  = pkgs.bashInteractive;
           flake-reference = "github:intersectmbo/cardano-node";
