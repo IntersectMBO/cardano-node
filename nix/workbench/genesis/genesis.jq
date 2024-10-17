@@ -23,7 +23,7 @@ def profile_cli_args($p):
   , createTestnetDataArgs:
     ([ "--testnet-magic",          $p.genesis.network_magic
      , "--total-supply",           fmt_decimal_10_5($p.genesis.funds_balance + $p.derived.supply_delegated)
-     , "--utxo-keys",              1
+     , "--utxo-keys",              2
      , "--genesis-keys",           $p.composition.n_bft_hosts
      , "--delegated-supply",       fmt_decimal_10_5($p.derived.supply_delegated)
      , "--pools",                  $p.composition.n_pools
@@ -50,31 +50,7 @@ def profile_cli_args($p):
 ##
 def profile_genesis_cache_key($p; $profile_file):
 
-  ($p.genesis * $p.composition * $p.derived)
-  |
-  { network_magic
-
-  , funds_balance
-  , per_pool_balance
-  , pool_coin
-
-  , n_pools
-  , n_bft_hosts
-  , n_dense_hosts
-  , dense_pool_density
-
-  , delegators
-  , utxo_stuffed
-  , dreps
-
-  } as $genesis_crypto_affecting_data
-
-  | $genesis_crypto_affecting_data | to_entries
-  | map(if .value == null
-        then error("FATAL: undefined key \(.key) in profile \(.profile_file)")
-        else null end)
-
-  | $genesis_crypto_affecting_data
+  ($p.genesis * $p.composition)
 ;
 
 def profile_genesis_cache_entry_name($p; $params_hash):
@@ -90,7 +66,7 @@ then [ "k\(.composition.n_pools)" ]
      +
      if .genesis.dreps != 0 then ["\(.genesis.dreps)Dr"] else [] end
      +
-     [ "\(.derived.utxo_stuffed / 1000)kU"
+     [ "\(([0, .genesis.utxo] | max) / 1000)kU"
      , "\($params_hash)" ]
 else [ "preset"
      , $profile[0].preset ]
