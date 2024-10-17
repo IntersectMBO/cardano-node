@@ -37,10 +37,10 @@ import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), TraceGDDEvent (..))
+import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), TraceGDDEvent (..), GDDDebugInfo (..))
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId, HasTxId,
-                   LedgerSupportsMempool, txForgetValidated, txId)
+                   LedgerSupportsMempool, txForgetValidated, txId, ByteSize32 (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -74,6 +74,7 @@ import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
+import           Data.Foldable (Foldable(toList))
 import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
@@ -881,8 +882,8 @@ instance ( LogFormatting peer
          , HasHeader (Header blk)
          , ConvertRawHash (Header blk)
          ) => LogFormatting (TraceGDDEvent peer blk) where
-  forMachine dtal TraceGDDEvent {..} = mconcat $
-    [ "kind" .= String "TraceGDDEvent"
+  forMachine dtal (TraceGDDDebug (GDDDebugInfo {..})) = mconcat $
+    [ "kind" .= String "TraceGDDDebugInfo"
     , "losingPeers".= toJSON (map (forMachine dtal) losingPeers)
     , "loeHead" .= forMachine dtal loeHead
     , "sgen" .= toJSON (unGenesisWindow sgen)
@@ -920,6 +921,11 @@ instance ( LogFormatting peer
            candidateSuffixes
          )
        ]
+
+  forMachine dtal (TraceGDDDisconnected peers) = mconcat
+    [ "kind" .= String "TraceGDDDisconnected"
+    , "peers" .= toJSON (map (forMachine dtal) (toList peers))
+    ]
 
   forHuman = forHumanOrMachine
 
@@ -1199,33 +1205,46 @@ instance
       , "mempoolSize" .= forMachine dtal mpSz
       ]
 
+  forMachine _dtal (TraceMempoolSynced et) =
+    mconcat
+      [ "kind" .= String "TraceMempoolSynced"
+      , "enclosingTime" .= et
+      ]
+
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
   asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
   asMetrics (TraceMempoolRemoveTxs _txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
     ]
+
+  asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
+    [ IntM "txsSyncDuration" (round $ 1000 * duration)
+    ]
+
+  asMetrics (TraceMempoolSynced RisingEdge) = []
+
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
     mconcat
       [ "numTxs" .= msNumTxs
-      , "bytes" .= msNumBytes
+      , "bytes" .= unByteSize32 msNumBytes
       ]
 
 
@@ -1234,11 +1253,13 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolRejectedTx {} = Namespace [] ["RejectedTx"]
     namespaceFor TraceMempoolRemoveTxs {} = Namespace [] ["RemoveTxs"]
     namespaceFor TraceMempoolManuallyRemovedTxs {} = Namespace [] ["ManuallyRemovedTxs"]
+    namespaceFor TraceMempoolSynced {} = Namespace [] ["Synced"]
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
     severityFor (Namespace _ ["RemoveTxs"]) _ = Just Info
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Info
+    severityFor (Namespace _ ["Synced"]) _ = Just Info
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1258,6 +1279,11 @@ instance MetaTrace (TraceEventMempool blk) where
       , ("mempoolBytes", "Byte size of the mempool")
       , ("txsProcessedNum", "")
       ]
+
+    metricsDocFor (Namespace _ ["Synced"]) =
+      [ ("txsSyncDuration", "Time to sync the mempool in ms after block adoption")
+      ]
+
     metricsDocFor _ = []
 
     documentFor (Namespace _ ["AddedTx"]) = Just

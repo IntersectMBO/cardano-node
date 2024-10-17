@@ -60,7 +60,7 @@ deriving instance (NFData OpeningDbs)
 
 data Replays
   = ReplayFromGenesis  (WithOrigin SlotNo)
-  | ReplayFromSnapshot SlotNo (WithOrigin SlotNo) (WithOrigin SlotNo)
+  | ReplayFromSnapshot (WithOrigin SlotNo) (WithOrigin SlotNo)
   | ReplayedBlock      SlotNo (WithOrigin SlotNo) (WithOrigin SlotNo)
   deriving (Generic, FromJSON, ToJSON)
 
@@ -219,8 +219,8 @@ traceNodeStateChainDB _scp tr ev =
       case ev' of
         LgrDb.ReplayFromGenesis (LgrDb.ReplayGoal p) ->
           traceWith tr $ NodeReplays $ ReplayFromGenesis (pointSlot p)
-        LgrDb.ReplayFromSnapshot _ (RP.RealPoint s _) (LgrDb.ReplayStart rs) (LgrDb.ReplayGoal rp) ->
-          traceWith tr $ NodeReplays $ ReplayFromSnapshot s (pointSlot rs) (pointSlot rp)
+        LgrDb.ReplayFromSnapshot _ (LgrDb.ReplayStart rs) (LgrDb.ReplayGoal rp) ->
+          traceWith tr $ NodeReplays $ ReplayFromSnapshot (pointSlot rs) (pointSlot rp)
         LgrDb.ReplayedBlock (RP.RealPoint s _) _ (LgrDb.ReplayStart rs) (LgrDb.ReplayGoal rp) ->
           traceWith tr $ NodeReplays $ ReplayedBlock s (pointSlot rs) (pointSlot rp)
     ChainDB.TraceInitChainSelEvent ev' ->
