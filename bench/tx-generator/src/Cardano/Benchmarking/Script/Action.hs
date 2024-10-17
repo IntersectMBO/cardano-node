@@ -35,14 +35,18 @@ import qualified Data.Text as Text (unpack)
 -- the cases' fields to functions with very similar names to the
 -- constructors.
 action :: Action -> ActionM ()
-action a = case a of
+action = \case
   SetNetworkId val -> setEnvNetworkId val
   SetSocketPath val -> setEnvSocketPath val
   InitWallet name -> initWallet name
   SetProtocolParameters p -> setProtocolParameters p
   StartProtocol configFile cardanoTracerSocket -> startProtocol configFile cardanoTracerSocket
   ReadSigningKey name filePath -> readSigningKey name filePath
+  ReadDRepKeys filepath -> readDRepKeys filepath
+  ReadStakeKeys filepath -> readStakeCredentials filepath
+  DefineDRepKey drepKey -> defineDRepCredential drepKey
   DefineSigningKey name descr -> defineSigningKey name descr
+  DefineStakeKey k -> defineStakeCredential k
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
   Submit era submitMode txParams generator -> submitAction era submitMode generator txParams

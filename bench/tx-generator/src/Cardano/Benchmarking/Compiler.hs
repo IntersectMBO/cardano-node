@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
@@ -18,6 +17,7 @@ import           Cardano.TxGenerator.Types
 import           Prelude
 
 import           Control.Monad
+import           Control.Monad.Extra
 import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)
@@ -62,6 +62,12 @@ compileToScript = do
         pure
   tc <- askNixOption _nix_cardanoTracerSocket
   emit $ StartProtocol nc tc
+
+  whenM (fromMaybe False <$> askNixOption _nix_drep_voting) do
+    emit $ ReadDRepKeys nc
+    emit $ ReadStakeKeys nc
+    logMsg "Importing DRep SigningKeys and StakeCredentials. Done."
+
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
@@ -275,7 +281,7 @@ newWallet n = do
 -- we assume the hardcoded base16 keys to successfully evaluate to a SigningKey PaymentKey
 parseKey :: BS.ByteString -> SigningKey PaymentKey
 parseKey k
-  = let ~(Right k') = parseSigningKeyBase16 k in k'
+  = let ~(Right k') = parsePaymentKeyBase16 k in k'
 
 keyNameGenesisInputFund :: String
 keyNameGenesisInputFund = "GenesisInputFund"

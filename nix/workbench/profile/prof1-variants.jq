@@ -427,6 +427,14 @@ def all_profile_variants:
       }
     }) as $plutus_base
   |
+    ({ extra_desc: "with DRep voting workload"
+    , generator:
+      { inputs_per_tx:                  1
+      , outputs_per_tx:                 1
+      , drep_voting:                    true
+      }
+    }) as $voting_base
+  |
    ({ generator:
       { plutus:
           { type:                       "LimitSaturationLoop"
@@ -556,6 +564,11 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
     ) as $genesis_voltaire
+  |
+    ($genesis_voltaire
+      | .genesis.pparamsOverlays      as $ovls
+      | .genesis.pparamsOverlays      = $ovls + ["voting"]
+    ) as $genesis_voltaire_10
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -1476,6 +1489,11 @@ def all_profile_variants:
     }
   , $scenario_chainsync * $chaindb_early_alonzo * $p2p *
     { name: "chainsync-early-alonzo-p2p"
+    }
+
+  ## development profile for voting workload: PV9, Conway costmodel, 1000 DReps injected
+  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voltaire_10 * $dreps_small *
+    { name: "development-voting"
     }
 
   ## Last, but not least, the profile used by "nix-shell -A devops":
