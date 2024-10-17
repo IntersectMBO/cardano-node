@@ -441,7 +441,7 @@ function wait_utxo_expected_or_0 {
     then
       ${coreutils}/bin/echo "''${tx_id_expected}"
     else
-      get_address_utxo_0
+      get_address_utxo_0 "''${nodeName}" "''${addr}"
     fi
   fi
 }
@@ -754,8 +754,7 @@ function governance_create_withdrawal {
   # Lock needed. Creates or destroys UTxOs.
   socket_path="$(get_socket_lock "''${nodeName}")"
 
-  local node_drep_vkey node_drep_skey node_drep_addr
-  node_drep_vkey="$(create_node_drep_keys   "''${nodeName}" "''${node_i}" "''${drep_i}")".vkey
+  local node_drep_skey node_drep_addr
   node_drep_skey="$(create_node_drep_keys   "''${nodeName}" "''${node_i}" "''${drep_i}")".skey
   node_drep_addr="$(build_node_drep_address "''${nodeName}" "''${node_i}" "''${drep_i}")"
 
@@ -833,8 +832,7 @@ function governance_vote_proposal {
     # Lock needed. Creates or destroys UTxOs.
     socket_path="$(get_socket_lock "''${nodeName}")"
 
-    local node_drep_vkey node_drep_skey node_drep_addr
-    node_drep_vkey="$(create_node_drep_keys   "''${nodeName}" "''${node_i}" "''${actual_drep}")".vkey
+    local node_drep_skey node_drep_addr
     node_drep_skey="$(create_node_drep_keys   "''${nodeName}" "''${node_i}" "''${actual_drep}")".skey
     node_drep_addr="$(build_node_drep_address "''${nodeName}" "''${node_i}" "''${actual_drep}")"
 
