@@ -2,8 +2,7 @@ module Parsers.Cardano
   ( cmdCardano
   ) where
 
-import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), File (..),
-                   bounded)
+import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..), bounded)
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
@@ -65,6 +64,8 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
+  -- We don't support passing custom node configurations files on the CLI.
+  -- So we use a default node configuration for all nodes.
   (`L.replicate` defaultSpoOptions) <$>
     OA.option auto
     (   OA.long "num-pool-nodes"
@@ -74,29 +75,6 @@ pNumSpoNodes =
     <>  OA.value 1)
   where
     defaultSpoOptions = SpoNodeOptions Nothing []
-
-_pSpo :: Parser TestnetNodeOptions
-_pSpo =
-  SpoNodeOptions -- TODO add parser for node roles
-    . Just <$> parseNodeConfigFile
-    <*> pure [] -- TODO: Consider adding support for extra args
-
-parseNodeConfigFile :: Parser NodeConfigurationYaml
-parseNodeConfigFile = File <$>
-  strOption
-    (mconcat
-       [ long "configuration-file"
-       , metavar "NODE-CONFIGURATION"
-       , help helpText
-       , completer (bashCompleter "file")
-       ]
-    )
- where
-   helpText = unwords
-               [ "Configuration file for the cardano-node(s)."
-               , "Specify a configuration file per node you want to have in the cluster."
-               , "Or use num-pool-nodes to use cardano-testnet's default configuration."
-               ]
 
 pGenesisOptions :: Parser GenesisOptions
 pGenesisOptions =
