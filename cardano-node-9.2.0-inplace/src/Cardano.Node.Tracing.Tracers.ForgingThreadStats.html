@@ -1,0 +1,788 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Tracing.Tracers.ForgingThreadStats</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier">ForgingStats</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier">ForgeThreadStats</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#forgeThreadStats"><span class="hs-identifier">forgeThreadStats</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.StartLeadershipCheck.html"><span class="hs-identifier">Cardano.Node.Tracing.Tracers.StartLeadershipCheck</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.StartLeadershipCheck.html#ForgeTracerType"><span class="hs-identifier">ForgeTracerType</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/cardano-slotting-0.2.0.0-6285142e6300c03ed5df275ddeb3151e919ee89e20158c1c69b5522a66c655ce/share/doc/html/src/Cardano.Slotting.Slot.html"><span class="hs-identifier">Cardano.Slotting.Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/cardano-slotting-0.2.0.0-6285142e6300c03ed5df275ddeb3151e919ee89e20158c1c69b5522a66c655ce/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-diffusion-0.17.1.0-d4223434b03df5c253c8b22adbb753eed423453582071f6c066fc9cac7afcebd/share/doc/html/src/Ouroboros.Consensus.Node.Tracers.html"><span class="hs-identifier">Ouroboros.Consensus.Node.Tracers</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-diffusion-0.17.1.0-d4223434b03df5c253c8b22adbb753eed423453582071f6c066fc9cac7afcebd/share/doc/html/src/Ouroboros.Consensus.Node.Tracers.html"><span class="hs-identifier">Ouroboros.Consensus.Node.Tracers</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-cardano-0.19.0.0-2b2c5bdc47bbaca2b663def3df79d19bf6bfa31485d0c61f9bc1c98c662eefde/share/doc/html/src/Ouroboros.Consensus.Shelley.Node.html"><span class="hs-identifier">Ouroboros.Consensus.Shelley.Node</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Conc.Sync.html#ThreadId"><span class="hs-identifier">ThreadId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier">myThreadId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- ForgeThreadStats Tracer</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | Per-forging-thread statistics.</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="ForgeThreadStats"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-var">ForgeThreadStats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ForgeThreadStats"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-var">ForgeThreadStats</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ftsNodeCannotForgeNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeCannotForgeNum"><span class="hs-identifier hs-var hs-var">ftsNodeCannotForgeNum</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsNodeIsLeaderNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeIsLeaderNum"><span class="hs-identifier hs-var hs-var">ftsNodeIsLeaderNum</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsBlocksForgedNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsBlocksForgedNum"><span class="hs-identifier hs-var hs-var">ftsBlocksForgedNum</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsSlotsMissedNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsSlotsMissedNum"><span class="hs-identifier hs-var hs-var">ftsSlotsMissedNum</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-comment">-- ^ Potentially missed slots.  Note that this is not the same as the number</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-comment">-- of missed blocks, since this includes all occurrences of not reaching a</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-comment">-- leadership check decision, whether or not leadership was possible or not.</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- Also note that when the aggregate total for this metric is reported in the</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">-- multi-pool case, it can be much larger than the actual number of slots</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">-- occurring since node start, for it is a sum total for all threads.</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsLastSlot"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsLastSlot"><span class="hs-identifier hs-var hs-var">ftsLastSlot</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681026260"><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LogFormatting"><span class="hs-identifier hs-type">LogFormatting</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621681026287"><span class="annot"><span class="annottext">forHuman :: ForgeThreadStats -&gt; Text
+</span><a href="#local-6989586621681026287"><span class="hs-identifier hs-var hs-var hs-var hs-var">forHuman</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681026289"><span id="local-6989586621681026290"><span id="local-6989586621681026291"><span id="local-6989586621681026292"><span id="local-6989586621681026293"><span class="annot"><span class="annottext">Int
+ftsNodeCannotForgeNum :: ForgeThreadStats -&gt; Int
+ftsNodeIsLeaderNum :: ForgeThreadStats -&gt; Int
+ftsBlocksForgedNum :: ForgeThreadStats -&gt; Int
+ftsSlotsMissedNum :: ForgeThreadStats -&gt; Int
+ftsLastSlot :: ForgeThreadStats -&gt; Int
+ftsNodeCannotForgeNum :: Int
+ftsNodeIsLeaderNum :: Int
+ftsBlocksForgedNum :: Int
+ftsSlotsMissedNum :: Int
+ftsLastSlot :: Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeCannotForgeNum"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Node cannot forge &quot;</span></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026289"><span class="hs-identifier hs-var">ftsNodeCannotForgeNum</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; node is leader &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026290"><span class="hs-identifier hs-var">ftsNodeIsLeaderNum</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; blocks forged &quot;</span></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026291"><span class="hs-identifier hs-var">ftsBlocksForgedNum</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; slots missed &quot;</span></span><span>   </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026292"><span class="hs-identifier hs-var">ftsSlotsMissedNum</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; last slot &quot;</span></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026293"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621681026325"><span class="annot"><span class="annottext">forMachine :: DetailLevel -&gt; ForgeThreadStats -&gt; Object
+</span><a href="#local-6989586621681026325"><span class="hs-identifier hs-var hs-var hs-var hs-var">forMachine</span></a></span></span><span> </span><span id="local-6989586621681026327"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621681026327"><span class="hs-identifier hs-var">_dtal</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681026328"><span id="local-6989586621681026329"><span id="local-6989586621681026330"><span id="local-6989586621681026331"><span id="local-6989586621681026332"><span class="annot"><span class="annottext">Int
+ftsNodeCannotForgeNum :: ForgeThreadStats -&gt; Int
+ftsNodeIsLeaderNum :: ForgeThreadStats -&gt; Int
+ftsBlocksForgedNum :: ForgeThreadStats -&gt; Int
+ftsSlotsMissedNum :: ForgeThreadStats -&gt; Int
+ftsLastSlot :: ForgeThreadStats -&gt; Int
+ftsNodeCannotForgeNum :: Int
+ftsNodeIsLeaderNum :: Int
+ftsBlocksForgedNum :: Int
+ftsSlotsMissedNum :: Int
+ftsLastSlot :: Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeCannotForgeNum"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ForgeThreadStats&quot;</span></span><span>
+</span><span id="line-55"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeCannotForge&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026328"><span class="hs-identifier hs-var">ftsNodeCannotForgeNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeIsLeader&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026329"><span class="hs-identifier hs-var">ftsNodeIsLeaderNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;blocksForged&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026330"><span class="hs-identifier hs-var">ftsBlocksForgedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;slotsMissed&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026331"><span class="hs-identifier hs-var">ftsSlotsMissedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;lastSlot&quot;</span></span><span>           </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026332"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>             </span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621681026348"><span class="annot"><span class="annottext">asMetrics :: ForgeThreadStats -&gt; [Metric]
+</span><a href="#local-6989586621681026348"><span class="hs-identifier hs-var hs-var hs-var hs-var">asMetrics</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681026350"><span id="local-6989586621681026351"><span id="local-6989586621681026352"><span id="local-6989586621681026353"><span id="local-6989586621681026354"><span class="annot"><span class="annottext">Int
+ftsNodeCannotForgeNum :: ForgeThreadStats -&gt; Int
+ftsNodeIsLeaderNum :: ForgeThreadStats -&gt; Int
+ftsBlocksForgedNum :: ForgeThreadStats -&gt; Int
+ftsSlotsMissedNum :: ForgeThreadStats -&gt; Int
+ftsLastSlot :: ForgeThreadStats -&gt; Int
+ftsNodeCannotForgeNum :: Int
+ftsNodeIsLeaderNum :: Int
+ftsBlocksForgedNum :: Int
+ftsSlotsMissedNum :: Int
+ftsLastSlot :: Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeCannotForgeNum"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeCannotForge&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026350"><span class="hs-identifier hs-var">ftsNodeCannotForgeNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeIsLeader&quot;</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026351"><span class="hs-identifier hs-var">ftsNodeIsLeaderNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;blocksForged&quot;</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026352"><span class="hs-identifier hs-var">ftsBlocksForgedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;slotsMissed&quot;</span></span><span>     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026353"><span class="hs-identifier hs-var">ftsSlotsMissedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681026359"><span id="local-6989586621681026363"><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#MetaTrace"><span class="hs-identifier hs-type">MetaTrace</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621681026370"><span class="annot"><span class="annottext">namespaceFor :: ForgeThreadStats -&gt; Namespace ForgeThreadStats
+</span><a href="#local-6989586621681026370"><span class="hs-identifier hs-var hs-var hs-var hs-var">namespaceFor</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace ForgeThreadStats
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ForgeThreadStats&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621681026373"><span class="annot"><span class="annottext">severityFor :: Namespace ForgeThreadStats
+-&gt; Maybe ForgeThreadStats -&gt; Maybe SeverityS
+</span><a href="#local-6989586621681026373"><span class="hs-identifier hs-var hs-var hs-var hs-var">severityFor</span></a></span></span><span> </span><span class="annot"><span class="annottext">Namespace ForgeThreadStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe ForgeThreadStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621681026377"><span class="annot"><span class="annottext">documentFor :: Namespace ForgeThreadStats -&gt; Maybe Text
+</span><a href="#local-6989586621681026377"><span class="hs-identifier hs-var hs-var hs-var hs-var">documentFor</span></a></span></span><span> </span><span class="annot"><span class="annottext">Namespace ForgeThreadStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621681026387"><span class="annot"><span class="annottext">metricsDocFor :: Namespace ForgeThreadStats -&gt; [(Text, Text)]
+</span><a href="#local-6989586621681026387"><span class="hs-identifier hs-var hs-var hs-var hs-var">metricsDocFor</span></a></span></span><span> </span><span class="annot"><span class="annottext">Namespace ForgeThreadStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeCannotForge&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many times was this node unable to forge [a block]?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeIsLeader&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many times was this node slot leader?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;blocksForged&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many blocks did this node forge?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;slotsMissed&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many slots did this node miss?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621681026390"><span class="annot"><span class="annottext">allNamespaces :: [Namespace ForgeThreadStats]
+</span><a href="#local-6989586621681026390"><span class="hs-identifier hs-var hs-var hs-var hs-var">allNamespaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace ForgeThreadStats
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ForgeThreadStats&quot;</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#emptyForgeThreadStats"><span class="hs-identifier hs-type">emptyForgeThreadStats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span>
+</span><span id="line-89"></span><span id="emptyForgeThreadStats"><span class="annot"><span class="annottext">emptyForgeThreadStats :: ForgeThreadStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#emptyForgeThreadStats"><span class="hs-identifier hs-var hs-var">emptyForgeThreadStats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int -&gt; Int -&gt; Int -&gt; ForgeThreadStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-var">ForgeThreadStats</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- ForgingStats Tracer</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- | This structure stores counters of blockchain-related events,</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--   per individual thread in fsStats.</span><span>
+</span><span id="line-98"></span><span class="hs-keyword">data</span><span> </span><span id="ForgingStats"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-var">ForgingStats</span></a></span></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ForgingStats"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-var">ForgingStats</span></a></span></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="fsStats"><span class="annot"><span class="annottext">ForgingStats -&gt; Map ThreadId ForgeThreadStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsStats"><span class="hs-identifier hs-var hs-var">fsStats</span></a></span></span><span>              </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Conc.Sync.html#ThreadId"><span class="hs-identifier hs-type">ThreadId</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fsNodeCannotForgeNum"><span class="annot"><span class="annottext">ForgingStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsNodeCannotForgeNum"><span class="hs-identifier hs-var hs-var">fsNodeCannotForgeNum</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fsNodeIsLeaderNum"><span class="annot"><span class="annottext">ForgingStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsNodeIsLeaderNum"><span class="hs-identifier hs-var hs-var">fsNodeIsLeaderNum</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fsBlocksForgedNum"><span class="annot"><span class="annottext">ForgingStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsBlocksForgedNum"><span class="hs-identifier hs-var hs-var">fsBlocksForgedNum</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fsSlotsMissedNum"><span class="annot"><span class="annottext">ForgingStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsSlotsMissedNum"><span class="hs-identifier hs-var hs-var">fsSlotsMissedNum</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681026402"><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LogFormatting"><span class="hs-identifier hs-type">LogFormatting</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621681026421"><span class="annot"><span class="annottext">forHuman :: ForgingStats -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var hs-var hs-var hs-var">forHuman</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681026422"><span id="local-6989586621681026423"><span id="local-6989586621681026424"><span id="local-6989586621681026425"><span id="local-6989586621681026426"><span class="annot"><span class="annottext">Int
+Map ThreadId ForgeThreadStats
+fsStats :: ForgingStats -&gt; Map ThreadId ForgeThreadStats
+fsNodeCannotForgeNum :: ForgingStats -&gt; Int
+fsNodeIsLeaderNum :: ForgingStats -&gt; Int
+fsBlocksForgedNum :: ForgingStats -&gt; Int
+fsSlotsMissedNum :: ForgingStats -&gt; Int
+fsStats :: Map ThreadId ForgeThreadStats
+fsNodeCannotForgeNum :: Int
+fsNodeIsLeaderNum :: Int
+fsBlocksForgedNum :: Int
+fsSlotsMissedNum :: Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsStats"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Node cannot forge &quot;</span></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026423"><span class="hs-identifier hs-var">fsNodeCannotForgeNum</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; node is leader &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026424"><span class="hs-identifier hs-var">fsNodeIsLeaderNum</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; blocks forged &quot;</span></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026425"><span class="hs-identifier hs-var">fsBlocksForgedNum</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; slots missed &quot;</span></span><span>   </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026426"><span class="hs-identifier hs-var">fsSlotsMissedNum</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621681026449"><span class="annot"><span class="annottext">forMachine :: DetailLevel -&gt; ForgingStats -&gt; Object
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var hs-var hs-var hs-var">forMachine</span></a></span></span><span> </span><span id="local-6989586621681026450"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621681026450"><span class="hs-identifier hs-var">_dtal</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681026451"><span id="local-6989586621681026452"><span id="local-6989586621681026453"><span id="local-6989586621681026454"><span id="local-6989586621681026455"><span class="annot"><span class="annottext">Int
+Map ThreadId ForgeThreadStats
+fsStats :: ForgingStats -&gt; Map ThreadId ForgeThreadStats
+fsNodeCannotForgeNum :: ForgingStats -&gt; Int
+fsNodeIsLeaderNum :: ForgingStats -&gt; Int
+fsBlocksForgedNum :: ForgingStats -&gt; Int
+fsSlotsMissedNum :: ForgingStats -&gt; Int
+fsStats :: Map ThreadId ForgeThreadStats
+fsNodeCannotForgeNum :: Int
+fsNodeIsLeaderNum :: Int
+fsBlocksForgedNum :: Int
+fsSlotsMissedNum :: Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsStats"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ForgingStats&quot;</span></span><span>
+</span><span id="line-115"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeCannotForge&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026452"><span class="hs-identifier hs-var">fsNodeCannotForgeNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeIsLeader&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026453"><span class="hs-identifier hs-var">fsNodeIsLeaderNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;blocksForged&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026454"><span class="hs-identifier hs-var">fsBlocksForgedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;slotsMissed&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026455"><span class="hs-identifier hs-var">fsSlotsMissedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>             </span><span class="hs-special">]</span><span>
+</span><span id="line-120"></span><span>  </span><span id="local-6989586621681026468"><span class="annot"><span class="annottext">asMetrics :: ForgingStats -&gt; [Metric]
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var hs-var hs-var hs-var">asMetrics</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681026469"><span id="local-6989586621681026470"><span id="local-6989586621681026471"><span id="local-6989586621681026472"><span id="local-6989586621681026473"><span class="annot"><span class="annottext">Int
+Map ThreadId ForgeThreadStats
+fsStats :: ForgingStats -&gt; Map ThreadId ForgeThreadStats
+fsNodeCannotForgeNum :: ForgingStats -&gt; Int
+fsNodeIsLeaderNum :: ForgingStats -&gt; Int
+fsBlocksForgedNum :: ForgingStats -&gt; Int
+fsSlotsMissedNum :: ForgingStats -&gt; Int
+fsStats :: Map ThreadId ForgeThreadStats
+fsNodeCannotForgeNum :: Int
+fsNodeIsLeaderNum :: Int
+fsBlocksForgedNum :: Int
+fsSlotsMissedNum :: Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsStats"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeCannotForge&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026470"><span class="hs-identifier hs-var">fsNodeCannotForgeNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeIsLeader&quot;</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026471"><span class="hs-identifier hs-var">fsNodeIsLeaderNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;blocksForged&quot;</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026472"><span class="hs-identifier hs-var">fsBlocksForgedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;slotsMissed&quot;</span></span><span>     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026473"><span class="hs-identifier hs-var">fsSlotsMissedNum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681026477"><span id="local-6989586621681026481"><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#MetaTrace"><span class="hs-identifier hs-type">MetaTrace</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621681026487"><span class="annot"><span class="annottext">namespaceFor :: ForgingStats -&gt; Namespace ForgingStats
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var hs-var hs-var hs-var">namespaceFor</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace ForgingStats
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ForgingStats&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621681026488"><span class="annot"><span class="annottext">severityFor :: Namespace ForgingStats -&gt; Maybe ForgingStats -&gt; Maybe SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var hs-var hs-var hs-var">severityFor</span></a></span></span><span> </span><span class="annot"><span class="annottext">Namespace ForgingStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe ForgingStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span>    </span><span id="local-6989586621681026490"><span class="annot"><span class="annottext">documentFor :: Namespace ForgingStats -&gt; Maybe Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var hs-var hs-var hs-var">documentFor</span></a></span></span><span> </span><span class="annot"><span class="annottext">Namespace ForgingStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeCannotForgeNum shows how many times this node could not forge.\
+      \\nnodeIsLeaderNum shows how many times this node was leader.\
+      \\nblocksForgedNum shows how many blocks did forge in this node.\
+      \\nslotsMissed shows how many slots were missed in this node.&quot;</span></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621681026501"><span class="annot"><span class="annottext">metricsDocFor :: Namespace ForgingStats -&gt; [(Text, Text)]
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#metricsDocFor"><span class="hs-identifier hs-var hs-var hs-var hs-var">metricsDocFor</span></a></span></span><span> </span><span class="annot"><span class="annottext">Namespace ForgingStats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeCannotForge&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many times was this node unable to forge [a block]?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>      </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;nodeIsLeader&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-142"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many times was this node slot leader?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>      </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;blocksForged&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many blocks did this node forge?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;slotsMissed&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;How many slots did this node miss?&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>      </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;lastSlot&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span>    </span><span id="local-6989586621681026503"><span class="annot"><span class="annottext">allNamespaces :: [Namespace ForgingStats]
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#allNamespaces"><span class="hs-identifier hs-var hs-var hs-var hs-var">allNamespaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace ForgingStats
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ForgingStats&quot;</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#emptyForgingStats"><span class="hs-identifier hs-type">emptyForgingStats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-155"></span><span id="emptyForgingStats"><span class="annot"><span class="annottext">emptyForgingStats :: ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#emptyForgingStats"><span class="hs-identifier hs-var hs-var">emptyForgingStats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map ThreadId ForgeThreadStats
+-&gt; Int -&gt; Int -&gt; Int -&gt; Int -&gt; ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-var">ForgingStats</span></a></span><span> </span><span class="annot"><span class="annottext">Map ThreadId ForgeThreadStats
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span id="local-6989586621681026198"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#forgeThreadStats"><span class="hs-identifier hs-type">forgeThreadStats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.StartLeadershipCheck.html#ForgeTracerType"><span class="hs-identifier hs-type">ForgeTracerType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026198"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-159"></span><span id="forgeThreadStats"><span class="annot"><span class="annottext">forgeThreadStats :: forall blk.
+Trace IO ForgingStats -&gt; IO (Trace IO (ForgeTracerType blk))
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#forgeThreadStats"><span class="hs-identifier hs-var hs-var">forgeThreadStats</span></a></span></span><span> </span><span id="local-6989586621681026509"><span class="annot"><span class="annottext">Trace IO ForgingStats
+</span><a href="#local-6989586621681026509"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681026514"><span class="annot"><span class="annottext">tr' :: Trace IO (Folding a ForgingStats)
+</span><a href="#local-6989586621681026514"><span class="hs-identifier hs-var hs-var">tr'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Folding a ForgingStats -&gt; ForgingStats)
+-&gt; Trace IO ForgingStats -&gt; Trace IO (Folding a ForgingStats)
+forall a' a. (a' -&gt; a) -&gt; Trace IO a -&gt; Trace IO a'
+forall (f :: * -&gt; *) a' a.
+Contravariant f =&gt;
+(a' -&gt; a) -&gt; f a -&gt; f a'
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.Contravariant.html#contramap"><span class="hs-identifier hs-var">contramap</span></a></span><span> </span><span class="annot"><span class="annottext">Folding a ForgingStats -&gt; ForgingStats
+forall a b. Folding a b -&gt; b
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#unfold"><span class="hs-identifier hs-var">unfold</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO ForgingStats
+</span><a href="#local-6989586621681026509"><span class="hs-identifier hs-var">tr</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(ForgingStats
+ -&gt; LoggingContext -&gt; ForgeTracerType blk -&gt; IO ForgingStats)
+-&gt; ForgingStats
+-&gt; (ForgeTracerType blk -&gt; Bool)
+-&gt; Trace IO (Folding (ForgeTracerType blk) ForgingStats)
+-&gt; IO (Trace IO (ForgeTracerType blk))
+forall a acc (m :: * -&gt; *).
+MonadUnliftIO m =&gt;
+(acc -&gt; LoggingContext -&gt; a -&gt; m acc)
+-&gt; acc -&gt; (a -&gt; Bool) -&gt; Trace m (Folding a acc) -&gt; m (Trace m a)
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#foldCondTraceM"><span class="hs-identifier hs-var">foldCondTraceM</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats
+-&gt; LoggingContext -&gt; ForgeTracerType blk -&gt; IO ForgingStats
+forall (m :: * -&gt; *) blk.
+MonadIO m =&gt;
+ForgingStats
+-&gt; LoggingContext -&gt; ForgeTracerType blk -&gt; m ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#calculateThreadStats"><span class="hs-identifier hs-var">calculateThreadStats</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#emptyForgingStats"><span class="hs-identifier hs-var">emptyForgingStats</span></a></span><span>
+</span><span id="line-162"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-163"></span><span>          </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-diffusion-0.17.1.0-d4223434b03df5c253c8b22adbb753eed423453582071f6c066fc9cac7afcebd/share/doc/html/src/Ouroboros.Consensus.Node.Tracers.html#TraceStartLeadershipCheck"><span class="hs-identifier hs-type">Consensus.TraceStartLeadershipCheck</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-164"></span><span>          </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TraceForgeEvent blk
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-165"></span><span>          </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="annot"><span class="annottext">TraceStartLeadershipCheckPlus
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-166"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>      </span><span class="annot"><span class="annottext">Trace IO (Folding (ForgeTracerType blk) ForgingStats)
+forall {a}. Trace IO (Folding a ForgingStats)
+</span><a href="#local-6989586621681026514"><span class="hs-identifier hs-var">tr'</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span id="local-6989586621681026216"><span id="local-6989586621681026217"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#calculateThreadStats"><span class="hs-identifier hs-type">calculateThreadStats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026216"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.7.0/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.StartLeadershipCheck.html#ForgeTracerType"><span class="hs-identifier hs-type">ForgeTracerType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026217"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681026216"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span></span></span><span>
+</span><span id="line-174"></span><span id="calculateThreadStats"><span class="annot"><span class="annottext">calculateThreadStats :: forall (m :: * -&gt; *) blk.
+MonadIO m =&gt;
+ForgingStats
+-&gt; LoggingContext -&gt; ForgeTracerType blk -&gt; m ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#calculateThreadStats"><span class="hs-identifier hs-var hs-var">calculateThreadStats</span></a></span></span><span> </span><span id="local-6989586621681026551"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026551"><span class="hs-identifier hs-var">stats</span></a></span></span><span> </span><span id="local-6989586621681026552"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621681026552"><span class="hs-identifier hs-var">_context</span></a></span></span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-diffusion-0.17.1.0-d4223434b03df5c253c8b22adbb753eed423453582071f6c066fc9cac7afcebd/share/doc/html/src/Ouroboros.Consensus.Node.Tracers.html#TraceNodeCannotForge"><span class="hs-identifier hs-type">TraceNodeCannotForge</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-176"></span><span>      </span><span class="annot"><span class="annottext">ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe Any))
+-&gt; (ForgingStats -&gt; Maybe Any -&gt; ForgingStats)
+-&gt; m ForgingStats
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe a))
+-&gt; (ForgingStats -&gt; Maybe a -&gt; ForgingStats)
+-&gt; m ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#mapThreadStats"><span class="hs-identifier hs-var">mapThreadStats</span></a></span><span>
+</span><span id="line-177"></span><span>        </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026551"><span class="hs-identifier hs-var">stats</span></a></span><span>
+</span><span id="line-178"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026555"><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026555"><span class="hs-identifier hs-var">fts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026555"><span class="hs-identifier hs-var">fts</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeCannotForgeNum"><span class="hs-identifier hs-var">ftsNodeCannotForgeNum</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeCannotForgeNum"><span class="hs-identifier hs-var">ftsNodeCannotForgeNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026555"><span class="hs-identifier hs-type">fts</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span class="hs-special">}</span><span>
+</span><span id="line-179"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe Any
+forall a. Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026557"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026557"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026557"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsNodeCannotForgeNum"><span class="hs-identifier hs-var">fsNodeCannotForgeNum</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsNodeCannotForgeNum"><span class="hs-identifier hs-var">fsNodeCannotForgeNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026557"><span class="hs-identifier hs-type">fs</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#calculateThreadStats"><span class="hs-identifier hs-var">calculateThreadStats</span></a></span><span> </span><span id="local-6989586621681026558"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026558"><span class="hs-identifier hs-var">stats</span></a></span></span><span> </span><span id="local-6989586621681026559"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621681026559"><span class="hs-identifier hs-var">_context</span></a></span></span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-diffusion-0.17.1.0-d4223434b03df5c253c8b22adbb753eed423453582071f6c066fc9cac7afcebd/share/doc/html/src/Ouroboros.Consensus.Node.Tracers.html#TraceNodeIsLeader"><span class="hs-identifier hs-type">TraceNodeIsLeader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/cardano-slotting-0.2.0.0-6285142e6300c03ed5df275ddeb3151e919ee89e20158c1c69b5522a66c655ce/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span id="local-6989586621681026562"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621681026562"><span class="hs-identifier hs-var">slot'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681026566"><span class="annot"><span class="annottext">slot :: Int
+</span><a href="#local-6989586621681026566"><span class="hs-identifier hs-var hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621681026562"><span class="hs-identifier hs-var">slot'</span></a></span><span>
+</span><span id="line-184"></span><span>      </span><span class="annot"><span class="annottext">ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe Any))
+-&gt; (ForgingStats -&gt; Maybe Any -&gt; ForgingStats)
+-&gt; m ForgingStats
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe a))
+-&gt; (ForgingStats -&gt; Maybe a -&gt; ForgingStats)
+-&gt; m ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#mapThreadStats"><span class="hs-identifier hs-var">mapThreadStats</span></a></span><span>
+</span><span id="line-185"></span><span>        </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026558"><span class="hs-identifier hs-var">stats</span></a></span><span>
+</span><span id="line-186"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026567"><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026567"><span class="hs-identifier hs-var">fts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026567"><span class="hs-identifier hs-var">fts</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeIsLeaderNum"><span class="hs-identifier hs-var">ftsNodeIsLeaderNum</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsNodeIsLeaderNum"><span class="hs-identifier hs-var">ftsNodeIsLeaderNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026567"><span class="hs-identifier hs-type">fts</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span>
+</span><span id="line-187"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsLastSlot"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621681026566"><span class="hs-identifier hs-type">slot</span></a></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe Any
+forall a. Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026568"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026568"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026568"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsNodeIsLeaderNum"><span class="hs-identifier hs-var">fsNodeIsLeaderNum</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsNodeIsLeaderNum"><span class="hs-identifier hs-var">fsNodeIsLeaderNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026568"><span class="hs-identifier hs-type">fs</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#calculateThreadStats"><span class="hs-identifier hs-var">calculateThreadStats</span></a></span><span> </span><span id="local-6989586621681026569"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026569"><span class="hs-identifier hs-var">stats</span></a></span></span><span> </span><span id="local-6989586621681026570"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621681026570"><span class="hs-identifier hs-var">_context</span></a></span></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-diffusion-0.17.1.0-d4223434b03df5c253c8b22adbb753eed423453582071f6c066fc9cac7afcebd/share/doc/html/src/Ouroboros.Consensus.Node.Tracers.html#TraceForgedBlock"><span class="hs-identifier hs-type">TraceForgedBlock</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-191"></span><span>      </span><span class="annot"><span class="annottext">ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe Any))
+-&gt; (ForgingStats -&gt; Maybe Any -&gt; ForgingStats)
+-&gt; m ForgingStats
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe a))
+-&gt; (ForgingStats -&gt; Maybe a -&gt; ForgingStats)
+-&gt; m ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#mapThreadStats"><span class="hs-identifier hs-var">mapThreadStats</span></a></span><span>
+</span><span id="line-192"></span><span>        </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026569"><span class="hs-identifier hs-var">stats</span></a></span><span>
+</span><span id="line-193"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026572"><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026572"><span class="hs-identifier hs-var">fts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026572"><span class="hs-identifier hs-var">fts</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsBlocksForgedNum"><span class="hs-identifier hs-var">ftsBlocksForgedNum</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsBlocksForgedNum"><span class="hs-identifier hs-var">ftsBlocksForgedNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026572"><span class="hs-identifier hs-type">fts</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span class="hs-special">}</span><span>
+</span><span id="line-194"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe Any
+forall a. Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026573"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026573"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026573"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsBlocksForgedNum"><span class="hs-identifier hs-var">fsBlocksForgedNum</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsBlocksForgedNum"><span class="hs-identifier hs-var">fsBlocksForgedNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026573"><span class="hs-identifier hs-type">fs</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#calculateThreadStats"><span class="hs-identifier hs-var">calculateThreadStats</span></a></span><span> </span><span id="local-6989586621681026574"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026574"><span class="hs-identifier hs-var">stats</span></a></span></span><span> </span><span id="local-6989586621681026575"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621681026575"><span class="hs-identifier hs-var">_context</span></a></span></span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-consensus-diffusion-0.17.1.0-d4223434b03df5c253c8b22adbb753eed423453582071f6c066fc9cac7afcebd/share/doc/html/src/Ouroboros.Consensus.Node.Tracers.html#TraceNodeNotLeader"><span class="hs-identifier hs-type">TraceNodeNotLeader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/cardano-slotting-0.2.0.0-6285142e6300c03ed5df275ddeb3151e919ee89e20158c1c69b5522a66c655ce/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span id="local-6989586621681026577"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621681026577"><span class="hs-identifier hs-var">slot'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-198"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681026580"><span class="annot"><span class="annottext">slot :: Int
+</span><a href="#local-6989586621681026580"><span class="hs-identifier hs-var hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621681026577"><span class="hs-identifier hs-var">slot'</span></a></span><span>
+</span><span id="line-199"></span><span>      </span><span class="annot"><span class="annottext">ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe Int))
+-&gt; (ForgingStats -&gt; Maybe Int -&gt; ForgingStats)
+-&gt; m ForgingStats
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe a))
+-&gt; (ForgingStats -&gt; Maybe a -&gt; ForgingStats)
+-&gt; m ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#mapThreadStats"><span class="hs-identifier hs-var">mapThreadStats</span></a></span><span>
+</span><span id="line-200"></span><span>        </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026574"><span class="hs-identifier hs-var">stats</span></a></span><span>
+</span><span id="line-201"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026581"><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026581"><span class="hs-identifier hs-var">fts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-202"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsLastSlot"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026581"><span class="hs-identifier hs-var">fts</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int
+forall a. Enum a =&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#succ"><span class="hs-identifier hs-var">succ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsLastSlot"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026581"><span class="hs-identifier hs-var">fts</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026580"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-203"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026581"><span class="hs-identifier hs-var">fts</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsLastSlot"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621681026580"><span class="hs-identifier hs-type">slot</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+forall a. Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>            </span><span class="hs-keyword">else</span><span>
+</span><span id="line-205"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681026585"><span class="annot"><span class="annottext">missed :: Int
+</span><a href="#local-6989586621681026585"><span class="hs-identifier hs-var hs-var">missed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026580"><span class="hs-identifier hs-var">slot</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsLastSlot"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026581"><span class="hs-identifier hs-var">fts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span><span>              </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026581"><span class="hs-identifier hs-var">fts</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsLastSlot"><span class="hs-identifier hs-var">ftsLastSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621681026580"><span class="hs-identifier hs-type">slot</span></a></span><span>
+</span><span id="line-207"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsSlotsMissedNum"><span class="hs-identifier hs-var">ftsSlotsMissedNum</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ftsSlotsMissedNum"><span class="hs-identifier hs-var">ftsSlotsMissedNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026581"><span class="hs-identifier hs-type">fts</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026585"><span class="hs-identifier hs-type">missed</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-208"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026585"><span class="hs-identifier hs-var">missed</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681026586"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026586"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621681026587"><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621681026587"><span class="hs-identifier hs-var">mbMissed</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621681026587"><span class="hs-identifier hs-var">mbMissed</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-210"></span><span>                            </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026586"><span class="hs-identifier hs-var">fs</span></a></span><span>
+</span><span id="line-211"></span><span>                            </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681026588"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681026588"><span class="hs-identifier hs-var">missed</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026586"><span class="hs-identifier hs-var">fs</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsSlotsMissedNum"><span class="hs-identifier hs-var">fsSlotsMissedNum</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-212"></span><span>                              </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsSlotsMissedNum"><span class="hs-identifier hs-var">fsSlotsMissedNum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026586"><span class="hs-identifier hs-type">fs</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026588"><span class="hs-identifier hs-type">missed</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#calculateThreadStats"><span class="hs-identifier hs-var">calculateThreadStats</span></a></span><span> </span><span id="local-6989586621681026589"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026589"><span class="hs-identifier hs-var">stats</span></a></span></span><span> </span><span id="local-6989586621681026590"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621681026590"><span class="hs-identifier hs-var">_context</span></a></span></span><span> </span><span id="local-6989586621681026591"><span class="annot"><span class="annottext">Either (TraceForgeEvent blk) TraceStartLeadershipCheckPlus
+</span><a href="#local-6989586621681026591"><span class="hs-identifier hs-var">_message</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForgingStats -&gt; m ForgingStats
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026589"><span class="hs-identifier hs-var">stats</span></a></span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span id="local-6989586621681026224"><span id="local-6989586621681026225"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#mapThreadStats"><span class="hs-identifier hs-type">mapThreadStats</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-216"></span><span>     </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026224"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026225"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026225"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-220"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681026224"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span></span></span><span>
+</span><span id="line-221"></span><span id="mapThreadStats"><span class="annot"><span class="annottext">mapThreadStats :: forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, Maybe a))
+-&gt; (ForgingStats -&gt; Maybe a -&gt; ForgingStats)
+-&gt; m ForgingStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#mapThreadStats"><span class="hs-identifier hs-var hs-var">mapThreadStats</span></a></span></span><span> </span><span id="local-6989586621681026599"><span class="annot"><span class="annottext">fs :: ForgingStats
+</span><a href="#local-6989586621681026599"><span class="hs-identifier hs-var">fs</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621681026600"><span class="annot"><span class="annottext">Map ThreadId ForgeThreadStats
+fsStats :: ForgingStats -&gt; Map ThreadId ForgeThreadStats
+fsStats :: Map ThreadId ForgeThreadStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsStats"><span class="hs-identifier hs-var hs-var">fsStats</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621681026601"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; (ForgeThreadStats, Maybe a)
+</span><a href="#local-6989586621681026601"><span class="hs-identifier hs-var">f1</span></a></span></span><span> </span><span id="local-6989586621681026602"><span class="annot"><span class="annottext">ForgingStats -&gt; Maybe a -&gt; ForgingStats
+</span><a href="#local-6989586621681026602"><span class="hs-identifier hs-var">f2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-222"></span><span>  </span><span id="local-6989586621681026603"><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621681026603"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ThreadId -&gt; m ThreadId
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681026606"><span class="annot"><span class="annottext">threadStats :: ForgeThreadStats
+</span><a href="#local-6989586621681026606"><span class="hs-identifier hs-var hs-var">threadStats</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Maybe ForgeThreadStats -&gt; ForgeThreadStats
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#emptyForgeThreadStats"><span class="hs-identifier hs-var">emptyForgeThreadStats</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ThreadId -&gt; Map ThreadId ForgeThreadStats -&gt; Maybe ForgeThreadStats
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621681026603"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">Map ThreadId ForgeThreadStats
+</span><a href="#local-6989586621681026600"><span class="hs-identifier hs-var">fsStats</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621681026608"><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026608"><span class="hs-identifier hs-var">newStats</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681026609"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621681026609"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; (ForgeThreadStats, Maybe a)
+</span><a href="#local-6989586621681026601"><span class="hs-identifier hs-var">f1</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681026606"><span class="hs-identifier hs-var">threadStats</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="annot"><span class="annottext">ForgingStats -&gt; m ForgingStats
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ForgingStats -&gt; m ForgingStats) -&gt; ForgingStats -&gt; m ForgingStats
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats -&gt; Maybe a -&gt; ForgingStats
+</span><a href="#local-6989586621681026602"><span class="hs-identifier hs-var">f2</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681026599"><span class="hs-identifier hs-var">fs</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ForgingThreadStats.html#fsStats"><span class="hs-identifier hs-var">fsStats</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-type">Map.insert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026603"><span class="hs-identifier hs-type">tid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026608"><span class="hs-identifier hs-type">newStats</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681026600"><span class="hs-identifier hs-type">fsStats</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621681026609"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-226"></span></pre></body></html>
