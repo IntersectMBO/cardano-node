@@ -87,7 +87,8 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
-import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
+import           Control.Concurrent (forkIO, killThread, mkWeakThreadId, myThreadId, forkIO,
+                   threadDelay)
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try)
 import qualified Control.Exception as Exception
@@ -116,6 +117,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+import           System.Mem (performMajorGC)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
@@ -142,6 +144,8 @@ runNode cmdPc = do
     installSigTermHandler
 
     Crypto.cryptoInit
+
+    gcThreadInit
 
     configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
 
@@ -179,6 +183,15 @@ runNode cmdPc = do
     case p of
       SomeConsensusProtocol blockType runP ->
         handleNodeWithTracers cmdPc nc p networkMagic blockType runP
+
+gcThreadInit :: IO ()
+gcThreadInit = do
+  void $ forkIO go
+ where
+   go = do
+     performMajorGC
+     threadDelay $ 613 * 1000000 -- about 10 minutes
+     go
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
