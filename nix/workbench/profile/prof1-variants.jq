@@ -427,6 +427,14 @@ def all_profile_variants:
       }
     }) as $plutus_base
   |
+    ({ extra_desc: "with DRep voting workload"
+    , generator:
+      { inputs_per_tx:                  1
+      , outputs_per_tx:                 1
+      , drep_voting:                    true
+      }
+    }) as $voting_base
+  |
    ({ generator:
       { plutus:
           { type:                       "LimitSaturationLoop"
@@ -556,6 +564,11 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
     ) as $genesis_voltaire
+  |
+    ($genesis_voltaire
+      | .genesis.pparamsOverlays      as $ovls
+      | .genesis.pparamsOverlays      = $ovls + ["voting"]
+    ) as $genesis_voltaire_10
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -903,7 +916,7 @@ def all_profile_variants:
     ) as $plutus_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - value-only workload
-    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire
+    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire_10
     ) as $valuevolt_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
@@ -1239,6 +1252,8 @@ def all_profile_variants:
 ## P&T Nomad cluster: same, but new Voltaire era baseline with 10k DReps, updated cost models and protocol version 9
   , $valuevolt_nomadperf_template * $dreps_large *
     { name: "value-volt-nomadperf"
+    , genesis:   {funds_balance: 40000000000000}
+    , generator: {drep_voting: true}
     }
   , $plutusvolt_nomadperf_template * $dreps_large *
     { name: "plutus-volt-nomadperf"
@@ -1476,6 +1491,11 @@ def all_profile_variants:
     }
   , $scenario_chainsync * $chaindb_early_alonzo * $p2p *
     { name: "chainsync-early-alonzo-p2p"
+    }
+
+  ## development profile for voting workload: PV9, Conway costmodel, 1000 DReps injected
+  , $cibench_base * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voltaire_10 * $dreps_small *
+    { name: "development-voting"
     }
 
   ## Last, but not least, the profile used by "nix-shell -A devops":

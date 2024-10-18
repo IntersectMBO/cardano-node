@@ -53,12 +53,14 @@ let
           active_slots="$(${jq}/bin/jq --null-input -r    \
             "''${epoch_length} * ''${active_slots_coeff}" \
           )"
+          with_explorer="$(${jq}/bin/jq      .composition.with_explorer  ../profile.json)"
           ${coreutils}/bin/echo "profile.json:"
           ${coreutils}/bin/echo "- network_magic:      ''${network_magic}"
           ${coreutils}/bin/echo "- slot_duration:      ''${slot_duration}"
           ${coreutils}/bin/echo "- epoch_length:       ''${epoch_length}"
           ${coreutils}/bin/echo "- active_slots_coeff: ''${active_slots_coeff}"
           ${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
+          ${coreutils}/bin/echo "- with_explorer:      ''${with_explorer}"
 
           # Fetch all defined node names (Including "explorer" nodes)
           ###########################################################
@@ -191,9 +193,21 @@ let
 
               done
             else
-              # Seconds supervisor needs to consider the start successful
-              ${coreutils}/bin/sleep 5
-              msg "Done, bye!"
+              # Producers only!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+              ############################# VOTING #############################
+              ############################# VOTING #############################
+              ############################# VOTING #############################
+              # If running supervisord (local only), only one healthcheck is run
+              # for all nodes, so sending to background and sleeping forever
+              # fits all backends for all producers to vote simultaneously.
+              for node in ''${nodes[*]} # nodes array is only deployed nodes!
+              do
+                workflow_producer "''${node}" &
+              done
+              ${coreutils}/bin/sleep 80000
+              ############################# VOTING #############################
+              ############################# VOTING #############################
+              ############################# VOTING #############################
             fi
 
           }
@@ -223,7 +237,7 @@ let
               # If the ping fails the whole script must fail!
               ${cardano-cli}/bin/cardano-cli ping \
                 --magic "''${network_magic}"      \
-                --count 3                         \
+                --count 1                         \
                 --json                            \
                 --host "''${host}"                \
                 --port "''${port}"
@@ -934,6 +948,12 @@ let
                 "${coreutils}/bin/echo -e \"$(${coreutils}/bin/date --rfc-3339=seconds): $1\" | ${coreutils}/bin/tee /dev/stderr"
             exit 22
           }
+
+          ######################################################################
+          # Conway/governance functions! #######################################
+          ######################################################################
+
+          ${import ./voting.nix {inherit pkgs profile nodeSpecs;}}
 
           if test -n "''${NOMAD_DEBUG:-}"
           then

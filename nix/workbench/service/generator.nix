@@ -129,6 +129,16 @@ let
         value = ''
           #!${pkgs.stdenv.shell}
 
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+          ${import ./voting.nix {inherit pkgs profile nodeSpecs;}}
+          workflow_generator \
+           ${if profile.composition.with_explorer then "explorer" else "node-0"}
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+          ############################### VOTING ###############################
+
           ${service.script}
           '';
         JSON = pkgs.writeScript "startup-generator.sh" value;
