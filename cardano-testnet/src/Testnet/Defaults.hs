@@ -44,6 +44,7 @@ import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Alonzo.Core (PParams (..))
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import qualified Cardano.Ledger.Alonzo.Genesis as Ledger
+import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
@@ -387,7 +388,9 @@ defaultShelleyGenesis asbe startTime maxSupply options = do
       -- TODO: find out why this actually degrates network stability - turned off for now
       -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
       pVer = eraToProtocolVersion asbe
-      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
+      -- TODO propagate this default to cardano-api
+      -- TODO update tests to read this value when registering keys
+      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults & L.ppKeyDepositL .~ 400_000
       protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
   Api.shelleyGenesisDefaults
         { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff

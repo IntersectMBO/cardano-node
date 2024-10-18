@@ -127,7 +127,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
   -- NB: We must include the stake credential
   testDelegatorPaymentAddr <- execCli
-                [ "address", "build"
+                [ "latest", "address", "build"
                 , "--testnet-magic", show @Int testnetMagic
                 , "--payment-verification-key-file", testDelegatorPaymentVKeyFp
                 , "--stake-verification-key-file", testDelegatorVkeyFp
@@ -135,7 +135,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   testDelegatorStakeAddress
     <- filter (/= '\n')
          <$> execCli
-               [ "stake-address", "build"
+               [ "latest", "stake-address", "build"
                , "--stake-verification-key-file", testDelegatorVkeyFp
                , "--testnet-magic", show @Int testnetMagic
                ]
@@ -160,7 +160,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.note_  "Get updated UTxO"
 
   void $ execCli' execConfig
-      [ "query", "utxo"
+      [ "latest", "query", "utxo"
       , "--address", utxoAddr
       , "--cardano-mode"
       , "--out-file", work </> "utxo-2.json"
@@ -188,7 +188,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
   let delegRegTestDelegatorTxFp = work </> "deleg-register-test-delegator.tx"
   void $ execCli
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", delegRegTestDelegatorTxBodyFp
     , "--testnet-magic", show @Int testnetMagic
     , "--signing-key-file", utxoSKeyFile
@@ -199,7 +199,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.note_ "Submitting test delegator registration and delegation certificates..."
 
   void $ execCli' execConfig
-           [ "transaction", "submit"
+           [ "latest", "transaction", "submit"
            , "--tx-file", delegRegTestDelegatorTxFp
            ]
 
@@ -233,7 +233,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   let testSpoOperationalCertFp = testSpoDir </> "node-operational.cert"
 
   void $ execCli' execConfig
-    [ "node", "new-counter"
+    [ "latest", "node", "new-counter"
     , "--cold-verification-key-file", stakePoolColdVKey
     , "--counter-value", "0"
     , "--operational-certificate-issue-counter-file", testSpoOperationalCertFp
@@ -241,7 +241,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
 
   void $ execCli' execConfig
-      [ "node", "issue-op-cert"
+      [ "latest", "node", "issue-op-cert"
       , "--kes-period", "0"
       , "--kes-verification-key-file", testSpoKesVKey
       , "--cold-signing-key-file", stakePoolColdSigningKey
@@ -273,7 +273,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   currentLeaderShipScheduleFile <- H.noteTempFile work "current-schedule.log"
 
   void $ execCli' execConfig
-    [ "query", "leadership-schedule"
+    [ "latest", "query", "leadership-schedule"
     , "--genesis", shelleyGenesisFile tr
     , "--stake-pool-id", stakePoolIdNewSpo
     , "--vrf-signing-key-file", vrfSkey
@@ -326,7 +326,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
     H.byDeadlineM 5 leadershipScheduleDeadline "Failed to query for leadership schedule" $ do
       void $ execCli' execConfig
-        [ "query", "leadership-schedule"
+        [ "latest", "query", "leadership-schedule"
         , "--genesis", shelleyGenesisFile tr
         , "--stake-pool-id", stakePoolIdNewSpo
         , "--vrf-signing-key-file", vrfSkey

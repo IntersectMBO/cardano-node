@@ -102,7 +102,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
     OuroborosApplication $ fold bundle
 
   n2nVer :: NodeToNodeVersion
-  n2nVer = NodeToNodeV_12
+  n2nVer = NodeToNodeV_14
   blkN2nVer :: BlockNodeToNodeVersion blk
   blkN2nVer = supportedVers Map.! n2nVer
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)

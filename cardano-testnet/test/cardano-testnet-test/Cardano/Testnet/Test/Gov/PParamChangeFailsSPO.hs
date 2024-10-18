@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Gov.PParamChangeFailsSPO
   ( hprop_check_pparam_fails_spo
@@ -15,8 +17,10 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Default.Class
+import qualified Data.Text as Text
 import           Data.Typeable (Typeable)
 import           Data.Word (Word16)
 import           System.FilePath ((</>))
@@ -24,9 +28,10 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Defaults (defaultSpoColdKeyPair, defaultSpoKeys)
 import           Testnet.Process.Cli.DRep
+import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction (failToSubmitTx, signTx)
-import           Testnet.Process.Run (mkExecConfig)
+import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -53,6 +58,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
+      eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
       shelleyOptions = def { genesisEpochLength = 200 }
 
@@ -80,6 +86,52 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
 
   baseDir <- H.createDirectoryIfMissing $ gov </> "output"
 
+  let stakeVkeyFp = gov </> "stake.vkey"
+      stakeSKeyFp = gov </> "stake.skey"
+      stakeCertFp = gov </> "stake.regcert"
+      stakingKeys = KeyPair { verificationKey = File stakeVkeyFp
+                            , signingKey= File stakeSKeyFp
+                            }
+
+  cliStakeAddressKeyGen stakingKeys
+
+  -- Register stake address
+
+  void $ execCli' execConfig
+    [ eraName, "stake-address", "registration-certificate"
+    , "--stake-verification-key-file", stakeVkeyFp
+    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--out-file", stakeCertFp
+    ]
+
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", stakeSKeyFp
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
+
 
   let propVotes :: [(String, Int)]
       propVotes = mkVotes [(1, "yes")]
@@ -90,8 +142,8 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
   annotateShow propVotes
 
   (governanceActionTxId, governanceActionIndex) <-
-    makeActivityChangeProposal execConfig epochStateView ceo baseDir "proposal"
-                               Nothing (EpochInterval 3) wallet0 (EpochInterval 2)
+    makeActivityChangeProposal execConfig epochStateView ceo (baseDir </> "proposal")
+                               Nothing (EpochInterval 3) stakingKeys wallet0 (EpochInterval 2)
 
   failToVoteChangeProposalWithSPOs ceo execConfig epochStateView baseDir "vote"
                                    governanceActionTxId governanceActionIndex propVotes wallet1
