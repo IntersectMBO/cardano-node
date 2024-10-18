@@ -119,7 +119,9 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envSummary :: Maybe PlutusBudgetSummary
                , envDRepKeys :: [SigningKey DRepKey]
                , envStakeCredentials :: [StakeCredential]
-               , envGovStateSummary :: GovStateSummary
+               -- | `envGovStateSummary` tracks the pending proposals in
+               -- order to avoid issuing queries for fidelity to workloads in the field.
+               , envGovStateSummary :: GovStateSummary StandardCrypto
                }
 -- | `Env` uses `Maybe` to represent values that might be uninitialized.
 -- This being empty means `Nothing` is used across the board, along with
@@ -255,7 +257,7 @@ setEnvWallets key val = modifyEnv (\e -> e { envWallets = Map.insert key val (en
 setEnvSummary :: PlutusBudgetSummary -> ActionM ()
 setEnvSummary val = modifyEnv (\e -> e { envSummary = Just val })
 
-setEnvGovSummary :: GovStateSummary -> ActionM ()
+setEnvGovSummary :: GovStateSummary StandardCrypto -> ActionM ()
 setEnvGovSummary val = modifyEnv (\e -> e { envGovStateSummary = val })
 
 -- | Read accessor helper for `Maybe` record fields of `Env`.
@@ -340,7 +342,7 @@ getEnvWallets = getEnvMap envWallets
 getEnvSummary :: ActionM (Maybe PlutusBudgetSummary)
 getEnvSummary = lift (RWS.gets envSummary)
 
-getEnvGovSummary :: ActionM GovStateSummary
+getEnvGovSummary :: ActionM (GovStateSummary StandardCrypto)
 getEnvGovSummary = lift (RWS.gets envGovStateSummary)
 
 -- | Helper to make submissions to the `Tracer.BenchTracers`.

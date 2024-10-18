@@ -1,10 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Benchmarking.Script.Queries
@@ -12,22 +14,24 @@ module Cardano.Benchmarking.Script.Queries
     , queryEra
     , queryGovernanceState
     , queryRemoteProtocolParameters
-
+    , quiesceGovState
     , debugDumpProposalsPeriodically
     ) where
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters, ShelleyLedgerEra)
 
+import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Cardano.Benchmarking.OuroborosImports
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
-import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
+import qualified Cardano.Benchmarking.Script.Env as Env (Env, Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Ledger.BaseTypes (unboundRational)
 import qualified Cardano.Ledger.Conway.Governance as LC
 import qualified Cardano.Ledger.Conway.PParams as LC
 import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Crypto as Crypto
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
 import           Cardano.TxGenerator.Setup.NodeConfig (mkConsensusProtocol, mkNodeConfig)
 import           Cardano.TxGenerator.Types
@@ -36,12 +40,17 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Exception (SomeException (..), catch, try)
 import           Control.Monad (forever, void)
+import           Control.Monad.Extra (untilJustM, whenJust)
+import           Control.Monad.Trans.RWS.Strict (RWST, get, put, runRWST)
 import           Data.Bifunctor (first)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import qualified Data.Foldable as Foldable
+import           Data.Function (on)
+import           Data.IORef
 import           Data.Ratio
 import           Data.Time (defaultTimeLocale, formatTime)
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import           Data.Tuple.Extra (fst3, uncurry3)
 import           Lens.Micro ((^.))
 
 
@@ -89,7 +98,29 @@ queryRemoteProtocolParameters = do
     AnyCardanoEra BabbageEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
     AnyCardanoEra ConwayEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraConway  QueryProtocolParameters
 
-queryGovernanceState :: ActionM GovStateSummary
+type GovStateSummaryStdCrypto = GovStateSummary Crypto.StandardCrypto
+type QuiescenceMonad t = RWST GovStateIORef () GovStateSummaryStdCrypto (ExceptT Env.Error (RWST Tracer.EnvConsts () Env.Env IO)) t
+
+quiesceAction :: QuiescenceMonad (Maybe GovStateSummaryStdCrypto)
+quiesceAction
+  | (=:=) <- (==) `on` \(GovStateSummary _ _ (GovernanceActionIds _ idList)) -> length $ idList
+  = do liftIO . threadDelay $ 30 * 10 ^ (6 :: Int)
+       curGS :: GovStateSummaryStdCrypto <- get
+       newGS :: GovStateSummaryStdCrypto <- lift queryGovernanceState
+       if | curGS =:= newGS -> pure $ Just newGS
+          | otherwise -> put newGS >> pure Nothing
+          
+
+quiesceGovState :: GovStateIORef -> ActionM ()
+quiesceGovState maybeGSIOR = do
+  curGS :: GovStateSummaryStdCrypto <- queryGovernanceState
+  -- 'threadDelay' takes an argument measured in microseconds.
+  finalGS <- fmap fst3 . uncurry3 runRWST . (, maybeGSIOR, curGS) $
+    untilJustM quiesceAction
+  setEnvGovSummary finalGS
+  whenJust (govStateIORef maybeGSIOR) \ioref -> liftIO $ writeIORef ioref finalGS
+
+queryGovernanceState :: ActionM (GovStateSummary Crypto.StandardCrypto)
 queryGovernanceState = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip   <- liftIO $ getLocalChainTip localNodeConnectInfo
@@ -100,7 +131,7 @@ queryGovernanceState = do
       ( ShelleyLedgerEra era ~ ledgerEra
       , LC.GovState ledgerEra ~ LC.ConwayGovState ledgerEra
       , LC.ConwayEraPParams ledgerEra
-      ) => ShelleyBasedEra era -> ActionM GovStateSummary
+      ) => ShelleyBasedEra era -> ActionM (GovStateSummary Crypto.StandardCrypto)
     callQuery era = shelleyBasedEraConstraints era $ do
       let
         query = QueryInEra $ QueryInShelleyBasedEra era QueryGovState
