@@ -12,6 +12,7 @@ module Cardano.Benchmarking.Script.Selftest
 where
 
 import           Cardano.Api hiding (Env)
+import           Cardano.Api.Shelley (Vote (..))
 
 import           Cardano.Benchmarking.LogTypes (EnvConsts (..))
 import           Cardano.Benchmarking.Script.Action
@@ -20,6 +21,7 @@ import           Cardano.Benchmarking.Script.Env as Env (Env (..))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error, runActionMEnv, setBenchTracers)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
+import qualified Cardano.Crypto.DSIGN as Crypto
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
@@ -32,12 +34,15 @@ import           Cardano.Prelude (encodeUtf8)
 import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
-import           Control.Monad
+import           Control.Exception (AssertionFailed (..), throw)
+import           Control.Monad.Extra (maybeM)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
+import           Data.IORef (newIORef)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.String
+import           System.FilePath ((</>))
 
 import           Paths_tx_generator
 
@@ -49,24 +54,29 @@ import           Paths_tx_generator
 -- 'Cardano.Benchmarking.Script.Core.submitInEra'
 -- does 'show' and 'writeFile' on.
 runSelftest :: Env -> EnvConsts -> Bool -> Maybe FilePath -> IO (Either Env.Error ())
-runSelftest env envConsts@EnvConsts { .. } doVoting outFile = do
-  protocolFile <-  getDataFileName pparamFile
-  let
-    submitMode = maybe DiscardTX DumpToFile outFile
-    fullScript = do
-        Env.setBenchTracers initNullTracers
-        forM_ (useThisScript protocolFile submitMode) action
-  (result, Env {  }, ()) <- Env.runActionMEnv env fullScript envConsts
-  abcMaybe <- STM.atomically $ STM.readTVar envThreads
-  case abcMaybe of
-    Just _ -> error $
-          List.unwords
-              [ "Cardano.Benchmarking.Script.Selftest.runSelftest:"
-              , "thread state spuriously initialized" ]
-    Nothing  -> pure result
-  where
-    pparamFile    = "data/" ++ if doVoting then "protocol-parameters-conway-voting.json" else "protocol-parameters.json"
-    useThisScript =  if doVoting then testScriptVoting else testScript
+runSelftest env envConsts@EnvConsts { .. } doVoting outFile
+  | submitMode <- DiscardTX `maybe` DumpToFile $ outFile
+  , abcException <- AssertionFailed $ List.unwords
+      [ "Cardano.Benchmarking.Script.Selftest.runSelftest:"
+      , "thread state spuriously initialized" ]
+  = do protocolFile <-  getDataFileName $
+         "data" </> if doVoting then "protocol-parameters-conway-voting.json"
+                                else "protocol-parameters.json"
+       gsIORef <- GovStateIORef . Just <$> newIORef undefined
+       let useThisScript
+            | not doVoting = testScript protocolFile submitMode
+            | otherwise = testScriptVoting protocolFile submitMode <>
+                [QuiesceGovState gsIORef]
+       (result, Env {  }, ()) <- flip (Env.runActionMEnv env) envConsts do
+             Env.setBenchTracers initNullTracers
+             mapM_ action useThisScript
+             -- In principle, one could construct votes according to
+             -- GovActionIds here. The approach taken instead was to
+             -- refer to proposals by their indices into the govProposals
+             -- list of the envGovStateSummary in the Env.
+             action . Submit anyConwayEra submitMode txParams . Take nrProposals . Cycle $ Sequence
+               [Vote genesisWallet payMode k Yes drepCred Nothing | k <- [0 .. nrProposals - 1]]
+       pure result `maybeM` const (throw abcException) $ STM.atomically $ STM.readTVar envThreads
 
 -- | 'printJSON' prints out the list of actions using Aeson.
 -- It has no callers within @cardano-node@.
@@ -103,15 +113,13 @@ testScript protocolFile submitMode =
       $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
   ]
   where
+    era = AnyCardanoEra AllegraEra
     skey = error "could not parse hardcoded signing key" `fromRight`
       parsePaymentKeyTE TextEnvelope
           { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
           , teDescription = fromString "Genesis Initial UTxO Signing Key"
           , teRawCBOR =  "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h"
                       <> "\153\171\SI/m\186\242D\228\NAK\182(&\162" }
-    era = AnyCardanoEra AllegraEra
-    txParams = defaultTxGenTxParams {txParamFee = 1000000}
-    genesisWallet = "genesisWallet"
     splitWallet1 = "SplitWallet-1"
     splitWallet2 = "SplitWallet-2"
     splitWallet3 = "SplitWallet-3"
@@ -119,7 +127,33 @@ testScript protocolFile submitMode =
     key = "pass-partout"
     createChange :: String -> String -> Int -> Int -> Action
     createChange src dest txCount outputs
-      = Submit era submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs
+      = Submit anyConwayEra submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs
+
+drepKey :: SigningKey DRepKey
+drepKey = error "could not parse hardcoded drep key" `fromRight`
+  parseDRepKeyBase16 "5820aa7f780a2dcd099762ebc31a43860c1373970c2e2062fcd02cceefe682f39ed8"
+
+drepCred :: forall crypto . ()
+         => L.Crypto crypto
+         => L.DSIGN crypto ~ Crypto.Ed25519DSIGN
+         => L.Credential L.DRepRole crypto
+drepCred
+  | DRepSigningKey unDRepSigningKey <- drepKey
+  , drepVerKey <- Crypto.deriveVerKeyDSIGN unDRepSigningKey
+  = L.KeyHashObj . L.hashKey $ L.VKey drepVerKey
+
+nrProposals :: Int
+nrProposals = 4
+payMode :: PayMode
+payMode = PayToAddr "pass-partout" genesisWallet
+anyConwayEra :: AnyCardanoEra
+anyConwayEra = AnyCardanoEra ConwayEra
+txParams :: TxGenTxParams
+txParams = defaultTxGenTxParams {txParamFee = 1000000}
+
+type Wallet = String
+genesisWallet :: Wallet
+genesisWallet = "genesisWallet"
 
 testScriptVoting :: FilePath -> SubmitMode -> [Action]
 testScriptVoting protocolFile submitMode =
@@ -127,7 +161,7 @@ testScriptVoting protocolFile submitMode =
   , SetNetworkId (Testnet (NetworkMagic {unNetworkMagic = 42}))
   , InitWallet genesisWallet
   , DefineSigningKey key skey
-  , AddFund era genesisWallet
+  , AddFund anyConwayEra genesisWallet
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
     fundCoins key
 
@@ -136,21 +170,13 @@ testScriptVoting protocolFile submitMode =
   -- manually inject an (unnamed) DRep key into the Env by means of an Action constructor
   , DefineDRepKey drepKey
 
-  , Submit era submitMode txParams . Take nrProposals . Cycle $
+  , Submit anyConwayEra submitMode txParams . Take nrProposals . Cycle $
       Propose genesisWallet payMode proposalCoins stakeCred anchor
-
-  , Submit era submitMode txParams
-      EmptyStream
-      -- TODO: instead, create 8(?) vote transactions using the new constructor for Generator
-      -- $ Take 8 $ Cycle $ <Vote constructor>
-
   ]
   where
     fundAmount = 90000000000000
     fundCoins  = L.Coin fundAmount
-    nrProposals :: Int = 4
     proposalCoins = L.Coin $ fundAmount `div` fromIntegral nrProposals
-    payMode = PayToAddr "pass-partout" genesisWallet
     skey :: SigningKey PaymentKey
     skey = error "could not parse hardcoded signing key" `fromRight`
       parsePaymentKeyTE TextEnvelope
@@ -158,10 +184,6 @@ testScriptVoting protocolFile submitMode =
           , teDescription = fromString "Genesis Initial UTxO Signing Key"
           , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h" <>
                         "\153\171\SI/m\186\242D\228\NAK\182(&\162" }
-
-    drepKey :: SigningKey DRepKey
-    drepKey = error "could not parse hardcoded drep key" `fromRight`
-      parseDRepKeyBase16 "5820aa7f780a2dcd099762ebc31a43860c1373970c2e2062fcd02cceefe682f39ed8"
 
     stakeCred :: L.Credential 'L.Staking L.StandardCrypto
     stakeCred = L.KeyHashObj . L.hashKey $ unStakeVerificationKey stakeKey
@@ -175,7 +197,4 @@ testScriptVoting protocolFile submitMode =
       { anchorUrl = fromJust $ L.textToUrl 999 "example.com"
       , anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 . L.urlToText $ L.anchorUrl anchor }
 
-    era = AnyCardanoEra ConwayEra
-    txParams = defaultTxGenTxParams {txParamFee = 1000000}
-    genesisWallet = "genesisWallet"
     key = "pass-partout"

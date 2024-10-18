@@ -146,6 +146,13 @@ instance ToJSON ScriptSpec where
 instance FromJSON ScriptSpec where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
+instance ToJSON GovStateIORef where
+  toJSON _     = genericToJSON jsonOptionsUnTaggedSum (Nothing :: Maybe Int)
+  toEncoding _ = genericToEncoding jsonOptionsUnTaggedSum (Nothing :: Maybe Int)
+instance FromJSON GovStateIORef where
+  parseJSON _ = pure $ GovStateIORef Nothing
+  omittedField = Just $ GovStateIORef Nothing
+
 instance ToJSON Action where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum

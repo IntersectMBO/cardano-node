@@ -16,6 +16,7 @@ module Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.OuroborosImports as Core (protocolToNetworkId)
 import           Cardano.Benchmarking.Script.Core
 import           Cardano.Benchmarking.Script.Env
+import           Cardano.Benchmarking.Script.Queries
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer
 import           Cardano.TxGenerator.Setup.NodeConfig
@@ -47,6 +48,7 @@ action = \case
   DefineDRepKey drepKey -> defineDRepCredential drepKey
   DefineSigningKey name descr -> defineSigningKey name descr
   DefineStakeKey k -> defineStakeCredential k
+  QuiesceGovState maybeIORef -> quiesceGovState maybeIORef
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
   Submit era submitMode txParams generator -> submitAction era submitMode generator txParams

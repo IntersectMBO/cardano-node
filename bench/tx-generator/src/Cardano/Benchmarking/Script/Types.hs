@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -43,6 +44,7 @@ import           Cardano.TxGenerator.Setup.SigningKey (SigningKeyFile)
 import           Cardano.TxGenerator.Types
 
 import           Data.Function (on)
+import           Data.IORef (IORef)
 import           Data.List.NonEmpty
 import           Data.Ratio (Ratio)
 import           Data.Text (Text)
@@ -100,6 +102,12 @@ data Action where
   DefineDRepKey      :: !(SigningKey DRepKey) -> Action
   -- | inject a singleton StakeCredential into the environment
   DefineStakeKey      :: !(VerificationKey StakeKey) -> Action
+  -- | 'QuiesceGovState' queries the governance state until it stabilizes
+  --    and sets 'Cardano.Benchmarking.Script.Env.envGovStateSummary'
+  --    according to the result.
+  --    The 'IORef' is for the sake of returning the governance state to
+  --    the calling environment, when interested.
+  QuiesceGovState :: GovStateIORef -> Action
   -- | 'AddFund' is mostly a wrapper around
   -- 'Cardano.Benchmarking.Wallet.walletRefInsertFund' which in turn
   -- is just 'Control.Concurrent.modifyMVar' around
@@ -187,7 +195,9 @@ data Generator where
   -- 'Vote issues a transaction to vote on a governance action proposal.
   Vote :: !String
        -> !PayMode
-       -> !(L.GovActionId L.StandardCrypto)
+       -> Int
+       -- ^ index into `GovStateSummary` with a result of
+       -- @!(L.GovActionId L.StandardCrypto)@
        -> !Vote
        -> !(L.Credential 'L.DRepRole L.StandardCrypto)
        -> Maybe (Ledger.Url, Text)
@@ -195,6 +205,13 @@ data Generator where
   -- | 'EmptyStream' will yield an empty stream. For testing only.
   EmptyStream :: Generator
   deriving (Eq, Generic, Show)
+
+newtype GovStateIORef = GovStateIORef
+  { govStateIORef :: Maybe (IORef (GovStateSummary L.StandardCrypto))
+  } deriving (Eq, Generic)
+
+instance Show GovStateIORef where
+  showsPrec n _ = showsPrec n (Nothing :: Maybe Int)
 
 deriving instance Generic Vote
 deriving instance FromJSON Vote
@@ -246,14 +263,16 @@ data ProtocolParameterMode where
   ProtocolParameterQuery :: ProtocolParameterMode
   ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode
 
-data GovernanceActionIds where
-  GovernanceActionIds ::
-    forall era. () => ShelleyBasedEra era
-                   -> [GovActionId (EraCrypto (ShelleyLedgerEra era))]
-                   -> GovernanceActionIds
+data GovernanceActionIds crypto where
+  GovernanceActionIds :: forall era ledgerEra crypto .
+                       ( ledgerEra ~ ShelleyLedgerEra era
+                       , crypto ~ EraCrypto ledgerEra)
+                      => ShelleyBasedEra era
+                      -> [GovActionId crypto]
+                      -> GovernanceActionIds crypto
 
-data GovStateSummary = GovStateSummary
+data GovStateSummary crypto = GovStateSummary
   { govGovActionDeposit                 :: !L.Coin
   , govDRepThresholdTreasuryWithdrawal  :: !(Ratio Int)
-  , govProposals                        :: !GovernanceActionIds
+  , govProposals                        :: !(GovernanceActionIds crypto)
   }
