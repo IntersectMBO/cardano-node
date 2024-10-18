@@ -116,6 +116,7 @@ let
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
             packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; !isMusl;
 
+            packages.fs-api.components.library.doHaddock = false;
             packages.cardano-ledger-allegra.components.library.doHaddock = false;
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;
             packages.cardano-ledger-api.components.library.doHaddock = false;
@@ -126,6 +127,7 @@ let
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
+            packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
             # Remvoe this once mingwx is mapped to null in haskell.nix (haskell.nix#2032), and we bumped _past_ that.

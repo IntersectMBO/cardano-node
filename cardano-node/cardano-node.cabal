@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                9.2.0
+version:                10.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -38,8 +38,8 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
-common maybe-Win32 
-  if os(windows) 
+common maybe-Win32
+  if os(windows)
     build-depends:      Win32
 
 common maybe-unix
@@ -55,7 +55,7 @@ common text
 library
   import:               project-config
                       , maybe-unix
-                      , maybe-Win32  
+                      , maybe-Win32
                       , text
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS
@@ -145,7 +145,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 9.3
+                      , cardano-api ^>= 10.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -186,14 +186,14 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.20
-                      , ouroboros-consensus-cardano ^>= 0.19
-                      , ouroboros-consensus-diffusion ^>= 0.17
+                      , ouroboros-consensus ^>= 0.21
+                      , ouroboros-consensus-cardano ^>= 0.20
+                      , ouroboros-consensus-diffusion ^>= 0.18
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.9
+                      , ouroboros-network-api ^>= 0.10
                       , ouroboros-network ^>= 0.17
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.10
+                      , ouroboros-network-protocols ^>= 0.11
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -207,7 +207,7 @@ library
                       , strict-stm
                       , time
                       , trace-dispatcher ^>= 2.7.0
-                      , trace-forward ^>= 2.2.7
+                      , trace-forward ^>= 2.2.8
                       , trace-resources ^>= 0.2.2
                       , tracer-transformers
                       , transformers

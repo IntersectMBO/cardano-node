@@ -189,7 +189,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
 -- }}}
 
   txidString <- mconcat . lines <$> execCli' execConfig
-    [ "transaction", "txid"
+    [ "latest", "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
 

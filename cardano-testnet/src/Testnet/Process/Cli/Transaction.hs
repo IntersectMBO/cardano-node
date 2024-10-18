@@ -216,7 +216,7 @@ retrieveTransactionId
   -> m String
 retrieveTransactionId execConfig signedTxBody = do
   txidOutput <- execCli' execConfig
-    [ "transaction", "txid"
+    [ "latest", "transaction", "txid"
     , "--tx-file", unFile signedTxBody
     ]
   return $ mconcat $ lines txidOutput

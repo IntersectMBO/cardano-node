@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-testnet
-version:                9.0.0
+version:                10.0.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 9.3
-                      , cardano-cli ^>= 9.4
+                      , cardano-api ^>= 10.0
+                      , cardano-cli ^>= 10.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -49,7 +49,7 @@ library
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.4
+                      , cardano-ping ^>= 0.5
                       , contra-tracer
                       , containers
                       , data-default-class

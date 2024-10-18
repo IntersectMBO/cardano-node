@@ -222,7 +222,7 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
                 , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
                 ])
-    -- | Various tracers we can turn on or off
+  -- | Various tracers we can turn on or off
   tracers :: Aeson.KeyMap Aeson.Value
   tracers = Aeson.fromList $ map (bimap Aeson.fromText Aeson.Bool)
     [ (proxyName (Proxy @TraceBlockFetchClient), False)
@@ -543,4 +543,3 @@ defaultUtxoKeys n =
 plutusV3Script :: Text
 plutusV3Script =
   "{ \"type\": \"PlutusScriptV3\", \"description\": \"\", \"cborHex\": \"46450101002499\" }"
-

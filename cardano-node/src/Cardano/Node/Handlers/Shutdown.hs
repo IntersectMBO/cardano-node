@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Handlers.Shutdown
@@ -26,7 +27,6 @@ module Cardano.Node.Handlers.Shutdown
   )
 where
 
-import           Cardano.Api (bounded)
 
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block (Header)
@@ -51,6 +51,8 @@ import           System.Exit (ExitCode (..))
 import qualified System.IO as IO
 import qualified System.IO.Error as IO
 import           System.Posix.Types (Fd (Fd))
+import qualified Text.Read as Read
+
 
 import           Generic.Data.Orphans ()
 
@@ -81,6 +83,13 @@ parseShutdownOn = asum
     ]
   , pure NoShutdown
   ]
+  where
+    bounded :: forall a. (Bounded a, Integral a, Show a) => String -> Opt.ReadM a
+    bounded t = Opt.eitherReader $ \s -> do
+      i <- Read.readEither @Integer s
+      when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
+      when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
+      pure (fromIntegral i)
 
 data ShutdownTrace
   = ShutdownRequested

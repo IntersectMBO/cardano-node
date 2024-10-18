@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 10.0 -- Oct 2024
+
+* Bump for Node 10.0
+
 ## 3.2.0 -- Nov 2023
 
 ** Using `cardano-api-8.33` and `cardano-cli-8.15`

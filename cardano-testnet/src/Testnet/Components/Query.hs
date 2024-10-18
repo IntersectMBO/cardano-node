@@ -302,13 +302,13 @@ findAllUtxos
 findAllUtxos epochStateView sbe = withFrozenCallStack $ do
   AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
-  pure $ fromLedgerUTxO $ newEpochState ^. L.nesEsL . L.esLStateL . L.lsUTxOStateL . L.utxosUtxoL
+  pure $ fromLedgerUTxO' $ newEpochState ^. L.nesEsL . L.esLStateL . L.lsUTxOStateL . L.utxosUtxoL
   where
-    fromLedgerUTxO
+    fromLedgerUTxO'
       :: ()
       => L.UTxO (ShelleyLedgerEra era)
       -> Map TxIn (TxOut CtxUTxO era)
-    fromLedgerUTxO (L.UTxO utxo) =
+    fromLedgerUTxO' (L.UTxO utxo) =
       shelleyBasedEraConstraints sbe
         $ Map.fromList
         . map (bimap fromShelleyTxIn (fromShelleyTxOut sbe))

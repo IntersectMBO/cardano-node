@@ -71,7 +71,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool)
+                   LedgerSupportsMempool, ByteSize32 (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -1249,6 +1249,9 @@ notifyTxsProcessed fStats tr = Tracer $ \case
     -- so we can treat them as completely processed.
     updatedTxProcessed <- mapForgingStatsTxsProcessed fStats (+ (length txs))
     traceCounter "txsProcessedNum" tr (fromIntegral updatedTxProcessed)
+  TraceMempoolSynced (FallingEdgeWith duration) -> do
+    traceCounter "txsSyncDuration" tr (round $ 1000 * duration :: Int)
+
   -- The rest of the constructors.
   _ -> return ()
 
@@ -1256,18 +1259,22 @@ notifyTxsProcessed fStats tr = Tracer $ \case
 mempoolMetricsTraceTransformer :: Trace IO a -> Tracer IO (TraceEventMempool blk)
 mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
-      (_n, tot) = case mempoolEvent of
-                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
-                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, tot0)
-      logValue1 :: LOContent a
-      logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
-      logValue2 :: LOContent a
-      logValue2 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
-  meta <- mkLOMeta Critical Confidential
-  traceNamedObject tr' (meta, logValue1)
-  traceNamedObject tr' (meta, logValue2)
+      (_n, tot_m) = case mempoolEvent of
+                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, Just tot0)
+                    TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, Just tot0)
+                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, Just tot0)
+                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, Just tot0)
+                    TraceMempoolSynced _ -> (0, Nothing)
+  case tot_m of
+    Just tot -> do
+      let logValue1 :: LOContent a
+          logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
+          logValue2 :: LOContent a
+          logValue2 = LogValue "mempoolBytes" . PureI . fromIntegral . unByteSize32 . msNumBytes $ tot
+      meta <- mkLOMeta Critical Confidential
+      traceNamedObject tr' (meta, logValue1)
+      traceNamedObject tr' (meta, logValue2)
+    Nothing -> return ()
 
 mempoolTracer
   :: ( ToJSON (GenTxId blk)

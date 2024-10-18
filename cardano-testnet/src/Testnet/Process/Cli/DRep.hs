@@ -37,7 +37,6 @@ import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
-import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', execCliStdoutToJson)
 import           Testnet.Types
@@ -344,29 +343,22 @@ makeActivityChangeProposal
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
   -> ConwayEraOnwards era -- ^ The 'ConwayEraOnwards' witness for current era.
-  -> FilePath -- ^ Base directory path where generated files will be stored.
-  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> FilePath -- ^ Working directory where the files will be stored
   -> Maybe (String, Word16) -- ^ The transaction id and the index of the previosu governance action if any.
   -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
+  -> KeyPair StakeKey -- ^ registered staking keys
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> EpochInterval -- ^ Number of epochs to wait for the proposal to be registered by the chain.
   -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
-makeActivityChangeProposal execConfig epochStateView ceo work prefix
-                           prevGovActionInfo drepActivity wallet timeout = do
+makeActivityChangeProposal execConfig epochStateView ceo work
+                           prevGovActionInfo drepActivity stakeKeyPair wallet timeout = do
 
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
+      KeyPair{verificationKey=File stakeVkeyFp} = stakeKeyPair
 
-  baseDir <- H.createDirectoryIfMissing $ work </> prefix
-
-  let stakeVkeyFp = baseDir </> "stake.vkey"
-      stakeSKeyFp = baseDir </> "stake.skey"
-
-  cliStakeAddressKeyGen
-    $ KeyPair { verificationKey = File stakeVkeyFp
-              , signingKey = File stakeSKeyFp
-              }
+  baseDir <- H.createDirectoryIfMissing work
 
   proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
   H.writeFile proposalAnchorFile "dummy anchor data"
