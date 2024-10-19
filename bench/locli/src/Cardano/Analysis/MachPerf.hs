@@ -33,11 +33,24 @@ import Cardano.Unlog.Resources
 
 -- * 1. Collect SlotStats & RunScalars:
 --
+-- | `collectSlotStats` processes logfiles from different cluster
+--   nodes in parallel. The right-hand argument of `(<$>)` is a
+--   partially-applied functipn, so it's really just `(.)`, but then
+--   `sequence` being composed with the function within the map has
+--   some complications from the forcing etc. from `deepseq` and the
+--   `evaluate` IO primitive.
 collectSlotStats :: Run -> [(JsonLogfile, [LogObject])]
                  -> IO (Either Text [(JsonLogfile, (RunScalars, [SlotStats UTCTime]))])
 collectSlotStats run = fmap sequence <$> mapConcurrentlyPure (timelineFromLogObjects run)
 
 
+-- | `timelineFromLogObjects` processes a list of `LogObject` to
+--   assemble the log entries into time slots. Per-slot data structures
+--   absorb the log entries describing the events ongoing during the
+--   time period they're intended to track over the course of the fold.
+--   The per-slot structures are also instantiated as the time periods
+--   in need of having events tracked within them are encountered in
+--   the list of log entries.
 timelineFromLogObjects :: Run -> (JsonLogfile, [LogObject])
                        -> Either Text (JsonLogfile, (RunScalars, [SlotStats UTCTime]))
 timelineFromLogObjects _ (JsonLogfile f, []) =
@@ -54,6 +67,8 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
    firstLogObjectHost :: Host
    firstLogObjectHost = loHost (head xs)
 
+   -- | `zeroTimelineAccum` represents the initial state of the
+   --   timeline accumulator to be fed to the fold.
    zeroTimelineAccum :: TimelineAccum
    zeroTimelineAccum =
      TimelineAccum
@@ -107,6 +122,9 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
      , slLogObjects  = []
      }
 
+-- | `timelineStep` processes a single `LogObject` to incorporate it
+--   into the `TimelineAccum` accumulator. A more detailed description
+--   of the case analysis inside it could be worthwhile.
 timelineStep :: Run -> JsonLogfile -> TimelineAccum -> LogObject -> TimelineAccum
 timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
   -- 1. skip pre-historic events not subject to performance analysis;
@@ -357,6 +375,9 @@ lastBlockSlot new TimelineAccum{aSlotStats=SlotStats{..}:_,..} =
   then slSlot
   else aLastBlockSlot
 
+-- | `patchSlotGap` walks through a gap in slot numbers adding slots
+--   to the accumulator. The gap is taken to start after the head of
+--   the accumulator, whose list is reversed.
 patchSlotGap :: Genesis -> SlotNo -> TimelineAccum -> TimelineAccum
 patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
   a & if gapLen < 1000
@@ -372,9 +393,12 @@ patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
 
    go :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
    go 0      _         acc = acc
+
    go remainingGap patchSlot acc =
      go (remainingGap - 1) (patchSlot + 1) (acc & addGapSlot patchSlot)
 
+   -- | `addGapSlot` constructs a single slot and adds it to the front
+   --   of the accumulator list.
    addGapSlot :: SlotNo -> TimelineAccum -> TimelineAccum
    addGapSlot slot acc =
     let (epoch, epochSlot) = genesis `unsafeParseSlot` slot in
@@ -418,6 +442,10 @@ patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
         }
     where slStart = slotStart genesis slot
 
+-- | `addTimelineSlot` updates the current position of the
+--   `TimelineAccum` accumulator. `timelineStep` invokes it via its
+--   `continue` internal function, which calls it when the slot is
+--   strictly greater than the `slSlot` if properly deciphered.
 addTimelineSlot :: Genesis -> SlotNo -> UTCTime -> TimelineAccum -> TimelineAccum
 addTimelineSlot genesis slot _time a@TimelineAccum{..} =
   let (epoch, epochSlot) = genesis `unsafeParseSlot` slot in
@@ -556,6 +584,23 @@ slotStatsSummary Run{genesis=Genesis{epochLength}} slots =
           in if tailEpoch == slEpoch (Vec.head v) then v
              else Vec.dropWhile ((tailEpoch == ) . slEpoch) v
 
+   -- | `spanLen` in effect does (slSlot last) - (slSlot head) with
+   --   `unSlotNo` only unpacking it from the `SlotNo` newtype and
+   --   `fromIntegral` converting it from a `Word64` to an `Int`, where
+   --   last and head refer to the vector's elements.
+   --
+   --   In plain words, this represents the number of slots in a half-open
+   --   interval bounded by the slot numbers at the first and last
+   --   positions within the vector of slot numbers. Some thoughts could
+   --   be had about the potential for a discontiguous set of slots
+   --   within the vector and whether a closed interval should be
+   --   preferred over a half-open one. Answers could be turned up over
+   --   the course of this documentation audit.
+   --
+   --   Simplifying the expression within the executable code might help
+   --   with maintainability, but it's best left undisturbed for the sake
+   --   of reducing the audit surface area in the event of regressions,
+   --   barring sufficiently broad consensus.
    spanLen :: Vector (SlotStats a) -> Int
    spanLen = fromIntegral . unSlotNo . uncurry (-) . (slSlot *** slSlot) . (Vec.last &&& Vec.head)
 
@@ -598,6 +643,8 @@ slotStatsMachPerf run (f, slots) =
 
    (,) sFirst sLast = (slSlot . head &&& slSlot . last) slots
 
+   -- | `dist` assembles the sample into a distribution `CDF` according
+   --   to the standard list of centiles `stdCentiles` using `cdfZ`.
    dist :: Divisible a => [a] -> CDF I a
    dist = cdfZ stdCentiles
 

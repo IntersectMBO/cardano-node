@@ -245,6 +245,9 @@ renderProfilingData rc a flt pd =
      , fDescription = peSrcLoc pe
      }
 
+-- | `renderTimelineWithClass` and `renderTimeline` output textual
+--   representations of timelines for postprocessing with ede, em, and
+--   other such tools for producing benchmark reports.
 renderTimelineWithClass :: forall (a :: Type). TimelineFields a => (Field ISelect I a -> Bool) -> RenderConfig -> Anchor -> [TimelineComments a] -> [a] -> [Text]
 renderTimelineWithClass flt = renderTimeline (filter flt timelineFields) rtCommentary
 
