@@ -54,7 +54,7 @@ library
                       , containers
                       , contra-tracer
                       , deepseq
-                      , ekg
+                      , ekg-wai
                       , ekg-core
                       , ekg-forward >= 0.5
                       , hostname
@@ -116,7 +116,6 @@ test-suite trace-dispatcher-test
                       , cardano-prelude
                       , containers
                       , deepseq
-                      , ekg
                       , ekg-core
                       , generic-data
                       , hostname
@@ -164,7 +163,7 @@ benchmark trace-dispatcher-bench
                       , aeson
                       , containers
                       , criterion
-                      , ekg
+                      , ekg-wai
                       , text
                       , time
                       , trace-dispatcher
