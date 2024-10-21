@@ -48,7 +48,7 @@ import           Data.Version (showVersion)
 import           System.Metrics.Counter (Counter)
 import           System.Metrics.Gauge (Gauge)
 import           System.Metrics.Label (Label)
-import qualified System.Remote.Monitoring as EKG
+import qualified System.Remote.Monitoring.Wai as EKG
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
