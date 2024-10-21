@@ -196,8 +196,12 @@ addFundToWallet wallet txIn outVal skey = do
 getLocalSubmitTx :: ActionM LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
 
+-- | 'delay' does 'threadDelay' for @t@ seconds, where the library's
+--   native units are microseconds, lifted into the 'ActionM' monad.
 delay :: Double -> ActionM ()
-delay t = liftIO $ threadDelay $ floor $ 1_000_000 * t
+delay t = do
+  liftIO . threadDelay . floor $ 1_000_000 * t
+  setEnvGovSummary =<< queryGovernanceState
 
 waitBenchmarkCore :: AsyncBenchmarkControl ->  ActionM ()
 waitBenchmarkCore ctl = do
