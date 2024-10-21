@@ -64,17 +64,10 @@ runSelftest env envConsts@EnvConsts { .. } doVoting outFile
                                 else "protocol-parameters.json"
        let useThisScript
             | not doVoting = testScript protocolFile submitMode
-            | otherwise = testScriptVoting protocolFile submitMode <>
-                [Delay 60]
+            | otherwise = testScriptVoting protocolFile submitMode
        (result, Env {  }, ()) <- flip (Env.runActionMEnv env) envConsts do
              Env.setBenchTracers initNullTracers
              mapM_ action useThisScript
-             -- In principle, one could construct votes according to
-             -- GovActionIds here. The approach taken instead was to
-             -- refer to proposals by their indices into the govProposals
-             -- list of the envGovStateSummary in the Env.
-             action . Submit anyConwayEra submitMode txParams . Take nrProposals . Cycle $ Sequence
-               [Vote genesisWallet payMode k Yes drepCred Nothing | k <- [0 .. nrProposals - 1]]
        pure result `maybeM` const (throw abcException) $ STM.atomically $ STM.readTVar envThreads
 
 -- | 'printJSON' prints out the list of actions using Aeson.
@@ -95,7 +88,7 @@ testScript protocolFile submitMode =
   , InitWallet splitWallet3
   , InitWallet doneWallet
   , DefineSigningKey key skey
-  , AddFund era genesisWallet
+  , AddFund anyAllegraEra genesisWallet
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
     (L.Coin 90000000000000) key
   , createChange genesisWallet splitWallet1 1 10
@@ -108,11 +101,11 @@ testScript protocolFile submitMode =
   , createChange splitWallet3 splitWallet3 300 30
 -}
 
-  , Submit era submitMode txParams $ Take 4000 $ Cycle
+  , Submit anyAllegraEra submitMode txParams $ Take 4000 $ Cycle
       $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
   ]
   where
-    era = AnyCardanoEra AllegraEra
+    anyAllegraEra = AnyCardanoEra AllegraEra
     skey = error "could not parse hardcoded signing key" `fromRight`
       parsePaymentKeyTE TextEnvelope
           { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
@@ -126,7 +119,7 @@ testScript protocolFile submitMode =
     key = "pass-partout"
     createChange :: String -> String -> Int -> Int -> Action
     createChange src dest txCount outputs
-      = Submit anyConwayEra submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs
+      = Submit anyAllegraEra submitMode txParams . Take txCount . Cycle $ SplitN src (PayToAddr key dest) outputs
 
 drepKey :: SigningKey DRepKey
 drepKey = error "could not parse hardcoded drep key" `fromRight`
@@ -145,8 +138,6 @@ nrProposals :: Int
 nrProposals = 4
 payMode :: PayMode
 payMode = PayToAddr "pass-partout" genesisWallet
-anyConwayEra :: AnyCardanoEra
-anyConwayEra = AnyCardanoEra ConwayEra
 txParams :: TxGenTxParams
 txParams = defaultTxGenTxParams {txParamFee = 1000000}
 
@@ -171,8 +162,17 @@ testScriptVoting protocolFile submitMode =
 
   , Submit anyConwayEra submitMode txParams . Take nrProposals . Cycle $
       Propose genesisWallet payMode proposalCoins stakeCred anchor
+  -- In principle, one could construct votes according to
+  -- GovActionIds here. The approach taken instead was to
+  -- refer to proposals by their indices into the govProposals
+  -- list of the envGovStateSummary in the Env.
+  , Delay 60
+  , Submit anyConwayEra submitMode txParams . Take nrProposals . Cycle $ Sequence
+      [Vote genesisWallet payMode k Yes drepCred Nothing | k <- [0 .. nrProposals - 1]]
   ]
   where
+    anyConwayEra :: AnyCardanoEra
+    anyConwayEra = AnyCardanoEra ConwayEra
     fundAmount = 90000000000000
     fundCoins  = L.Coin fundAmount
     proposalCoins = L.Coin $ fundAmount `div` fromIntegral nrProposals
