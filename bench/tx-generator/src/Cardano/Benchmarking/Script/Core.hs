@@ -472,9 +472,9 @@ data VoteCase crypto = VoteCase
   -- anchor can likely be assumed Nothing at all times
   , vcAnchor      :: Maybe (Ledger.Url, Text.Text) }
 
-unsuppErr :: ActionM t
-unsuppErr = liftTxGenError . TxGenError $
-     "Proposal governance action unsupported "
+unsuppErr :: String -> ActionM t
+unsuppErr s = liftTxGenError . TxGenError $
+  s <> " governance action unsupported "
   <> "in era and/or protocol version."
 
 voteCase :: forall era ledgerEra crypto . ()
@@ -610,7 +610,7 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                       , gcEnvTxParams = txParams
                       , gcEnvLedgerParams = ledgerParameters
                       , gcEnvFeeInEra = feeInEra }
-          -> forShelleyBasedEraInEon sbe unsuppErr \case
+          -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") \case
                ConwayEraOnwardsConway -> proposeCase env args
 
         Vote vcWalletName vcPayMode vcGovActId vcVote vcGenDRepCred vcAnchor
@@ -619,7 +619,7 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                                , gcEnvTxParams = txParams
                                , gcEnvLedgerParams = ledgerParameters
                                , gcEnvFeeInEra = feeInEra }
-          -> forShelleyBasedEraInEon sbe unsuppErr $ voteCase env args
+          -> forShelleyBasedEraInEon sbe (unsuppErr "Vote") $ voteCase env args
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
