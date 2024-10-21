@@ -52,10 +52,10 @@ checkStakePoolRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ExecConfig
-  -> FilePath -- ^ Stake pool cold verification key file
+  -> File (VKey StakeKey) In -- ^ Stake pool cold verification key file
   -> FilePath -- ^ Output file path of stake pool info
   -> m String -- ^ Stake pool ID
-checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp outputFp =
+checkStakePoolRegistered tempAbsP execConfig (File poolColdVkeyFp) outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
         oFpAbs = tempAbsPath' </> outputFp
@@ -160,11 +160,11 @@ createStakeDelegationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ShelleyBasedEra era
-  -> FilePath -- ^ Delegate stake verification key file
+  -> File (VKey StakeKey) In -- ^ Delegate stake verification key file
   -> String -- ^ Pool id
   -> FilePath
   -> m ()
-createStakeDelegationCertificate tempAbsP sbe delegatorStakeVerKey poolId outputFp =
+createStakeDelegationCertificate tempAbsP sbe (File delegatorStakeVerKey) poolId outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
     execCli_
@@ -179,11 +179,11 @@ createStakeKeyRegistrationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> AnyShelleyBasedEra
-  -> FilePath -- ^ Stake verification key file
+  -> File (VKey StakeKey) In -- ^ Stake verification key file
   -> Int -- ^ deposit amount used only in Conway
   -> FilePath -- ^ Output file path
   -> m ()
-createStakeKeyRegistrationCertificate tempAbsP asbe stakeVerKey deposit outputFp = GHC.withFrozenCallStack $ do
+createStakeKeyRegistrationCertificate tempAbsP asbe (File stakeVerKey) deposit outputFp = GHC.withFrozenCallStack $ do
   AnyShelleyBasedEra sbe <- return asbe
   let tempAbsPath' = unTmpAbsPath tempAbsP
       extraArgs = monoidForEraInEon @ConwayEraOnwards (toCardanoEra sbe) $
@@ -251,16 +251,12 @@ registerSingleSpo
   -> ExecConfig
   -> (TxIn, FilePath, String)
   -> m ( String
-       , FilePath
-       , FilePath
-       , FilePath
-       , FilePath
+       , KeyPair StakeKey
+       , KeyPair VrfKey
        ) -- ^ Result tuple:
          --   1. String: Registered stake pool ID
-         --   2. FilePath: Stake pool cold signing key
-         --   3. FilePath: Stake pool cold verification key
-         --   4. FilePath: Stake pool VRF signing key
-         --   5. FilePath: Stake pool VRF verification key
+         --   2. Stake pool cold keys
+         --   3. Stake pool VRF keys
 registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch testnetMag execConfig
                   (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   workDir <- H.note tempAbsPath'
@@ -276,48 +272,53 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
   let spoReqDir = workDir </>  "spo-"<> show identifier <> "-requirements"
 
   H.createDirectoryIfMissing_ spoReqDir
-  let poolOwnerstakeVkeyFp = spoReqDir </> "pool-owner-stake.vkey"
-      poolOwnerstakeSKeyFp = spoReqDir </> "pool-owner-stake.skey"
+  let poolOwnerStakeKeys = KeyPair
+        { verificationKey = File $ spoReqDir </> "pool-owner-stake.vkey"
+        , signingKey = File $ spoReqDir </> "pool-owner-stake.skey"
+        }
 
-  cliStakeAddressKeyGen
-    $ KeyPair (File poolOwnerstakeVkeyFp) (File poolOwnerstakeSKeyFp)
+  cliStakeAddressKeyGen poolOwnerStakeKeys
 
   poolownerstakeaddr <- filter (/= '\n')
                           <$> execCli
                                 [ "latest", "stake-address", "build"
-                                , "--stake-verification-key-file", poolOwnerstakeVkeyFp
+                                , "--stake-verification-key-file", verificationKeyFp poolOwnerStakeKeys
                                 , "--testnet-magic", show @Int testnetMag
                                 ]
 
   -- 2. Generate stake pool owner payment key pair
-  let poolOwnerPaymentVkeyFp = spoReqDir </> "pool-owner-payment.vkey"
-      poolOwnerPaymentSkeyFp = spoReqDir </> "pool-owner-payment.skey"
-  cliAddressKeyGen
-     $ KeyPair (File poolOwnerPaymentVkeyFp) (File poolOwnerPaymentSkeyFp)
+  let poolOwnerPaymentKeys = KeyPair
+        { verificationKey = File $ spoReqDir </> "pool-owner-payment.vkey"
+        , signingKey = File $ spoReqDir </> "pool-owner-payment.skey"
+        }
+  cliAddressKeyGen poolOwnerPaymentKeys
 
   poolowneraddresswstakecred <-
     execCli [ "latest", "address", "build"
-              , "--payment-verification-key-file", poolOwnerPaymentVkeyFp
-              , "--stake-verification-key-file",  poolOwnerstakeVkeyFp
+              , "--payment-verification-key-file", verificationKeyFp poolOwnerPaymentKeys
+              , "--stake-verification-key-file",  verificationKeyFp poolOwnerStakeKeys
               , "--testnet-magic", show @Int testnetMag
               ]
 
   -- 3. Generate pool cold keys
-  let poolColdVkeyFp = spoReqDir </> "pool-cold.vkey"
-      poolColdSkeyFp = spoReqDir </> "pool-cold.skey"
+  let poolColdKeys = KeyPair
+        { verificationKey = File $ spoReqDir </> "pool-cold.vkey"
+        , signingKey = File $ spoReqDir </> "pool-cold.skey"
+        }
 
   execCli_
     [ "latest", "node", "key-gen"
-    , "--cold-verification-key-file", poolColdVkeyFp
-    , "--cold-signing-key-file", poolColdSkeyFp
+    , "--cold-verification-key-file", verificationKeyFp poolColdKeys
+    , "--cold-signing-key-file", signingKeyFp poolColdKeys
     , "--operational-certificate-issue-counter-file", spoReqDir </> "operator.counter"
     ]
 
   -- 4. Generate VRF keys
-  let vrfVkeyFp = spoReqDir </> "pool-vrf.vkey"
-      vrfSkeyFp = spoReqDir </> "pool-vrf.skey"
-  cliNodeKeyGenVrf
-     $ KeyPair (File vrfVkeyFp) (File vrfSkeyFp)
+  let vrfKeys = KeyPair
+        { verificationKey = File $ spoReqDir </> "pool-vrf.vkey"
+        , signingKey = File $ spoReqDir </> "pool-vrf.skey"
+        }
+  cliNodeKeyGenVrf vrfKeys
 
   -- 5. Create registration certificate
   let poolRegCertFp = spoReqDir </> "registration.cert"
@@ -330,10 +331,10 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
     , "--pool-pledge", "0"
     , "--pool-cost", "0"
     , "--pool-margin", "0"
-    , "--cold-verification-key-file", poolColdVkeyFp
-    , "--vrf-verification-key-file", vrfVkeyFp
-    , "--reward-account-verification-key-file", poolOwnerstakeVkeyFp
-    , "--pool-owner-stake-verification-key-file", poolOwnerstakeVkeyFp
+    , "--cold-verification-key-file", verificationKeyFp poolColdKeys
+    , "--vrf-verification-key-file", verificationKeyFp vrfKeys
+    , "--reward-account-verification-key-file", verificationKeyFp poolOwnerStakeKeys
+    , "--pool-owner-stake-verification-key-file", verificationKeyFp poolOwnerStakeKeys
     , "--out-file", poolRegCertFp
     ]
 
@@ -342,7 +343,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
 
   -- Create pledger registration certificate
   createStakeKeyRegistrationCertificate tap asbe
-    poolOwnerstakeVkeyFp
+    (verificationKey poolOwnerStakeKeys)
     400_000
     (workDir </> "pledger.regcert")
 
@@ -365,8 +366,8 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
     , "--tx-body-file", workDir </> "pledge-registration-cert.txbody"
     , "--testnet-magic", show @Int testnetMag
     , "--signing-key-file", fundingSigninKey
-    , "--signing-key-file", poolOwnerstakeSKeyFp
-    , "--signing-key-file", poolColdSkeyFp
+    , "--signing-key-file", signingKeyFp poolOwnerStakeKeys
+    , "--signing-key-file", signingKeyFp poolColdKeys
     , "--out-file", pledgeAndPoolRegistrationTx
     ]
 
@@ -397,9 +398,9 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
   poolId <- checkStakePoolRegistered
               tap
               execConfig
-              poolColdVkeyFp
+              (verificationKey poolColdKeys)
               currentRegistedPoolsJson
-  return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
+  return (poolId, poolColdKeys, vrfKeys)
 
 -- | Generates Stake Pool Operator (SPO) voting files, using @cardano-cli@.
 --
