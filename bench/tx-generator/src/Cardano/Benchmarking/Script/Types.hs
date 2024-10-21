@@ -45,7 +45,6 @@ import           Cardano.TxGenerator.Setup.SigningKey (SigningKeyFile)
 import           Cardano.TxGenerator.Types
 
 import           Data.Function (on)
-import           Data.IORef (IORef)
 import           Data.List.NonEmpty
 import           Data.Ratio (Ratio)
 import           Data.Text (Text)
@@ -103,12 +102,6 @@ data Action where
   DefineDRepKey      :: !(SigningKey DRepKey) -> Action
   -- | inject a singleton StakeCredential into the environment
   DefineStakeKey      :: !(VerificationKey StakeKey) -> Action
-  -- | 'QuiesceGovState' queries the governance state until it stabilizes
-  --    and sets 'Cardano.Benchmarking.Script.Env.envGovStateSummary'
-  --    according to the result.
-  --    The 'IORef' is for the sake of returning the governance state to
-  --    the calling environment, when interested.
-  QuiesceGovState :: GovStateIORef -> Action
   -- | 'AddFund' is mostly a wrapper around
   -- 'Cardano.Benchmarking.Wallet.walletRefInsertFund' which in turn
   -- is just 'Control.Concurrent.modifyMVar' around
@@ -208,13 +201,6 @@ data Generator where
   -- | 'EmptyStream' will yield an empty stream. For testing only.
   EmptyStream :: Generator
   deriving (Eq, Generic, Show)
-
-newtype GovStateIORef = GovStateIORef
-  { govStateIORef :: Maybe (IORef (GovStateSummary L.StandardCrypto))
-  } deriving (Eq, Generic)
-
-instance Show GovStateIORef where
-  showsPrec n _ = showsPrec n (Nothing :: Maybe Int)
 
 deriving instance Generic Vote
 deriving instance FromJSON Vote

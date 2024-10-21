@@ -39,7 +39,6 @@ import           Control.Exception (AssertionFailed (..), throw)
 import           Control.Monad.Extra (maybeM)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
-import           Data.IORef (newIORef)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.String
@@ -63,11 +62,10 @@ runSelftest env envConsts@EnvConsts { .. } doVoting outFile
   = do protocolFile <-  getDataFileName $
          "data" </> if doVoting then "protocol-parameters-conway-voting.json"
                                 else "protocol-parameters.json"
-       gsIORef <- GovStateIORef . Just <$> newIORef undefined
        let useThisScript
             | not doVoting = testScript protocolFile submitMode
             | otherwise = testScriptVoting protocolFile submitMode <>
-                [QuiesceGovState gsIORef]
+                [Delay 60]
        (result, Env {  }, ()) <- flip (Env.runActionMEnv env) envConsts do
              Env.setBenchTracers initNullTracers
              mapM_ action useThisScript
