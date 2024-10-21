@@ -193,8 +193,8 @@ testScriptVoting protocolFile submitMode =
       parseStakeKeyBase16 "5820bbbfe3f3b71b00d1d61f4fe2a82526597740f61a0aa06f1324557925803c7d3e"
 
     anchor :: L.Anchor L.StandardCrypto
-    anchor = L.Anchor
-      { anchorUrl = fromJust $ L.textToUrl 999 "example.com"
-      , anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 . L.urlToText $ L.anchorUrl anchor }
+    anchor = L.Anchor {..} where
+      anchorUrl = fromJust $ L.textToUrl 999 "example.com"
+      anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 $ L.urlToText anchorUrl
 
     key = "pass-partout"
