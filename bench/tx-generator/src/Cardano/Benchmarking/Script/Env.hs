@@ -35,6 +35,7 @@ module Cardano.Benchmarking.Script.Env (
         , liftIOSafe
         , hoistActionEither
         , hoistActionM
+        , throwHelper
         , upgradeTxGenError
         , askIOManager
         , askNixSvcOpts
@@ -83,7 +84,7 @@ import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService as Nix (NixServiceOptions)
 import           Cardano.TxGenerator.Setup.SigningKey (SigningKey)
-import           Cardano.TxGenerator.Types (TxGenError (..))
+import qualified Cardano.TxGenerator.Types as TxGen (TxGenError (..))
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Prelude
@@ -100,7 +101,9 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ratio
 import qualified Data.Text as Text
-import qualified System.IO as IO (hPutStrLn, stderr)
+import qualified GHC.Stack as Stack (HasCallStack, callStack, prettyCallStack)
+import qualified System.IO as IO (BufferMode (..), hGetBuffering, hPutStrLn,
+                   hSetBuffering, stderr)
 
 
 -- | The 'Env' type represents the state maintained while executing
@@ -165,31 +168,43 @@ runActionMEnv env action envConsts = RWS.runRWST (runExceptT action) envConsts e
 -- for the outermost and "Cardano.Benchmarking.Set.Plutus" for the
 -- middle, and the innermost to "Cardano.Api.Error".
 data Error where
-  TxGenError  :: !TxGenError -> Error
-  UserError   :: !String     -> Error
-  WalletError :: !String     -> Error
+  TxGenError  :: !TxGen.TxGenError -> Error
+  UserError   :: !String           -> Error
+  WalletError :: !String           -> Error
 
 deriving instance Show Error
 
 -- | This throws a `TxGenError` in the `ActionM` monad.
-liftTxGenError :: TxGenError -> ActionM a
-liftTxGenError = throwE . Cardano.Benchmarking.Script.Env.TxGenError
+liftTxGenError :: TxGen.TxGenError -> ActionM a
+liftTxGenError = throwE . TxGenError
 
 upgradeTxGenError :: Monad monad
-  => ExceptT Cardano.TxGenerator.Types.TxGenError monad t
+  => ExceptT TxGen.TxGenError monad t
   -> ExceptT Error monad t
-upgradeTxGenError = withExceptT Cardano.Benchmarking.Script.Env.TxGenError
+upgradeTxGenError = withExceptT TxGenError
 
-hoistActionEither :: Either Cardano.TxGenerator.Types.TxGenError t -> ActionM t
+throwHelper :: Stack.HasCallStack => String -> ActionM t
+throwHelper msg = do
+  liftIO do
+    bufferMode <- IO.hGetBuffering IO.stderr
+    IO.hSetBuffering IO.stderr IO.NoBuffering
+    putErrStrLn msg
+    putErrStrLn $ Stack.prettyCallStack Stack.callStack
+    IO.hSetBuffering IO.stderr bufferMode
+  throwE . TxGenError $ TxGen.TxGenError msg
+  where
+    putErrStrLn = IO.hPutStrLn IO.stderr
+
+hoistActionEither :: Either TxGen.TxGenError t -> ActionM t
 hoistActionEither = upgradeTxGenError . hoistEither
 
-hoistActionM :: ActionM (Either Cardano.TxGenerator.Types.TxGenError t) -> ActionM t
+hoistActionM :: ActionM (Either TxGen.TxGenError t) -> ActionM t
 hoistActionM act = hoistActionEither =<< act
 
 -- | The safety comes from the invocation of `throwE`
 -- instead of just using the constructor for `ExceptT`
 -- to convert the `Either` to an `ExceptT` monadic value.
-liftIOSafe :: IO (Either TxGenError a) -> ActionM a
+liftIOSafe :: IO (Either TxGen.TxGenError a) -> ActionM a
 liftIOSafe a = liftIO a >>= either liftTxGenError pure
 
 -- | Accessor for the `IOManager` reader monad aspect of the `RWST`.
@@ -325,8 +340,8 @@ getEnvProtocol :: ActionM SomeConsensusProtocol
 getEnvProtocol = getEnvVal envProtocol "Protocol"
 
 -- | Read accessor for `envSocketPath`.
-getEnvSocketPath :: ActionM SocketPath
-getEnvSocketPath = File <$> getEnvVal envSocketPath "SocketPath"
+getEnvSocketPath :: ActionM (Maybe SocketPath)
+getEnvSocketPath = lift $ fmap File <$> RWS.gets envSocketPath
 
 -- | Read accessor for `envThreads`.
 getEnvThreads :: ActionM (Maybe AsyncBenchmarkControl)

@@ -71,13 +71,14 @@ import           Cardano.TxGenerator.UTxO
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
-import           Control.Monad.Extra (whenJust)
+import           Control.Monad.Extra (whenJust, whenJustM)
 import qualified Control.Monad.Random as Random (getRandom)
 import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Bitraversable (bimapM)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Either.Extra (eitherToMaybe)
+import           Data.Functor.Syntax ((<$$>))
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
 import           Data.Kind (Type)
@@ -194,14 +195,18 @@ addFundToWallet wallet txIn outVal skey = do
          }
 
 getLocalSubmitTx :: ActionM LocalSubmitTx
-getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
+getLocalSubmitTx =
+  throwHelper "getLocalSubmitTx: LocalConnectInfo unset" `onNothing`
+    (submitTxToNodeLocal <$$> getLocalConnectInfo)
+
 
 -- | 'delay' does 'threadDelay' for @t@ seconds, where the library's
 --   native units are microseconds, lifted into the 'ActionM' monad.
 delay :: Double -> ActionM ()
 delay t = do
   liftIO . threadDelay . floor $ 1_000_000 * t
-  setEnvGovSummary =<< queryGovernanceState
+  whenJustM getLocalConnectInfo \localNodeConnectInfo -> do
+    setEnvGovSummary =<< queryGovernanceState localNodeConnectInfo
 
 waitBenchmarkCore :: AsyncBenchmarkControl ->  ActionM ()
 waitBenchmarkCore ctl = do
@@ -237,21 +242,20 @@ cancelBenchmark = do
   liftIO abcShutdown
   waitBenchmarkCore abc
 
-getProtocolParameters :: ActionM ProtocolParameters
-getProtocolParameters = do
-  getProtoParamMode  >>= \case
-    ProtocolParameterQuery -> queryRemoteProtocolParameters
-    ProtocolParameterLocal parameters -> return parameters
+getProtocolParameters :: LocalNodeConnectInfo -> ActionM ProtocolParameters
+getProtocolParameters localNodeConnectInfo = getProtoParamMode >>= \case
+  ProtocolParameterQuery -> queryRemoteProtocolParameters localNodeConnectInfo
+  ProtocolParameterLocal parameters -> pure parameters
 
 waitForEra :: AnyCardanoEra -> ActionM ()
-waitForEra era = do
-  currentEra <- queryEra
-  if currentEra == era
-    then return ()
-    else do
-      traceError $ "Current era: " ++ show currentEra ++ " Waiting for: " ++ show era
-      liftIO $ threadDelay 1_000_000
-      waitForEra era
+waitForEra era = getLocalConnectInfo >>= mapM_ \localNodeConnectInfo -> do
+  currentEra <- queryEra localNodeConnectInfo
+  when (currentEra /= era) do
+    -- It seems like this could be worth displaying in multiple lines.
+    traceError $ unwords [ "Current era:", show currentEra
+                         , "Waiting for:", show era]
+    liftIO $ threadDelay 1_000_000
+    waitForEra era
 
 localSubmitTx :: TxInMode -> ActionM (SubmitResult TxValidationErrorInCardanoMode)
 localSubmitTx tx = do
@@ -295,6 +299,7 @@ submitInEra :: forall era. ()
   -> ActionM ()
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
+                `catchError` \e -> throwHelper $ "evalGenerator caught: " <> show e
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
@@ -420,10 +425,11 @@ summarizeTx size maybeFeeEstimate = do
               , projectedTxFee = maybeFeeEstimate }
 
 data GovCaseEnv era = GovCaseEnv
-  { gcEnvEra          :: AsType era
-  , gcEnvFeeInEra     :: TxFee era
-  , gcEnvTxParams     :: TxGenTxParams
-  , gcEnvLedgerParams :: LedgerProtocolParameters era }
+  { gcEnvEra              :: AsType era
+  , gcEnvFeeInEra         :: TxFee era
+  , gcEnvLedgerParams     :: LedgerProtocolParameters era
+  , gcEnvLocalConnectInfo :: LocalNodeConnectInfo
+  , gcEnvTxParams         :: TxGenTxParams }
 
 data ProposeCase = ProposeCase
   { pcWalletName   :: String
@@ -444,9 +450,11 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
   , sbe <- shelleyBasedEra @era
   = do network :: Ledger.Network <- toShelleyNetwork <$> getEnvNetworkId
        ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
-         <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
+         <- eitherToMaybe . toLedgerPParams sbe <$>
+              getProtocolParameters gcEnvLocalConnectInfo
        wallet <- getEnvWallets pcWalletName
-       (toUTxO, _addressOut) <- interpretPayMode pcPayMode
+       (toUTxO, _addressOut)
+         <- interpretPayMode gcEnvLocalConnectInfo pcPayMode
        let ptxTxGen :: TxGenerator era
            ptxTxGen = genTxProposal' gcEnvLedgerParams gcEnvFeeInEra unProposal
            ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
@@ -494,6 +502,8 @@ voteCase GovCaseEnv {..} VoteCase {..} eon
   | TxGenTxParams {..} <- gcEnvTxParams
   , VotingProcedure {..} <- createVotingProcedure eon vcVote vcAnchor
   , sbe <- conwayEraOnwardsToShelleyBasedEra eon
+  , connectInfoExcept :: ActionM LocalNodeConnectInfo
+      <- throwHelper "voteCase: LocalConnectInfo unset"
   , insufReadyProps :: Env.Error
       <- Env.TxGenError $ TxGenError "insufficient ready proposals"
   , ptxInToOut :: [L.Coin] -> [L.Coin]
@@ -501,11 +511,14 @@ voteCase GovCaseEnv {..} VoteCase {..} eon
   , voter :: Ledger.Voter crypto
       <- Ledger.DRepVoter vcGenDRepCred
   = conwayEraOnwardsConstraints eon do
+       localNodeConnectInfo :: LocalNodeConnectInfo
+         <- connectInfoExcept `onNothing` getLocalConnectInfo
        ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
-         <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
+         <- eitherToMaybe . toLedgerPParams sbe <$>
+                getProtocolParameters localNodeConnectInfo
        (wallet, fundSource)
          <- second (flip walletSource 1) . dupe <$> getEnvWallets vcWalletName
-       (toUTxO, _addressOut) <- interpretPayMode vcPayMode
+       (toUTxO, _addressOut) <- interpretPayMode localNodeConnectInfo vcPayMode
        ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
        GovStateSummary { govProposals = GovernanceActionIds _govEra govIds }
          <- getEnvGovSummary
@@ -532,11 +545,13 @@ evalGenerator :: forall era ledgerEra crypto . ()
   -> AsType era
   -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{..} era = do
+  gcEnvLocalConnectInfo
+    <- throwHelper "LocalConnectInfo unset" `onNothing` getLocalConnectInfo
   networkId <- getEnvNetworkId
-  protocolParameters <- getProtocolParameters
+  protocolParameters <- getProtocolParameters gcEnvLocalConnectInfo
   -- Hmm? hoistActionM seems rather apt here.
   case convertToLedgerProtocolParameters sbe protocolParameters of
-    Left err -> throwE (Env.TxGenError (ApiError err))
+    Left err -> throwHelper . docToString $ prettyError err
     Right ledgerParameters
       | feeInEra <- Utils.mkTxFee txParamFee
       , mangleUTxOs <- mangle . repeat
@@ -565,11 +580,12 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
         Split walletName payMode payModeChange coins
           | inToOut <- Utils.includeChange txParamFee coins
           -> do fundSource <- flip walletSource 1 <$> getEnvWallets walletName
-                (toUTxO, addressOut) <- interpretPayMode payMode
+                (toUTxO, addressOut)
+                  <- interpretPayMode gcEnvLocalConnectInfo payMode
                 traceDebug $ "split output address : " <> addressOut
                 (mangledUTxOChange, addressChange)
                   <- first (flip mangleWithChange toUTxO) <$>
-                        interpretPayMode payModeChange
+                        interpretPayMode gcEnvLocalConnectInfo payModeChange
                 traceDebug $ "split change address : " <> addressChange
                 pure . Streaming.effect $ Streaming.yield <$>
                       sourceToStoreTransactionNew txGenDefault fundSource inToOut mangledUTxOChange
@@ -583,7 +599,8 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
           | inToOut <- Utils.inputsToOutputsWithFee txParamFee count
           -> do fundSource <- flip walletSource 1 <$> getEnvWallets walletName
                 (mangledUTxOs, addressOut)
-                  <- first mangleUTxOs <$> interpretPayMode payMode
+                  <- first mangleUTxOs <$>
+                        interpretPayMode gcEnvLocalConnectInfo payMode
                 traceDebug $ "SplitN output address : " <> addressOut
                 pure . Streaming.effect $ Streaming.yield <$>
                   sourceToStoreTransactionNew txGenDefault fundSource inToOut mangledUTxOs
@@ -595,7 +612,8 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
           -> do wallet <- getEnvWallets walletName
                 collaterals <- selectCollateralFunds collateralWallet
                 (ptxMangledUTxOs, addressOut)
-                  <- first mangleUTxOs <$> interpretPayMode payMode
+                  <- first mangleUTxOs <$>
+                       interpretPayMode gcEnvLocalConnectInfo payMode
                 traceDebug $ "NtoM output address : " <> addressOut
                 ptxFund <- liftIO $ walletPreview wallet ptxInputs
                 let ptxTxGen = genTx' collaterals $ toMetadata metadataSize
@@ -613,7 +631,8 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                       { gcEnvEra = era
                       , gcEnvTxParams = txParams
                       , gcEnvLedgerParams = ledgerParameters
-                      , gcEnvFeeInEra = feeInEra }
+                      , gcEnvFeeInEra = feeInEra
+                      , ..}
           -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") \case
                ConwayEraOnwardsConway -> proposeCase env args
 
@@ -622,7 +641,8 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
           , env  <- GovCaseEnv { gcEnvEra = era
                                , gcEnvTxParams = txParams
                                , gcEnvLedgerParams = ledgerParameters
-                               , gcEnvFeeInEra = feeInEra }
+                               , gcEnvFeeInEra = feeInEra
+                               , ..}
           -> forShelleyBasedEraInEon sbe (unsuppErr "Vote") $ voteCase env args
 
         Sequence l -> do
@@ -699,8 +719,12 @@ dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 initWallet :: String -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name
 
-interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
-interpretPayMode payMode = do
+interpretPayMode :: forall era . ()
+  => IsShelleyBasedEra era
+  => LocalNodeConnectInfo
+  -> PayMode
+  -> ActionM (CreateAndStore IO era, String)
+interpretPayMode localNodeConnectInfo payMode = do
   networkId <- getEnvNetworkId
   case payMode of
     PayToAddr keyName destWallet -> do
@@ -710,17 +734,19 @@ interpretPayMode payMode = do
              , Text.unpack $ serialiseAddress $ Utils.keyAddress @era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
       walletRef <- getEnvWallets destWallet
-      (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
+      (witness, script, scriptData, _scriptFee)
+        <- makePlutusContext localNodeConnectInfo scriptSpec
       case script of
         ScriptInAnyLang _ script' ->
           return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                  , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
 
 makePlutusContext :: forall era. IsShelleyBasedEra era
-  => ScriptSpec
+  => LocalNodeConnectInfo
+  -> ScriptSpec
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
-makePlutusContext ScriptSpec{..} = do
-  protocolParameters <- getProtocolParameters
+makePlutusContext localNodeConnectInfo ScriptSpec{..} = do
+  protocolParameters <- getProtocolParameters localNodeConnectInfo
   script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of

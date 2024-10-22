@@ -19,7 +19,7 @@ import           Cardano.Benchmarking.LogTypes (EnvConsts (..))
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Env (Env (..))
-import qualified Cardano.Benchmarking.Script.Env as Env (Error, runActionMEnv, setBenchTracers)
+import qualified Cardano.Benchmarking.Script.Env as Env (Error, askNixSvcOpts, runActionMEnv, setBenchTracers)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
 import qualified Cardano.Crypto.DSIGN as Crypto
@@ -29,6 +29,7 @@ import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Crypto as L
 import qualified Cardano.Ledger.Keys as L
+import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
@@ -37,9 +38,10 @@ import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Exception (AssertionFailed (..), throw)
-import           Control.Monad.Extra (maybeM)
+import           Control.Monad.Extra (maybeM, whenJustM)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
+import           Data.Functor.Syntax ((<&&>))
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.String
@@ -124,6 +126,9 @@ runSelftest env envConsts@EnvConsts { .. } doVoting outFile
             | otherwise = testScriptVoting protocolFile submitMode
        (result, Env {  }, ()) <- flip (Env.runActionMEnv env) envConsts do
              Env.setBenchTracers initNullTracers
+             whenJustM (Env.askNixSvcOpts <&&> _nix_localNodeSocketPath) \sockPath -> do
+               liftIO $ putStrLn "Doing SetSocketPath"
+               action $ SetSocketPath sockPath
              mapM_ action useThisScript
        pure result `maybeM` const (throw abcException) $
          STM.atomically do STM.readTVar envThreads
@@ -133,8 +138,8 @@ runSelftest env envConsts@EnvConsts { .. } doVoting outFile
 -- 'SubmitMode' passed along as a parameter within a 'Submit' action.
 testScript :: FilePath -> SubmitMode -> [Action]
 testScript protocolFile submitMode =
-  [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
-  , SetNetworkId (Testnet (NetworkMagic {unNetworkMagic = 42}))
+  [ SetProtocolParameters $ UseLocalProtocolFile protocolFile
+  , SetNetworkId $ Testnet NetworkMagic { unNetworkMagic = 42 }
   , InitWallet genesisWallet
   , InitWallet splitWallet1
   , InitWallet splitWallet2
@@ -171,8 +176,8 @@ testScript protocolFile submitMode =
 
 testScriptVoting :: FilePath -> SubmitMode -> [Action]
 testScriptVoting protocolFile submitMode =
-  [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
-  , SetNetworkId (Testnet (NetworkMagic {unNetworkMagic = 42}))
+  [ SetProtocolParameters $ UseLocalProtocolFile protocolFile
+  , SetNetworkId $ Testnet NetworkMagic { unNetworkMagic = 42 }
   , InitWallet genesisWallet
   , DefineSigningKey key skey
   , AddFund anyConwayEra genesisWallet fundTxIn fundCoins key

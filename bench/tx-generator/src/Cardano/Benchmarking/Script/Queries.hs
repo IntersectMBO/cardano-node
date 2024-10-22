@@ -52,22 +52,21 @@ fileNamePParams     = "protocol-parameters-queried.json"
 fileNameProposals :: String -> FilePath
 fileNameProposals tStamp = "govstate-proposals-" ++ tStamp ++ ".json"
 
-getLocalConnectInfo :: ActionM LocalNodeConnectInfo
-getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
+getLocalConnectInfo :: ActionM (Maybe LocalNodeConnectInfo)
+getLocalConnectInfo =
+  fmap <$> makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
 
-queryEra :: ActionM AnyCardanoEra
-queryEra = do
-  localNodeConnectInfo <- getLocalConnectInfo
+queryEra :: LocalNodeConnectInfo -> ActionM AnyCardanoEra
+queryEra localNodeConnectInfo = do
   chainTip  <- getLocalChainTip localNodeConnectInfo
   mapExceptT liftIO .
     modifyError (Env.TxGenError . TxGenError . show) $
       queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
 
-queryRemoteProtocolParameters :: ActionM ProtocolParameters
-queryRemoteProtocolParameters = do
-  localNodeConnectInfo <- getLocalConnectInfo
+queryRemoteProtocolParameters :: LocalNodeConnectInfo -> ActionM ProtocolParameters
+queryRemoteProtocolParameters localNodeConnectInfo = do
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  era <- queryEra
+  era <- queryEra localNodeConnectInfo
 
   let
     callQuery :: forall era.
@@ -90,11 +89,10 @@ queryRemoteProtocolParameters = do
     AnyCardanoEra BabbageEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
     AnyCardanoEra ConwayEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraConway  QueryProtocolParameters
 
-queryGovernanceState :: ActionM (GovStateSummary StandardCrypto)
-queryGovernanceState = do
-  localNodeConnectInfo <- getLocalConnectInfo
+queryGovernanceState :: LocalNodeConnectInfo -> ActionM (GovStateSummary StandardCrypto)
+queryGovernanceState localNodeConnectInfo = do
   chainTip   <- liftIO $ getLocalChainTip localNodeConnectInfo
-  currentEra <- queryEra
+  currentEra <- queryEra localNodeConnectInfo
 
   let
     callQuery :: forall era ledgerEra.
