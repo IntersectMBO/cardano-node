@@ -59,8 +59,6 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
       eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
       shelleyOptions = def { genesisEpochLength = 200 }
@@ -144,7 +142,6 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
     ]
 
   H.noteShowM_ $ waitForBlocks epochStateView 1
-  -- H.noteShowM_ $ waitForEpochs epochStateView (EpochInterval 2)
 
   do
     (_, stdout', stderr') <- execCliAny execConfig

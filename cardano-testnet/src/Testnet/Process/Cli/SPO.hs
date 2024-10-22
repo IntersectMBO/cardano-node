@@ -180,11 +180,10 @@ createStakeKeyRegistrationCertificate
   => TmpAbsolutePath
   -> AnyShelleyBasedEra
   -> File (VKey StakeKey) In -- ^ Stake verification key file
-  -> Int -- ^ deposit amount used only in Conway
+  -> L.Coin -- ^ deposit amount used only in Conway
   -> FilePath -- ^ Output file path
   -> m ()
-createStakeKeyRegistrationCertificate tempAbsP asbe (File stakeVerKey) deposit outputFp = GHC.withFrozenCallStack $ do
-  AnyShelleyBasedEra sbe <- return asbe
+createStakeKeyRegistrationCertificate tempAbsP (AnyShelleyBasedEra sbe) (File stakeVerKey) (L.Coin deposit) outputFp = GHC.withFrozenCallStack $ do
   let tempAbsPath' = unTmpAbsPath tempAbsP
       extraArgs = monoidForEraInEon @ConwayEraOnwards (toCardanoEra sbe) $
         const ["--key-reg-deposit-amt", show deposit]
@@ -221,11 +220,11 @@ createStakeKeyDeregistrationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ShelleyBasedEra era
-  -> FilePath -- ^ Stake verification key file
+  -> File (VKey StakeKey) In -- ^ Stake verification key file
   -> Int -- ^ deposit amount used only in Conway
   -> FilePath -- ^ Output file path
   -> m ()
-createStakeKeyDeregistrationCertificate tempAbsP sbe stakeVerKey deposit outputFp =
+createStakeKeyDeregistrationCertificate tempAbsP sbe (File stakeVerKey) deposit outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
         extraArgs = monoidForEraInEon @ConwayEraOnwards (toCardanoEra sbe) $
@@ -248,8 +247,9 @@ registerSingleSpo
   -> SocketPath
   -> EpochNo -- ^ Termination epoch
   -> Int -- ^ Testnet magic
+  -> L.Coin -- ^ key deposit
   -> ExecConfig
-  -> (TxIn, FilePath, String)
+  -> (TxIn, File (SKey PaymentKey) In, String)
   -> m ( String
        , KeyPair StakeKey
        , KeyPair VrfKey
@@ -257,8 +257,8 @@ registerSingleSpo
          --   1. String: Registered stake pool ID
          --   2. Stake pool cold keys
          --   3. Stake pool VRF keys
-registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch testnetMag execConfig
-                  (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
+registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch testnetMag keyDeposit execConfig
+                  (fundingInput, File fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   workDir <- H.note tempAbsPath'
 
   -- In order to register a stake pool we need two certificates:
@@ -344,7 +344,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
   -- Create pledger registration certificate
   createStakeKeyRegistrationCertificate tap asbe
     (verificationKey poolOwnerStakeKeys)
-    400_000
+    keyDeposit
     (workDir </> "pledger.regcert")
 
   void $ execCli' execConfig

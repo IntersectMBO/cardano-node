@@ -49,7 +49,6 @@ import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
-import           Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L

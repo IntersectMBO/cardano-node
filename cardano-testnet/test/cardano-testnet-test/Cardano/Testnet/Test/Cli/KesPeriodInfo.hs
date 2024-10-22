@@ -12,7 +12,6 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Coin (..))
 
 import           Cardano.CLI.Types.Output
 import           Cardano.Node.Configuration.Topology
@@ -79,7 +78,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   -- We get our UTxOs from here
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
-      utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
+      utxoSKeyFile = signingKey $ paymentKeyInfoPair wallet0
   void $ execCli' execConfig
     [ eraString, "query", "utxo"
     , "--address", utxoAddr
@@ -94,12 +93,14 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 3
   epochStateView <- getEpochStateView configurationFile node1SocketPath
+  keyDeposit <- getKeyDeposit epochStateView ceo
   (stakePoolId, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, _)
     <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
          node1SocketPath
          termEpoch
          testnetMagic
+         keyDeposit
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)
 
@@ -141,7 +142,6 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
                , "--testnet-magic", show @Int testnetMagic
                ]
 
-  keyDeposit <- fromIntegral . unCoin <$> getKeyDeposit epochStateView ceo
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
@@ -193,7 +193,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     [ "latest", "transaction", "sign"
     , "--tx-body-file", delegRegTestDelegatorTxBodyFp
     , "--testnet-magic", show @Int testnetMagic
-    , "--signing-key-file", utxoSKeyFile
+    , "--signing-key-file", unFile utxoSKeyFile
     , "--signing-key-file", signingKeyFp testDelegatorKeys
     , "--out-file", delegRegTestDelegatorTxFp
     ]
