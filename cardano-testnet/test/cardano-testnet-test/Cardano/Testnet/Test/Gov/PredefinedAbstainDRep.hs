@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
 
 import           Cardano.Api as Api
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 
 import           Cardano.Ledger.Conway.Core (ppNOptL)
@@ -42,8 +43,7 @@ import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
 import           Testnet.Start.Types
 import           Testnet.Types (KeyPair (..),
-                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
-                   SomeKeyPair (SomeKeyPair), StakingKey)
+                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), StakingKey)
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
@@ -158,8 +158,8 @@ delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
 
   -- Sign transaction
   repRegSignedRegTx1 <- signTx execConfig cEra baseDir "signed-reg-tx"
-                               repRegTxBody1 [ SomeKeyPair (paymentKeyInfoPair payingWallet)
-                                             , SomeKeyPair skeyPair]
+                               repRegTxBody1 [ Some (paymentKeyInfoPair payingWallet)
+                                             , Some skeyPair]
 
   -- Submit transaction
   submitTx execConfig cEra repRegSignedRegTx1
@@ -281,7 +281,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
     ]
 
   signedProposalTx <- signTx execConfig cEra baseDir "signed-proposal"
-                             (File proposalBody) [SomeKeyPair $ paymentKeyInfoPair wallet]
+                             (File proposalBody) [Some $ paymentKeyInfoPair wallet]
 
   submitTx execConfig cEra signedProposalTx
 
@@ -326,7 +326,7 @@ voteChangeProposal execConfig epochStateView sbe work prefix
                                      voteFiles wallet
 
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp
-                     (SomeKeyPair (paymentKeyInfoPair wallet):[SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- votes])
+                     (Some (paymentKeyInfoPair wallet):[Some $ defaultDRepKeyPair n | (_, n) <- votes])
   submitTx execConfig cEra voteTxFp
 
 -- | Obtains the @desiredPoolNumberValue@ from the protocol parameters.

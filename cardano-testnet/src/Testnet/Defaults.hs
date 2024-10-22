@@ -44,7 +44,6 @@ import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Alonzo.Core (PParams (..))
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import qualified Cardano.Ledger.Alonzo.Genesis as Ledger
-import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()

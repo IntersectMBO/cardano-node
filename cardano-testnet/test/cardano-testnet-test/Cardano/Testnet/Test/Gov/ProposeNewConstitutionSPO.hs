@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -135,7 +136,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
     , "--out-file", txBodyFp
     ]
 
-  txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+  txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [Some $ paymentKeyInfoPair wallet0]
 
   submitTx execConfig cEra txBodySigned
 
@@ -160,8 +161,8 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
   votesTxBody <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body" votes wallet0
 
   votesSignedTx <- signTx execConfig cEra work "vote-signed-tx"
-                     votesTxBody (SomeKeyPair (paymentKeyInfoPair wallet0)
-                                  :[SomeKeyPair $ defaultSpoColdKeyPair n | n <- [1..3]])
+                     votesTxBody (Some (paymentKeyInfoPair wallet0)
+                                  :[Some $ defaultSpoColdKeyPair n | n <- [1..3]])
 
   -- Call should fail, because SPOs are unallowed to vote on the constitution
   failToSubmitTx execConfig cEra votesSignedTx "DisallowedVoters"

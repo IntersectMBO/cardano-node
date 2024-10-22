@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.PParamChangeFailsSPO
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval))
 
 import           Cardano.Testnet
@@ -180,7 +181,7 @@ failToVoteChangeProposalWithSPOs ceo execConfig epochStateView work prefix
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe baseDir "vote-tx-body"
                                      voteFiles wallet
 
-  let signingKeys = SomeKeyPair (paymentKeyInfoPair wallet):(SomeKeyPair . defaultSpoColdKeyPair . snd <$> votes)
+  let signingKeys = Some (paymentKeyInfoPair wallet):(Some . defaultSpoColdKeyPair . snd <$> votes)
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp signingKeys
 
   failToSubmitTx execConfig cEra voteTxFp "DisallowedVoters"

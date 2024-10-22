@@ -94,7 +94,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 3
   epochStateView <- getEpochStateView configurationFile node1SocketPath
-  (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
+  (stakePoolId, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, _)
     <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
          node1SocketPath

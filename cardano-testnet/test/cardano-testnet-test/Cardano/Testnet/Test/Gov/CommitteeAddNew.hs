@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.CommitteeAddNew
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
@@ -214,7 +215,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   committeeMembers `H.assertWith` null
 
   signedProposalTx <-
-    signTx execConfig cEra work "signed-proposal" (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+    signTx execConfig cEra work "signed-proposal" (File txbodyFp) [Some $ paymentKeyInfoPair wallet0]
   submitTx execConfig cEra signedProposalTx
 
   governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
@@ -245,7 +246,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
         , verificationKey = error "unused"
         }
       drepSKeys = map (defaultDRepKeyPair . snd) drepVotes
-      signingKeys = SomeKeyPair <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
+      signingKeys = Some <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
   voteTxFp <- signTx
     execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 

@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.Gov.DRepActivity
 
 import           Cardano.Api as Api
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
 
 import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
@@ -286,7 +287,7 @@ voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxI
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe baseDir "vote-tx-body"
                                      voteFiles wallet
 
-  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet:(defaultDRepKeyPair . snd <$> votes))
+  let signingKeys = Some <$> (paymentKeyInfoPair wallet:(defaultDRepKeyPair . snd <$> votes))
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp signingKeys
 
   submitTx execConfig cEra voteTxFp

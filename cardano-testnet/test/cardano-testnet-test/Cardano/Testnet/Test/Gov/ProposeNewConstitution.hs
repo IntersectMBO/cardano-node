@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (Coin (..), EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
@@ -199,7 +200,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     ]
 
   signedProposalTx <- signTx execConfig cEra gov "signed-proposal"
-                           (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet1]
+                           (File txbodyFp) [Some $ paymentKeyInfoPair wallet1]
 
   submitTx execConfig cEra signedProposalTx
 
@@ -218,7 +219,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
                                      voteFiles wallet0
 
-  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
+  let signingKeys = Some <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
   voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 
   submitTx execConfig cEra voteTxFp
