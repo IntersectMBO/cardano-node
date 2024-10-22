@@ -103,6 +103,12 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
       , "--script-data-value", "0"
       ]
 
+  supplementalDatumHash <- filter (/= '\n') <$>
+    execCli' execConfig
+      [ "latest", "transaction", "hash-script-data"
+      , "--script-data-value", "1"
+      ]
+
   scriptStakeRegistrationCertificate
     <- H.note $ work </> "script-stake-registration-certificate"
 
@@ -149,6 +155,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
                       , "+", mintValue
                       ]
+      txoutWithSupplementalDatum = [utxoAddr, "+", show @Int 2_000_000]
 
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
@@ -165,6 +172,9 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--certificate-script-file", plutusScript
     , "--certificate-redeemer-value", "0"
     , "--tx-out", txout
+    , "--tx-out", txoutWithSupplementalDatum 
+    , "--tx-out-datum-hash", supplementalDatumHash
+    , "--supplementary-datum-value" , "1"
     , "--out-file", spendScriptUTxOTxBody
     ]
 
