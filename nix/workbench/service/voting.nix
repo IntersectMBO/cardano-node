@@ -825,7 +825,7 @@ function governance_create_constitution {
     --constitution-hash        "$(${coreutils}/bin/cat ../"''${node_str}"/constitution.hash)" \
     --constitution-script-hash "$(${coreutils}/bin/cat ../"''${node_str}"/guardrails-script.hash)" \
     --governance-action-deposit "''${action_deposit}" \
-    --deposit-return-stake-verification-key-file ../genesis/pools/staking-reward1.vkey \
+    --deposit-return-stake-verification-key-file ../genesis/cache-entry/stake-delegators/delegator0/staking.vkey \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
@@ -899,8 +899,8 @@ function governance_create_withdrawal {
     --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
-    --deposit-return-stake-verification-key-file  ../genesis/pools/staking-reward1.vkey                                          \
-    --funds-receiving-stake-verification-key-file ../genesis/pools/staking-reward2.vkey                                          \
+    --deposit-return-stake-verification-key-file  ../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey    \
+    --funds-receiving-stake-verification-key-file ../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey    \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
