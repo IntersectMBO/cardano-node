@@ -517,7 +517,25 @@ def all_profile_variants:
       }
     }
     | .generator.tx_fee        = 940000
-    ) as $plutus_loop_blst    
+    ) as $plutus_loop_blst
+  |
+   ({ generator:
+      { plutus:
+          { type:                       "LimitTxPerBlock_8"
+          , script:                     "Ripemd160"
+          , redeemer:
+            { "constructor": 0
+            , "fields": [
+                { "int": 1000000 }
+              ## ByteString content is arbitrary, but should be of the same size as RIPEMD-160 output, i.e. 160 bits
+              , { bytes: "5a56da88e6fd8419181dec4d3dd6997bab953d2f" }
+              ]
+            }
+          }
+      }
+    }
+    | .generator.tx_fee        = 940000
+    ) as $plutus_loop_ripemd
   ##
   ### Definition vocabulary:  genesis variants
   ##
@@ -564,6 +582,10 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
     ) as $genesis_voltaire
+  |
+    ({}
+      | .genesis.pparamsOverlays      = ["v10-preview"]
+    ) as $costmodel_v10_preview
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -1133,6 +1155,11 @@ def all_profile_variants:
     , analysis:
       { filters:        ["size-moderate-2"] }
     }
+  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_ripemd *
+    { name: "ci-bench-plutusv3-ripemd"
+    , analysis:
+      { filters:        ["size-small"] }
+    }
   , $cibench_base * $without_tracer *
     { name: "ci-bench-notracer"
     }
@@ -1219,6 +1246,23 @@ def all_profile_variants:
     }
   , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
     { name: "plutuscall-secp-schnorr-double"
+    }
+
+## Conway / Voltaire era Plutus call variants
+  , $plutus_base * $plutuscall_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_ripemd *
+    { name: "plutuscall-volt-ripemd"
+    , analysis:
+      { filters:        ["size-small"] }
+    }
+  , $plutus_base * $plutuscall_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_blst *
+    { name: "plutuscall-volt-blst"
+    , analysis:
+      { filters:        ["size-moderate-2"] }
+    }
+  , $plutus_base * $plutuscall_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_counter *
+    { name: "plutuscall-volt-loop"
+    , analysis:
+      { filters:        ["size-small"] }
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (incl. old tracing variant) and Plutus, P2P enabled by default
