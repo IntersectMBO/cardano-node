@@ -155,7 +155,8 @@ library
                       , cardano-ledger-babbage
                       , cardano-ledger-binary
                       , cardano-ledger-byron
-                      , cardano-ledger-conway
+                      -- TODO: remove constraint at next ledger bump
+                      , cardano-ledger-conway ^>= 1.17.1
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
