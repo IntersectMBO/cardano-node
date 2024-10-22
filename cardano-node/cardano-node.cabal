@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                10.0
+version:                10.1.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -145,7 +145,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.0
+                      , cardano-api ^>= 10.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -155,7 +155,8 @@ library
                       , cardano-ledger-babbage
                       , cardano-ledger-binary
                       , cardano-ledger-byron
-                      , cardano-ledger-conway
+                      -- TODO: remove constraint at next ledger bump
+                      , cardano-ledger-conway ^>= 1.17.1
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
