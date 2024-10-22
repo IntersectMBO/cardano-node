@@ -78,7 +78,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
-  H.writeFile plutusScript $ Text.unpack plutusV3Script
+  H.writeFile plutusScript $ Text.unpack plutusV3SupplementalDatumScript
 
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 

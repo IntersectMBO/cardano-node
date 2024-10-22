@@ -35,6 +35,7 @@ module Testnet.Defaults
   , defaultMainnetTopology
   , defaultUtxoKeys
   , plutusV3Script
+  , plutusV3SupplementalDatumScript
   ) where
 
 import           Cardano.Api (AnyShelleyBasedEra (..), CardanoEra (..), File (..),
@@ -545,3 +546,9 @@ defaultUtxoKeys n =
 plutusV3Script :: Text
 plutusV3Script =
   "{ \"type\": \"PlutusScriptV3\", \"description\": \"\", \"cborHex\": \"46450101002499\" }"
+
+plutusV3SupplementalDatumScript :: Text 
+plutusV3SupplementalDatumScript = 
+  "{ \"type\": \"PlutusScriptV3\", \"description\": \"\", \"cborHex\": \"46450100002499\" }"
+
+

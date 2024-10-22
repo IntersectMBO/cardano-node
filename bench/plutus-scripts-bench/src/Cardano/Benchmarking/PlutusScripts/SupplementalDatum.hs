@@ -34,8 +34,8 @@ import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV3, PlutusS
                    Script (..), toScriptInAnyLang)
 
 import           Cardano.Benchmarking.ScriptAPI
-import qualified PlutusLedgerApi.V3 as PlutusV3
-
+import qualified PlutusLedgerApi.V3 as V3
+import qualified PlutusTx.Eq as PlutusTx
 import           Prelude as Haskell (String, (.), (<$>))
 
 import qualified Data.ByteString.Short as SBS
@@ -43,7 +43,7 @@ import qualified Data.ByteString.Short as SBS
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import qualified PlutusTx
-import qualified PlutusTx.Builtins.Internal as BI (unitval)
+import qualified PlutusTx.Builtins.HasOpaque as PlutusTx
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
 
 
@@ -55,11 +55,17 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: BuiltinData -> BuiltinUnit
-mkValidator _scriptContext = BI.unitval
+mkValidator :: V3.ScriptContext -> BuiltinUnit
+mkValidator _scriptContext = 
+  check (PlutusTx.stringToBuiltinString "one" PlutusTx.== PlutusTx.stringToBuiltinString "one")
+
+
+  where
+   -- txContext = V3.scriptContextTxInfo scriptContext
+    -- _datumMap = V3.findDatum 
 
 supplementalDatumBs :: SBS.ShortByteString
-supplementalDatumBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
+supplementalDatumBs = V3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
 
 scriptSerialized :: PlutusScript PlutusScriptV3
 scriptSerialized = PlutusScriptSerialised supplementalDatumBs
