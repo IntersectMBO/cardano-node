@@ -28,7 +28,6 @@ import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Core (valueTxOutL)
 import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
                    utxosUtxoL)
-import qualified Cardano.Ledger.TxIn as L
 import qualified Cardano.Ledger.UTxO as L
 import           Cardano.Testnet
 

@@ -12,7 +12,6 @@ import           Cardano.Api.Ledger (EpochInterval (..), GovActionId (..))
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Conway.Governance as L
-import qualified Cardano.Ledger.Shelley.API as L
 import           Cardano.Ledger.Shelley.LedgerState (newEpochStateGovStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 
