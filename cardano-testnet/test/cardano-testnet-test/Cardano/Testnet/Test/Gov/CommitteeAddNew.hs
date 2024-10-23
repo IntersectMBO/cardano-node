@@ -32,8 +32,10 @@ import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro
+import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
@@ -42,7 +44,7 @@ import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), cardanoNumPools)
 import           Testnet.Types
@@ -104,16 +106,15 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFp <- H.note $ gov </> "sample-proposal-anchor"
-  proposalDataFp <- H.note $ gov </> "sample-proposal-data"
-  updateCommitteeFp <- H.note $ gov </> "update-cc.action"
 
-  H.writeFile proposalAnchorFp "dummy anchor data"
-  H.writeFile proposalDataFp "dummy proposal data"
+  let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
+  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+
+  updateCommitteeFp <- H.note $ gov </> "update-cc.action"
 
   proposalAnchorDataHash <- execCli' execConfig
     [ "hash", "anchor-data"
-    , "--file-text", proposalAnchorFp
+    , "--file-text", proposalAnchorFile
     ]
 
   let ccColdSKeyFp n = gov </> "cc-" <> show n <> "-cold.skey"
@@ -185,30 +186,42 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   EpochNo epochNo <- H.noteShowM $ getCurrentEpochNo epochStateView
   let ccExpiryEpoch = epochNo + 200
 
-  _ <- execCli' execConfig $
-    [ eraName, "governance", "action" , "update-committee"
-    , "--testnet"
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
-    , "--anchor-data-hash", proposalAnchorDataHash
-    , "--governance-action-deposit", show minGovActDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
-    , "--threshold", "0.2"
-    , "--out-file", updateCommitteeFp
-    ]
-    <> concatMap
-         (\fp -> ["--add-cc-cold-verification-key-file", fp, "--epoch", show ccExpiryEpoch])
-         ccColdKeyFps
+  let relativeUrl = ["ipfs", proposalAnchorDataIpfsHash]
 
   txbodyFp <- H.note $ work </> "tx.body"
   txin1' <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
-  void $ execCli' execConfig
-    [ eraName, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--tx-in", Text.unpack $ renderTxIn txin1'
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
-    , "--proposal-file", updateCommitteeFp
-    , "--out-file", txbodyFp
-    ]
+
+  -- Create temporary HTTP server with files required by the call to `cardano-cli`
+  -- In this case, the server emulates an IPFS gateway
+  serveFilesWhile
+    [(relativeUrl, proposalAnchorFile)]
+    ( \port -> do
+        let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
+
+        void $ execCli' execConfig' $
+          [ eraName, "governance", "action" , "update-committee"
+          , "--testnet"
+          , "--anchor-url", "ipfs://" ++ proposalAnchorDataIpfsHash
+          , "--anchor-data-hash", proposalAnchorDataHash
+          , "--check-anchor-data"
+          , "--governance-action-deposit", show minGovActDeposit
+          , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+          , "--threshold", "0.2"
+          , "--out-file", updateCommitteeFp
+          ]
+          <> concatMap
+              (\fp -> ["--add-cc-cold-verification-key-file", fp, "--epoch", show ccExpiryEpoch])
+              ccColdKeyFps
+
+        void $ execCli' execConfig'
+          [ eraName, "transaction", "build"
+          , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
+          , "--tx-in", Text.unpack $ renderTxIn txin1'
+          , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
+          , "--proposal-file", updateCommitteeFp
+          , "--out-file", txbodyFp
+          ]
+    )
 
   -- double check that we're starting with an empty committee
   committeeMembers <- getCommitteeMembers epochStateView ceo
