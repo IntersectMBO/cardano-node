@@ -549,6 +549,6 @@ plutusV3Script =
 
 plutusV3SupplementalDatumScript :: Text 
 plutusV3SupplementalDatumScript = 
-  "{ \"type\": \"PlutusScriptV3\", \"description\": \"\", \"cborHex\": \"46450100002601\" }"
+  "{ \"type\": \"PlutusScriptV3\", \"description\": \"\", \"cborHex\": \"46450100002499\" }"
 
 

@@ -155,7 +155,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
                       , "+", mintValue
                       ]
-      txoutWithSupplementalDatum = [utxoAddr, "+", show @Int 2_000_000]
+      txoutWithSupplementalDatum = mconcat [utxoAddr, "+", show @Int 2_000_000]
 
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
