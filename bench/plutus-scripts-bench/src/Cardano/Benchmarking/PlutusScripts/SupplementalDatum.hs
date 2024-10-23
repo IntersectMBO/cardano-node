@@ -57,7 +57,7 @@ script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusS
 {-# INLINABLE mkValidator #-}
 mkValidator :: V3.ScriptContext -> BuiltinUnit
 mkValidator _scriptContext = 
-  check (PlutusTx.stringToBuiltinString "one" PlutusTx.== PlutusTx.stringToBuiltinString "gghfgdhdfghfdone")
+  check (PlutusTx.stringToBuiltinString "one" PlutusTx.== PlutusTx.stringToBuiltinString "one")
 
 
   where

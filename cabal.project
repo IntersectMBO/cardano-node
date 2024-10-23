@@ -74,3 +74,6 @@ source-repository-package
     location: https://github.com/IntersectMBO/cardano-cli.git
     tag: 251a0262b48af49e1fefcde718a13fac2e4fb72b
     subdir: cardano-cli
+
+-- TODO: Left off here. Add cardano-api SRP then adjust the supplemental datum script to pass by default
+-- to check the cli has the new available aruments.
