@@ -103,10 +103,14 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
       , "--script-data-value", "0"
       ]
 
+  supplementalDatumJsonFile
+    <- H.note $ work </> "supplemental-datum.cbor"
+  H.writeFile supplementalDatumJsonFile "{\"int\":1}"
+
   supplementalDatumHash <- filter (/= '\n') <$>
     execCli' execConfig
       [ "latest", "transaction", "hash-script-data"
-      , "--script-data-value", "1"
+      , "--script-data-file", supplementalDatumJsonFile
       ]
 
   scriptStakeRegistrationCertificate
@@ -174,7 +178,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--tx-out", txout
     , "--tx-out", txoutWithSupplementalDatum 
     , "--tx-out-datum-hash", supplementalDatumHash
-    , "--supplementary-datum-value" , "1"
+    , "--supplementary-datum-file", supplementalDatumJsonFile
     , "--out-file", spendScriptUTxOTxBody
     ]
 
@@ -189,5 +193,6 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     [ "latest", "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
     ]
+
   H.success
 

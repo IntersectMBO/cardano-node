@@ -49,7 +49,7 @@ import qualified PlutusTx.Builtins.HasOpaque as PlutusTx
 import qualified PlutusLedgerApi.V3.Contexts as V3
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
 import PlutusTx
--- import qualified PlutusTx.Foldable as PlutusTx
+import qualified PlutusTx.Foldable as PlutusTx
 import qualified PlutusTx.Prelude as PlutusTx
 
 scriptName :: Haskell.String
@@ -62,6 +62,7 @@ script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusS
 {-# INLINABLE typedValidator #-}
 typedValidator :: V3.ScriptContext -> Bool
 typedValidator scriptContext = 
+    --numDatums PlutusTx.== 2 -- Succeeds
     PlutusTx.elem datum1 datums &&
     PlutusTx.elem datum0 datums
   where
@@ -70,11 +71,11 @@ typedValidator scriptContext =
     -- FAILS TO FIND THIS: supplementalDatumHash = V3.DatumHash (PlutusTx.stringToBuiltinByteString "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314")
     -- Fails to find either datum. So we need to see how big the datum map is
     -- Return to this once you confirm there are two datums in the datum map
-    supplementalDatumHash = datum1Hash
-    _mSupplementalDatum = V3.findDatum supplementalDatumHash txInfo
+    _mSupplementalDatum = V3.findDatum datum1Hash txInfo
     txInfo = V3.scriptContextTxInfo scriptContext
     datumMap = V3.txInfoData txInfo
     datums = PlutusTx.elems datumMap
+    _numDatums = PlutusTx.length datumMap
 
 {-# INLINABLE datum1 #-}
 datum1 :: V1.Datum 
@@ -87,7 +88,7 @@ datum0 = V1.Datum (PlutusTx.mkI 0)
 -- Looking up by hash fails. Not sure why 
 {-# INLINABLE datum1Hash #-}
 datum1Hash :: V3.DatumHash 
-datum1Hash = V3.DatumHash $ PlutusTx.encodeUtf8 $ PlutusTx.stringToBuiltinString "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314"
+datum1Hash = V3.DatumHash $ PlutusTx.stringToBuiltinByteString "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314"
 
 untypedValidator :: BuiltinData -> BuiltinUnit 
 untypedValidator ctx = 
