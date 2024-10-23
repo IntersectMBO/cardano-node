@@ -7,6 +7,7 @@ let
 
   # Packages
   ##########
+
   bashInteractive    = pkgs.bashInteractive;
   coreutils          = pkgs.coreutils;
   jq                 = pkgs.jq;
@@ -14,23 +15,23 @@ let
 
   # Script params!
   ################
+
   testnetMagic = profile.genesis.network_magic;
+  gov_action_deposit = profile.genesis.conway.govActionDeposit;
   # Where to obtain the genesis funds from.
   genesis_funds_vkey = "../genesis/cache-entry/utxo-keys/utxo2.vkey";
   genesis_funds_skey = "../genesis/cache-entry/utxo-keys/utxo2.skey";
-  # How many constitutions to create with the genesis funds.
-  constitutions_from_genesis = 1;
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
+
   # Filter producers from "node-specs.json".
   producers =
     builtins.filter
       (nodeSpec: nodeSpec.isProducer)
       (builtins.attrValues nodeSpecs)
   ;
-  producers_count = builtins.length producers;
   # Construct an "array" with node producers to use in BASH `for` loops.
-  producers_array =
+  producers_bash_array =
       "("
     + (builtins.concatStringsSep
         " "
@@ -41,63 +42,78 @@ let
       )
     + ")"
   ;
-  # When splitting the genesis funds, we first move to a "node address" (called
-  # DRep 0) for each producer, and then to a "node-drep address" for each
-  # node-drep combination.
-  dreps_per_producer = builtins.floor (profile.genesis.dreps / producers_count);
-  # Max number of '--tx-out' when splitting funds.
-  # DUCT TAPE: Split 10000 DReps to 52 nodes in 1 TX per node.
-  #            Signed tx file is 16337 bytes of a tx maximum of 16384 bytes!!!
-  outs_per_transaction = 193;
-  # To calculate how much funds to leave on nodes' addresses (DRep 0) for the
-  # node to create withdrawal proposals (`--governance-action-deposit` arg).
-  withdrawal_proposals_per_producer = 2;
+
+  # How many constitutions to create with the genesis funds (explorer node).
+  constitutions_from_genesis = 1;
+  # To calculate how much funds to leave on nodes' addresses (Prop 0 / DRep 0)
+  # for the node to create withdrawal proposals (`--governance-action-deposit`).
+  withdrawal_proposals_per_producer = 1;
+
+  # UTxO preparation / creation / splitting phase.
+  # When splitting the genesis funds, we first move from `genesis_funds_vkey` to
+  # a "node address", called proposal-0 / DRep-0, for each producer, and then to
+  # a "node-proposal address", called proposal-i / DRep-0, for each proposal and
+  # last split is from each of this last node-proposal addressed to one
+  # "node-proposal-drep address", called node-i-prop-j-drep-k, for each DRep the
+  # node has assigned and will use to vote on each proposal.
+  #                                   Genesis                                   
+  #                                      |                                      
+  #                  ----------------------------------------                   
+  #                  |                                      |                   
+  #                node-0                                 node-1                
+  #                  |                                      |                   
+  #        ---------------------                  ---------------------         
+  #        |                   |                  |                   |         
+  #    proposal-1          proposal-2         proposal-1          proposal-2    
+  #        |                   |                  |                   |         
+  #  -------------       -------------      -------------       -------------   
+  #  |     |     |       |     |     |      |     |     |       |     |     |   
+  # drep1 drep2 drep3   drep1 drep2 drep3  drep1 drep2 drep3   drep1 drep2 drep3
+  #
+  # Helper with the total number of producers.
+  producers_count = builtins.length producers;
   # Helper with the total number of proposals created.
   proposals_count =
       constitutions_from_genesis
     + producers_count * withdrawal_proposals_per_producer
   ;
+  dreps_per_producer = builtins.floor (profile.genesis.dreps / producers_count);
+  # Max number of '--tx-out' when splitting funds.
+  # DUCT TAPE: Split 10000 DReps to 52 nodes in 1 TX per node.
+  #            Signed tx file is 16337 bytes of a tx maximum of 16384 bytes!!!
+  outs_per_transaction = 193;
+
   # Sleeps.
-  # Used when splitting funds to wait for them to arrive
+  # Used when splitting funds to wait for them to arrive, a pretty high number!
   # Any UTxO is considered a success in this phase.
-  wait_any_utxo_tries = 18;
-  wait_any_utxo_sleep =  10; # 3 minutes in 10s steps.
+  wait_any_utxo_tries = 30;
+  wait_any_utxo_sleep =  10; # 5 minutes in 10s steps.
   # Used when sending funds if they need to be batched, it waits for the
-  # expected UTxO to arrive to the change-address.
+  # expected UTxO to arrive to the change-address. More than this is a failure!
   wait_utxo_id_tries = 24;
   wait_utxo_id_sleep = 10; # 4 minutes in 10s steps.
   # Used when waiting for the recently created proposal.
-  wait_proposal_id_tries = 12;
-  wait_proposal_id_sleep = 10; # 2 minutes
+  wait_proposal_id_tries = 18;
+  wait_proposal_id_sleep = 10; # 3 minutes
   # Use to wait for all proposals to be available before we start voting.
-  wait_proposals_count_tries = 36;
-  wait_proposals_count_sleep = 10; # 6 minutes in 10s steps.
-  # The most important one.
-  # In a two-node local cluster with plenty of resources, both nodes voted
-  # simultaneously using with 500 DReps each on 5 proposals (one constitution
-  # and 4 withdrawals) in 659 seconds.
-  # governance_vote_all: Start:             2024-10-21 22:03:58+00:00
-  # governance_vote_all: Start:             2024-10-21 22:03:58+00:00
-  # ...
-  # governance_vote_all: End:               2024-10-21 22:13:43+00:00
-  # governance_vote_all: End:               2024-10-21 22:13:43+00:00
-  unrestricted_tps_per_producer = (500.0 * 5.0) / 581; # 4.30 votes second.
-  desired_cluster_average_tps = 5;
-  producer_vote_sleep =
-    # Calculate TPS assuming instantaneous voting.
-      (1.0 / desired_cluster_average_tps)
-    * producers_count
-    # Minus calculated overhead (local build, sing, submit).
-    - (1.0 / unrestricted_tps_per_producer)
-  ;
+  # As nodes will end their splitting phases at different times, this parameters
+  # works as a formation lap before race start =).
+  wait_proposals_count_tries = 120;
+  wait_proposals_count_sleep = 10; # 20 minutes in 10s steps.
+
+  # The most important one. To calculate and achieve a predictable TPS.
+  desired_cluster_average_tps = 5.0; # Add decimals!!!!!
+  desired_producer_tps = desired_cluster_average_tps / producers_count;
+  desired_producer_sleep = 1.0 / desired_producer_tps; # Add decimals!!!!!
 
 in ''
 
 # producers_count: ${toString producers_count}
 # proposals_count: ${toString proposals_count}
-# unrestricted_tps_per_producer: ${toString unrestricted_tps_per_producer}
+# dreps_per_producer: ${toString dreps_per_producer}
 # desired_cluster_average_tps: ${toString desired_cluster_average_tps}
-# producer_vote_sleep: ${toString producer_vote_sleep}
+# desired_producer_tps: ${toString desired_producer_tps}
+# desired_producer_sleep: ${toString desired_producer_sleep}
 
 ################################################################################
 # Returns the node's socket path.
@@ -153,7 +169,7 @@ function calculate_next_utxo {
         '                                                   \
   )"
 
-  if test "''${tx_ix}" = "null"
+  if test "''${tx_ix}" = "null" || test -z "''${tx_ix}"
   then
     # Fail
     ${coreutils}/bin/echo "calculate_next_utxo: ''${tx_signed} - ''${addr}"
@@ -201,7 +217,7 @@ function get_address_utxo_expected {
 ################################################################################
 # Evenly split the first UTxO of this key to the addresses in the array!
 # Does it in batchs so we don't exceed "maxTxSize" of 16384.
-# Stores the future UTxO in a file for later references.
+# Stores the future UTxOs of all addresses in files for later references.
 # Not to be run during the benchmarking phase: waits for funds between batchs!
 ################################################################################
 function funds_from_to {
@@ -249,7 +265,7 @@ function funds_from_to {
   # Calculate how much lovelace for each output address.
   local outs_count per_out_lovelace
   outs_count="''${#addrs_array[@]}"
-  ### HACK: Fees! Always using 500000!!!
+  ### HACK: Fees! Always using 550000!!!
   ### With   2 outputs: "Estimated transaction fee: 172233 Lovelace"
   ### With  10 outputs: "Estimated transaction fee: 186665 Lovelace"
   ### With  53 outputs: "Estimated transaction fee: 264281 Lovelace"
@@ -265,7 +281,9 @@ function funds_from_to {
              ( $numerator
              - $reminder
              - $donation
-             - (500000 * $denominator / ${toString outs_per_transaction} | ceil)
+             - ( 550000
+               * ( ($denominator / ${toString outs_per_transaction}) | ceil )
+               )
              )
            / $denominator
          | round
@@ -274,16 +292,18 @@ function funds_from_to {
 
   # Split the funds in batchs (donations only happen in the first batch).
   local i=0
-  local txOuts_array=() txOuts_cache_array=()
+  local txOuts_args_array=() txOuts_addrs_array=()
   local batch=${toString outs_per_transaction}
-  local tx_in tx_filename treasury_donation
+  local tx_in tx_filename
+  local treasury_donation_args_array=()
   for addr in "''${addrs_array[@]}"
   do
     i="$((i + 1))"
     # Build the "--tx-out" arguments array of this batch.
-    txOuts_array+=("--tx-out")
-    txOuts_array+=("''${addr}+''${per_out_lovelace}")
-    txOuts_cache_array+=("''${addr}")
+    txOuts_args_array+=("--tx-out")
+    txOuts_args_array+=("''${addr}+''${per_out_lovelace}")
+    txOuts_addrs_array+=("''${addr}")
+
     # We send if last addr in the for loop or batch max exceeded.
     if test "$i" -ge "''${#addrs_array[@]}" || test "$i" -ge "$batch"
     then
@@ -293,7 +313,10 @@ function funds_from_to {
         # The input comes from the function arguments.
         tx_in="''${funds_tx}"
         # Treasury donation happens only once.
-        treasury_donation="''${donation}"
+        if ! test "''${donation}" = "0"
+        then
+          treasury_donation_args_array=("--treasury-donation" "''${donation}")
+        fi
       else
         # Not the first batch.
         # The input comes from the last transaction submitted. Wait for it!!!
@@ -302,19 +325,21 @@ function funds_from_to {
         wait_utxo_id "''${node_str}" "''${funds_addr}" "''${tx_in}" >/dev/null
         ${coreutils}/bin/echo "funds_from_to: Funds available: $(${coreutils}/bin/date --rfc-3339=seconds)"
         # Treasury donation happens only once.
-        treasury_donation=0
+        treasury_donation_args_array=()
       fi
+
       # Some debugging!
-      ${coreutils}/bin/echo "funds_from_to: ''${utxo_vkey} (''${funds_addr}): --tx-in ''${tx_in} ''${txOuts_array[*]}"
+      ${coreutils}/bin/echo "funds_from_to: ''${utxo_vkey} (''${funds_addr}): --tx-in ''${tx_in}" # Remove from output ''${txOuts_args_array[*]}
+
       # Send this batch to each node!
       # Build transaction.
-      tx_filename=../"''${node_str}"/funds_from_to."''${tx_in}"."''${i}"
+      tx_filename=../"''${node_str}"/funds_from_to."''${funds_addr}"."''${i}"
       ${cardano-cli}/bin/cardano-cli conway transaction build               \
         --testnet-magic         ${toString testnetMagic}                    \
         --socket-path           "''${socket_path}"                          \
         --tx-in                 "''${tx_in}"                                \
-        ''${txOuts_array[@]}                                                \
-        --treasury-donation     "''${treasury_donation}"                    \
+        ''${txOuts_args_array[@]}                                           \
+        ''${treasury_donation_args_array[@]}                                \
         --change-address        "''${funds_addr}"                           \
         --out-file              "''${tx_filename}.raw"
       # Sign transaction.
@@ -328,18 +353,20 @@ function funds_from_to {
         --testnet-magic         ${toString testnetMagic}                    \
         --socket-path           "''${socket_path}"                          \
         --tx-file               "''${tx_filename}.signed"
+
       # Store outs/addresses next UTxO, including the change address.
       # Without the change address we can't wait for the funds if a next batch!
-      txOuts_cache_array+=("''${funds_addr}")
-      for addr_cache in "''${txOuts_cache_array[@]}"
+      txOuts_addrs_array+=("''${funds_addr}")
+      for addr_cache in "''${txOuts_addrs_array[@]}"
       do
         store_address_utxo_expected \
           "''${node_str}"           \
           "''${tx_filename}.signed" \
           "''${addr_cache}"
       done
+
       # Reset variables for next batch iteration.
-      txOuts_array=() txOuts_cache_array=()
+      txOuts_args_array=() txOuts_addrs_array=()
       batch="$((batch + ${toString outs_per_transaction}))"
     fi
   done
@@ -388,11 +415,6 @@ function wait_any_utxo {
     fi
     tries="$((tries - 1))"
   done
-
-  # Return first tx_id from the "cached" node query.
-    ${coreutils}/bin/echo "''${utxos_json}" \
-  | ${jq}/bin/jq -r                         \
-      'keys[0]'
 }
 
 ################################################################################
@@ -420,16 +442,12 @@ function wait_utxo_id {
       ${coreutils}/bin/echo "wait_utxo_id: Timeout waiting for: ''${addr} - ''${utxo_id}"
       exit 1
     else
-      local utxos_json
-      utxos_json="$( \
-        ${cardano-cli}/bin/cardano-cli conway query utxo     \
-          --testnet-magic     ${toString testnetMagic}       \
-          --socket-path       "''${socket_path}"             \
-          --address           "''${addr}"                    \
-          --output-json                                      \
-      )"
       contains_addr="$(                                      \
-          ${coreutils}/bin/echo "''${utxos_json}"            \
+          ${cardano-cli}/bin/cardano-cli conway query utxo   \
+            --testnet-magic     ${toString testnetMagic}     \
+            --socket-path       "''${socket_path}"           \
+            --address           "''${addr}"                  \
+            --output-json                                    \
         | ${jq}/bin/jq --raw-output                          \
             --argjson utxo_id "\"''${utxo_id}\""             \
             'keys | any(. == $utxo_id) // false'             \
@@ -535,18 +553,21 @@ function wait_proposals_count {
 }
 
 ################################################################################
-# Hack: Given a node "i" and a DRep number create always the same address keys.
-# Only supports up to 99 nodes and 999999 DReps by adding the missing Hex chars.
+# Hack: Given a node "i" and proposal number and a DRep number create always the
+# same address keys.
+# Only supports up to 99 nodes, 9999 proposals and 999999 DReps by adding the
+# missing Hex chars.
 # Returns the file path without the extensions (the ".skey" or ".vkey" part).
 ################################################################################
-function create_node_drep_keys {
+function create_node_prop_drep_key_files {
 
   # Function arguments.
   local node_str=$1 # String for the key file name (not for the socket).
   local node_i=$2   # This "i" is part of the node name ("node-i").
-  local drep_i=$3
+  local prop_i=$3
+  local drep_i=$4
 
-  local filename=../"''${node_str}"-drep-"''${drep_i}"
+  local filename=../"''${node_str}"-prop-"''${prop_i}"-drep-"''${drep_i}"
   # Now with the extensions.
   local skey="''${filename}".skey
   local vkey="''${filename}".vkey
@@ -556,17 +577,29 @@ function create_node_drep_keys {
   then
       ${jq}/bin/jq --null-input \
         --argjson node_i "''${node_i}" \
+        --argjson prop_i "''${prop_i}" \
         --argjson drep_i "''${drep_i}" \
         '
           {"type": "PaymentSigningKeyShelley_ed25519",
            "description": "Payment Signing Key",
            "cborHex": (
-                "5820b02868d722df021278c78be3b7363759b37f5852b8747b488bab20c3"
+                "5820b02868d722df021278c78be3b7363759b37f5852b8747b488bab"
               + (if   $node_i <=  9
                  then ("0" + ($node_i | tostring))
                  elif $node_i >= 10 and $node_i <= 99
                  then (       $node_i | tostring)
                  else (error ("Node ID above 99"))
+                 end
+                )
+              + (if   $prop_i <=      9
+                 then (   "000" + ($prop_i | tostring))
+                 elif $prop_i >=   10 and $prop_i <=   99
+                 then (    "00" + ($prop_i | tostring))
+                 elif $prop_i >=  100 and $prop_i <=  999
+                 then (     "0" + ($prop_i | tostring))
+                 elif $prop_i >= 1000 and $prop_i <= 9999
+                 then (           ($prop_i | tostring))
+                 else (error ("Proposal ID above 9999"))
                  end
                 )
               + (if   $drep_i <=      9
@@ -596,17 +629,18 @@ function create_node_drep_keys {
 }
 
 ################################################################################
-# Get address of the node-drep combination!
+# Get address of the node-proposal-drep combination!
 ################################################################################
-function build_node_drep_address {
+function build_node_prop_drep_address {
 
   # Function arguments.
   local node_str=$1 # String for the key file name (not for the socket).
   local node_i=$2   # This "i" is part of the node name ("node-i").
-  local drep_i=$3
+  local prop_i=$3
+  local drep_i=$4
 
   local filename addr
-  filename="$(create_node_drep_keys "''${node_str}" "''${node_i}" "''${drep_i}")"
+  filename="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${drep_i}")"
   addr="''${filename}.addr"
   # Only create if not already there!
   if ! test -f "''${addr}"
@@ -621,45 +655,27 @@ function build_node_drep_address {
 }
 
 ################################################################################
-# Deposit needed to create a proposal (`--governance-action-deposit` argument).
-# Not to be run during the benchmarking phase: unnecessary node query!
-################################################################################
-function get_gov_action_deposit {
-
-  local node_str=$1       # node name / folder to find the socket to use.
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-    ${cardano-cli}/bin/cardano-cli conway query gov-state \
-      --testnet-magic ${toString testnetMagic}            \
-      --socket-path "''${socket_path}"                    \
-  | ${jq}/bin/jq -r '.currentPParams.govActionDeposit'
-}
-
-################################################################################
 # Evenly distribute the "utxo_*key" genesis funds to all producer nodes.
-# Splits all funds evenly to all producer-assigned addresses so then you can
-# call function `governance_funds_producer_dreps` to split funds into the DReps
-# each producer controls.
+# To be called before `governance_funds_producer`.
+# See above for a better explanation.
 # Not to be run during the benchmarking phase: waits for funds to arrive!
 ################################################################################
-function governance_funds_producers {
+function governance_funds_genesis {
 
   # Function arguments.
   local node_str=$1       # node name / folder to find the socket to use.
   local utxo_vkey=$2      # tx-in
   local utxo_skey=$3      # tx-in
-  local producers=${toString producers_array}
+  local producers=${toString producers_bash_array}
 
   # Send funds to each node (using DRep ID 0 as a special logical separation).
-  ${coreutils}/bin/echo "governance_funds_producers: Node(s) splitting phase! (''${node_str})"
+  ${coreutils}/bin/echo "governance_funds_genesis: Node(s) splitting phase! (''${node_str})"
 
   local action_deposit constitution_reminder
-  action_deposit="$(get_gov_action_deposit "''${node_str}")"
+  action_deposit="${toString gov_action_deposit}"
   # HACK: Plus a fee estimate ("Estimated transaction fee: 172585 Lovelace").
   #       Plus "Minimum UTxO threshold: 105986 Lovelace"
+  #       Not more than one split transaction from here (no profile has more than 52 nodes, no batch).
   constitution_reminder="$(( (action_deposit + 2000000) * ${toString constitutions_from_genesis} + 200000 ))"
 
   local producers_addrs_array=()
@@ -674,9 +690,9 @@ function governance_funds_producers {
     )"
     local producer_addr
     # Drep 0 is No DRep (funds for the node).
-    producer_addr="$(build_node_drep_address "''${producer_name}" "''${producer_i}" 0)"
+    producer_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" 0 0)"
     producers_addrs_array+=("''${producer_addr}")
-    ${coreutils}/bin/echo "governance_funds_producers: Splitting to: ''${producer_name} - ''${producer_i} - 0 - (''${producer_addr})"
+    ${coreutils}/bin/echo "governance_funds_genesis: Splitting to: ''${producer_name} - ''${producer_i} - 0 - (''${producer_addr})"
   done
 
   # Split!
@@ -688,31 +704,23 @@ function governance_funds_producers {
     "''${producers_addrs_array[@]}"
 
   # Wait for the funds of the last producer to arrive.
-  wait_any_utxo "''${node_str}" "''${producers_addrs_array[-1]}" >/dev/null
+  wait_any_utxo "''${node_str}" "''${producers_addrs_array[-1]}"
 }
 
 ################################################################################
-# Evenly distribute producer funds to all producer-assigned DReps.
-# First send all funds evenly to all producer-assigned addresses using function
-# `governance_funds_producers` and later call this function to do the same with
-# the addresses assigned to each producers' DRep.
-# (TODO in as many UTxO as the times it intends to vote ???).
+# Evenly distribute, for each proposal, producer funds to all producer DReps.
+# To be called after `governance_funds_genesis`.
+# See above for a better explanation.
 # Not to be run during the benchmarking phase: waits for funds to arrive!
 ################################################################################
-function governance_funds_producer_dreps {
+function governance_funds_producer {
 
   # Function arguments.
   local node_str=$1       # node name / folder to find the socket to use.
   local producer_name=$2
 
-  # Send funds to each node's assigned DReps (DReps N to ???).
-  ${coreutils}/bin/echo "governance_funds_producer_dreps: Node(s)-DRep(s) splitting phase! (''${node_str})"
-
-  local action_deposit proposals_reminder
-  action_deposit="$(get_gov_action_deposit "''${node_str}")"
-  # HACK: Plus a fee estimate ("Estimated transaction fee: 374457 Lovelace").
-  #       Plus "Minimum UTxO threshold: 105986 Lovelace"
-  proposals_reminder="$(( (action_deposit + 4000000) * ${toString withdrawal_proposals_per_producer} + 200000 ))"
+  # Send funds to each node-proposal combination.
+  ${coreutils}/bin/echo "governance_funds_producer: Node(s)-Prop(s) splitting phase! (''${node_str})"
 
   local producer_i
   producer_i="$( \
@@ -722,26 +730,32 @@ function governance_funds_producer_dreps {
       ../node-specs.json                 \
   )"
   local producer_addr producer_vkey producer_skey
-  producer_addr="$(build_node_drep_address "''${producer_name}" "''${producer_i}" 0)"
-  producer_vkey="$(create_node_drep_keys   "''${producer_name}" "''${producer_i}" 0)".vkey
-  producer_skey="$(create_node_drep_keys   "''${producer_name}" "''${producer_i}" 0)".skey
+  producer_addr="$(build_node_prop_drep_address    "''${producer_name}" "''${producer_i}" 0 0)"
+  producer_vkey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" 0 0)".vkey
+  producer_skey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" 0 0)".skey
 
   # Wait for initial funds to arrive!
-  ${coreutils}/bin/echo "governance_funds_producer_dreps: Wait for funds:  $(${coreutils}/bin/date --rfc-3339=seconds)"
-  wait_any_utxo "''${node_str}" "''${producer_addr}" >/dev/null
-  ${coreutils}/bin/echo "governance_funds_producer_dreps: Funds available: $(${coreutils}/bin/date --rfc-3339=seconds)"
+  ${coreutils}/bin/echo "governance_funds_producer: Wait for funds:  $(${coreutils}/bin/date --rfc-3339=seconds)"
+  wait_any_utxo "''${node_str}" "''${producer_addr}"
+  ${coreutils}/bin/echo "governance_funds_producer: Funds available: $(${coreutils}/bin/date --rfc-3339=seconds)"
 
-  local producer_dreps_addrs_array=()
-  local drep_step=0
-  drep_step="$((producer_i * ${toString dreps_per_producer}))"
-  local actual_drep
-  for i in {1..${toString dreps_per_producer}}
+  ###############################
+  # Producer -> Proposals split #
+  ###############################
+
+  local action_deposit proposals_reminder
+  action_deposit="${toString gov_action_deposit}"
+  # HACK: Plus a fee estimate ("Estimated transaction fee: 374457 Lovelace").
+  #       Plus "Minimum UTxO threshold: 105986 Lovelace"
+  proposals_reminder="$(( (action_deposit + 4000000) * ${toString withdrawal_proposals_per_producer} + 200000 ))"
+
+  local producer_prop_addr_array=()
+  for prop_i in {1..${toString proposals_count}}
   do
-    local producer_drep_addr
-    actual_drep="$((drep_step + i))"
-    producer_drep_addr="$(build_node_drep_address "''${producer_name}" "''${producer_i}" "''${actual_drep}")"
-    producer_dreps_addrs_array+=("''${producer_drep_addr}")
-    ${coreutils}/bin/echo  "governance_funds_producer_dreps: Splitting to: ''${producer_name} - ''${producer_i} - ''${actual_drep} - ''${producer_drep_addr}"
+    local producer_prop_addr
+    producer_prop_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)"
+    producer_prop_addr_array+=("''${producer_prop_addr}")
+    ${coreutils}/bin/echo  "governance_funds_producer: Splitting to: ''${producer_name} - ''${producer_i} - ''${prop_i} - ''${producer_prop_addr}"
   done
 
   # Split!
@@ -750,10 +764,50 @@ function governance_funds_producer_dreps {
     "''${producer_vkey}" "''${producer_skey}" \
     "''${proposals_reminder}"                 \
     0                                         \
-    "''${producer_dreps_addrs_array[@]}"
+    "''${producer_prop_addr_array[@]}"
 
   # Wait for the funds of the last producer-drep to arrive.
-  wait_any_utxo "''${node_str}" "''${producer_dreps_addrs_array[-1]}" >/dev/null
+  wait_any_utxo "''${node_str}" "''${producer_prop_addr_array[-1]}"
+
+  ############################
+  # Proposals -> DReps split #
+  ############################
+
+  local dreps_reminder
+  # HACK: Plus "Minimum UTxO threshold: 105986 Lovelace"
+  dreps_reminder="$(( 200000 ))"
+
+  for prop_i in {1..${toString proposals_count}}
+  do
+
+    local producer_prop_vkey producer_prop_skey
+    producer_prop_vkey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".vkey
+    producer_prop_skey="$(create_node_prop_drep_key_files "''${producer_name}" "''${producer_i}" "''${prop_i}" 0)".skey
+
+    local producer_dreps_addrs_array=()
+    local drep_step=0
+    drep_step="$((producer_i * ${toString dreps_per_producer}))"
+    local actual_drep
+    for i in {1..${toString dreps_per_producer}}
+    do
+      local producer_drep_addr
+      actual_drep="$((drep_step + i))"
+      producer_drep_addr="$(build_node_prop_drep_address "''${producer_name}" "''${producer_i}" "''${prop_i}" "''${actual_drep}")"
+      producer_dreps_addrs_array+=("''${producer_drep_addr}")
+      ${coreutils}/bin/echo  "governance_funds_producer: Splitting to: ''${producer_name} - ''${producer_i} - ''${prop_i} - ''${actual_drep} - ''${producer_drep_addr}"
+    done
+  
+    # Split!
+    funds_from_to \
+      "''${node_str}"                                     \
+      "''${producer_prop_vkey}" "''${producer_prop_skey}" \
+      "''${dreps_reminder}"                               \
+      0                                                   \
+      "''${producer_dreps_addrs_array[@]}"
+  
+    # Wait for the funds of the last producer-prop-drep to arrive.
+    wait_any_utxo "''${node_str}" "''${producer_dreps_addrs_array[-1]}"
+  done
 }
 
 ################################################################################
@@ -784,11 +838,11 @@ function governance_create_constitution {
 
   # Funds needed for this governance action ?
   local action_deposit
-  action_deposit="$(get_gov_action_deposit "''${node_str}")"
+  action_deposit="${toString gov_action_deposit}"
   # Funds address.
   # The input is calculated from the last transaction submitted.
   # No waiting! But, if last submitted transaction fails (function
-  # `governance_funds_producers` in current workflow), everything else fails.
+  # `governance_funds_genesis` in current workflow), everything else fails.
   local funds_tx
   funds_tx="$(get_address_utxo_expected "''${node_str}" "''${node_addr}")"
 
@@ -878,16 +932,16 @@ function governance_create_withdrawal {
   socket_path="$(get_socket_path "''${node_str}")"
 
   local node_drep_skey node_drep_addr
-  node_drep_skey="$(create_node_drep_keys   "''${node_str}" "''${node_i}" "''${drep_i}")".skey
-  node_drep_addr="$(build_node_drep_address "''${node_str}" "''${node_i}" "''${drep_i}")"
+  node_drep_skey="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" 0 "''${drep_i}")".skey
+  node_drep_addr="$(build_node_prop_drep_address    "''${node_str}" "''${node_i}" 0 "''${drep_i}")"
 
   # Funds needed for this governance action ?
   local action_deposit
-  action_deposit="$(get_gov_action_deposit "''${node_str}")"
+  action_deposit="${toString gov_action_deposit}"
   # Funds address.
   # The input is calculated from the last transaction submitted.
   # No waiting! But, if last submitted transaction fails (function
-  # `governance_funds_producer_dreps` current workflow), everything else fails.
+  # `governance_funds_producer` current workflow), everything else fails.
   local funds_tx
   funds_tx="$(get_address_utxo_expected "''${node_str}" "''${node_drep_addr}")"
 
@@ -934,6 +988,98 @@ function governance_create_withdrawal {
 }
 
 ################################################################################
+# Sleeps the node between votes submissions to achieve the desired TPS.
+################################################################################
+
+function vote_tps_throttle() {
+  # Function arguments.
+  local node_str=$1       # node name / folder to find the socket to use.
+  local votes_count=$2    # Actual number of total votes already submitted.
+
+  local filepath_first=../"''${node_str}"/first_vote_time
+  local filepath_last=../"''${node_str}"/last_vote_time
+  if ! test -f "''${filepath_first}"
+  then
+    local start_time
+    start_time="$(${coreutils}/bin/date +"%s.%3N")" # With milliseconds / decimals.
+    ${coreutils}/bin/echo "''${start_time}" > "''${filepath_first}"
+    ${coreutils}/bin/echo "''${start_time}" > "''${filepath_last}"
+  else
+    local start_time last_time
+    start_time="$(${coreutils}/bin/cat "''${filepath_first}")"
+    last_time="$(${coreutils}/bin/cat  "''${filepath_last}")"
+    local current_time
+    current_time="$(${coreutils}/bin/date +"%s.%3N")" # With milliseconds / decimals.
+    ${coreutils}/bin/echo "''${current_time}" > "''${filepath_last}"
+    local sleep_arg_number
+    sleep_arg_number="$(                               \
+      ${jq}/bin/jq --null-input --raw-output           \
+        --argjson start_time   "''${start_time}"       \
+        --argjson last_time    "''${last_time}"        \
+        --argjson current_time "''${current_time}"     \
+        --argjson votes_count  "''${votes_count}"      \
+        '
+          if $votes_count < 3
+          then 0
+          else (
+              ($current_time - $start_time  )    as $cluster_seconds
+            | ($votes_count  / $cluster_seconds) as $current_tps
+            | if $current_tps < ${toString desired_producer_tps}
+              then 0
+              else (
+                  (($votes_count + 1) / ${toString desired_producer_tps}) as $next_cluster_seconds
+                | ($start_time + $next_cluster_seconds - $current_time)
+              )
+              end
+          )
+          end
+        '                                              \
+    )"
+    ${coreutils}/bin/echo "vote_tps_throttle: ''${node_str}: ''${sleep_arg_number}"
+    ${coreutils}/bin/sleep "''${sleep_arg_number}"
+  fi
+}
+
+################################################################################
+# Benchmarking phase function!
+# Fetch all proposals and call `governance_vote_proposal` with each proposal ID
+# so the node votes that proposal with all the DReps it controls.
+################################################################################
+function governance_vote_all {
+
+  # Function arguments.
+  local node_str=$1       # node name / folder to find the socket to use.
+  local node_i=$2         # This "i" is part of the node name ("node-i").
+
+  # Only defined in functions that use it.
+  local socket_path
+  socket_path="$(get_socket_path "''${node_str}")"
+
+  # Don't query the node while voting!
+  local txIdsJSON proposal_tx_ids_array
+  txIdsJSON="$( \
+      ${cardano-cli}/bin/cardano-cli conway query gov-state          \
+        --testnet-magic ${toString testnetMagic}                     \
+        --socket-path "''${socket_path}"                             \
+    | ${jq}/bin/jq '.proposals | map(.actionId.txId)'                \
+  )"
+  proposal_tx_ids_array=$(echo "''${txIdsJSON}" | ${jq}/bin/jq --raw-output '. | join (" ")')
+
+  # Cycle proposals.
+  local prop_i=0
+  local votes_count=0 # Keep a counter for TPS calculation.
+  for proposal_tx_id in ''${proposal_tx_ids_array[*]}
+  do
+    prop_i=$(( prop_i + 1 )) # Prop key to use.
+    governance_vote_proposal "''${node_str}" "''${node_i}" "''${prop_i}" "''${proposal_tx_id}" "''${votes_count}"
+    local proposal_flag="../''${node_str}/proposal.''${proposal_tx_id}.voted"
+    ${coreutils}/bin/touch "''${proposal_flag}"
+    # Separate counter, which proposal in which epoch, etc will change!
+    votes_count=$(( votes_count + ${toString dreps_per_producer} ))
+  done
+}
+
+################################################################################
 # Benchmarking phase function!
 # The node votes the proposal with all the DReps it controls.
 ################################################################################
@@ -942,7 +1088,9 @@ function governance_vote_proposal {
   # Function arguments.
   local node_str=$1       # node name / folder to find the socket to use.
   local node_i=$2         # This "i" is part of the node name ("node-i").
-  local proposal_id=$3
+  local prop_i=$3         # Proposal key/address to use.
+  local proposal_tx_id=$4
+  local votes_count=$5    # Actual number of total votes already submitted.
 
   # Only defined in functions that use it.
   local socket_path
@@ -954,16 +1102,16 @@ function governance_vote_proposal {
   do
     actual_drep="$((drep_step + i))"
 
-    ${coreutils}/bin/echo "governance_vote_proposal: ''${proposal_id} - ''${node_str} - ''${actual_drep}"
+    ${coreutils}/bin/echo "governance_vote_proposal: ''${proposal_tx_id} - ''${node_str} - ''${actual_drep}"
 
     local node_drep_skey node_drep_addr
-    node_drep_skey="$(create_node_drep_keys   "''${node_str}" "''${node_i}" "''${actual_drep}")".skey
-    node_drep_addr="$(build_node_drep_address "''${node_str}" "''${node_i}" "''${actual_drep}")"
+    node_drep_skey="$(create_node_prop_drep_key_files "''${node_str}" "''${node_i}" "''${prop_i}" "''${actual_drep}")".skey
+    node_drep_addr="$(build_node_prop_drep_address    "''${node_str}" "''${node_i}" "''${prop_i}" "''${actual_drep}")"
 
     # Funds address.
     # The input is calculated from the last transaction submitted.
     # No waiting! But, if last submitted transaction fails (function
-    # `governance_funds_producer_dreps` or `governance_vote_proposal` in current
+    # `governance_funds_producer` or `governance_vote_proposal` in current
     # workflow), everything else fails.
     local funds_tx
     funds_tx="$(get_address_utxo_expected "''${node_str}" "''${node_drep_addr}")"
@@ -971,13 +1119,14 @@ function governance_vote_proposal {
     # we don't check the response to be sure there is an expected UTxO to be
     # really sure we are not querying the node unnecessarily.
 
-    ${coreutils}/bin/sleep ${toString producer_vote_sleep}
+    vote_tps_throttle "''${node_str}" "''${votes_count}"
+    votes_count=$(( votes_count + 1 ))
 
     # Voting with DRep keys:
-    local tx_filename=../"''${node_str}"/proposal."''${proposal_id}"."''${actual_drep}"
+    local tx_filename=../"''${node_str}"/proposal."''${proposal_tx_id}"."''${actual_drep}"
     ${cardano-cli}/bin/cardano-cli conway governance vote create   \
       --yes                                                        \
-      --governance-action-tx-id "''${proposal_id}"                 \
+      --governance-action-tx-id "''${proposal_tx_id}"              \
       --governance-action-index "0"                                \
       --drep-verification-key-file ../genesis/cache-entry/drep-keys/drep"''${actual_drep}"/drep.vkey \
       --out-file "''${tx_filename}".action
@@ -1007,45 +1156,8 @@ function governance_vote_proposal {
 
     ${coreutils}/bin/touch "''${tx_filename}".voted
 
-    store_address_utxo_expected \
-      "''${node_str}"           \
-      "''${tx_filename}.signed" \
-      "''${node_drep_addr}"
+    # No `store_address_utxo_expected`, all UTxOs are created before voting!
 
-  done
-}
-
-################################################################################
-# Benchmarking phase function!
-# Fetch all proposals and call `governance_vote_proposal` with each proposal ID
-# so the node votes that proposal with all the DReps it controls.
-################################################################################
-function governance_vote_all {
-
-  # Function arguments.
-  local node_str=$1       # node name / folder to find the socket to use.
-  local node_i=$2         # This "i" is part of the node name ("node-i").
-
-  # Only defined in functions that use it.
-  local socket_path
-  socket_path="$(get_socket_path "''${node_str}")"
-
-  # Don't query the node while voting!
-  local txIdsJSON proposal_ids_array
-  txIdsJSON="$( \
-      ${cardano-cli}/bin/cardano-cli conway query gov-state          \
-        --testnet-magic ${toString testnetMagic}                     \
-        --socket-path "''${socket_path}"                             \
-    | ${jq}/bin/jq '.proposals | map(.actionId.txId)'                \
-  )"
-  proposal_ids_array=$(echo "''${txIdsJSON}" | ${jq}/bin/jq --raw-output '. | join (" ")')
-
-  # Cycle proposals.
-  for proposal_id in ''${proposal_ids_array[*]}
-  do
-    governance_vote_proposal "''${node_str}" "''${node_i}" "''${proposal_id}"
-    local proposal_flag="../''${node_str}/proposal.''${proposal_id}.voted"
-    ${coreutils}/bin/touch "''${proposal_flag}"
   done
 }
 
@@ -1057,19 +1169,22 @@ function workflow_generator {
   # Function arguments.
   local node_str=$1       # node name / folder to find the socket to use.
 
-  ${coreutils}/bin/echo "governance_funds_producers: Start:      $(${coreutils}/bin/date --rfc-3339=seconds)"
-  governance_funds_producers       \
+  #- Splinting 0 --------------------------------------------------------------#
+  ${coreutils}/bin/echo "governance_funds_genesis:        Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
+  governance_funds_genesis       \
     "''${node_str}"                \
     ${toString genesis_funds_vkey} \
     ${toString genesis_funds_skey}
-  ${coreutils}/bin/echo "governance_funds_producers: End:        $(${coreutils}/bin/date --rfc-3339=seconds)"
-
-  ${coreutils}/bin/echo "governance_create_constitution: Start:  $(${coreutils}/bin/date --rfc-3339=seconds)"
+  ${coreutils}/bin/echo "governance_funds_genesis:        End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
+  #- Preparing ----------------------------------------------------------------#
+  ${coreutils}/bin/echo "governance_create_constitution:  Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
   governance_create_constitution   \
     "''${node_str}"                \
     ${toString genesis_funds_vkey} \
     ${toString genesis_funds_skey}
-  ${coreutils}/bin/echo "governance_create_constitution: End:    $(${coreutils}/bin/date --rfc-3339=seconds)"
+  ${coreutils}/bin/echo "governance_create_constitution:  End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
+  #----------------------------------------------------------------------------#
+
 }
 
 function workflow_producer {
@@ -1084,18 +1199,22 @@ function workflow_producer {
       ../node-specs.json                 \
   )"
 
-  ${coreutils}/bin/echo "governance_funds_producer_dreps: Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
-  governance_funds_producer_dreps "''${node_str}" "''${node_str}"
-  ${coreutils}/bin/echo "governance_funds_producer_dreps: End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
-
+  #- Splinting 1 --------------------------------------------------------------#
+  ${coreutils}/bin/echo "governance_funds_producer:       Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
+  governance_funds_producer "''${node_str}" "''${node_str}"
+  ${coreutils}/bin/echo "governance_funds_producer:       End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
+  #- Preparing ----------------------------------------------------------------#
   ${coreutils}/bin/echo "governance_create_withdrawal(s): Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
   for i in {1..${toString withdrawal_proposals_per_producer}}
   do
     governance_create_withdrawal "''${node_str}" "''${producer_i}" 0
   done
-  wait_proposals_count "''${node_str}" ${toString proposals_count}
   ${coreutils}/bin/echo "governance_create_withdrawal(s): End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
-
+  #- Waiting ------------------------------------------------------------------#
+  ${coreutils}/bin/echo "wait_proposals_count:            Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
+  wait_proposals_count "''${node_str}" ${toString proposals_count}
+  ${coreutils}/bin/echo "wait_proposals_count:            End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
+  #- Benchmarking -------------------------------------------------------------#
   local socket_path
   socket_path="$(get_socket_path "''${node_str}")"
   # Store actual gov-state
@@ -1103,15 +1222,17 @@ function workflow_producer {
       --testnet-magic ${toString testnetMagic}                       \
       --socket-path "''${socket_path}"                               \
   > "../''${node_str}/gov-state.start.json"
-  ${coreutils}/bin/echo "governance_vote_all: Start:             $(${coreutils}/bin/date --rfc-3339=seconds)"
+  ${coreutils}/bin/echo "governance_vote_all:             Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
   governance_vote_all "''${node_str}" "''${producer_i}"
-  ${coreutils}/bin/echo "governance_vote_all: End:               $(${coreutils}/bin/date --rfc-3339=seconds)"
+  ${coreutils}/bin/echo "governance_vote_all:             End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
   socket_path="$(get_socket_path "''${node_str}")"
   # Store actual gov-state
     ${cardano-cli}/bin/cardano-cli conway query gov-state            \
       --testnet-magic ${toString testnetMagic}                       \
       --socket-path "''${socket_path}"                               \
   > "../''${node_str}/gov-state.end.json"
+  #----------------------------------------------------------------------------#
+
 }
 
 ''
