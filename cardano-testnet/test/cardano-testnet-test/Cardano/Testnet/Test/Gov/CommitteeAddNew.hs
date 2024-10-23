@@ -127,12 +127,12 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
               , signingKey = File stakeSKeyFp
               }
 
+  keyDepositStr <- show . L.unCoin <$> getKeyDeposit epochStateView ceo
   -- Register stake address
-
   void $ execCli' execConfig
     [ eraName, "stake-address", "registration-certificate"
     , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--key-reg-deposit-amt", keyDepositStr
     , "--out-file", stakeCertFp
     ]
 
@@ -163,7 +163,6 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertTxSignedFp
     ]
-
 
   minGovActDeposit <- getMinGovActionDeposit epochStateView ceo
 

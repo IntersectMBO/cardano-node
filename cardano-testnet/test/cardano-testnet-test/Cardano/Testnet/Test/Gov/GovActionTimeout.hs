@@ -11,7 +11,7 @@ module Cardano.Testnet.Test.Gov.GovActionTimeout
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
+import           Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval, unEpochInterval))
 
 import           Cardano.Testnet
 
@@ -94,12 +94,12 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
 
   cliStakeAddressKeyGen stakeKeys
 
+  keyDepositStr <- show . unCoin <$> getKeyDeposit epochStateView ceo
   -- Register stake address
-
   void $ execCli' execConfig
     [ eraName, "stake-address", "registration-certificate"
     , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--key-reg-deposit-amt", keyDepositStr
     , "--out-file", stakeCertFp
     ]
 

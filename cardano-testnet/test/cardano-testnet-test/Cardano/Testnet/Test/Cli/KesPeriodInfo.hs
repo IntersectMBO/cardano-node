@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Ledger (Coin (..))
 
 import           Cardano.CLI.Types.Output
 import           Cardano.Node.Configuration.Topology
@@ -32,6 +33,7 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.Query
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -60,7 +62,8 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     <- mkConf tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = ShelleyBasedEraConway
+      ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
       cTestnetOptions = def { cardanoNodeEra = asbe }
@@ -90,6 +93,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 3
+  epochStateView <- getEpochStateView configurationFile node1SocketPath
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
     <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
@@ -135,12 +139,13 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
                , "--testnet-magic", show @Int testnetMagic
                ]
 
+  keyDeposit <- fromIntegral . unCoin <$> getKeyDeposit epochStateView ceo
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
-    0
+    keyDeposit
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert

@@ -29,7 +29,6 @@ module Testnet.Types
   , SomeKeyPair(..)
   , VKey
   , SKey
-  , ColdPoolKey
   , VrfKey
   , StakingKey
   , PaymentKey
@@ -143,7 +142,6 @@ isTestnetNodeSpo = isJust . poolKeys
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 
-data ColdPoolKey
 data StakingKey
 data SpoColdKey
 

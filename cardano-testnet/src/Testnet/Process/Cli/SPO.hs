@@ -341,10 +341,9 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
   -- NB: Pledger and owner can be the same
 
   -- Create pledger registration certificate
-
   createStakeKeyRegistrationCertificate tap asbe
     poolOwnerstakeVkeyFp
-    0
+    400_000
     (workDir </> "pledger.regcert")
 
   void $ execCli' execConfig

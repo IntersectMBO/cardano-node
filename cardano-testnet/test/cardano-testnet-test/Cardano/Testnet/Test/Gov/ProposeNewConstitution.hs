@@ -9,7 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (EpochInterval (..))
+import           Cardano.Api.Ledger (Coin (..), EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -121,12 +121,12 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     $ KeyPair { verificationKey = File stakeVkeyFp
               , signingKey = File stakeSKeyFp
               }
+  keyDepositStr <- show . unCoin <$> getKeyDeposit epochStateView ceo
   -- Register stake address
-
   void $ execCli' execConfig
     [ eraName, "stake-address", "registration-certificate"
     , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--key-reg-deposit-amt", keyDepositStr
     , "--out-file", stakeCertFp
     ]
 

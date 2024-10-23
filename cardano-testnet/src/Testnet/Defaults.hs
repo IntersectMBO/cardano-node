@@ -388,8 +388,7 @@ defaultShelleyGenesis asbe startTime maxSupply options = do
       -- TODO: find out why this actually degrates network stability - turned off for now
       -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
       pVer = eraToProtocolVersion asbe
-      -- TODO: Remove after merging https://github.com/IntersectMBO/cardano-node/pull/6017
-      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults & L.ppKeyDepositL .~ 0
+      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
       protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
   Api.shelleyGenesisDefaults
         { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff

@@ -15,6 +15,7 @@ module Cardano.Testnet.Test.Cli.LeadershipSchedule
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
+import           Cardano.Api.Ledger (Coin (..))
 
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Testnet
@@ -37,6 +38,7 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.Query
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -60,7 +62,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = shelleyBasedEra @ConwayEra -- TODO: We should only support the latest era and the upcoming era
+      ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def
         { cardanoNodeEra = asbe
@@ -97,6 +100,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 15
+  epochStateView <- getEpochStateView configurationFile node1SocketPath
   (stakePoolIdNewSpo, stakePoolColdSigningKey, stakePoolColdVKey, vrfSkey, _)
     <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
@@ -140,12 +144,13 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
                , "--testnet-magic", show @Int testnetMagic
                ]
 
+  keyDeposit <- fromIntegral . unCoin <$> getKeyDeposit epochStateView ceo
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
-    0
+    keyDeposit
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert

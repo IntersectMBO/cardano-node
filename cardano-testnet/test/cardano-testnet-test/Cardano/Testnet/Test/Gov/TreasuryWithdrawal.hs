@@ -108,10 +108,11 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
                , signingKey= File stakeSKeyFp
                }
 
+  keyDepositStr <- show . L.unCoin <$> getKeyDeposit epochStateView ceo
   void $ execCli' execConfig
     [ eraName, "stake-address", "registration-certificate"
     , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--key-reg-deposit-amt", keyDepositStr
     , "--out-file", stakeCertFp
     ]
 

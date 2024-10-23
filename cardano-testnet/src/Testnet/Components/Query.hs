@@ -37,6 +37,7 @@ module Testnet.Components.Query
   , checkDRepState
   , assertNewEpochState
   , getGovActionLifetime
+  , getKeyDeposit
   ) where
 
 import           Cardano.Api as Api
@@ -571,11 +572,22 @@ assertNewEpochState epochStateView sbe maxWait lens expected = withFrozenCallSta
 -- The @govActionLifetime@ or governance action maximum lifetime in epochs is
 -- the number of epochs such that a governance action submitted during an epoch @e@
 -- expires if it is still not ratified as of the end of epoch: @e + govActionLifetime + 1@.
-getGovActionLifetime :: (ConwayEraPParams (ShelleyLedgerEra era), H.MonadAssertion m, MonadTest m, MonadIO m)
+getGovActionLifetime :: (H.MonadAssertion m, MonadTest m, MonadIO m)
   => EpochStateView
   -> ConwayEraOnwards era
   -> m EpochInterval
-getGovActionLifetime epochStateView ceo = do
+getGovActionLifetime epochStateView ceo = conwayEraOnwardsConstraints ceo $ do
    govState :: ConwayGovState era <- getGovState epochStateView ceo
    return $ govState ^. L.cgsCurPParamsL
                       . L.ppGovActionLifetimeL
+
+-- | Obtains the key registration deposit from the protocol parameters.
+getKeyDeposit :: (H.MonadAssertion m, MonadTest m, MonadIO m)
+  => EpochStateView
+  -> ConwayEraOnwards era
+  -> m L.Coin
+getKeyDeposit epochStateView ceo = conwayEraOnwardsConstraints ceo $ do
+   govState :: ConwayGovState era <- getGovState epochStateView ceo
+   return $ govState ^. L.cgsCurPParamsL
+                      . L.ppKeyDepositL
+
