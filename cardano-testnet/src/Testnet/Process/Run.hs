@@ -18,6 +18,7 @@ module Testnet.Process.Run
   , mkExecConfigOffline
   , ProcessError(..)
   , ExecutableError(..)
+  , addEnvVarsToConfig
   ) where
 
 import           Prelude
@@ -33,6 +34,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Function
 import qualified Data.List as List
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.String (fromString)
 import qualified Data.Text as Text
@@ -192,6 +194,16 @@ mkExecConfig tempBaseAbsPath sprocket networkId = do
       <> env'
     , H.execConfigCwd = Last $ Just tempBaseAbsPath
     }
+
+-- | Adds environment variables to an 'ExecConfig' that may already
+-- have some environment variables set. This is done by prepending the new
+-- environment variables to the existing ones.
+addEnvVarsToConfig :: H.ExecConfig -> [(String, String)] -> H.ExecConfig
+addEnvVarsToConfig execConfig newEnvVars =
+  execConfig { H.execConfigEnv = Last $ Just $ newEnvVars <> prevEnvVars }
+  where
+    prevEnvVars :: [(String, String)]
+    prevEnvVars = fromMaybe [] . getLast $ H.execConfigEnv execConfig
 
 -- | Creates an 'ExecConfig' that can be used to run a process offline.
 -- e.g cardano-cli without a node running.

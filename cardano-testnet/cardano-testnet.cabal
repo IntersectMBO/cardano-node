@@ -220,7 +220,7 @@ test-suite cardano-testnet-test
                       , base16-bytestring
                       , bytestring
                       , cardano-api:{cardano-api, internal}
-                      , cardano-cli
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib}
                       , cardano-crypto-class
                       , cardano-ledger-conway
                       , cardano-ledger-core
