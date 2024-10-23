@@ -35,17 +35,18 @@ import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV3, PlutusS
 
 import           Cardano.Benchmarking.ScriptAPI
 import qualified PlutusLedgerApi.V3 as V3
-import qualified PlutusTx.Eq as PlutusTx
 import           Prelude as Haskell (String, (.), (<$>))
 
 import qualified Data.ByteString.Short as SBS
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
-import qualified PlutusTx
 import qualified PlutusTx.Builtins.HasOpaque as PlutusTx
+import qualified PlutusTx.Maybe as PlutusTx
+import qualified PlutusLedgerApi.V3.Contexts as V3
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
-
+import PlutusTx
+import qualified PlutusTx.Prelude as PlutusTx
 
 scriptName :: Haskell.String
 scriptName
@@ -54,18 +55,22 @@ scriptName
 script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
 
-{-# INLINABLE mkValidator #-}
-mkValidator :: V3.ScriptContext -> BuiltinUnit
-mkValidator _scriptContext = 
-  check (PlutusTx.stringToBuiltinString "one" PlutusTx.== PlutusTx.stringToBuiltinString "one")
-
-
+{-# INLINABLE typedValidator #-}
+typedValidator :: V3.ScriptContext -> Bool
+typedValidator scriptContext = 
+    PlutusTx.isJust mSupplementalDatum
   where
-   -- txContext = V3.scriptContextTxInfo scriptContext
-    -- _datumMap = V3.findDatum 
+    -- supplementalDatumHash = cardano-cli latest transaction hash-script-data --script-data-value 1
+    supplementalDatumHash = V3.DatumHash (PlutusTx.stringToBuiltinByteString "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25")
+    txInfo = V3.scriptContextTxInfo scriptContext
+    mSupplementalDatum = V3.findDatum supplementalDatumHash txInfo
+
+untypedValidator :: BuiltinData -> BuiltinUnit 
+untypedValidator ctx = 
+  PlutusTx.check (typedValidator (PlutusTx.unsafeFromBuiltinData ctx) )
 
 supplementalDatumBs :: SBS.ShortByteString
-supplementalDatumBs = V3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
+supplementalDatumBs = V3.serialiseCompiledCode $$(PlutusTx.compile [|| untypedValidator ||])
 
 scriptSerialized :: PlutusScript PlutusScriptV3
 scriptSerialized = PlutusScriptSerialised supplementalDatumBs
