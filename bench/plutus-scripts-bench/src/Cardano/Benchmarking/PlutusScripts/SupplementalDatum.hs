@@ -41,11 +41,12 @@ import qualified Data.ByteString.Short as SBS
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
-import qualified PlutusTx.Builtins.HasOpaque as PlutusTx
-import qualified PlutusTx.Maybe as PlutusTx
-import qualified PlutusLedgerApi.V3.Contexts as V3
+-- import qualified PlutusTx.Builtins.HasOpaque as PlutusTx
+-- import qualified PlutusTx.Maybe as PlutusTx
+-- import qualified PlutusLedgerApi.V3.Contexts as V3
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
 import PlutusTx
+import qualified PlutusTx.Foldable as PlutusTx
 import qualified PlutusTx.Prelude as PlutusTx
 
 scriptName :: Haskell.String
@@ -58,12 +59,18 @@ script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusS
 {-# INLINABLE typedValidator #-}
 typedValidator :: V3.ScriptContext -> Bool
 typedValidator scriptContext = 
-    PlutusTx.isJust mSupplementalDatum
+    numDatums PlutusTx.== 2
   where
     -- supplementalDatumHash = cardano-cli latest transaction hash-script-data --script-data-value 1
-    supplementalDatumHash = V3.DatumHash (PlutusTx.stringToBuiltinByteString "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25")
+    -- FAILS TO FIND THIS: supplementalDatumHash = V3.DatumHash (PlutusTx.stringToBuiltinByteString "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25")
+    -- FAILS TO FIND THIS: supplementalDatumHash = V3.DatumHash (PlutusTx.stringToBuiltinByteString "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314")
+    -- Fails to find either datum. So we need to see how big the datum map is
+    -- Return to this once you confirm there are two datums in the datum map
+    -- supplementalDatumHash = V3.DatumHash (PlutusTx.stringToBuiltinByteString "???")
+    -- mSupplementalDatum = V3.findDatum supplementalDatumHash txInfo
     txInfo = V3.scriptContextTxInfo scriptContext
-    mSupplementalDatum = V3.findDatum supplementalDatumHash txInfo
+    datumMap = V3.txInfoData txInfo
+    numDatums = PlutusTx.length datumMap
 
 untypedValidator :: BuiltinData -> BuiltinUnit 
 untypedValidator ctx = 
