@@ -36,6 +36,7 @@ import           Testnet.Components.Query
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
@@ -89,23 +90,15 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
-      stakeCertFp = gov </> "stake.regcert"
-      stakeKeys =  KeyPair { verificationKey = File stakeVkeyFp
-                           , signingKey = File stakeSKeyFp
-                           }
-
-  cliStakeAddressKeyGen stakeKeys
-
   -- Register stake address
-
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
-    , "--out-file", stakeCertFp
-    ]
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -126,7 +119,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 

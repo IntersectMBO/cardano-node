@@ -11,7 +11,7 @@ module Cardano.Testnet.Test.Gov.GovActionTimeout
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval, unEpochInterval))
+import           Cardano.Api.Ledger (EpochInterval (..))
 
 import           Cardano.Testnet
 
@@ -26,6 +26,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.DRep (makeActivityChangeProposal)
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types
@@ -85,23 +86,16 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   govActionLifetime <- getGovActionLifetime epochStateView ceo
   H.note_ $ "govActionLifetime: " <> show govActionLifetime
 
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
-      stakeCertFp = gov </> "stake.regcert"
-      stakeKeys = KeyPair { verificationKey = File stakeVkeyFp
-                          , signingKey = File stakeSKeyFp
-                          }
-
-  cliStakeAddressKeyGen stakeKeys
-
-  keyDepositStr <- show . unCoin <$> getKeyDeposit epochStateView ceo
   -- Register stake address
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", keyDepositStr
-    , "--out-file", stakeCertFp
-    ]
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
+
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -122,7 +116,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 

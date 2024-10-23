@@ -200,10 +200,10 @@ createScriptStakeRegistrationCertificate
   => TmpAbsolutePath
   -> AnyCardanoEra
   -> FilePath -- ^ Script file
-  -> Int -- ^ Registration deposit amount used only in Conway
+  -> L.Coin -- ^ Registration deposit amount used only in Conway
   -> FilePath -- ^ Output file path
   -> m ()
-createScriptStakeRegistrationCertificate tempAbsP (AnyCardanoEra cEra) scriptFile deposit outputFp =
+createScriptStakeRegistrationCertificate tempAbsP (AnyCardanoEra cEra) scriptFile (L.Coin deposit) outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
         extraArgs = monoidForEraInEon @ConwayEraOnwards cEra $
@@ -221,10 +221,10 @@ createStakeKeyDeregistrationCertificate
   => TmpAbsolutePath
   -> ShelleyBasedEra era
   -> File (VKey StakeKey) In -- ^ Stake verification key file
-  -> Int -- ^ deposit amount used only in Conway
+  -> L.Coin -- ^ deposit amount used only in Conway
   -> FilePath -- ^ Output file path
   -> m ()
-createStakeKeyDeregistrationCertificate tempAbsP sbe (File stakeVerKey) deposit outputFp =
+createStakeKeyDeregistrationCertificate tempAbsP sbe (File stakeVerKey) (L.Coin deposit) outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
         extraArgs = monoidForEraInEon @ConwayEraOnwards (toCardanoEra sbe) $

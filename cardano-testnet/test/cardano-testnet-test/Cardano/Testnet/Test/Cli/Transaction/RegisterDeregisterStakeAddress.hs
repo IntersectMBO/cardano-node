@@ -9,35 +9,21 @@ module Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Coin (..), EpochInterval (..))
 
-import qualified Cardano.Crypto.Hash as L
-import qualified Cardano.Ledger.Conway.Governance as L
-import qualified Cardano.Ledger.Conway.Governance as Ledger
-import qualified Cardano.Ledger.Hashes as L
-import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.State.Strict (StateT)
 import           Data.Default.Class
-import           Data.Maybe
-import           Data.Maybe.Strict
-import           Data.String
 import qualified Data.Text as Text
-import           GHC.Exts (IsList (..))
-import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
-import           Testnet.Defaults
-import           Testnet.EpochStateProcessing (waitForGovActionVotes)
-import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
-import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Cli.SPO (createStakeKeyDeregistrationCertificate,
+                   createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types
@@ -83,33 +69,16 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   H.note_ $ "Socketpath: " <> unFile socketPath
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
-  -- Create Conway constitution
-  gov <- H.createDirectoryIfMissing $ work </> "governance"
-
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
-      stakeCertFp = gov </> "stake.regcert"
-      stakeCertDeregFp = gov </> "stake.deregcert"
-      stakeKeys = KeyPair { verificationKey = File stakeVkeyFp
-                          , signingKey = File stakeSKeyFp
-                          }
-
-  cliStakeAddressKeyGen stakeKeys
-
-  keyDepositStr <- show . unCoin <$> getKeyDeposit epochStateView ceo
   -- Register stake address
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", keyDepositStr
-    , "--out-file", stakeCertFp
-    ]
-
-  stakeAddress <- H.noteM $ execCli' execConfig
-    [ eraName, "stake-address", "build"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--out-file", "/dev/stdout"
-    ]
+  let stakeCertFp = work </> "stake.regcert"
+      stakeCertDeregFp = work </> "stake.deregcert"
+      stakeKeys =  KeyPair { verificationKey = File $ work </> "stake.vkey"
+                           , signingKey = File $ work </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -132,7 +101,7 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 
@@ -143,22 +112,9 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
 
   H.noteShowM_ $ waitForBlocks epochStateView 1
 
-  do
-    (_, stdout', stderr') <- execCliAny execConfig
-      [ eraName, "query", "stake-address-info"
-      , "--address", stakeAddress
-      , "--out-file", "/dev/stdout"
-      ]
-    H.note_ stdout'
-    H.note_ stderr'
-
   -- deregister stake address
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "deregistration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", keyDepositStr
-    , "--out-file", stakeCertDeregFp
-    ]
+  createStakeKeyDeregistrationCertificate
+    tempAbsPath sbe (verificationKey stakeKeys) keyDeposit stakeCertDeregFp
 
   stakeCertDeregTxBodyFp <- H.note $ work </> "stake.deregistration.txbody"
   stakeCertDeregTxSignedFp <- H.note $ work </> "stake.deregistration.tx"
@@ -181,7 +137,7 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertDeregTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertDeregTxSignedFp
     ]
 

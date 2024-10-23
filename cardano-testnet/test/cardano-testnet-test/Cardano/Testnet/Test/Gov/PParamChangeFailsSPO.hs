@@ -12,7 +12,7 @@ module Cardano.Testnet.Test.Gov.PParamChangeFailsSPO
 
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval))
+import           Cardano.Api.Ledger (EpochInterval (..))
 
 import           Cardano.Testnet
 
@@ -31,6 +31,7 @@ import           Testnet.Defaults (defaultSpoColdKeyPair, defaultSpoKeys)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import qualified Testnet.Process.Cli.SPO as SPO
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction (failToSubmitTx, signTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
@@ -87,23 +88,15 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
 
   baseDir <- H.createDirectoryIfMissing $ gov </> "output"
 
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
-      stakeCertFp = gov </> "stake.regcert"
-      stakingKeys = KeyPair { verificationKey = File stakeVkeyFp
-                            , signingKey= File stakeSKeyFp
-                            }
-
-  cliStakeAddressKeyGen stakingKeys
-
-  keyDepositStr <- show . unCoin <$> getKeyDeposit epochStateView ceo
   -- Register stake address
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", keyDepositStr
-    , "--out-file", stakeCertFp
-    ]
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -124,7 +117,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 
@@ -144,7 +137,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
 
   (governanceActionTxId, governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView ceo (baseDir </> "proposal")
-                               Nothing (EpochInterval 3) stakingKeys wallet0 (EpochInterval 2)
+                               Nothing (EpochInterval 3) stakeKeys wallet0 (EpochInterval 2)
 
   failToVoteChangeProposalWithSPOs ceo execConfig epochStateView baseDir "vote"
                                    governanceActionTxId governanceActionIndex propVotes wallet1
