@@ -67,6 +67,7 @@ library
                         Cardano.Benchmarking.Script.Aeson
                         Cardano.Benchmarking.Script.Core
                         Cardano.Benchmarking.Script.Env
+                        Cardano.Benchmarking.Script.Queries
                         Cardano.Benchmarking.Script.Selftest
                         Cardano.Benchmarking.Script.Types
                         Cardano.Benchmarking.TpsThrottle
@@ -117,14 +118,17 @@ library
                       , cardano-ledger-api
                       , cardano-ledger-byron
                       , cardano-ledger-core
+                      , cardano-ledger-conway
                       , cardano-node
                       , cardano-prelude
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
                       , constraints-extras
+                      , directory
                       , dlist
                       , extra
+                      , filepath
                       , formatting
                       , generic-monoid
                       , ghc-prim
@@ -160,7 +164,9 @@ library
                       , yaml
 
   default-language:     Haskell2010
-  default-extensions:   OverloadedStrings
+  default-extensions:   BlockArguments
+                        LambdaCase
+                        OverloadedStrings
 
 executable tx-generator
   import:               project-config
