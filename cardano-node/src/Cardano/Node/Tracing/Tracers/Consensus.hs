@@ -470,9 +470,8 @@ instance ConvertRawHash blk
                <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
   asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking FallingEdge) =
-      [CounterM "headersServed.falling" Nothing]
-  asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking _) =
-      [CounterM "headersServed" Nothing]
+      [CounterM "served.header" Nothing]
+  asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking _) = []
   asMetrics _ = []
 
 instance MetaTrace (TraceChainSyncServerEvent blk) where
@@ -487,8 +486,7 @@ instance MetaTrace (TraceChainSyncServerEvent blk) where
   severityFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["Update"]) =
-    [ ("served.header", "A counter triggered on any header event")
-    , ("served.header.falling",
+    [ ("served.header",
         "A counter triggered only on header event with falling edge")]
   metricsDocFor _ = []
 
@@ -622,6 +620,8 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
                       , cmCdf5sVar  = thd3 updatedMetrics
                       , cmDelay     = realToFrac forgeDelay
                       , cmBlockSize = getSizeInBytes blockSize
+                      , cmTraceVars = True
+                      , cmTraceIt   = True
                       , cmSlotMap   = slotMap'' }
 
     updateMetrics slotMap' _slotNo =
@@ -633,12 +633,17 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
                  , cmCdf5sVar  = thd3 updatedMetrics
                  , cmDelay     = realToFrac forgeDelay
                  , cmBlockSize = getSizeInBytes blockSize
+                 , cmTraceVars = True
+                 , cmTraceIt   = True
                  , cmSlotMap   = slotMap' }
             else pure cm
                  { cmCdf1sVar  = fst3 updatedMetrics
                  , cmCdf3sVar  = snd3 updatedMetrics
                  , cmCdf5sVar  = thd3 updatedMetrics
+                 , cmDelay     = realToFrac forgeDelay
+                 , cmBlockSize = getSizeInBytes blockSize
                  , cmTraceVars = False
+                 , cmTraceIt   = True
                  , cmSlotMap   = slotMap' }
 
     updateCDFs minDelay forgeDelay' =
