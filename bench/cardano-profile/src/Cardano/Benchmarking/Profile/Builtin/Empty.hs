@@ -141,6 +141,18 @@ profilesNoEraEmpty = map baseNoDataset
   -- TODO: Remove and make `P.p2pOn` the default without adding a "-nop2p" profile.
   , ciTest & P.name "ci-test-p2p"      . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.p2pOn
   , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff
+  , ciTest & P.name "ci-test-hydra"    . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff
+  ]
+  ++
+  ------------------------------------------------------------------------------
+  -- ci-test-hydra: FixedLoaded and "--shutdown-on-block-synced 3" with 2 nodes.
+  ------------------------------------------------------------------------------
+  let ciTestHydra =
+          P.empty & V.datasetEmpty . V.genesisVariantPreVoltaire . ciTestDuration
+        . P.uniCircle . V.hosts 2 . P.loopback
+        . V.clusterDefault -- TODO: "cluster" should be "null" here.
+  in [
+    ciTestHydra & P.name "ci-test-hydra" . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOn
   ]
   ++
   ------------------------------------------------------------------------------
