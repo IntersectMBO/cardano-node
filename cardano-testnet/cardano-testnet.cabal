@@ -65,6 +65,7 @@ library
                       , hedgehog-extras ^>= 0.6.4
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mono-traversable
                       , mtl
                       , network
@@ -240,6 +241,7 @@ test-suite cardano-testnet-test
                       , lens
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mtl
                       , process
                       , regex-compat
