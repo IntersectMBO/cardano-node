@@ -24,6 +24,7 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Data (Typeable)
 import           Data.Default.Class
 import qualified Data.Map as Map
@@ -197,8 +198,8 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
 -- and issues the specified votes using default DReps. Optionally, it also
 -- waits checks the expected effect of the proposal.
 activityChangeProposalTest
-  :: forall m t era . (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t, Typeable era,
-      EraGov (ShelleyLedgerEra era), ConwayEraPParams (ShelleyLedgerEra era))
+  :: forall m t era . (HasCallStack, MonadBaseControl IO m, MonadTest m, MonadIO m, H.MonadAssertion m,
+      MonadCatch m, Foldable t, Typeable era, EraGov (ShelleyLedgerEra era), ConwayEraPParams (ShelleyLedgerEra era))
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
