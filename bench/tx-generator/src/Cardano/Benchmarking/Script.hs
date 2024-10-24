@@ -1,5 +1,3 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 

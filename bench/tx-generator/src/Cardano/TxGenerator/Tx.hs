@@ -148,7 +148,7 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   (outputs, _)  = toStore split
 
 -- | 'genTx' seems to mostly be a wrapper for
--- 'Cardano.Api.TxBody.createAndValidateTransactionBody', which uses
+-- 'Cardano.Api.TxBody.createTransactionBody', which uses
 -- the 'Either' convention in lieu of e.g.
 -- 'Control.Monad.Trans.Except.ExceptT'. Then the pure function
 -- 'Cardano.Api.Tx.makeSignedTransaction' is composed with it and
@@ -170,7 +170,7 @@ genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
       (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+      (createTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = defaultTxBodyContent sbe
