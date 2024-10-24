@@ -1719,11 +1719,13 @@ instance ( tx ~ GenTx blk
     [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNoLedgerView slot _) =
     [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceLedgerView slot) = []
+  asMetrics (TraceLedgerView _) = []
+  asMetrics (TraceBlockContext _ _ _) = []
+  asMetrics (TraceLedgerState _ _) = []
   asMetrics (TraceNodeCannotForge slot _reason) =
     [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNodeNotLeader slot) =
-    [IntM "Forge.nodeNotLeader" (fromIntegral $ unSlotNo slot)]
+    [IntM "Forge.node-not-leader" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNodeIsLeader slot) =
     [IntM "Forge.node-is-leader" (fromIntegral $ unSlotNo slot)]
   asMetrics TraceForgeTickedLedgerState {} = []
@@ -1801,21 +1803,18 @@ instance MetaTrace (TraceForgeEvent blk) where
   severityFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["StartLeadershipCheck"]) =
-    [("aboutToLeadSlotLast", "")]
+    [("Forge.about-to-lead", "")]
   metricsDocFor (Namespace _ ["SlotIsImmutable"]) =
-    [("slotIsImmutable", "")]
+    [("Forge.slot-is-immutable", "")]
   metricsDocFor (Namespace _ ["BlockFromFuture"]) =
-    [("blockFromFuture", "")]
-  metricsDocFor (Namespace _ ["BlockContext"]) =
-    [("blockContext", "")]
+    [("Forge.block-from-future", "")]
+  metricsDocFor (Namespace _ ["BlockContext"]) = []
   metricsDocFor (Namespace _ ["NoLedgerState"]) =
-    [("couldNotForgeSlotLast", "")]
-  metricsDocFor (Namespace _ ["LedgerState"]) =
-    [("ledgerState", "")]
+    [("Forge.could-not-forge", "")]
+  metricsDocFor (Namespace _ ["LedgerState"]) = []
   metricsDocFor (Namespace _ ["NoLedgerView"]) =
-    [("couldNotForgeSlotLast", "")]
-  metricsDocFor (Namespace _ ["LedgerView"]) =
-    [("ledgerView", "")]
+    [("Forge.could-not-forge", "")]
+  metricsDocFor (Namespace _ ["LedgerView"]) = []
   metricsDocFor (Namespace _ ["ForgeStateUpdateError"]) =
     [ ("operationalCertificateStartKESPeriod", "")
     , ("operationalCertificateExpiryKESPeriod", "")
@@ -1823,23 +1822,23 @@ instance MetaTrace (TraceForgeEvent blk) where
     , ("remainingKESPeriods", "")
     ]
   metricsDocFor (Namespace _ ["NodeCannotForge"]) =
-    [("nodeCannotForge", "")]
+    [("Forge.could-not-forge", "")]
   metricsDocFor (Namespace _ ["NodeNotLeader"]) =
-    [("nodeNotLeader", "")]
+    [("Forge.node-not-leader", "")]
   metricsDocFor (Namespace _ ["NodeIsLeader"]) =
-    [("nodeIsLeader", "")]
+    [("Forge.node-is-leader", "")]
   metricsDocFor (Namespace _ ["ForgeTickedLedgerState"]) = []
   metricsDocFor (Namespace _ ["ForgingMempoolSnapshot"]) = []
   metricsDocFor (Namespace _ ["ForgedBlock"]) =
-    [("forgedSlotLast", "")]
+    [("Forge.forged", "")]
   metricsDocFor (Namespace _ ["DidntAdoptBlock"]) =
-    [("notAdoptedSlotLast", "")]
+    [("Forge.didnt-adopt", "")]
   metricsDocFor (Namespace _ ["ForgedInvalidBlock"]) =
-    [("forgedInvalidSlotLast", "")]
+    [("Forge.forged-invalid", "")]
   metricsDocFor (Namespace _ ["AdoptedBlock"]) =
-    [("adoptedOwnBlockSlotLast", "")]
+    [("Forge.adopted", "")]
   metricsDocFor (Namespace _ ["AdoptionThreadDied"]) =
-    [("adoptionThreadDied", "")]
+    [("Forge.adoption-thread-died", "")]
   metricsDocFor _ = []
 
   documentFor (Namespace _ ["StartLeadershipCheck"]) = Just
