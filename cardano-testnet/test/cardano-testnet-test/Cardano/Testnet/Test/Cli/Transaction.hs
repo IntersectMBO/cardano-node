@@ -1,10 +1,8 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Cli.Transaction
   ( hprop_transaction
@@ -12,7 +10,6 @@ module Cardano.Testnet.Test.Cli.Transaction
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
-import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Core as L
@@ -22,19 +19,20 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
-import qualified Data.List as List
-import qualified Data.Map as Map
 import qualified Data.Text as Text
+import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.Query (findLargestUtxoWithAddress, findUtxosWithAddress,
+                   getEpochStateView, waitForBlocks)
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
-import           Hedgehog (Property)
+import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
@@ -59,7 +57,8 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
-    { testnetMagic
+    { configurationFile
+    , testnetMagic
     , testnetNodes
     , wallets=wallet0:_
     } <- cardanoTestnetDefault options def conf
@@ -67,6 +66,7 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)
 
 
   txbodyFp <- H.note $ work </> "tx.body"
@@ -79,22 +79,15 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     , "--out-file", work </> "pparams.json"
     ]
 
-  void $ execCli' execConfig
-    [ anyEraToString cEra, "query", "utxo"
-    , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--cardano-mode"
-    , "--out-file", work </> "utxo-1.json"
-    ]
+  (txin1, TxOut _addr outValue _datum _refScript) <- H.nothingFailM $ findLargestUtxoWithAddress epochStateView sbe (paymentKeyInfoAddr wallet0)
+  let (L.Coin initialAmount) = txOutValueToLovelace outValue
 
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
-  txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
-
+  let transferAmount = 5_000_001
   void $ execCli' execConfig
     [ anyEraToString cEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_001
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show transferAmount
     , "--out-file", txbodyFp
     ]
   cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
@@ -106,7 +99,7 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
   -- changed regarding fee calculation.
   -- 8.10 changed fee from 228 -> 330
   -- 9.2  changed fee from 330 -> 336
-  336 H.=== txFee
+  336 === txFee
 
   void $ execCli' execConfig
     [ anyEraToString cEra, "transaction", "sign"
@@ -120,27 +113,16 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     , "--tx-file", txbodySignedFp
     ]
 
+  H.noteShowM_ $ waitForBlocks epochStateView 1
 
   H.byDurationM 1 15 "Expected UTxO found" $ do
-    void $ execCli' execConfig
-      [ anyEraToString cEra, "query", "utxo"
-      , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
-      , "--cardano-mode"
-      , "--out-file", work </> "utxo-2.json"
-      ]
-
-    utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-    UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
-    txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
-    H.assert $ 15_000_003_000_000 `List.elem` txouts2
+    utxo2 <- findUtxosWithAddress epochStateView sbe (paymentKeyInfoAddr wallet0)
+    txouts2 <- H.noteShow $ L.unCoin . txOutValueToLovelace . txOutValue . snd <$> toList utxo2
+    H.assertWith txouts2 $ \txouts2' ->
+      [transferAmount, initialAmount - transferAmount - txFee] == txouts2'
 
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v
-
-txOutValueLovelace ::TxOutValue era -> L.Coin
-txOutValueLovelace = \case
-  TxOutValueShelleyBased sbe v -> v ^. A.adaAssetL sbe
-  TxOutValueByron v -> v
 
 extractTxFee :: Tx era -> L.Coin
 extractTxFee (ShelleyTx sbe ledgerTx) =
