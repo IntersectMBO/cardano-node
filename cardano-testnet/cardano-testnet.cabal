@@ -36,7 +36,7 @@ library
                       , ansi-terminal
                       , bytestring
                       , cardano-api ^>= 10.1
-                      , cardano-cli ^>= 10.1
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -65,6 +65,7 @@ library
                       , hedgehog-extras ^>= 0.6.4
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mono-traversable
                       , mtl
                       , network
@@ -240,6 +241,7 @@ test-suite cardano-testnet-test
                       , lens
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mtl
                       , process
                       , regex-compat
