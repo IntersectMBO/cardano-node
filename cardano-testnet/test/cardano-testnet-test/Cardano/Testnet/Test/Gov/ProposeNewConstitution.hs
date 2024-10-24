@@ -29,8 +29,10 @@ import           Data.String
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           Lens.Micro
+import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
@@ -38,7 +40,7 @@ import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -99,18 +101,19 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
-  consitutionFile <- H.note $ gov </> "sample-constitution"
   constitutionActionFp <- H.note $ gov </> "constitution.action"
 
-  H.writeFile proposalAnchorFile "dummy anchor data"
-  H.writeFile consitutionFile "dummy constitution data"
+  let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
+  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+  let constitutionAnchorDataIpfsHash = "QmXGkenkhh3NsotVwbNGToGsPuvJLgRT9aAz5ToyKAqdWP"
+  constitutionAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+
   constitutionHash <- execCli' execConfig
-    [ "hash", "anchor-data", "--file-text", consitutionFile
+    [ "hash", "anchor-data", "--file-binary", constitutionAnchorFile
     ]
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-binary", proposalAnchorFile
     ]
 
   let stakeVkeyFp = gov </> "stake.vkey"
@@ -170,33 +173,48 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       , "--script-file", guardRailScriptFp
       ]
 
-  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
-  void $ execCli' execConfig
-    [ "conway", "governance", "action", "create-constitution"
-    , "--testnet"
-    , "--governance-action-deposit", show minDRepDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
-    , "--anchor-data-hash", proposalAnchorDataHash
-    , "--constitution-url", "https://tinyurl.com/2pahcy6z"
-    , "--constitution-hash", constitutionHash
-    , "--constitution-script-hash", constitutionScriptHash
-    , "--out-file", constitutionActionFp
-    ]
+  let relativeUrlProposal = ["ipfs", proposalAnchorDataIpfsHash]
+      relativeUrlConstitution = ["ipfs", constitutionAnchorDataIpfsHash]
 
   txbodyFp <- H.note $ work </> "tx.body"
+  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
-  H.noteShowM_ $ waitForBlocks epochStateView 1
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
-
-  void $ execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-    , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
-    , "--proposal-file", constitutionActionFp
-    , "--out-file", txbodyFp
+  -- Create temporary HTTP server with files required by the call to `cardano-cli`
+  -- In this case, the server emulates an IPFS gateway
+  serveFilesWhile
+    [ (relativeUrlProposal, proposalAnchorFile)
+    , (relativeUrlConstitution, constitutionAnchorFile)
     ]
+    ( \port -> do
+        let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
+
+        void $ execCli' execConfig'
+          [ "conway", "governance", "action", "create-constitution"
+          , "--testnet"
+          , "--governance-action-deposit", show minDRepDeposit
+          , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+          , "--anchor-url", "ipfs://" ++ proposalAnchorDataIpfsHash
+          , "--anchor-data-hash", proposalAnchorDataHash
+          , "--check-anchor-data"
+          , "--constitution-url", "ipfs://" ++ constitutionAnchorDataIpfsHash
+          , "--constitution-hash", constitutionHash
+          , "--check-constitution-hash"
+          , "--constitution-script-hash", constitutionScriptHash
+          , "--out-file", constitutionActionFp
+          ]
+
+        H.noteShowM_ $ waitForBlocks epochStateView 1
+        txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+        void $ execCli' execConfig'
+          [ "conway", "transaction", "build"
+          , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+          , "--tx-in", Text.unpack $ renderTxIn txin2
+          , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
+          , "--proposal-file", constitutionActionFp
+          , "--out-file", txbodyFp
+          ]
+    )
 
   signedProposalTx <- signTx execConfig cEra gov "signed-proposal"
                            (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet1]
