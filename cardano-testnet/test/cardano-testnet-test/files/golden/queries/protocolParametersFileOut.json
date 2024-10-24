@@ -641,7 +641,7 @@
         "major": 10,
         "minor": 0
     },
-    "stakeAddressDeposit": 0,
+    "stakeAddressDeposit": 400000,
     "stakePoolDeposit": 0,
     "stakePoolTargetNum": 100,
     "treasuryCut": 0.1,

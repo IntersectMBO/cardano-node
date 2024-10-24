@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -26,10 +27,8 @@ module Testnet.Types
   , KeyPair(..)
   , verificationKeyFp
   , signingKeyFp
-  , SomeKeyPair(..)
   , VKey
   , SKey
-  , ColdPoolKey
   , VrfKey
   , StakingKey
   , PaymentKey
@@ -44,6 +43,7 @@ module Testnet.Types
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Shelley (VrfKey)
 
 import qualified Cardano.Chain.Genesis as G
@@ -92,14 +92,19 @@ instance MonoFunctor (KeyPair k) where
 deriving instance Show (KeyPair k)
 deriving instance Eq (KeyPair k)
 
+instance {-# OVERLAPPING #-} Show (Some KeyPair) where
+  show (Some kp) = show kp
+
+instance {-# OVERLAPPING #-} Eq (Some KeyPair) where
+  (Some KeyPair{verificationKey=File vk1, signingKey=File sk1})
+    == (Some KeyPair{verificationKey=File vk2, signingKey=File sk2}) =
+      vk1 == vk2 && sk1 == sk2
+
 verificationKeyFp :: KeyPair k -> FilePath
 verificationKeyFp = unFile . verificationKey
 
 signingKeyFp :: KeyPair k -> FilePath
 signingKeyFp = unFile . signingKey
-
-data SomeKeyPair = forall a. SomeKeyPair (KeyPair a)
-deriving instance Show SomeKeyPair
 
 -- | Verification key tag
 data VKey k
@@ -143,7 +148,6 @@ isTestnetNodeSpo = isJust . poolKeys
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 
-data ColdPoolKey
 data StakingKey
 data SpoColdKey
 

@@ -5,6 +5,7 @@ module Cardano.Testnet.Test.Gov.DRepDeposit
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
@@ -84,7 +85,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
   drepRegTxBody1 <- createCertificatePublicationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
                                                        drepRegCert1 wallet0
   drepSignedRegTx1 <- signTx execConfig cEra drepDir1 "signed-reg-tx"
-                             drepRegTxBody1 [SomeKeyPair drepKeyPair1, SomeKeyPair $ paymentKeyInfoPair wallet0]
+                             drepRegTxBody1 [Some drepKeyPair1, Some $ paymentKeyInfoPair wallet0]
 
   failToSubmitTx execConfig cEra drepSignedRegTx1 "ConwayDRepIncorrectDeposit"
 

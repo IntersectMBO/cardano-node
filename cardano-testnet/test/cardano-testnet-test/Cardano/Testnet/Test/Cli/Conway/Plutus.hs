@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Cli.Conway.Plutus
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
 
@@ -53,7 +54,8 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    sbe = ShelleyBasedEraConway -- TODO: We should only support the latest era and the upcoming era
+    ceo = ConwayEraOnwardsConway
+    sbe = conwayEraOnwardsToShelleyBasedEra ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
     options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
@@ -106,12 +108,13 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   scriptStakeRegistrationCertificate
     <- H.note $ work </> "script-stake-registration-certificate"
 
+  keyDeposit <- fromIntegral . L.unCoin <$> getKeyDeposit epochStateView ceo
   -- Create script stake registration certificate
   createScriptStakeRegistrationCertificate
     tempAbsPath
     anyEra
     plutusScript
-    0
+    keyDeposit
     scriptStakeRegistrationCertificate
 
   -- 1. Put UTxO and datum at Plutus spending script address

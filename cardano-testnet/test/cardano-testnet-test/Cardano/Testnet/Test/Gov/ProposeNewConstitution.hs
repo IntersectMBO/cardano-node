@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
@@ -37,6 +38,7 @@ import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
@@ -113,22 +115,15 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
-      stakeCertFp = gov </> "stake.regcert"
-
-  cliStakeAddressKeyGen
-    $ KeyPair { verificationKey = File stakeVkeyFp
-              , signingKey = File stakeSKeyFp
-              }
   -- Register stake address
-
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
-    , "--out-file", stakeCertFp
-    ]
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -149,7 +144,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 
@@ -175,7 +170,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
     , "--governance-action-deposit", show minDRepDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--constitution-url", "https://tinyurl.com/2pahcy6z"
@@ -199,7 +194,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     ]
 
   signedProposalTx <- signTx execConfig cEra gov "signed-proposal"
-                           (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet1]
+                           (File txbodyFp) [Some $ paymentKeyInfoPair wallet1]
 
   submitTx execConfig cEra signedProposalTx
 
@@ -218,7 +213,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
                                      voteFiles wallet0
 
-  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
+  let signingKeys = Some <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
   voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 
   submitTx execConfig cEra voteTxFp

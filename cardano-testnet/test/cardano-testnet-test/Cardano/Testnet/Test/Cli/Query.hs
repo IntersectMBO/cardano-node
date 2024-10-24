@@ -14,6 +14,7 @@ module Cardano.Testnet.Test.Cli.Query
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Genesis as Api
 import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), StandardCrypto,
                    extractHash, unboundRational)
@@ -327,7 +328,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         -- Now we create a transaction and check if it exists in the mempool
         mempoolWork <- H.createDirectoryIfMissing $ work </> "mempool-test"
         txBody <- mkSimpleSpendOutputsOnlyTx execConfig epochStateView sbe mempoolWork "tx-body" wallet0 wallet1 10_000_000
-        signedTx <- signTx execConfig cEra mempoolWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet0]
+        signedTx <- signTx execConfig cEra mempoolWork "signed-tx" txBody [Some $ paymentKeyInfoPair wallet0]
         submitTx execConfig cEra signedTx
         txId <- retrieveTransactionId execConfig signedTx
         -- And we check
@@ -349,7 +350,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         -- Submit a transaction to publish the reference script
         txBody <- mkSpendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
                     [(ReferenceScriptAddress plutusV3Script, transferAmount)]
-        signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [SomeKeyPair $ paymentKeyInfoPair wallet1]
+        signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [Some $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
         -- Wait until transaction is on chain and obtain transaction identifier
         txId <- retrieveTransactionId execConfig signedTx

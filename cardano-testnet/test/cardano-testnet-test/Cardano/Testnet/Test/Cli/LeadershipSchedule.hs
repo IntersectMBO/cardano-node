@@ -37,6 +37,7 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.Query
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -60,7 +61,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = shelleyBasedEra @ConwayEra -- TODO: We should only support the latest era and the upcoming era
+      ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def
         { cardanoNodeEra = asbe
@@ -84,7 +86,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
 
   ----------------Need to register an SPO------------------
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
-      utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
+      utxoSKeyFile = signingKey $ paymentKeyInfoPair wallet0
   void $ execCli' execConfig
     [ eraString, "query", "utxo"
     , "--address", utxoAddr
@@ -97,12 +99,15 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 15
-  (stakePoolIdNewSpo, stakePoolColdSigningKey, stakePoolColdVKey, vrfSkey, _)
+  epochStateView <- getEpochStateView configurationFile node1SocketPath
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  (stakePoolIdNewSpo, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, KeyPair{signingKey=File vrfSkey})
     <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
          node1SocketPath
          (EpochNo 10)
          testnetMagic
+         keyDeposit
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)
 
@@ -113,30 +118,32 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   let testStakeDelegator = work </> "test-delegator"
 
   H.createDirectoryIfMissing_ testStakeDelegator
-  let testDelegatorVkeyFp = testStakeDelegator </> "test-delegator.vkey"
-      testDelegatorSKeyFp = testStakeDelegator </> "test-delegator.skey"
-      testDelegatorPaymentVKeyFp = testStakeDelegator </> "test-delegator-payment.vkey"
-      testDelegatorPaymentSKeyFp = testStakeDelegator </> "test-delegator-payment.skey"
+  let testDelegatorKeys = KeyPair
+        { signingKey = File $ testStakeDelegator </> "test-delegator.skey"
+        , verificationKey = File $ testStakeDelegator </> "test-delegator.vkey"
+        }
+      testDelegatorPaymentKeys = KeyPair
+        { signingKey = File $ testStakeDelegator </> "test-delegator-payment.skey"
+        , verificationKey = File $ testStakeDelegator </> "test-delegator-payment.vkey"
+        }
       testDelegatorRegCertFp = testStakeDelegator </> "test-delegator.regcert"
       testDelegatorDelegCert = testStakeDelegator </> "test-delegator.delegcert"
 
-  cliStakeAddressKeyGen
-    $ KeyPair (File testDelegatorVkeyFp) (File testDelegatorSKeyFp)
-  cliAddressKeyGen
-    $ KeyPair (File testDelegatorPaymentVKeyFp) (File testDelegatorPaymentSKeyFp)
+  cliStakeAddressKeyGen testDelegatorKeys
+  cliAddressKeyGen testDelegatorPaymentKeys
 
   -- NB: We must include the stake credential
   testDelegatorPaymentAddr <- execCli
                 [ "latest", "address", "build"
                 , "--testnet-magic", show @Int testnetMagic
-                , "--payment-verification-key-file", testDelegatorPaymentVKeyFp
-                , "--stake-verification-key-file", testDelegatorVkeyFp
+                , "--payment-verification-key-file", verificationKeyFp testDelegatorPaymentKeys
+                , "--stake-verification-key-file", verificationKeyFp testDelegatorKeys
                 ]
   testDelegatorStakeAddress
     <- filter (/= '\n')
          <$> execCli
                [ "latest", "stake-address", "build"
-               , "--stake-verification-key-file", testDelegatorVkeyFp
+               , "--stake-verification-key-file", verificationKeyFp testDelegatorKeys
                , "--testnet-magic", show @Int testnetMagic
                ]
 
@@ -144,15 +151,15 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   createStakeKeyRegistrationCertificate
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
-    testDelegatorVkeyFp
-    0
+    (verificationKey testDelegatorKeys)
+    keyDeposit
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
   createStakeDelegationCertificate
     tempAbsPath
     sbe
-    testDelegatorVkeyFp
+    (verificationKey testDelegatorKeys)
     stakePoolIdNewSpo
     testDelegatorDelegCert
 
@@ -191,8 +198,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
     [ "latest", "transaction", "sign"
     , "--tx-body-file", delegRegTestDelegatorTxBodyFp
     , "--testnet-magic", show @Int testnetMagic
-    , "--signing-key-file", utxoSKeyFile
-    , "--signing-key-file", testDelegatorSKeyFp
+    , "--signing-key-file", unFile utxoSKeyFile
+    , "--signing-key-file", signingKeyFp testDelegatorKeys
     , "--out-file", delegRegTestDelegatorTxFp
     ]
 
