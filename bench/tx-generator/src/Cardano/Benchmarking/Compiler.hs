@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
@@ -18,6 +17,7 @@ import           Cardano.TxGenerator.Types
 import           Prelude
 
 import           Control.Monad
+import           Control.Monad.Extra
 import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)
@@ -62,6 +62,11 @@ compileToScript = do
         pure
   tc <- askNixOption _nix_cardanoTracerSocket
   emit $ StartProtocol nc tc
+
+  whenM (fromMaybe False <$> askNixOption _nix_drep_voting) do
+    emit $ ReadDRepKeys nc
+    logMsg "Importing DRep SigningKeys. Done."
+
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet

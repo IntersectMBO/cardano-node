@@ -1,24 +1,25 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 -- | This module provides convenience functions when dealing with signing keys.
 module Cardano.TxGenerator.Setup.SigningKey
-       ( parseSigningKeyTE
+       ( parseDRepKeyBase16
+       , parseSigningKeyTE
        , parseSigningKeyBase16
+       , readDRepKeyFile
        , readSigningKeyFile
        , PaymentKey
        , SigningKey
        )
        where
 
+import           Cardano.Api
+
+import           Cardano.CLI.Types.Common (SigningKeyFile)
+import           Cardano.TxGenerator.Types (TxGenError (..))
+
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS (ByteString)
 import           Data.ByteString.Base16 as Base16 (decode)
-
-import           Cardano.Api
-import           Cardano.CLI.Types.Common (SigningKeyFile)
-
-import           Cardano.TxGenerator.Types (TxGenError (..))
 
 
 parseSigningKeyTE :: TextEnvelope -> Either TxGenError (SigningKey PaymentKey)
@@ -38,8 +39,24 @@ parseSigningKeyBase16 k
         , teRawCBOR = addr
         }
 
+parseDRepKeyBase16 ::  BS.ByteString -> Either TxGenError (SigningKey DRepKey)
+parseDRepKeyBase16 k
+  = either
+    (const $ Left $ TxGenError "parseSigningKeyBase16: ill-formed base16 encoding")
+    (first ApiError . deserialiseFromTextEnvelope (AsSigningKey AsDRepKey) . asTE)
+    (Base16.decode k)
+  where
+    asTE k' = TextEnvelope {
+          teType = TextEnvelopeType "DRepSigningKey_ed25519"
+        , teDescription = "Delegated Representative Signing Key"
+        , teRawCBOR = k'
+        }
+
 readSigningKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey PaymentKey))
 readSigningKeyFile f = first ApiError <$> readFileTextEnvelopeAnyOf acceptedTypes f
+
+readDRepKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey DRepKey))
+readDRepKeyFile f = first ApiError <$> readKeyFileTextEnvelope (AsSigningKey AsDRepKey) f
 
 acceptedTypes :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
 acceptedTypes =
