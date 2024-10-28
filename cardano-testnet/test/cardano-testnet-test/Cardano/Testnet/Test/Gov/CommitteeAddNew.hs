@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.CommitteeAddNew
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
@@ -41,6 +42,7 @@ import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
@@ -118,23 +120,16 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   let ccColdSKeyFp n = gov </> "cc-" <> show n <> "-cold.skey"
       ccColdVKeyFp n = gov </> "cc-" <> show n <> "-cold.vkey"
-      stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
       stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
 
-  cliStakeAddressKeyGen
-    $ KeyPair { verificationKey = File stakeVkeyFp
-              , signingKey = File stakeSKeyFp
-              }
-
-  -- Register stake address
-
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
-    , "--out-file", stakeCertFp
-    ]
+  -- Register new stake address
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -155,7 +150,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 
@@ -163,7 +158,6 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertTxSignedFp
     ]
-
 
   minGovActDeposit <- getMinGovActionDeposit epochStateView ceo
 
@@ -191,7 +185,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--governance-action-deposit", show minGovActDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--threshold", "0.2"
     , "--out-file", updateCommitteeFp
     ]
@@ -215,7 +209,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   committeeMembers `H.assertWith` null
 
   signedProposalTx <-
-    signTx execConfig cEra work "signed-proposal" (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+    signTx execConfig cEra work "signed-proposal" (File txbodyFp) [Some $ paymentKeyInfoPair wallet0]
   submitTx execConfig cEra signedProposalTx
 
   governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
@@ -246,7 +240,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
         , verificationKey = error "unused"
         }
       drepSKeys = map (defaultDRepKeyPair . snd) drepVotes
-      signingKeys = SomeKeyPair <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
+      signingKeys = Some <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
   voteTxFp <- signTx
     execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 

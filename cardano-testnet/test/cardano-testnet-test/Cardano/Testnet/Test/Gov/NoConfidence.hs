@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.Gov.NoConfidence
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger
 import           Cardano.Api.Shelley
 
@@ -184,7 +185,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
     ]
 
   signedProposalTx <- signTx execConfig cEra work "signed-proposal"
-                           (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+                           (File txbodyFp) [Some $ paymentKeyInfoPair wallet0]
 
   submitTx execConfig cEra signedProposalTx
 
@@ -216,12 +217,12 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   -- Submit votes
   voteTxBodyFp <- DRep.createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
                                      allVoteFiles wallet0
-  let spoSigningKeys = [SomeKeyPair $ defaultSpoColdKeyPair n | (_, n) <- spoVotes]
-      drepSigningKeys = [SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- drepVotes]
+  let spoSigningKeys = [Some $ defaultSpoColdKeyPair n | (_, n) <- spoVotes]
+      drepSigningKeys = [Some $ defaultDRepKeyPair n | (_, n) <- drepVotes]
       allVoteSigningKeys = spoSigningKeys ++ drepSigningKeys
 
   voteTxFp <- signTx execConfig cEra work "signed-vote-tx" voteTxBodyFp
-                (SomeKeyPair (paymentKeyInfoPair wallet0) : allVoteSigningKeys)
+                (Some (paymentKeyInfoPair wallet0) : allVoteSigningKeys)
 
   submitTx execConfig cEra voteTxFp
 

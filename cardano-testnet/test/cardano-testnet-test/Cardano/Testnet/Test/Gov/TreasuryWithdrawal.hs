@@ -40,6 +40,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
@@ -99,21 +100,15 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   -- {{{ Register stake address
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
-      stakeCertFp = gov </> "stake.regcert"
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
-  cliStakeAddressKeyGen
-     $ KeyPair { verificationKey = File stakeVkeyFp
-               , signingKey= File stakeSKeyFp
-               }
-
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
-    , "--out-file", stakeCertFp
-    ]
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -132,7 +127,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 
@@ -151,9 +146,9 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--governance-action-deposit", show govActionDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--transfer", show withdrawalAmount
-    , "--funds-receiving-stake-verification-key-file", stakeVkeyFp
+    , "--funds-receiving-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--out-file", treasuryWithdrawalActionFp
     ]
 

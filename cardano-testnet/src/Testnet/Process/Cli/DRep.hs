@@ -17,6 +17,7 @@ module Testnet.Process.Cli.DRep
   ) where
 
 import           Cardano.Api hiding (Certificate, TxBody)
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
 
 import           Cardano.Testnet (maybeExtractGovernanceActionIndex)
@@ -239,7 +240,7 @@ registerDRep execConfig epochStateView ceo work prefix wallet = do
   drepRegTxBody <- createCertificatePublicationTxBody execConfig epochStateView sbe baseDir "reg-cert-txbody"
                                                        drepRegCert wallet
   drepSignedRegTx <- signTx execConfig cEra baseDir "signed-reg-tx"
-                             drepRegTxBody [SomeKeyPair drepKeyPair, SomeKeyPair $ paymentKeyInfoPair wallet]
+                             drepRegTxBody [Some drepKeyPair, Some $ paymentKeyInfoPair wallet]
   submitTx execConfig cEra drepSignedRegTx
 
   return drepKeyPair
@@ -286,8 +287,8 @@ delegateToDRep execConfig epochStateView sbe work prefix
 
   -- Sign transaction
   repRegSignedRegTx1 <- signTx execConfig cEra baseDir "signed-reg-tx"
-                               repRegTxBody1 [ SomeKeyPair $ paymentKeyInfoPair payingWallet
-                                             , SomeKeyPair skeyPair]
+                               repRegTxBody1 [ Some $ paymentKeyInfoPair payingWallet
+                                             , Some skeyPair]
 
   -- Submit transaction
   submitTx execConfig cEra repRegSignedRegTx1
@@ -398,7 +399,7 @@ makeActivityChangeProposal execConfig epochStateView ceo work
     ]
 
   signedProposalTx <- signTx execConfig cEra baseDir "signed-proposal"
-                             (File proposalBody) [SomeKeyPair $ paymentKeyInfoPair wallet]
+                             (File proposalBody) [Some $ paymentKeyInfoPair wallet]
 
   submitTx execConfig cEra signedProposalTx
 

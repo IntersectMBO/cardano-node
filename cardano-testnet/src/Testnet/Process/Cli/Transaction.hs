@@ -15,6 +15,7 @@ module Testnet.Process.Cli.Transaction
   ) where
 
 import           Cardano.Api hiding (Certificate, TxBody)
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (Coin (unCoin))
 
 import           Prelude
@@ -146,14 +147,14 @@ signTx
   -> FilePath -- ^ Base directory path where the signed transaction file will be stored.
   -> String -- ^ Prefix for the output signed transaction file name. The extension will be @.tx@.
   -> File TxBody In -- ^ Transaction body to be signed, obtained using 'createCertificatePublicationTxBody' or similar.
-  -> [SomeKeyPair] -- ^ List of key pairs used for signing the transaction.
+  -> [Some KeyPair] -- ^ List of key pairs used for signing the transaction.
   -> m (File SignedTx In)
 signTx execConfig cEra work prefix txBody signatoryKeyPairs = do
   let signedTx = File (work </> prefix <> ".tx")
   void $ execCli' execConfig $
     [ anyEraToString cEra, "transaction", "sign"
     , "--tx-body-file", unFile txBody
-    ] ++ (concat [["--signing-key-file", signingKeyFp kp] | SomeKeyPair kp <- signatoryKeyPairs]) ++
+    ] ++ (concat [["--signing-key-file", signingKeyFp kp] | Some kp <- signatoryKeyPairs]) ++
     [ "--out-file", unFile signedTx
     ]
   return signedTx

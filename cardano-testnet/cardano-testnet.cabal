@@ -183,30 +183,31 @@ test-suite cardano-testnet-test
 
   main-is:              cardano-testnet-test.hs
 
-  other-modules:        Cardano.Testnet.Test.Cli.LeadershipSchedule
-                        Cardano.Testnet.Test.Cli.StakeSnapshot
-                        Cardano.Testnet.Test.Cli.Transaction
-                        Cardano.Testnet.Test.Cli.Conway.Plutus
+  other-modules:        Cardano.Testnet.Test.Cli.Conway.Plutus
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
+                        Cardano.Testnet.Test.Cli.LeadershipSchedule
                         Cardano.Testnet.Test.Cli.Query
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
+                        Cardano.Testnet.Test.Cli.StakeSnapshot
+                        Cardano.Testnet.Test.Cli.Transaction
+                        Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
                         Cardano.Testnet.Test.FoldEpochState
                         Cardano.Testnet.Test.Gov.CommitteeAddNew
                         Cardano.Testnet.Test.Gov.DRepActivity
                         Cardano.Testnet.Test.Gov.DRepDeposit
                         Cardano.Testnet.Test.Gov.DRepRetirement
+                        Cardano.Testnet.Test.Gov.GovActionTimeout
                         Cardano.Testnet.Test.Gov.InfoAction
                         Cardano.Testnet.Test.Gov.NoConfidence
                         Cardano.Testnet.Test.Gov.PParamChangeFailsSPO
+                        Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
                         Cardano.Testnet.Test.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
-                        Cardano.Testnet.Test.Gov.GovActionTimeout
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
                         Cardano.Testnet.Test.Misc
-                        Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.SubmitApi.Transaction

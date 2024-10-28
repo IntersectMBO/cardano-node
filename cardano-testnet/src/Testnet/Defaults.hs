@@ -44,7 +44,6 @@ import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Alonzo.Core (PParams (..))
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import qualified Cardano.Ledger.Alonzo.Genesis as Ledger
-import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
@@ -388,8 +387,7 @@ defaultShelleyGenesis asbe startTime maxSupply options = do
       -- TODO: find out why this actually degrates network stability - turned off for now
       -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
       pVer = eraToProtocolVersion asbe
-      -- TODO: Remove after merging https://github.com/IntersectMBO/cardano-node/pull/6017
-      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults & L.ppKeyDepositL .~ 0
+      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
       protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
   Api.shelleyGenesisDefaults
         { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff
