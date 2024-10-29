@@ -52,7 +52,7 @@ checkStakePoolRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ExecConfig
-  -> File (VKey StakeKey) In -- ^ Stake pool cold verification key file
+  -> File (VKey StakePoolKey) In -- ^ Stake pool cold verification key file
   -> FilePath -- ^ Output file path of stake pool info
   -> m String -- ^ Stake pool ID
 checkStakePoolRegistered tempAbsP execConfig (File poolColdVkeyFp) outputFp =
@@ -251,7 +251,7 @@ registerSingleSpo
   -> ExecConfig
   -> (TxIn, File (SKey PaymentKey) In, String)
   -> m ( String
-       , KeyPair StakeKey
+       , KeyPair StakePoolKey
        , KeyPair VrfKey
        ) -- ^ Result tuple:
          --   1. String: Registered stake pool ID

@@ -38,6 +38,7 @@ module Testnet.Components.Query
   , assertNewEpochState
   , getGovActionLifetime
   , getKeyDeposit
+  , getDelegationState
   ) where
 
 import           Cardano.Api as Api
@@ -51,6 +52,7 @@ import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
+import qualified Cardano.Ledger.UMap as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
@@ -589,4 +591,20 @@ getKeyDeposit epochStateView ceo = conwayEraOnwardsConstraints ceo $ do
    govState :: ConwayGovState era <- getGovState epochStateView ceo
    return $ govState ^. L.cgsCurPParamsL
                       . L.ppKeyDepositL
+
+
+-- | Returns delegation state from the epoch state.
+getDelegationState :: (H.MonadAssertion m, MonadTest m, MonadIO m)
+  => EpochStateView
+  -> m (L.StakeCredentials StandardCrypto)
+getDelegationState epochStateView = do
+  AnyNewEpochState sbe newEpochState <- getEpochState epochStateView
+  let pools = shelleyBasedEraConstraints sbe $ newEpochState
+                ^. L.nesEsL
+                 . L.esLStateL
+                 . L.lsCertStateL
+                 . L.certDStateL
+                 . L.dsUnifiedL
+
+  pure $ L.toStakeCredentials pools
 
