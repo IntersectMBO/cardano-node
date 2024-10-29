@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-profile
-version:                8.4.0
+version:                8.6.0
 synopsis:               A Cardano benchmarking profile generator
 description:            A Cardano benchmarking profile generator.
 category:               Cardano,
@@ -13,14 +13,10 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-extra-source-files:     README.md
 data-files:             data/all-profiles.json
                         data/ci-test-bage.json
                         data/genesis/epoch-timeline.json
-                        data/genesis/overlays/v8-preview.json
-                        data/genesis/overlays/v9-preview.json
-                        data/genesis/overlays/stepshalf.json
-                        data/genesis/overlays/doublebudget.json
+                        data/genesis/overlays/*.json
 
 common project-config
   build-depends:        base >= 4.14 && < 5
@@ -73,9 +69,6 @@ executable cardano-profile
   import:               project-config
   hs-source-dirs:       app/
   main-is:              cardano-profile.hs
-  ghc-options:          -threaded
-                        -rtsopts
-                        "-with-rtsopts=-T"
   build-depends:        aeson
                       , vector
                       , bytestring
@@ -96,6 +89,3 @@ test-suite cardano-profile-test
                       , tasty
                       , tasty-hunit
                       , cardano-profile
-  ghc-options:          -threaded
-                        -rtsopts
-                        "-with-rtsopts=-T"

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -Wno-partial-fields #-}
 
 --------------------------------------------------------------------------------
 
@@ -48,6 +49,7 @@ import           Prelude
 import           GHC.Generics
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KM
 -- Package: cardano-topology.
 import qualified Cardano.Benchmarking.Topology.Types as Topology
 -- Package: scientific.
@@ -454,28 +456,38 @@ instance Aeson.FromJSON Plutus where
         <*> o Aeson..:? "script"
         <*> o Aeson..:? "redeemer"
 
-data Redeemer = Redeemer
-  { redeemerInt :: Maybe Integer
-  , constructor :: Maybe Integer
-  , fields :: Maybe [Aeson.Object]
-  }
+data Redeemer =
+    RedeemerInt
+      { redeemerInt :: Integer
+      }
+  | RedeemerFields
+      { constructor :: Integer
+      , fields :: [Aeson.Object]
+      }
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON Redeemer where
-  toJSON r =
+  toJSON r@(RedeemerInt _) =
     Aeson.object
       [ "int"         Aeson..= redeemerInt r
-      , "constructor" Aeson..= constructor r
+      ]
+  toJSON r@(RedeemerFields _ _) =
+    Aeson.object
+      [ "constructor" Aeson..= constructor r
       , "fields"      Aeson..= fields r
       ]
 
 instance Aeson.FromJSON Redeemer where
   parseJSON =
-    Aeson.withObject "Redeemer" $ \o -> do
-      Redeemer
-        <$> o Aeson..:? "int"
-        <*> o Aeson..:? "constructor"
-        <*> o Aeson..:? "fields"
+    Aeson.withObject "Redeemer" $ \o ->
+      case KM.lookup "int" o of
+        (Just _) -> do
+          RedeemerInt
+            <$> o Aeson..: "int"
+        Nothing -> do
+          RedeemerFields
+            <$> o Aeson..: "constructor"
+            <*> o Aeson..: "fields"
 
 --------------------------------------------------------------------------------
 

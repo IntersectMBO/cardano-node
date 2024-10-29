@@ -17,8 +17,9 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad (unless, void)
+import           Control.Monad.Catch (MonadCatch)
+import           Data.Default.Class
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import           System.Exit
@@ -26,7 +27,8 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -37,33 +39,28 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Donation/"'@
 hprop_ledger_events_treasury_donation :: Property
-hprop_ledger_events_treasury_donation = integrationWorkspace "treasury-donation" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-donation" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
-        , cardanoNodeEra = cEra
-        }
+      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -95,7 +92,7 @@ doTreasuryDonation :: ()
   -> Int -- ^ The amount to donate
   -> m ()
 doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasury' treasuryDonation = do
-  currentTreasury <- 
+  currentTreasury <-
     case currentTreasury' of
       Nothing -> do
         v <- unCoin <$> getTreasuryValue epochStateView
@@ -133,24 +130,24 @@ doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasur
         -- greater or equal to zero.
         ct >= 0 && td >= 0
       H.noteM_ $ execCli' execConfig
-        [ "conway", "transaction", "view" , "--tx-file", txBodyFp
+        [ "debug", "transaction", "view" , "--tx-file", txBodyFp
         , "--output-json", "--out-file", txViewFp]
-    
+
       H.noteM_ $ execCli' execConfig
         [ "conway", "transaction", "sign"
         , "--tx-body-file", txBodyFp
         , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
         , "--out-file", signedTxFp
         ]
-    
+
       H.noteM_ $ execCli' execConfig
-        [ "conway", "transaction", "view" , "--tx-file", signedTxFp ]
-    
+        [ "debug", "transaction", "view" , "--tx-file", signedTxFp ]
+
       H.noteM_ $ execCli' execConfig
         [ "conway", "transaction", "submit" , "--tx-file", signedTxFp ]
-    
+
       void $ waitForEpochs epochStateView (EpochInterval 3)
-    
+
       L.Coin finalTreasury <- getTreasuryValue epochStateView
       H.note_ $ "finalTreasury: " <> show finalTreasury
       finalTreasury H.=== (currentTreasury + toInteger treasuryDonation)

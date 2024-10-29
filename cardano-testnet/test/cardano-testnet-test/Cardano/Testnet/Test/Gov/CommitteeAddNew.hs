@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.CommitteeAddNew
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
@@ -23,6 +24,7 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.Char as C
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.Maybe.Strict
 import           Data.Set (Set)
@@ -40,14 +42,19 @@ import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types (GenesisOptions (..), cardanoNumPools)
 import           Testnet.Types
 
 import           Hedgehog
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Committee Add New/"'@
 hprop_constitutional_committee_add_new :: Property
 hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -58,37 +65,38 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   -- how many votes to cast
   let drepVotes, spoVotes :: [(String, Int)]
-      drepVotes = zip (concatMap (uncurry replicate) [(5, "yes"), (3, "no"), (2, "abstain")]) [1..]
-      spoVotes = zip (concatMap (uncurry replicate) [(1, "yes")]) [1..]
-  H.noteShow_ drepVotes
-
-  let nDrepVotes :: Int
+      drepVotes = mkVotes [(5, "yes"), (3, "no"), (2, "abstain")]
+      spoVotes = mkVotes [(nSpos, "yes")]
+      -- replicate votes requested number of times
+      mkVotes :: [(Int, String)] -- ^ [(count, vote)]
+              -> [(String, Int)] -- ^ [(vote, ordering number)]
+      mkVotes votes = zip (concatMap (uncurry replicate) votes) [1..]
       nDrepVotes = length drepVotes
-  H.noteShow_ nDrepVotes
-
-  let ceo = ConwayEraOnwardsConway
+      nSpos = fromIntegral $ cardanoNumPools fastTestnetOptions
+      ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
-        , cardanoNumDReps = nDrepVotes
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoNumDReps = fromIntegral nDrepVotes
         }
+      shelleyOptions = def { genesisEpochLength = 200 }
+  H.annotateShow drepVotes
+  H.noteShow_ nDrepVotes
 
-  TestnetRuntime
+  runtime@TestnetRuntime
     { testnetMagic
-    , poolNodes
-    , wallets=wallet0:_
+    , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime, poolKeys} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node@TestnetNode{poolKeys=Just poolKeys} <- H.headM . filter isTestnetNodeSpo $ testnetNodes runtime
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -112,13 +120,44 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   let ccColdSKeyFp n = gov </> "cc-" <> show n <> "-cold.skey"
       ccColdVKeyFp n = gov </> "cc-" <> show n <> "-cold.vkey"
-      stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
+      stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
 
-  cliStakeAddressKeyGen
-    $ KeyPair { verificationKey = File stakeVkeyFp
-              , signingKey = File stakeSKeyFp
-              }
+  -- Register new stake address
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
+
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp stakeKeys
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
 
   minGovActDeposit <- getMinGovActionDeposit epochStateView ceo
 
@@ -146,7 +185,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--governance-action-deposit", show minGovActDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--threshold", "0.2"
     , "--out-file", updateCommitteeFp
     ]
@@ -155,11 +194,11 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
          ccColdKeyFps
 
   txbodyFp <- H.note $ work </> "tx.body"
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+  txin1' <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
   void $ execCli' execConfig
-    [ eraToString era, "transaction", "build"
+    [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-in", Text.unpack $ renderTxIn txin1'
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
     , "--proposal-file", updateCommitteeFp
     , "--out-file", txbodyFp
@@ -170,7 +209,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   committeeMembers `H.assertWith` null
 
   signedProposalTx <-
-    signTx execConfig cEra work "signed-proposal" (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+    signTx execConfig cEra work "signed-proposal" (File txbodyFp) [Some $ paymentKeyInfoPair wallet0]
   submitTx execConfig cEra signedProposalTx
 
   governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
@@ -201,7 +240,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
         , verificationKey = error "unused"
         }
       drepSKeys = map (defaultDRepKeyPair . snd) drepVotes
-      signingKeys = SomeKeyPair <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
+      signingKeys = Some <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
   voteTxFp <- signTx
     execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 

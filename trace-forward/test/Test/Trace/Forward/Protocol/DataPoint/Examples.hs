@@ -8,6 +8,9 @@ module Test.Trace.Forward.Protocol.DataPoint.Examples
   , dataPointForwarderCount
   ) where
 
+import           Control.Concurrent.Class.MonadSTM.TVar
+import           Control.Monad.Class.MonadSTM
+
 import           Trace.Forward.Protocol.DataPoint.Acceptor
 import           Trace.Forward.Protocol.DataPoint.Forwarder
 import           Trace.Forward.Protocol.DataPoint.Type
@@ -30,18 +33,17 @@ dataPointAcceptorApply f = go
           $ \(_reply :: DataPointValues) -> return $ go (f acc) (pred n)
 
 -- | A server which counts number received of 'MsgDataPointsRequest'.
---
 dataPointForwarderCount
-  :: forall m. Monad m
-  => DataPointForwarder m Int
-dataPointForwarderCount = go 0
- where
-  go n =
+  :: MonadSTM m
+  => m (DataPointForwarder m Int)
+dataPointForwarderCount = do
+  n <- newTVarIO 0
+  return $
     DataPointForwarder
-      { recvMsgDone = return n
+      { recvMsgDone = readTVarIO n
       , recvMsgDataPointsRequest =
-          \(dpNames :: [DataPointName]) ->
+          \(dpNames :: [DataPointName]) -> do
+            atomically $ modifyTVar' n succ
             return ( zip dpNames (repeat Nothing)
-                   , go (succ n)
                    )
       }

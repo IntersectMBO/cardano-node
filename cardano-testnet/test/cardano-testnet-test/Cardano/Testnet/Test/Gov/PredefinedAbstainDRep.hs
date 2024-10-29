@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
 
 import           Cardano.Api as Api
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 
 import           Cardano.Ledger.Conway.Core (ppNOptL)
@@ -24,6 +25,7 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
+import           Data.Default.Class
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word16)
@@ -31,7 +33,6 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Configuration (anyEraToString)
 import           Testnet.Components.Query
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
@@ -40,9 +41,9 @@ import qualified Testnet.Process.Cli.Keys as P
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
+import           Testnet.Start.Types
 import           Testnet.Types (KeyPair (..),
-                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), PoolNode (..),
-                   SomeKeyPair (SomeKeyPair), StakingKey, TestnetRuntime (..), nodeSocketPath)
+                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), StakingKey)
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
@@ -74,26 +75,24 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 3
         }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -159,8 +158,8 @@ delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
 
   -- Sign transaction
   repRegSignedRegTx1 <- signTx execConfig cEra baseDir "signed-reg-tx"
-                               repRegTxBody1 [ SomeKeyPair (paymentKeyInfoPair payingWallet)
-                                             , SomeKeyPair skeyPair]
+                               repRegTxBody1 [ Some (paymentKeyInfoPair payingWallet)
+                                             , Some skeyPair]
 
   -- Submit transaction
   submitTx execConfig cEra repRegSignedRegTx1
@@ -282,7 +281,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
     ]
 
   signedProposalTx <- signTx execConfig cEra baseDir "signed-proposal"
-                             (File proposalBody) [SomeKeyPair $ paymentKeyInfoPair wallet]
+                             (File proposalBody) [Some $ paymentKeyInfoPair wallet]
 
   submitTx execConfig cEra signedProposalTx
 
@@ -327,7 +326,7 @@ voteChangeProposal execConfig epochStateView sbe work prefix
                                      voteFiles wallet
 
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp
-                     (SomeKeyPair (paymentKeyInfoPair wallet):[SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- votes])
+                     (Some (paymentKeyInfoPair wallet):[Some $ defaultDRepKeyPair n | (_, n) <- votes])
   submitTx execConfig cEra voteTxFp
 
 -- | Obtains the @desiredPoolNumberValue@ from the protocol parameters.

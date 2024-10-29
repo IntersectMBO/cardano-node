@@ -58,6 +58,7 @@ cliNodeKeyGenKes :: ()
   -> m ()
 cliNodeKeyGenKes = GHC.withFrozenCallStack $ shelleyKeyGen "node" "key-gen-KES"
 
+-- | NB this automatically selects the latest era.
 shelleyKeyGen :: ()
   => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => String -- ^ command
@@ -67,7 +68,7 @@ shelleyKeyGen :: ()
 shelleyKeyGen command subCommand keyPair =
   GHC.withFrozenCallStack $
     execCli_
-        [ command, subCommand
+        [ "latest", command, subCommand
         , "--verification-key-file", verificationKeyFp keyPair
         , "--signing-key-file", signingKeyFp keyPair
         ]
@@ -79,7 +80,7 @@ cliNodeKeyGen
   -> m ()
 cliNodeKeyGen keyPair (File counterPath) =
   execCli_
-    [ "node", "key-gen"
+    [ "latest", "node", "key-gen"
     , "--cold-verification-key-file", verificationKeyFp keyPair
     , "--cold-signing-key-file", signingKeyFp keyPair
     , "--operational-certificate-issue-counter-file", counterPath

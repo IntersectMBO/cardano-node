@@ -4,7 +4,7 @@ def delta:
   "shelley": {
     "protocolVersion": {
       "major": 9
-    },
+    }
   },
   "conway": {
     "plutusV3CostModel":

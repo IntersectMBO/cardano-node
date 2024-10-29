@@ -1,22 +1,22 @@
 Usage: cardano-testnet (cardano | version | help)
 
 Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
-  [ --byron-era
-  | --shelley-era
+  [ --shelley-era
   | --allegra-era
   | --mary-era
   | --alonzo-era
   | --babbage-era
+  | --conway-era
   ]
-  [--epoch-length SLOTS]
-  [--slot-length SECONDS]
-  --testnet-magic INT
-  [--active-slots-coeff DOUBLE]
   [--max-lovelace-supply WORD64]
   [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
+  --testnet-magic INT
+  [--epoch-length SLOTS]
+  [--slot-length SECONDS]
+  [--active-slots-coeff DOUBLE]
 
   Start a testnet in any era
 

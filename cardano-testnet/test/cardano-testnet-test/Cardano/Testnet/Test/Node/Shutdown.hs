@@ -21,6 +21,7 @@ import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Default.Class
 import           Data.Either (isRight)
 import qualified Data.List as L
 import           Data.Maybe
@@ -39,7 +40,7 @@ import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, initiateProcess, procNode)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Byron
-import           Testnet.Types
+import           Testnet.Start.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -66,6 +67,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
       logDir' = makeLogDir $ tempAbsPath conf
       socketDir' = makeSocketDir $ tempAbsPath conf
       testnetMagic' = 42
+      sbe = ShelleyBasedEraBabbage
 
   -- TODO: We need to uniformly create these directories
   H.createDirectoryIfMissing_ logDir'
@@ -101,7 +103,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- Testnet.getDefaultAlonzoGenesis
+  gen <- Testnet.getDefaultAlonzoGenesis sbe
   H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
@@ -110,7 +112,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 4. Create Shelley genesis
   execCli_
-    [ "genesis", "create"
+    [ "latest", "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic'
     , "--genesis-dir", shelleyDir
     , "--start-time", formatIso8601 startTime
@@ -130,7 +132,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
                                  $ mconcat [ byronGenesisHash
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
-                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)] -- TODO: This should not be hardcoded
+                                           , defaultYamlHardforkViaConfig sbe]
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 
@@ -191,20 +193,20 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
 
   let maxSlot = 150
       slotLen = 0.01
-  let fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 300
-        , cardanoSlotLength = slotLen
-        , cardanoNodes =
-          [ SpoTestnetNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
-          , SpoTestnetNodeOptions Nothing []
-          , SpoTestnetNodeOptions Nothing []
+  let fastTestnetOptions = def
+        { cardanoNodes =
+          [ SpoNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
           ]
         }
-  testnetRuntime <- cardanoTestnetDefault fastTestnetOptions conf
-  let allNodes' = poolNodes testnetRuntime
-  H.note_ $ "All nodes: " <>  show (map (nodeName . poolRuntime) allNodes')
+      shelleyOptions = def
+        { genesisEpochLength = 300
+        , genesisSlotLength = slotLen
+        }
+  testnetRuntime <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+  let allNodes = testnetNodes testnetRuntime
+  H.note_ $ "All nodes: " <>  show (map nodeName allNodes)
 
-  node <- H.headM $ poolRuntime <$> allNodes'
+  node <- H.headM allNodes
   H.note_ $ "Node name: " <> nodeName node
 
   -- Wait for the node to exit
@@ -238,12 +240,11 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 300
-        }
+  let fastTestnetOptions = def
+      shelleyOptions = def { genesisEpochLength = 300 }
   testnetRuntime
-    <- cardanoTestnetDefault fastTestnetOptions conf
-  node@NodeRuntime{nodeProcessHandle} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+  TestnetNode{nodeProcessHandle, nodeStdout, nodeStderr} <- H.headM $ testnetNodes testnetRuntime
 
   -- send SIGINT
   H.evalIO $ interruptProcessGroupOf nodeProcessHandle
@@ -253,13 +254,13 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
 
   -- Check results
   when (isRight mExitCodeRunning) $ do
-    H.cat (nodeStdout node)
-    H.cat (nodeStderr node)
+    H.cat nodeStdout
+    H.cat nodeStderr
   case mExitCodeRunning of
     Right (ExitFailure _) -> H.success
     other -> H.failMessage callStack $ "Unexpected exit status for the testnet process: " <> show other
 
-  logs <- H.readFile (nodeStdout node)
+  logs <- H.readFile nodeStdout
   case mapMaybe parseMsg $ reverse $ lines logs of
     [] -> H.failMessage callStack "Could not find close DB message."
     (Left err):_ -> H.failMessage callStack err

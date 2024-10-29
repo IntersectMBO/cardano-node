@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.14.2 -- Oct 2024
+
+* Bump for Node 10
+
 ## 2.14.1 -- June 2024
 * A new NixSvcOptions field is introduced: `_nix_keepalive`
   and it's propagated down to the `kaClient` that does keepalives.

@@ -2,22 +2,10 @@
     "contents": {
         "contents": {
             "contents": {
-                "era": "ShelleyBasedEraBabbage",
+                "era": "ShelleyBasedEraConway",
                 "error": [
-                    {
-                        "contents": {
-                            "contents": "AlonzoInBabbageUtxoPredFailure (ValueNotConservedUTxO (MaryValue (Coin 0) (MultiAsset (fromList []))) (MaryValue (Coin 300000000000) (MultiAsset (fromList []))))",
-                            "tag": "UtxoFailure"
-                        },
-                        "tag": "UtxowFailure"
-                    },
-                    {
-                        "contents": {
-                            "contents": "AlonzoInBabbageUtxoPredFailure (BadInputsUTxO (fromList [TxIn (TxId {unTxId = SafeHash \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}) (TxIx {unTxIx = 0})]))",
-                            "tag": "UtxoFailure"
-                        },
-                        "tag": "UtxowFailure"
-                    }
+                    "ConwayUtxowFailure (UtxoFailure (ValueNotConservedUTxO (MaryValue (Coin 0) (MultiAsset (fromList []))) (MaryValue (Coin 15000003000000) (MultiAsset (fromList [])))))",
+                    "ConwayUtxowFailure (UtxoFailure (BadInputsUTxO (fromList [TxIn (TxId {unTxId = SafeHash \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}) (TxIx {unTxIx = 0})])))"
                 ],
                 "kind": "ShelleyTxValidationError"
             },

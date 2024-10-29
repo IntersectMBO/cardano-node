@@ -46,11 +46,6 @@ let
         cp    $supervisorConfPath           $out/supervisor.conf
         '';
 
-  overlay =
-    proTopo: self: super:
-    {
-    };
-
   service-modules = {
     node =
       { config, ... }:
@@ -68,7 +63,7 @@ in
 
   inherit extraShellPkgs;
   inherit materialise-profile;
-  inherit overlay service-modules;
+  inherit service-modules;
   inherit stateDir basePort;
 
   inherit useCabalRun;

@@ -24,14 +24,13 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.HardFork ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
-import           Cardano.Node.Types
+import           Cardano.Node.Types as Node
 import           Cardano.Prelude (canonicalDecodePretty)
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
@@ -80,13 +79,11 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
             npcByronSupportedProtocolVersionAlt,
         byronSoftwareVersion = softwareVersion,
         byronLeaderCredentials =
-          optionalLeaderCredentials,
-        byronMaxTxCapacityOverrides =
-          TxLimits.mkOverrides TxLimits.noOverridesMeasure
+          optionalLeaderCredentials
         }
 
 readGenesis :: GenesisFile
-            -> Maybe GenesisHash
+            -> Maybe Node.GenesisHash
             -> RequiresNetworkMagic
             -> ExceptT ByronProtocolInstantiationError IO
                        Genesis.Config
@@ -113,9 +110,9 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash ncReqNetworkMagic = do
 
         _ -> return ()
 
-    fromByronGenesisHash :: Genesis.GenesisHash -> GenesisHash
+    fromByronGenesisHash :: Genesis.GenesisHash -> Node.GenesisHash
     fromByronGenesisHash (Genesis.GenesisHash h) =
-        GenesisHash
+        Node.GenesisHash
       . fromMaybe impossible
       . Crypto.hashFromBytes
       . Byron.Crypto.hashToBytes
@@ -157,7 +154,7 @@ readLeaderCredentials genesisConfig
 
 data ByronProtocolInstantiationError =
     CanonicalDecodeFailure !FilePath !Text
-  | GenesisHashMismatch !GenesisHash !GenesisHash -- actual, expected
+  | GenesisHashMismatch !Node.GenesisHash !Node.GenesisHash -- actual, expected
   | DelegationCertificateFilepathNotSpecified
   | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
   | GenesisReadError !FilePath !Genesis.GenesisDataError

@@ -16,11 +16,12 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Data.Default.Class
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack
 
-import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Types
+import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
@@ -39,18 +40,19 @@ newtype AdditionalCatcher
 -- This sets the stage for more direct testing of clusters allowing us to avoid querying the node, dealing with serialization to and from disk,
 -- setting timeouts for expected results etc.
 hprop_ledger_events_sanity_check :: Property
-hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-check" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_sanity_check = integrationRetryWorkspace 2 "ledger-events-sanity-check" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf <- mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
+  let fastTestnetOptions = def
+      shelleyOptions = def
+        { genesisEpochLength = 100
+        , genesisSlotLength = 0.1
         }
 
-  TestnetRuntime{configurationFile, poolNodes}
-    <- cardanoTestnetDefault fastTestnetOptions conf
-  nr@NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes
+  TestnetRuntime{configurationFile, testnetNodes}
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
+  nr@TestnetNode{nodeSprocket} <- H.headM testnetNodes
   let socketPath = nodeSocketPath nr
 
   H.note_ $ "Sprocket: " <> show nodeSprocket

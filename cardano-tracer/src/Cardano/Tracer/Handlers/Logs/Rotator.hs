@@ -10,7 +10,7 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Utils (createOrUpdateEmptyLog, getTimeStampFromLog,
                    isItLog)
 import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Types (HandleRegistry, NodeName)
+import           Cardano.Tracer.Types (HandleRegistry, HandleRegistryKey, NodeName)
 import           Cardano.Tracer.Utils (showProblemIfAny, readRegistry)
 
 import           Control.Concurrent.Async (forConcurrently_)
@@ -77,7 +77,7 @@ checkRootDir
   -> RotationParams
   -> LoggingParams
   -> IO ()
-checkRootDir currentLogLock registry rotParams loggingParams@LoggingParams{logRoot, logFormat} = do
+checkRootDir currentLogLock registry rotParams loggingParams@LoggingParams{logRoot} = do
   logRootAbs <- makeAbsolute logRoot
   whenM (doesDirectoryExist logRootAbs) do
     logsSubDirs <- listDirectories logRootAbs
@@ -92,11 +92,11 @@ checkRootDir currentLogLock registry rotParams loggingParams@LoggingParams{logRo
       let nodeName :: NodeName
           nodeName = Text.pack (takeFileName logSubDir)
 
-      for_ @Maybe (Map.lookup (nodeName, loggingParams) handles) \(handle, filePath) -> let
-        nodeName' :: NodeName
-        nodeName' = Text.pack filePath
-        in
-        checkLogs currentLogLock handle nodeName' loggingParams registry rotParams logFormat (logRootAbs </> logSubDir)
+          key :: HandleRegistryKey
+          key = (nodeName, loggingParams)
+
+      for_ @Maybe (Map.lookup key handles) \(handle, _filePath) ->
+        checkLogs currentLogLock handle key registry rotParams (logRootAbs </> logSubDir)
 
 -- | We check the log files:
 --   1. If there are too big log files.
@@ -104,15 +104,13 @@ checkRootDir currentLogLock registry rotParams loggingParams@LoggingParams{logRo
 checkLogs
   :: Lock
   -> Handle
-  -> NodeName
-  -> LoggingParams
+  -> HandleRegistryKey
   -> HandleRegistry
   -> RotationParams
-  -> LogFormat
   -> FilePath
   -> IO ()
-checkLogs currentLogLock handle nodeName loggingParams registry
-          RotationParams{rpLogLimitBytes, rpMaxAgeMinutes, rpKeepFilesNum} format subDirForLogs = do
+checkLogs currentLogLock handle key@(_, LoggingParams{logFormat = format}) registry
+          RotationParams{rpLogLimitBytes, rpMaxAgeMinutes, rpKeepFilesNum} subDirForLogs = do
 
   logs <- map (subDirForLogs </>) . filter (isItLog format) <$> listFiles subDirForLogs
   unless (null logs) do
@@ -122,23 +120,21 @@ checkLogs currentLogLock handle nodeName loggingParams registry
         -- Usage of partial function 'last' is safe here (we already checked the list isn't empty).
         -- Only previous logs should be checked if they are outdated.
         allOtherLogs = dropEnd 1 fromOldestToNewest
-    checkIfCurrentLogIsFull currentLogLock handle nodeName loggingParams registry format rpLogLimitBytes subDirForLogs
+    checkIfCurrentLogIsFull currentLogLock handle key registry rpLogLimitBytes subDirForLogs
     checkIfThereAreOldLogs allOtherLogs rpMaxAgeMinutes rpKeepFilesNum
 
 -- | If the current log file is full (it's size is too big), the new log will be created.
 checkIfCurrentLogIsFull
   :: Lock
   -> Handle
-  -> NodeName
-  -> LoggingParams
+  -> HandleRegistryKey
   -> HandleRegistry
-  -> LogFormat
   -> Word64
   -> FilePath
   -> IO ()
-checkIfCurrentLogIsFull currentLogLock handle nodeName loggingParams registry format maxSizeInBytes subDirForLogs =
+checkIfCurrentLogIsFull currentLogLock handle key registry maxSizeInBytes subDirForLogs =
   whenM logIsFull do
-    createOrUpdateEmptyLog currentLogLock nodeName loggingParams registry subDirForLogs format
+     createOrUpdateEmptyLog currentLogLock key registry subDirForLogs
 
  where
   logIsFull :: IO Bool

@@ -114,14 +114,13 @@ library
                       , filepath
                       , fingertree
                       , hashable
-                      , ghc
                       , gnuplot
                       , iohk-monitoring
                       , optparse-applicative-fork
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.16.1
+                      , ouroboros-network ^>= 0.17
                       , ouroboros-network-api
                       , process
                       , quiet

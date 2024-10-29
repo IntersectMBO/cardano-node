@@ -71,7 +71,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool)
+                   LedgerSupportsMempool, ByteSize32 (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -496,11 +496,13 @@ mkTracers _ _ _ _ _ enableP2P =
       { Consensus.chainSyncClientTracer = nullTracer
       , Consensus.chainSyncServerHeaderTracer = nullTracer
       , Consensus.chainSyncServerBlockTracer = nullTracer
+      , Consensus.consensusSanityCheckTracer = nullTracer
       , Consensus.blockFetchDecisionTracer = nullTracer
       , Consensus.blockFetchClientTracer = nullTracer
       , Consensus.blockFetchServerTracer = nullTracer
       , Consensus.keepAliveClientTracer = nullTracer
       , Consensus.forgeStateInfoTracer = nullTracer
+      , Consensus.gddTracer = nullTracer
       , Consensus.txInboundTracer = nullTracer
       , Consensus.txOutboundTracer = nullTracer
       , Consensus.localTxSubmissionServerTracer = nullTracer
@@ -757,7 +759,6 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   tBlockDelayCDF1s <- STM.newTVarIO $ CdfCounter 0
   tBlockDelayCDF3s <- STM.newTVarIO $ CdfCounter 0
   tBlockDelayCDF5s <- STM.newTVarIO $ CdfCounter 0
-
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
     , Consensus.chainSyncServerHeaderTracer =
@@ -765,6 +766,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
                         (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr)
         <> (\(TraceLabelPeer _ ev) -> ev) `contramap` Tracer (traceServedCount mbEKGDirect)
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
+    , Consensus.consensusSanityCheckTracer = tracerOnOff (traceSanityCheckIssue trSel) verb "ConsensusSanityCheck" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
     , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
@@ -772,6 +774,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
         tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
+    , Consensus.gddTracer = tracerOnOff (traceGDD trSel) verb "GDD" tr
     , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @blk) trSel tr
@@ -1246,6 +1249,9 @@ notifyTxsProcessed fStats tr = Tracer $ \case
     -- so we can treat them as completely processed.
     updatedTxProcessed <- mapForgingStatsTxsProcessed fStats (+ (length txs))
     traceCounter "txsProcessedNum" tr (fromIntegral updatedTxProcessed)
+  TraceMempoolSynced (FallingEdgeWith duration) -> do
+    traceCounter "txsSyncDuration" tr (round $ 1000 * duration :: Int)
+
   -- The rest of the constructors.
   _ -> return ()
 
@@ -1253,18 +1259,22 @@ notifyTxsProcessed fStats tr = Tracer $ \case
 mempoolMetricsTraceTransformer :: Trace IO a -> Tracer IO (TraceEventMempool blk)
 mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
-      (_n, tot) = case mempoolEvent of
-                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
-                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, tot0)
-      logValue1 :: LOContent a
-      logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
-      logValue2 :: LOContent a
-      logValue2 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
-  meta <- mkLOMeta Critical Confidential
-  traceNamedObject tr' (meta, logValue1)
-  traceNamedObject tr' (meta, logValue2)
+      (_n, tot_m) = case mempoolEvent of
+                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, Just tot0)
+                    TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, Just tot0)
+                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, Just tot0)
+                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, Just tot0)
+                    TraceMempoolSynced _ -> (0, Nothing)
+  case tot_m of
+    Just tot -> do
+      let logValue1 :: LOContent a
+          logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
+          logValue2 :: LOContent a
+          logValue2 = LogValue "mempoolBytes" . PureI . fromIntegral . unByteSize32 . msNumBytes $ tot
+      meta <- mkLOMeta Critical Confidential
+      traceNamedObject tr' (meta, logValue1)
+      traceNamedObject tr' (meta, logValue2)
+    Nothing -> return ()
 
 mempoolTracer
   :: ( ToJSON (GenTxId blk)

@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -60,10 +61,9 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Bootstrap
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters,
-                   PeerSelectionView (..), PeerSelectionState (..),
-                   PeerSelectionTargets (..), TracePeerSelection (..),
+import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..), DebugPeerSelection (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
+                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
@@ -98,7 +98,6 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import qualified Ouroboros.Network.Server2 as Server
-import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
@@ -1170,6 +1169,25 @@ instance ToObject SlotNo where
     mconcat [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
 
+instance (ConvertRawHash blk) => ToObject (AF.Anchor blk) where
+  toObject verb = \case
+    AF.AnchorGenesis -> mconcat
+      [ "kind" .= String "AnchorGenesis" ]
+    AF.Anchor slot hash bno -> mconcat
+      [ "kind" .= String "Anchor"
+      , "slot" .= toJSON (unSlotNo slot)
+      , "headerHash" .= renderHeaderHashForVerbosity (Proxy @blk) verb hash
+      , "blockNo" .= toJSON (unBlockNo bno)
+      ]
+
+instance (ConvertRawHash blk, HasHeader blk) => ToObject (AF.AnchoredFragment blk) where
+  toObject verb frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchor" .= toObject verb (AF.anchor frag)
+    , "headPoint" .= toObject verb (AF.headPoint frag)
+    , "length" .= toJSON (AF.length frag)
+    ]
+
 instance ToJSON PeerGSV where
   toJSON PeerGSV { outboundGSV = GSV outboundG _ _
                  , inboundGSV = GSV inboundG _ _
@@ -1938,6 +1956,8 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
+            , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
+            , "associationMode" .= dpssAssociationMode ds
             ]
 
 -- Connection manager abstract state.  For explanation of each state see
@@ -2151,22 +2171,12 @@ instance Show vNumber => ToJSON (HandshakeException vNumber) where
                  ]
 
 instance ToJSON NodeToNodeVersion where
-  toJSON NodeToNodeV_7  = Number 7
-  toJSON NodeToNodeV_8  = Number 8
-  toJSON NodeToNodeV_9  = Number 9
-  toJSON NodeToNodeV_10 = Number 10
-  toJSON NodeToNodeV_11  = Number 11
-  toJSON NodeToNodeV_12  = Number 12
   toJSON NodeToNodeV_13  = Number 13
+  toJSON NodeToNodeV_14  = Number 14
 
 instance FromJSON NodeToNodeVersion where
-  parseJSON (Number 7) = return NodeToNodeV_7
-  parseJSON (Number 8) = return NodeToNodeV_8
-  parseJSON (Number 9) = return NodeToNodeV_9
-  parseJSON (Number 10) = return NodeToNodeV_10
-  parseJSON (Number 11) = return NodeToNodeV_11
-  parseJSON (Number 12) = return NodeToNodeV_12
   parseJSON (Number 13) = return NodeToNodeV_13
+  parseJSON (Number 14) = return NodeToNodeV_14
   parseJSON (Number x) = fail ("FromJSON.NodeToNodeVersion: unsupported node-to-node protocol version " ++ show x)
   parseJSON x          = fail ("FromJSON.NodeToNodeVersion: error parsing NodeToNodeVersion: " ++ show x)
 
@@ -2179,6 +2189,9 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_14 = Number 14
   toJSON NodeToClientV_15 = Number 15
   toJSON NodeToClientV_16 = Number 16
+  toJSON NodeToClientV_17 = Number 17
+  toJSON NodeToClientV_18 = Number 18
+  -- NB: When adding a new version here, update FromJSON below as well!
 
 instance FromJSON NodeToClientVersion where
   parseJSON (Number 9) = return NodeToClientV_9
@@ -2188,6 +2201,9 @@ instance FromJSON NodeToClientVersion where
   parseJSON (Number 13) = return NodeToClientV_13
   parseJSON (Number 14) = return NodeToClientV_14
   parseJSON (Number 15) = return NodeToClientV_15
+  parseJSON (Number 16) = return NodeToClientV_16
+  parseJSON (Number 17) = return NodeToClientV_17
+  parseJSON (Number 18) = return NodeToClientV_18
   parseJSON (Number x) = fail ("FromJSON.NodeToClientVersion: unsupported node-to-client protocol version " ++ show x)
   parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
 
@@ -2610,6 +2626,15 @@ instance FromJSON LedgerStateJudgement where
   parseJSON (String "YoungEnough") = pure YoungEnough
   parseJSON (String "TooOld")      = pure TooOld
   parseJSON _                      = fail "Invalid JSON for LedgerStateJudgement"
+
+instance ToJSON AssociationMode where
+  toJSON LocalRootsOnly = String "LocalRootsOnly"
+  toJSON Unrestricted   = String "Unrestricted"
+
+instance FromJSON AssociationMode where
+  parseJSON (String "LocalRootsOnly") = pure LocalRootsOnly
+  parseJSON (String "Unrestricted")   = pure Unrestricted
+  parseJSON _                      = fail "Invalid JSON for AssociationMode"
 
 instance ToJSON UseLedgerPeers where
   toJSON DontUseLedgerPeers                  = Number (-1)

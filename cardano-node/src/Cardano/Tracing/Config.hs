@@ -143,6 +143,7 @@ type TraceDnsSubscription = ("TraceDnsSubscription" :: Symbol)
 type TraceErrorPolicy = ("TraceErrorPolicy" :: Symbol)
 type TraceForge = ("TraceForge" :: Symbol)
 type TraceForgeStateInfo = ("TraceForgeStateInfo" :: Symbol)
+type TraceGDD = ("TraceGDD" :: Symbol)
 type TraceHandshake = ("TraceHandshake" :: Symbol)
 type TraceIpSubscription = ("TraceIpSubscription" :: Symbol)
 type TraceKeepAliveClient = ("TraceKeepAliveClient" :: Symbol)
@@ -165,6 +166,7 @@ type TracePeerSelection = ("TracePeerSelection" :: Symbol)
 type TracePeerSelectionCounters = ("TracePeerSelectionCounters" :: Symbol)
 type TracePeerSelectionActions = ("TracePeerSelectionActions" :: Symbol)
 type TracePublicRootPeers = ("TracePublicRootPeers" :: Symbol)
+type TraceSanityCheckIssue = ("TraceSanityCheckIssue" :: Symbol)
 type TraceServer = ("TraceServer" :: Symbol)
 type TraceInboundGovernor = ("TraceInboundGovernor" :: Symbol)
 type TraceInboundGovernorCounters = ("TraceInboundGovernorCounters" :: Symbol)
@@ -212,6 +214,7 @@ data TraceSelection
   , traceErrorPolicy :: OnOff TraceErrorPolicy
   , traceForge :: OnOff TraceForge
   , traceForgeStateInfo :: OnOff TraceForgeStateInfo
+  , traceGDD :: OnOff TraceGDD
   , traceHandshake :: OnOff TraceHandshake
   , traceInboundGovernor :: OnOff TraceInboundGovernor
   , traceInboundGovernorCounters :: OnOff TraceInboundGovernorCounters
@@ -237,6 +240,7 @@ data TraceSelection
   , tracePeerSelectionCounters :: OnOff TracePeerSelectionCounters
   , tracePeerSelectionActions :: OnOff TracePeerSelectionActions
   , tracePublicRootPeers :: OnOff TracePublicRootPeers
+  , traceSanityCheckIssue :: OnOff TraceSanityCheckIssue
   , traceServer :: OnOff TraceServer
   , traceTxInbound :: OnOff TraceTxInbound
   , traceTxOutbound :: OnOff TraceTxOutbound
@@ -275,6 +279,7 @@ data PartialTraceSelection
       , pTraceErrorPolicy :: Last (OnOff TraceErrorPolicy)
       , pTraceForge :: Last (OnOff TraceForge)
       , pTraceForgeStateInfo :: Last (OnOff TraceForgeStateInfo)
+      , pTraceGDD :: Last (OnOff TraceGDD)
       , pTraceHandshake :: Last (OnOff TraceHandshake)
       , pTraceInboundGovernor :: Last (OnOff TraceInboundGovernor)
       , pTraceInboundGovernorCounters :: Last (OnOff TraceInboundGovernorCounters)
@@ -300,6 +305,7 @@ data PartialTraceSelection
       , pTracePeerSelectionCounters :: Last (OnOff TracePeerSelectionCounters)
       , pTracePeerSelectionActions :: Last (OnOff TracePeerSelectionActions)
       , pTracePublicRootPeers :: Last (OnOff TracePublicRootPeers)
+      , pTraceSanityCheckIssue :: Last (OnOff TraceSanityCheckIssue)
       , pTraceServer :: Last (OnOff TraceServer)
       , pTraceTxInbound :: Last (OnOff TraceTxInbound)
       , pTraceTxOutbound :: Last (OnOff TraceTxOutbound)
@@ -339,6 +345,7 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceErrorPolicy) v
       <*> parseTracer (Proxy @TraceForge) v
       <*> parseTracer (Proxy @TraceForgeStateInfo) v
+      <*> parseTracer (Proxy @TraceGDD) v
       <*> parseTracer (Proxy @TraceHandshake) v
       <*> parseTracer (Proxy @TraceInboundGovernor) v
       <*> parseTracer (Proxy @TraceInboundGovernorCounters) v
@@ -364,6 +371,7 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TracePeerSelectionCounters) v
       <*> parseTracer (Proxy @TracePeerSelectionActions) v
       <*> parseTracer (Proxy @TracePublicRootPeers) v
+      <*> parseTracer (Proxy @TraceSanityCheckIssue) v
       <*> parseTracer (Proxy @TraceServer) v
       <*> parseTracer (Proxy @TraceTxInbound) v
       <*> parseTracer (Proxy @TraceTxOutbound) v
@@ -400,6 +408,7 @@ defaultPartialTraceConfiguration =
     , pTraceErrorPolicy = pure $ OnOff True
     , pTraceForge = pure $ OnOff True
     , pTraceForgeStateInfo = pure $ OnOff True
+    , pTraceGDD = pure $ OnOff False
     , pTraceHandshake = pure $ OnOff False
     , pTraceInboundGovernor = pure $ OnOff True
     , pTraceInboundGovernorCounters = pure $ OnOff True
@@ -425,6 +434,7 @@ defaultPartialTraceConfiguration =
     , pTracePeerSelectionCounters = pure $ OnOff True
     , pTracePeerSelectionActions = pure $ OnOff True
     , pTracePublicRootPeers = pure $ OnOff False
+    , pTraceSanityCheckIssue = pure $ OnOff False
     , pTraceServer = pure $ OnOff True
     , pTraceTxInbound = pure $ OnOff False
     , pTraceTxOutbound = pure $ OnOff False
@@ -463,6 +473,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceErrorPolicy <- proxyLastToEither (Proxy @TraceErrorPolicy) pTraceErrorPolicy
    traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
    traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
+   traceGDD <- proxyLastToEither (Proxy @TraceGDD) pTraceGDD
    traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
    traceInboundGovernor <- proxyLastToEither (Proxy @TraceInboundGovernor) pTraceInboundGovernor
    traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceInboundGovernorCounters
@@ -488,6 +499,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
    tracePeerSelectionActions <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelectionActions
    tracePublicRootPeers <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePublicRootPeers
+   traceSanityCheckIssue <- proxyLastToEither (Proxy @TraceSanityCheckIssue) pTraceSanityCheckIssue
    traceServer <- proxyLastToEither (Proxy @TraceServer) pTraceServer
    traceTxInbound <- proxyLastToEither (Proxy @TraceTxInbound) pTraceTxInbound
    traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
@@ -519,6 +531,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceErrorPolicy = traceErrorPolicy
              , traceForge = traceForge
              , traceForgeStateInfo = traceForgeStateInfo
+             , traceGDD = traceGDD
              , traceHandshake = traceHandshake
              , traceInboundGovernor = traceInboundGovernor
              , traceInboundGovernorCounters = traceInboundGovernorCounters
@@ -544,6 +557,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , tracePeerSelectionCounters = tracePeerSelectionCounters
              , tracePeerSelectionActions = tracePeerSelectionActions
              , tracePublicRootPeers = tracePublicRootPeers
+             , traceSanityCheckIssue = traceSanityCheckIssue
              , traceServer = traceServer
              , traceTxInbound = traceTxInbound
              , traceTxOutbound = traceTxOutbound
@@ -579,6 +593,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceErrorPolicy <- proxyLastToEither (Proxy @TraceErrorPolicy) pTraceErrorPolicy
   traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
   traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
+  traceGDD <- proxyLastToEither (Proxy @TraceGDD) pTraceGDD
   traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
   traceInboundGovernor <- proxyLastToEither (Proxy @TraceInboundGovernor) pTraceInboundGovernor
   traceIpSubscription <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceIpSubscription
@@ -604,6 +619,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
   tracePeerSelectionActions <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelectionActions
   tracePublicRootPeers <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePublicRootPeers
+  traceSanityCheckIssue <- proxyLastToEither (Proxy @TraceSanityCheckIssue) pTraceSanityCheckIssue
   traceServer <- proxyLastToEither (Proxy @TraceServer) pTraceServer
   traceTxInbound <- proxyLastToEither (Proxy @TraceTxInbound) pTraceTxInbound
   traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
@@ -635,6 +651,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceErrorPolicy = traceErrorPolicy
             , traceForge = traceForge
             , traceForgeStateInfo = traceForgeStateInfo
+            , traceGDD = traceGDD
             , traceHandshake = traceHandshake
             , traceInboundGovernor = traceInboundGovernor
             , traceInboundGovernorCounters = traceInboundGovernorCounters
@@ -660,6 +677,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , tracePeerSelectionCounters = tracePeerSelectionCounters
             , tracePeerSelectionActions = tracePeerSelectionActions
             , tracePublicRootPeers = tracePublicRootPeers
+            , traceSanityCheckIssue = traceSanityCheckIssue
             , traceServer = traceServer
             , traceTxInbound = traceTxInbound
             , traceTxOutbound = traceTxOutbound

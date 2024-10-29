@@ -2,7 +2,7 @@ pkgs:
 let serviceConfigToJSON =
       cfg:
       {
-        inherit (cfg) networkMagic resourceFreq;
+        inherit (cfg) networkMagic resourceFreq metricsHelp;
         # loRequestNum = 100;
         network =
           if        cfg.acceptingSocket != null
@@ -28,10 +28,10 @@ let serviceConfigToJSON =
           rpMaxAgeHours   = 24;
         } // (cfg.rotation or {});
 
-        hasEKG = [
-          { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase;     }
-          { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase + 1; }
-        ];
+        hasEKG = {
+          epHost  = "127.0.0.1"; 
+          epPort  = cfg.ekgPortBase;
+        };
         ekgRequestFreq = 1;
         hasPrometheus = {
           epHost    = "127.0.0.1";
@@ -75,6 +75,7 @@ in pkgs.commonLib.defServiceModule
         ekgRequestFreq  = opt    int 1         "EKG request frequency";
         prometheus      = opt    attrs {}      "Prometheus overrides: see cardano-tracer documentation.";
         resourceFreq    = mayOpt int           "Frequency (1/ms) for tracing resource usage.";
+        metricsHelp     = mayOpt str           "JSON file containing metrics help annotations for Prometheus";
 
         ### Here be dragons, on the other hand..
         configFile      = mayOpt str

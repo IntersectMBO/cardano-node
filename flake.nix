@@ -15,7 +15,9 @@
       flake = false;
     };
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix";
+      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
+      # Unpin this once we no longer need GHC 8.10.7.
+      url = "github:input-output-hk/haskell.nix/cb139fa956158397aa398186bb32dd26f7318784";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
@@ -56,8 +58,6 @@
 
     std.url = "github:divnix/std";
 
-    nix2container.url = "github:nlewo/nix2container";
-
     cardano-automation = {
       url = "github:input-output-hk/cardano-automation";
       inputs = {
@@ -78,7 +78,6 @@
     , ops-lib
     , cardano-mainnet-mirror
     , std
-    , nix2container
     , cardano-automation
     , em
     , ...
@@ -106,7 +105,7 @@
         iohkNix.overlays.cardano-lib
         iohkNix.overlays.utils
         (final: prev: {
-          inherit customConfig nix2container;
+          inherit customConfig;
           bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
           em = import em { inherit (final) system;
                            nixpkgsSrcs = nixpkgs.outPath;
@@ -206,14 +205,15 @@
 
             ## This is a very light profile, no caching&pinning needed.
             workbench-ci-test =
-              workbenchTest { profileName        = "ci-test-bage";
+              workbenchTest { profileName        = "ci-test-hydra-coay";
+                              workbenchStartArgs = [ "--create-testnet-data" ];
                             };
             workbench-ci-test-trace =
-              workbenchTest { profileName        = "ci-test-bage";
-                              workbenchStartArgs = [ "--trace" ];
+              workbenchTest { profileName        = "ci-test-hydra-coay";
+                              workbenchStartArgs = [ "--create-testnet-data" "--trace" ];
                             };
 
-            inherit (pkgs) all-profiles-json;
+            inherit (pkgs) all-profiles-json profile-data-nomadperf;
 
             system-tests = pkgs.writeShellApplication {
               name = "system-tests";

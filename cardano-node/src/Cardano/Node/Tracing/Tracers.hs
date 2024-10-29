@@ -34,7 +34,6 @@ import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
-
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer ()
@@ -242,6 +241,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["ChainSync", "ServerBlock"]
     configureTracers configReflection trConfig [chainSyncServerBlockTr]
 
+    !consensusSanityCheckTr <- mkCardanoTracer
+                 trBase trForward mbTrEKG
+                 ["Consensus", "SanityCheck"]
+    configureTracers configReflection trConfig [consensusSanityCheckTr]
+
+    !gddTr <- mkCardanoTracer
+                 trBase trForward mbTrEKG
+                 ["Consensus", "GDD"]
+    configureTracers configReflection trConfig [gddTr]
+
     !blockFetchDecisionTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockFetch", "Decision"]
@@ -317,12 +326,12 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     !consensusStartupErrorTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "Startup"]
+    configureTracers configReflection trConfig [consensusStartupErrorTr]
 
     !consensusGsmTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "GSM"]
-
-    configureTracers configReflection trConfig [consensusStartupErrorTr]
+    configureTracers configReflection trConfig [consensusGsmTr]
 
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
@@ -332,6 +341,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            <> traceWith chainSyncServerHeaderMetricsTr
       , Consensus.chainSyncServerBlockTracer = Tracer $
           traceWith chainSyncServerBlockTr
+      , Consensus.consensusSanityCheckTracer = Tracer $
+          traceWith consensusSanityCheckTr
       , Consensus.blockFetchDecisionTracer = Tracer $
           traceWith blockFetchDecisionTr
       , Consensus.blockFetchClientTracer = Tracer $
@@ -341,6 +352,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith blockFetchServerTr
       , Consensus.forgeStateInfoTracer = Tracer $
           traceWith (traceAsKESInfo (Proxy @blk) forgeKESInfoTr)
+      , Consensus.gddTracer = Tracer $
+          traceWith gddTr
       , Consensus.txInboundTracer = Tracer $
            traceWith txInboundTr
       , Consensus.txOutboundTracer = Tracer $

@@ -16,7 +16,6 @@ module Cardano.Tracer.Handlers.RTView.Update.Nodes
 import           Cardano.Logging (showT)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.UI.Charts

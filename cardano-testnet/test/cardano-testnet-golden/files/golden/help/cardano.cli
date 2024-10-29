@@ -1,41 +1,40 @@
 Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
-  [ --byron-era
-  | --shelley-era
+  [ --shelley-era
   | --allegra-era
   | --mary-era
   | --alonzo-era
   | --babbage-era
+  | --conway-era
   ]
-  [--epoch-length SLOTS]
-  [--slot-length SECONDS]
-  --testnet-magic INT
-  [--active-slots-coeff DOUBLE]
   [--max-lovelace-supply WORD64]
   [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
+  --testnet-magic INT
+  [--epoch-length SLOTS]
+  [--slot-length SECONDS]
+  [--active-slots-coeff DOUBLE]
 
   Start a testnet in any era
 
 Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
-                           configuration for all nodes.
-                           (default: [SpoTestnetNodeOptions Nothing [],SpoTestnetNodeOptions Nothing [],SpoTestnetNodeOptions Nothing []])
-  --byron-era              Specify the Byron era
-  --shelley-era            Specify the Shelley era
-  --allegra-era            Specify the Allegra era
-  --mary-era               Specify the Mary era
-  --alonzo-era             Specify the Alonzo era
-  --babbage-era            Specify the Babbage era (default)
-  --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
-  --slot-length SECONDS    Slot length (default: 0.1)
-  --testnet-magic INT      Specify a testnet magic id.
-  --active-slots-coeff DOUBLE
-                           Active slots co-efficient (default: 5.0e-2)
+                           configuration for all nodes. (default: 1)
+  --shelley-era            Specify the Shelley era - DEPRECATED - will be
+                           removed in the future
+  --allegra-era            Specify the Allegra era - DEPRECATED - will be
+                           removed in the future
+  --mary-era               Specify the Mary era - DEPRECATED - will be removed
+                           in the future
+  --alonzo-era             Specify the Alonzo era - DEPRECATED - will be removed
+                           in the future
+  --babbage-era            Specify the Babbage era (default) - DEPRECATED - will
+                           be removed in the future
+  --conway-era             Specify the Conway era
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
-                           (default: 10020000000)
+                           (default: 100000020000000)
   --enable-p2p BOOL        Enable P2P (default: False)
   --nodeLoggingFormat LOGGING_FORMAT
                            Node logging format (json|text)
@@ -45,4 +44,9 @@ Available options:
   --enable-new-epoch-state-logging
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log
+  --testnet-magic INT      Specify a testnet magic id.
+  --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
+  --slot-length SECONDS    Slot length (default: 0.1)
+  --active-slots-coeff DOUBLE
+                           Active slots co-efficient (default: 5.0e-2)
   -h,--help                Show this help text

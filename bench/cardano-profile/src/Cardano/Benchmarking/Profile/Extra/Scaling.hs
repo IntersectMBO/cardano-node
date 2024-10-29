@@ -54,12 +54,12 @@ profilesNoEraScalingCloud =
         . P.p2pOn
         . clusterNomadSsdNoRegions
         . P.analysisSizeFull . P.analysisEpoch3Plus
-      fast = P.empty & V.genesisVariantLast . C.composeFiftytwo . E.base . E.fastDuration . nomadSsd
+      fast  = P.empty & V.genesisVariantPreVoltaire . C.composeFiftytwo . E.base . E.fastDuration . nomadSsd
       value = P.empty & C.base . C.valueDuration . nomadSsd
   in [
-    utxoScale   & P.name "utxoscale-solo-12M16G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantLast . P.rtsHeapLimit 16384 . P.heapLimit 16384
-  , utxoScale   & P.name "utxoscale-solo-12M64G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantLast
-  , utxoScale   & P.name "utxoscale-solo-24M64G-nomadperfssd" . P.utxo 24000000 . V.fundsDouble  . V.genesisVariantLast
+    utxoScale   & P.name "utxoscale-solo-12M16G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire . P.rtsHeapLimit 16384 . P.heapLimit 16384
+  , utxoScale   & P.name "utxoscale-solo-12M64G-nomadperfssd" . P.utxo 12000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
+  , utxoScale   & P.name "utxoscale-solo-24M64G-nomadperfssd" . P.utxo 24000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
   , fast        & P.name "fast-nomadperfssd"  . V.valueLocal . P.traceForwardingOn . P.newTracing . P.p2pOn
   , value       & P.name "value-nomadperfssd" . V.valueCloud . V.datasetOct2021    . P.dreps 0 . V.fundsDouble . P.newTracing . P.p2pOn
   ]

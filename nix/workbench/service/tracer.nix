@@ -1,5 +1,4 @@
 { pkgs
-, runJq
 , jsonFilePretty
 
 , backend
@@ -30,6 +29,7 @@ let
           };
           configFile     = "config.json";
           logRoot        = ".";
+          metricsHelp    = "../../../cardano-tracer/configuration/metrics_help.json";
         } // optionalAttrs backend.useCabalRun {
           executable     = "cardano-tracer";
         } // optionalAttrs profile.tracer.rtview {

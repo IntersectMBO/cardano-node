@@ -1,5 +1,13 @@
 # ChangeLog
 
+## 2.2.8 - Oct 2024
+
+* Bump for version bound
+
+## 2.2.7 - Sep 2024
+
+* Remove potentially leaky continuation passing from `TraceObjectForwarder` and `DataPointForwarder`.
+
 ## 2.2.2 - Dec 2023
 
 * with overflow callback

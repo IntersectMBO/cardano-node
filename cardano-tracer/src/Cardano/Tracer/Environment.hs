@@ -17,6 +17,9 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.Extra (Lock)
+import           Data.Text (Text)
+import           Data.Text.Lazy.Builder (Builder)
+
 
 -- | Environment for all functions.
 data TracerEnv = TracerEnv
@@ -32,6 +35,7 @@ data TracerEnv = TracerEnv
   , teReforwardTraceObjects :: !([TraceObject] -> IO ())
   , teRegistry              :: !HandleRegistry
   , teStateDir              :: !(Maybe FilePath)
+  , teMetricsHelp           :: ![(Text, Builder)]
   }
 
 #if RTVIEW

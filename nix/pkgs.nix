@@ -2,66 +2,36 @@
 final: prev:
 
 let
-  inherit (prev) customConfig;
-  inherit (final) pkgs cardanoNodePackages cardanoNodeProject;
+  inherit (final) pkgs;
   inherit (prev.pkgs) lib;
+  inherit (prev) customConfig;
 
-  # A generic, fully parameteric version of the workbench development environment.
-  workbench = pkgs.callPackage ./workbench {};
+  # A generic, fully parametric version of the workbench development environment.
+  workbench = import ./workbench
+    {inherit pkgs lib; inherit (final) cardanoNodePackages cardanoNodeProject;};
 
-  # A conveniently-parametrisable workbench preset.
-  # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
-  # The general idea is:
-  # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
-  # 2. batchName -> profileName -> profiling -> backend -> workbench -> runner
-  # * `workbench` is in case a pinned version of the workbench is needed.
+  # Workbench runner instantiated by parameters from customConfig:
   workbench-runner =
-  let
-    backendRegistry =
-      {
-        nomadcloud      = params:
-          import ./workbench/backend/nomad/cloud.nix  params;
-        nomadexec       = params:
-          import ./workbench/backend/nomad/exec.nix   params;
-        nomadpodman     = params:
-          import ./workbench/backend/nomad/podman.nix params;
-        supervisor      = params:
-          import ./workbench/backend/supervisor.nix   params;
-      }
-    ;
-  in
-    { stateDir           ? customConfig.localCluster.stateDir
-    , batchName          ? customConfig.localCluster.batchName
-    , profileName        ? customConfig.localCluster.profileName
+    { profileName        ? customConfig.localCluster.profileName
+    , profiling          ? customConfig.profiling
     , backendName        ? customConfig.localCluster.backendName
+    , stateDir           ? customConfig.localCluster.stateDir
     , basePort           ? customConfig.localCluster.basePort
     , useCabalRun        ? customConfig.localCluster.useCabalRun
     , workbenchDevMode   ? customConfig.localCluster.workbenchDevMode
+    , batchName          ? customConfig.localCluster.batchName
     , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
-    , profiling          ? customConfig.profiling
     , cardano-node-rev   ? null
-    , workbench          ? pkgs.workbench
     }:
-    let
-        # The `useCabalRun` flag is set in the backend to allow the backend to
-        # override its value. The runner uses the value of `useCabalRun` from
-        # the backend to prevent a runner using a different value.
-        backend = (backendRegistry."${backendName}")
-                   { inherit pkgs lib stateDir basePort useCabalRun; };
-    in import ./workbench/backend/runner.nix
-      {
-        inherit pkgs lib cardanoNodePackages;
-        inherit batchName profileName backend;
-        inherit cardano-node-rev;
-        inherit workbench workbenchDevMode workbenchStartArgs profiling;
+    workbench.runner
+      { inherit profileName profiling backendName stateDir basePort useCabalRun;
+        inherit batchName workbenchDevMode workbenchStartArgs cardano-node-rev;
       };
-
-  # Workbench instantiated by parameters from customConfig:
-  custom-config-workbench-runner = workbench-runner {};
 
 in with final;
 {
   inherit (cardanoNodeProject.args) compiler-nix-name;
+
   inherit workbench workbench-runner;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
@@ -82,10 +52,19 @@ in with final;
     index-state = "2023-08-05T00:00:00Z";
   };
 
+  # The ghc-hls point release compatibility table is documented at
+  # https://haskell-language-server.readthedocs.io/en/latest/support/ghc-version-support.html
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
     src = {
       ghc8107 = haskell-nix.sources."hls-2.2";
-    }.${compiler-nix-name} or haskell-nix.sources."hls-2.3";
+      ghc927 = haskell-nix.sources."hls-2.0";
+      ghc945 = haskell-nix.sources."hls-2.2";
+      ghc946 = haskell-nix.sources."hls-2.2";
+      ghc947 = haskell-nix.sources."hls-2.5";
+      ghc963 = haskell-nix.sources."hls-2.5";
+      ghc964 = haskell-nix.sources."hls-2.6";
+      ghc981 = haskell-nix.sources."hls-2.6";
+    }.${compiler-nix-name} or haskell-nix.sources."hls-2.9";
     cabalProject = builtins.readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
@@ -97,11 +76,14 @@ in with final;
 
   profiteur = haskell-nix.tool compiler-nix-name "profiteur" {
     cabalProjectLocal = ''
-      allow-newer: pofiteur:base, ghc-prof:base
+      allow-newer: profiteur:base, ghc-prof:base
     '';
   };
 
   cabal-plan = haskell-nix.tool compiler-nix-name "cabal-plan" {
+    cabalProjectLocal = ''
+      flags: +exe
+    '';
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };
@@ -146,13 +128,57 @@ in with final;
 
   all-profiles-json = workbench.profile-names-json;
 
+  # The profile data and backend data of the cloud / "*-nomadperf" profiles.
+  # Useful to mix workbench and cardano-node commits, mostly because of scripts.
+  profile-data-nomadperf = builtins.listToAttrs (
+    builtins.map
+    (cloudName:
+      # Only Conway era cloud profiles are flake outputs.
+      let profileName = "${cloudName}-coay";
+      in {
+        name = profileName;
+        value =
+          let
+              # Default values only ("run/current", 30000, profiling "none").
+              profile = workbench.profile {
+                inherit profileName;
+                inherit (customConfig) profiling;
+              };
+              backend = workbench.backend
+                { backendName = "nomadcloud";
+                  stateDir    = customConfig.localCluster.stateDir;
+                  basePort    = customConfig.localCluster.basePort;
+                  useCabalRun = customConfig.localCluster.useCabalRun;
+                }
+              ;
+              profileData = profile.materialise-profile
+                { inherit backend; }
+              ;
+              backendData = backend.materialise-profile {inherit profileData;};
+          in pkgs.runCommand "workbench-data-${profileName}" {}
+            ''
+            mkdir $out
+            ln -s ${profileData} $out/profileData
+            ln -s ${backendData} $out/backendData
+            ''
+        ;
+        }
+    )
+    # Fetch all "*-nomadperf" profiles.
+    (__fromJSON (__readFile
+      (pkgs.runCommand "cardano-profile-names-cloud-noera" {} ''
+        ${cardanoNodePackages.cardano-profile}/bin/cardano-profile names-cloud-noera > $out
+      ''
+      )
+    ))
+  );
+
   # Disable failing python uvloop tests
-  python38 = prev.python38.override {
+  python39 = prev.python39.override {
     packageOverrides = pythonFinal: pythonPrev: {
       uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
         disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" "tests/test_dns.py" ];
       });
     };
   };
-} //
-custom-config-workbench-runner.overlay final prev
+}

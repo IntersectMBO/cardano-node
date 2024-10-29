@@ -29,6 +29,7 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.State.Class
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Default.Class
 import           Data.Map (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as Text
@@ -39,16 +40,17 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
-import           Testnet.Start.Types (eraToString)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
 
 hprop_ledger_events_treasury_withdrawal:: Property
-hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury-withdrawal" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury-withdrawal" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -59,26 +61,24 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       eraName = eraToString era
-      cEra = AnyCardanoEra era
 
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
-        , cardanoActiveSlotsCoeff = 0.3
-        }
+      fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+      shelleyOptions = def { genesisEpochLength = 200
+                           , genesisActiveSlotsCoeff = 0.3
+                           }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node@TestnetNode{nodeSprocket} <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow nodeSprocket
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -100,21 +100,15 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   -- {{{ Register stake address
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
-      stakeCertFp = gov </> "stake.regcert"
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
-  cliStakeAddressKeyGen
-     $ KeyPair { verificationKey = File stakeVkeyFp
-               , signingKey= File stakeSKeyFp
-               }
-
-  void $ execCli' execConfig
-    [ eraName, "stake-address", "registration-certificate"
-    , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
-    , "--out-file", stakeCertFp
-    ]
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -133,7 +127,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", stakeSKeyFp
+    , "--signing-key-file", signingKeyFp stakeKeys
     , "--out-file", stakeCertTxSignedFp
     ]
 
@@ -152,9 +146,9 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--governance-action-deposit", show govActionDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--transfer", show withdrawalAmount
-    , "--funds-receiving-stake-verification-key-file", stakeVkeyFp
+    , "--funds-receiving-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--out-file", treasuryWithdrawalActionFp
     ]
 
@@ -190,7 +184,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
 -- }}}
 
   txidString <- mconcat . lines <$> execCli' execConfig
-    [ "transaction", "txid"
+    [ "latest", "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
 

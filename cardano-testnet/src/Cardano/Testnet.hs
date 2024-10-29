@@ -6,12 +6,11 @@ module Cardano.Testnet (
   -- ** Start a testnet
   cardanoTestnet,
   cardanoTestnetDefault,
-  requestAvailablePortNumbers,
+  retryOnAddressInUseError,
 
   -- ** Testnet options
   CardanoTestnetOptions(..),
   TestnetNodeOptions(..),
-  cardanoDefaultTestnetOptions,
   cardanoDefaultTestnetNodeOptions,
   getDefaultAlonzoGenesis,
   getDefaultShelleyGenesis,
@@ -19,7 +18,8 @@ module Cardano.Testnet (
   -- * Configuration
   Conf(..),
   TmpAbsolutePath(..),
-  NodeConfigurationYaml(..),
+  NodeConfiguration,
+  NodeConfigurationYaml,
   mkConf,
   makeLogDir,
   makeSocketDir,
@@ -37,9 +37,14 @@ module Cardano.Testnet (
   waitForEpochs,
 
   -- * Runtime
-  NodeRuntime(..),
-  allNodes,
+  TestnetRuntime(..),
+  testnetSprockets,
+  spoNodes,
+  relayNodes,
 
+  TestnetNode(..),
+  isTestnetNodeSpo,
+  nodeSocketPath,
   ) where
 
 import           Testnet.Components.Query

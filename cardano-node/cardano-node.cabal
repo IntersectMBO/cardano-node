@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                9.0.0
+version:                10.1.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -145,7 +145,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 9.0
+                      , cardano-api ^>= 10.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -155,7 +155,8 @@ library
                       , cardano-ledger-babbage
                       , cardano-ledger-binary
                       , cardano-ledger-byron
-                      , cardano-ledger-conway
+                      -- TODO: remove constraint at next ledger bump
+                      , cardano-ledger-conway ^>= 1.17.2
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
@@ -175,10 +176,10 @@ library
                       , generic-data
                       , hostname
                       , io-classes >= 1.4
-                      , iohk-monitoring
+                      , iohk-monitoring < 0.2
                       , iproute
                       , lobemo-backend-aggregation
-                      , lobemo-backend-ekg
+                      , lobemo-backend-ekg < 0.2
                       , lobemo-backend-monitoring
                       , lobemo-backend-trace-forwarder
                       , mtl
@@ -186,14 +187,14 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.20
-                      , ouroboros-consensus-cardano ^>= 0.18
-                      , ouroboros-consensus-diffusion ^>= 0.17
+                      , ouroboros-consensus ^>= 0.21
+                      , ouroboros-consensus-cardano ^>= 0.20
+                      , ouroboros-consensus-diffusion ^>= 0.18
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.7.3
-                      , ouroboros-network ^>= 0.16.1
+                      , ouroboros-network-api ^>= 0.10
+                      , ouroboros-network ^>= 0.17
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.9
+                      , ouroboros-network-protocols ^>= 0.11
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -201,12 +202,13 @@ library
                       , scientific
                       , si-timers
                       , sop-core
-                      , stm
+                      -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
+                      , stm <2.5.2 || >=2.5.3
                       , strict-sop-core
                       , strict-stm
                       , time
-                      , trace-dispatcher ^>= 2.5.8
-                      , trace-forward ^>= 2.2.6
+                      , trace-dispatcher ^>= 2.7.0
+                      , trace-forward ^>= 2.2.8
                       , trace-resources ^>= 0.2.2
                       , tracer-transformers
                       , transformers

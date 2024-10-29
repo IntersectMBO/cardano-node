@@ -523,7 +523,7 @@ def all_profile_variants:
   ##
   |
     ({}
-      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsEpoch         = timeline::lastKnownBabbageEpoch
       | .genesis.pparamsOverlays      = ["v8-preview"]
     ) as $costmodel_v8_preview
   |
@@ -536,7 +536,7 @@ def all_profile_variants:
     ) as $costmodel_v8_preview_doubleb
   |
     ({}
-      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsEpoch         = timeline::lastKnownBabbageEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview"]
     ) as $costmodel_v9_preview
   |
@@ -547,6 +547,15 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview", "doublebudget"]
     ) as $costmodel_v9_preview_doubleb
+  |
+    ($costmodel_v9_preview
+      | .genesis.pparamsOverlays      as $ovls
+      | .genesis.pparamsOverlays      = $ovls + ["blocksize64k"]
+    ) as $ovl_conway64kblocksize
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+    ) as $genesis_voltaire
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -618,6 +627,12 @@ def all_profile_variants:
      }|
      .node.rts_flags_override         = ["-xn"]
     ) as $rts_xn
+  |
+    ({ extra_desc:                     "RTSflags collect all event/profiling data not requiring a -prof build"
+     , suffix:                         "rtsprof"
+     }|
+     .node.rts_flags_override         = ["-l", "-hT"]
+    ) as $rts_prof
   |
   ##
   ### Definition vocabulary:  scenario
@@ -887,13 +902,35 @@ def all_profile_variants:
     ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
     ) as $plutus_nomadperf_template
   |
+  # P&T Nomad cluster: 52 nodes, P2P by default - value-only workload
+    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire
+    ) as $valuevolt_nomadperf_template
+  |
+  # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
+    ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $genesis_voltaire
+    ) as $plutusvolt_nomadperf_template
+  |
   # P&T Nomad cluster: 52 nodes, P2P by default - PlutusV3 BLST workload
-    ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $costmodel_v9_preview
+    ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $plutusv3blst_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus SECP workload
     ($nomad_perf_plutussecp_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
     ) as $plutussecp_nomadperf_template
+  |
+  # This combination of dense topology and reduced block size aims to locally reproduce UTxO-HD in-memory heap size increase on 9.0 and 9.1
+  # runtime: 30mins
+    ($p2p * $dataset_miniature * $ovl_conway64kblocksize *
+      { name: "6-dense"
+      , desc: "6 local nodes, P2P enabled, dense topology, reduced block size"
+      , composition:
+        { topology:                 "torus-dense" }
+      ,  node:
+        { shutdown_on_slot_synced: 1800 }
+      , analysis:
+        { filters:                  ["unitary", "size-full"] }
+      }
+    ) as $default_dense_local_template
   |
 
   ### First, auto-named profiles:
@@ -926,6 +963,40 @@ def all_profile_variants:
   , $p2p *
     { name: "default-p2p"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with P2P enabled"
+    }
+  , $default_dense_local_template *
+    { name: "6-dense"
+    }
+  , $default_dense_local_template *
+    { name: "6-dense-1h"
+    ,  node:
+      { shutdown_on_slot_synced: 3600 }
+    , generator:
+      { epochs:                  6 }
+    }
+  , $default_dense_local_template *
+    { name: "6-dense-4h"
+    ,  node:
+      { shutdown_on_slot_synced: 14400 }
+    , generator:
+      { epochs:                  24 }
+    }
+  , $default_dense_local_template * $rts_prof *
+    { name: "6-dense-rtsprof"
+    }
+  , $default_dense_local_template * $rts_prof *
+    { name: "6-dense-1h-rtsprof"
+    ,  node:
+      { shutdown_on_slot_synced: 3600 }
+    , generator:
+      { epochs:                  6 }
+    }
+  , $default_dense_local_template * $rts_prof *
+    { name: "6-dense-4h-rtsprof"
+    ,  node:
+      { shutdown_on_slot_synced: 14400 }
+    , generator:
+      { epochs:                  24 }
     }
   , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
@@ -1021,6 +1092,10 @@ def all_profile_variants:
     { name: "ci-test-nomadperf-nop2p"
     , desc: "ci-test on P&T exclusive cluster with P2P disabled"
     }
+  , $citest_base * $plutus_base * $plutus_loop_counter * $costmodel_v8_preview * $p2p *
+    { name: "ci-test-hydra"
+    , desc: "ci-test variant intended for Hydra CI"
+    }
 
   ## CI variants: bench duration, 15 blocks
   , $cibench_base *
@@ -1045,7 +1120,7 @@ def all_profile_variants:
     , analysis:
       { filters:        ["size-moderate"] }
     }
-  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $costmodel_v9_preview * $plutus_loop_blst *
+  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $plutus_loop_blst *
     { name: "ci-bench-plutusv3-blst"
     , analysis:
       { filters:        ["size-moderate-2"] }
@@ -1159,6 +1234,14 @@ def all_profile_variants:
     }
   , $nomad_perfssd_latency_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperfssd"
+    }
+
+## P&T Nomad cluster: same, but new Voltaire era baseline with 10k DReps, updated cost models and protocol version 9
+  , $valuevolt_nomadperf_template * $dreps_large *
+    { name: "value-volt-nomadperf"
+    }
+  , $plutusvolt_nomadperf_template * $dreps_large *
+    { name: "plutus-volt-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, PlutusV3 BLST and Plutus SECP workloads

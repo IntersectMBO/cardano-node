@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
@@ -22,6 +23,7 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
+import           Data.Default.Class
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
@@ -36,9 +38,11 @@ import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -68,24 +72,25 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
-        , cardanoNumDReps = numVotes
+      eraName = eraToString sbe
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoNumDReps = fromIntegral numVotes
         }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -110,13 +115,43 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
+  -- Register stake address
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
-  cliStakeAddressKeyGen
-    $ KeyPair { verificationKey = File stakeVkeyFp
-              , signingKey = File stakeSKeyFp
-              }
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp stakeKeys
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
 
   -- Create constitution proposal
   guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
@@ -125,7 +160,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   -- only useful for minting scripts
   constitutionScriptHash <- filter (/= '\n') <$>
     execCli' execConfig
-      [ anyEraToString cEra, "transaction"
+      [ eraToString sbe, "transaction"
       , "policyid"
       , "--script-file", guardRailScriptFp
       ]
@@ -135,7 +170,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
     , "--governance-action-deposit", show minDRepDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--constitution-url", "https://tinyurl.com/2pahcy6z"
@@ -146,6 +181,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   txbodyFp <- H.note $ work </> "tx.body"
 
+  H.noteShowM_ $ waitForBlocks epochStateView 1
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   void $ execCli' execConfig
@@ -158,7 +194,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     ]
 
   signedProposalTx <- signTx execConfig cEra gov "signed-proposal"
-                           (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet1]
+                           (File txbodyFp) [Some $ paymentKeyInfoPair wallet1]
 
   submitTx execConfig cEra signedProposalTx
 
@@ -177,7 +213,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
                                      voteFiles wallet0
 
-  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
+  let signingKeys = Some <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
   voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 
   submitTx execConfig cEra voteTxFp
@@ -193,7 +229,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   length (filter ((== L.VoteYes) . snd) votes) === 4
   length (filter ((== L.VoteNo) . snd) votes) === 3
   length (filter ((== L.Abstain) . snd) votes) === 2
-  length votes === numVotes
+  length votes === fromIntegral numVotes
 
   -- We check that constitution was succcessfully ratified
   void . H.leftFailM . evalIO . runExceptT $

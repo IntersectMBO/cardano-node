@@ -52,9 +52,11 @@ profilesNoEraForgeStress :: [Types.Profile]
 profilesNoEraForgeStress =
   let fs = P.empty & base
       -- Helpers by composition size:
-      n1 = V.genesisVariantLast . V.hosts 1 -- TODO: Why "forge-stress*solo*" is the only one not using epoch 300 ???
-      n3 = V.genesisVariant300  . V.hosts 3
-      n6 = V.genesisVariant300  . V.hosts 6
+      -- TODO: after dropping jq profiles, bump all to genesisVariantVoltaire.
+      -- TODO: Except for the solo profile, forge-stress is not supposed to bump blocksize. Possibly solve this via overlay.
+      n1 = V.genesisVariantPreVoltaire  . V.hosts 1
+      n3 = V.genesisVariant300          . V.hosts 3
+      n6 = V.genesisVariant300          . V.hosts 6
   in [
   -- 1 node versions (non-pre).
     fs & P.name "forge-stress-solo-xs"       . V.valueLocal . n1 . V.datasetCurrent . durationXS . P.traceForwardingOn                                         . P.analysisUnitary

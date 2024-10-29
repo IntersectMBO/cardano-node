@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.Gov.NoConfidence
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger
 import           Cardano.Api.Shelley
 
@@ -21,8 +22,8 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad
-import           Data.Bifunctor
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Default.Class
 import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
 import           Data.String
@@ -41,6 +42,7 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import qualified Testnet.Process.Run as H
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -61,15 +63,14 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      asbe = AnyShelleyBasedEra sbe
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
-        }
+      fastTestnetOptions = def { cardanoNodeEra = asbe  }
+      shelleyOptions = def { genesisEpochLength = 200 }
+
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
 
   -- Step 1. Define generate and define a committee in the genesis file
@@ -78,7 +79,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   H.createDirectoryIfMissing_ $ tempAbsPath' </> work </> "committee-keys"
   H.forConcurrently_ [1] $ \n -> do
     H.execCli' execConfigOffline
-      [ anyEraToString cEra, "governance", "committee"
+      [ eraToString sbe, "governance", "committee"
       , "key-gen-cold"
       , "--cold-verification-key-file", work </> defaultCommitteeVkeyFp n
       , "--cold-signing-key-file", work </> defaultCommitteeSkeyFp n
@@ -89,7 +90,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   -- Read committee cold keys from disk to put into conway genesis
 
   comKeyHash1Str <- filter (/= '\n') <$> H.execCli' execConfigOffline
-      [ anyEraToString cEra, "governance", "committee"
+      [ eraToString sbe, "governance", "committee"
       , "key-hash"
       , "--verification-key-file", committeeVkey1Fp
       ]
@@ -103,23 +104,27 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
-  alonzoGenesis <- evalEither $ first prettyError defaultAlonzoGenesis
-  (startTime, shelleyGenesis') <- getDefaultShelleyGenesis fastTestnetOptions
+  alonzoGenesis <- getDefaultAlonzoGenesis sbe
+  shelleyGenesis' <-
+    getDefaultShelleyGenesis
+      asbe
+      (cardanoMaxSupply fastTestnetOptions)
+      shelleyOptions
   let conwayGenesisWithCommittee =
         defaultConwayGenesis { L.cgCommittee = committee }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:_wallet1:_
     , configurationFile
     } <- cardanoTestnet
            fastTestnetOptions
-           conf startTime shelleyGenesis'
+           conf shelleyGenesis'
            alonzoGenesis conwayGenesisWithCommittee
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  poolNode1 <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
   let socketName' = IO.sprocketName poolSprocket1
@@ -180,7 +185,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
     ]
 
   signedProposalTx <- signTx execConfig cEra work "signed-proposal"
-                           (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+                           (File txbodyFp) [Some $ paymentKeyInfoPair wallet0]
 
   submitTx execConfig cEra signedProposalTx
 
@@ -212,12 +217,12 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   -- Submit votes
   voteTxBodyFp <- DRep.createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
                                      allVoteFiles wallet0
-  let spoSigningKeys = [SomeKeyPair $ defaultSpoColdKeyPair n | (_, n) <- spoVotes]
-      drepSigningKeys = [SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- drepVotes]
+  let spoSigningKeys = [Some $ defaultSpoColdKeyPair n | (_, n) <- spoVotes]
+      drepSigningKeys = [Some $ defaultDRepKeyPair n | (_, n) <- drepVotes]
       allVoteSigningKeys = spoSigningKeys ++ drepSigningKeys
 
   voteTxFp <- signTx execConfig cEra work "signed-vote-tx" voteTxBodyFp
-                (SomeKeyPair (paymentKeyInfoPair wallet0) : allVoteSigningKeys)
+                (Some (paymentKeyInfoPair wallet0) : allVoteSigningKeys)
 
   submitTx execConfig cEra voteTxFp
 

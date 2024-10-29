@@ -16,23 +16,25 @@ import qualified Cardano.Benchmarking.Profile.Types as Types
 
 --------------------------------------------------------------------------------
 
-data Cli = Names | All | ByName String | LibMK | ToJson String | FromJson String
+data Cli =
+    Names
+  | NamesCloudNoEra
+  | All
+  | ByName String
+  | LibMK
+  | ToJson String
+  | FromJson String
 
 --------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
-  cli <- OA.execParser
-    (OA.info
-      cliParser
-      (   OA.fullDesc
-       <> OA.progDesc "Cardano benchmarking profile generator"
-       <> OA.header "names | all | make PROFILE_NAME | from-json FILE.json | to-json FILE.hs"
-      )
-    )
+  cli <- getOpts
   case cli of
     -- Print all profile names.
     Names -> BSL8.putStrLn $ Aeson.encode Profiles.names
+    -- Print all cloud profile (-nomadperf) names.
+    NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesCloudNoEra
     -- Print a map with all profiles, with an optional overlay.
     All -> do
       obj <- lookupOverlay
@@ -68,6 +70,12 @@ lookupOverlay = do
                     (Just (Aeson.Object keyMap)) -> return keyMap
                     _ -> error ""
 
+getOpts :: IO Cli
+getOpts = OA.execParser $
+  OA.info
+    (cliParser OA.<**> OA.helper)
+    (OA.fullDesc <> OA.progDesc "Cardano benchmarking profile generator (-h for help)")
+
 --------------------------------------------------------------------------------
 
 cliParser :: OA.Parser Cli
@@ -76,6 +84,12 @@ cliParser = OA.hsubparser $
         (OA.info
           (pure Names)
           (OA.fullDesc <> OA.header "names" <> OA.progDesc "All profiles names")
+        )
+  <>
+      OA.command "names-cloud-noera"
+        (OA.info
+          (pure NamesCloudNoEra)
+          (OA.fullDesc <> OA.header "names" <> OA.progDesc "All cloud profiles names (no era suffix)")
         )
   <>
       OA.command "all"

@@ -6,16 +6,10 @@
   },
   "loRequestNum": 100,
   "ekgRequestFreq": 2,
-  "hasEKG": [
-    {
-      "epHost": "127.0.0.1",
-      "epPort": 3100
-    },
-    {
-      "epHost": "127.0.0.1",
-      "epPort": 3101
-    }
-  ],
+  "hasEKG": {
+    "epHost": "127.0.0.1",
+    "epPort": 3100
+  },
   "hasPrometheus": {
     "epHost": "127.0.0.1",
     "epPort": 3000

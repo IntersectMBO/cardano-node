@@ -24,8 +24,8 @@ import           System.Remote.Monitoring (Server, getCounter, getGauge, getLabe
 
 -- | It is mandatory to construct only one standard tracer in any application!
 -- Throwing away a standard tracer and using a new one will result in an exception
-ekgTracer :: MonadIO m => Either Metrics.Store Server-> m (Trace m FormattedMessage)
-ekgTracer storeOrServer = liftIO $ do
+ekgTracer :: MonadIO m => TraceConfig -> Either Metrics.Store Server-> m (Trace m FormattedMessage)
+ekgTracer config storeOrServer = liftIO $ do
     rgsGauges   <- newMVar Map.empty
     rgsLabels   <- newMVar Map.empty
     rgsCounters <- newMVar Map.empty
@@ -54,22 +54,29 @@ ekgTracer storeOrServer = liftIO $ do
       -> [Text]
       -> Metric
       -> IO ()
-    setIt rgsGauges _rgsLabels _rgsCounters _namespace
-      (IntM name theInt) = do
-      gauge <- modifyMVar rgsGauges (setFunc Metrics.createGauge getGauge name)
-      Gauge.set gauge (fromIntegral theInt)
-    setIt _rgsGauges rgsLabels _rgsCounters _namespace
-      (DoubleM name theDouble) = do
-        label <- modifyMVar rgsLabels (setFunc Metrics.createLabel getLabel name)
+    setIt rgsGauges _rgsLabels _rgsCounters _namespace (IntM name theInt) = do
+        let fullName = case tcMetricsPrefix config of
+                          Just prefix -> prefix <> name <> "_int"
+                          Nothing -> name <> "_int"
+        gauge <- modifyMVar rgsGauges (setFunc Metrics.createGauge getGauge fullName)
+        Gauge.set gauge (fromIntegral theInt)
+    setIt _rgsGauges rgsLabels _rgsCounters _namespace (DoubleM name theDouble) = do
+        let fullName = case tcMetricsPrefix config of
+                          Just prefix -> prefix <> name <> "_real"
+                          Nothing -> name <> "_real"
+        label <- modifyMVar rgsLabels (setFunc Metrics.createLabel getLabel fullName)
         Label.set label ((pack . show) theDouble)
-    setIt _rgsGauges rgsLabels _rgsCounters _namespace
-      (PrometheusM name keyLabels) = do
-        label <- modifyMVar rgsLabels (setFunc Metrics.createLabel getLabel name)
+    setIt _rgsGauges rgsLabels _rgsCounters _namespace (PrometheusM name keyLabels) = do
+        let fullName = case tcMetricsPrefix config of
+                          Just prefix -> prefix <> name
+                          Nothing -> name
+        label <- modifyMVar rgsLabels (setFunc Metrics.createLabel getLabel fullName)
         Label.set label (presentPrometheusM keyLabels)
-
-    setIt _rgsGauges _rgsLabels rgsCounters _namespace
-      (CounterM name mbInt) = do
-        counter <- modifyMVar rgsCounters (setFunc Metrics.createCounter getCounter name)
+    setIt _rgsGauges _rgsLabels rgsCounters _namespace (CounterM name mbInt) = do
+        let fullName = case tcMetricsPrefix config of
+                          Just prefix -> prefix <> name <> "_counter"
+                          Nothing -> name <> "_counter"
+        counter <- modifyMVar rgsCounters (setFunc Metrics.createCounter getCounter fullName)
         case mbInt of
           Nothing -> Counter.inc counter
           Just i  -> Counter.add counter (fromIntegral i)

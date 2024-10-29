@@ -510,7 +510,7 @@ makePlutusContext ScriptSpec{..} = do
                               scriptLang
                               version
                               (PScript script')               -- TODO: add capability for reference inputs from Babbage era onwards
-                              (ScriptDatumForTxIn scriptData)
+                              (ScriptDatumForTxIn $ Just scriptData)
                               scriptRedeemer
                               executionUnits
       in return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, getScriptData scriptData, scriptFee)

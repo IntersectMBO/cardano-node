@@ -3,44 +3,47 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Testnet.Types
   ( LeadershipSlot(..)
   , NodeLoggingFormat(..)
   , PaymentKeyInfo(..)
   , TestnetRuntime(..)
-  , NodeRuntime(..)
+  , spoNodes
+  , relayNodes
+  , testnetSprockets
+  , TestnetNode(..)
   , nodeSocketPath
-  , PoolNode(..)
-  , PoolNodeKeys(..)
+  , isTestnetNodeSpo
+  , SpoNodeKeys(..)
   , Delegator(..)
   , KeyPair(..)
   , verificationKeyFp
   , signingKeyFp
-  , SomeKeyPair(..)
   , VKey
   , SKey
-  , ColdPoolKey
   , VrfKey
   , StakingKey
   , PaymentKey
   , DRepKey
   , SpoColdKey
-  , allNodes
-  , poolSprockets
-  , poolNodeStdout
   , readNodeLoggingFormat
   , ShelleyGenesis(..)
   , shelleyGenesis
   , getStartTime
+  , testnetDefaultIpv4Address
+  , showIpv4Address
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Shelley (VrfKey)
 
 import qualified Cardano.Chain.Genesis as G
@@ -55,12 +58,16 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.Aeson as A
+import           Data.List (intercalate)
+import           Data.Maybe
+import           Data.MonoTraversable (Element, MonoFunctor (..))
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
+import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
-import           Network.Socket (PortNumber)
+import           Network.Socket (HostAddress, PortNumber, hostAddressToTuple, tupleToHostAddress)
 import           System.FilePath
 import qualified System.Process as IO
 
@@ -75,17 +82,29 @@ data KeyPair k = KeyPair
   , signingKey :: forall dir. (File (SKey k) dir)
   }
 
+type instance Element (KeyPair k) = FilePath
+instance MonoFunctor (KeyPair k) where
+  omap f (KeyPair vk sk) = KeyPair (f' vk) (f' sk)
+    where
+      f' :: File k' d -> File k' d
+      f' = File . f . unFile
+
 deriving instance Show (KeyPair k)
 deriving instance Eq (KeyPair k)
+
+instance {-# OVERLAPPING #-} Show (Some KeyPair) where
+  show (Some kp) = show kp
+
+instance {-# OVERLAPPING #-} Eq (Some KeyPair) where
+  (Some KeyPair{verificationKey=File vk1, signingKey=File sk1})
+    == (Some KeyPair{verificationKey=File vk2, signingKey=File sk2}) =
+      vk1 == vk2 && sk1 == sk2
 
 verificationKeyFp :: KeyPair k -> FilePath
 verificationKeyFp = unFile . verificationKey
 
 signingKeyFp :: KeyPair k -> FilePath
 signingKeyFp = unFile . signingKey
-
-data SomeKeyPair = forall a. SomeKeyPair (KeyPair a)
-deriving instance Show SomeKeyPair
 
 -- | Verification key tag
 data VKey k
@@ -97,25 +116,24 @@ data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
   , testnetMagic :: !Int
-  , poolNodes :: ![PoolNode]
+  , testnetNodes :: ![TestnetNode]
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
   }
 
-poolSprockets :: TestnetRuntime -> [Sprocket]
-poolSprockets = fmap (nodeSprocket . poolRuntime) . poolNodes
+testnetSprockets :: TestnetRuntime -> [Sprocket]
+testnetSprockets = fmap nodeSprocket . testnetNodes
 
-data PoolNode = PoolNode
-  { poolRuntime :: NodeRuntime
-  , poolKeys :: PoolNodeKeys
-  }
+spoNodes :: TestnetRuntime -> [TestnetNode]
+spoNodes = filter isTestnetNodeSpo . testnetNodes
 
-poolNodeStdout :: PoolNode -> FilePath
-poolNodeStdout = nodeStdout . poolRuntime
+relayNodes :: TestnetRuntime -> [TestnetNode]
+relayNodes = filter (not . isTestnetNodeSpo) . testnetNodes
 
-data NodeRuntime = NodeRuntime
+data TestnetNode = TestnetNode
   { nodeName :: !String
-  , nodeIpv4 :: !Text
+  , poolKeys :: Maybe SpoNodeKeys -- ^ Keys are only present for SPO nodes
+  , nodeIpv4 :: !HostAddress
   , nodePort :: !PortNumber
   , nodeSprocket :: !Sprocket
   , nodeStdinHandle :: !IO.Handle
@@ -124,18 +142,24 @@ data NodeRuntime = NodeRuntime
   , nodeProcessHandle :: !IO.ProcessHandle
   }
 
-nodeSocketPath :: NodeRuntime -> SocketPath
+isTestnetNodeSpo :: TestnetNode -> Bool
+isTestnetNodeSpo = isJust . poolKeys
+
+nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 
-data ColdPoolKey
 data StakingKey
 data SpoColdKey
 
-data PoolNodeKeys = PoolNodeKeys
+data SpoNodeKeys = SpoNodeKeys
   { poolNodeKeysCold :: KeyPair SpoColdKey
   , poolNodeKeysVrf :: KeyPair VrfKey
   , poolNodeKeysStaking :: KeyPair StakingKey
   } deriving (Eq, Show)
+
+type instance Element SpoNodeKeys = FilePath
+instance MonoFunctor SpoNodeKeys where
+  omap f (SpoNodeKeys cold vrf staking) = SpoNodeKeys (omap f cold) (omap f vrf) (omap f staking)
 
 data PaymentKeyInfo = PaymentKeyInfo
   { paymentKeyInfoPair :: KeyPair PaymentKey
@@ -189,5 +213,13 @@ readNodeLoggingFormat = \case
   "text" -> Right NodeLoggingFormatAsText
   s -> Left $ "Unrecognised node logging format: " <> show s <> ".  Valid options: \"json\", \"text\""
 
-allNodes :: TestnetRuntime -> [NodeRuntime]
-allNodes tr = fmap poolRuntime (poolNodes tr)
+
+-- | Hardcoded testnet IPv4 address pointing to the local host
+testnetDefaultIpv4Address :: HostAddress
+testnetDefaultIpv4Address = tupleToHostAddress (127, 0, 0, 1)
+
+-- | Format IPv4 address as a string-like e.g. @127.0.0.1@
+showIpv4Address :: IsString s => HostAddress -> s
+showIpv4Address address = fromString . intercalate "." $ show <$> [a,b,c,d]
+  where (a,b,c,d) = hostAddressToTuple address
+

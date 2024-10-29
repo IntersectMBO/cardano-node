@@ -4,7 +4,7 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile (
-  names, namesNoEra
+  names, namesNoEra, namesCloudNoEra
 , byName
 , profiles
 , libMk
@@ -50,6 +50,10 @@ import           Cardano.Benchmarking.Profile.Extra.Scaling               (profi
 names :: [String]
 -- Overlay not supported here, using an empty overlay.
 names = Map.keys (profiles mempty)
+
+namesCloudNoEra :: [String]
+-- Overlay not supported here, using an empty overlay.
+namesCloudNoEra = map Types.name profilesNoEraCloud
 
 -- Names:
 -- wb profile all-profiles | jq .[] | jq -r .name | sort | uniq | grep "\-bage"

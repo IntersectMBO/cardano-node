@@ -32,7 +32,7 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
-import           Ouroboros.Consensus.Storage.LedgerDB (UpdateLedgerDbTraceEvent (..))
+import           Ouroboros.Consensus.Storage.LedgerDB (UpdateLedgerDbTraceEvent (..), ReplayStart (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -79,6 +79,8 @@ instance (  LogFormatting (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
+  forHuman ChainDB.TraceLastShutdownUnclean        =
+    "ChainDB is not clean. Validating all immutable chunks"
   forHuman (ChainDB.TraceAddBlockEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceFollowerEvent v)          = forHumanOrMachine v
   forHuman (ChainDB.TraceCopyToImmutableDBEvent v) = forHumanOrMachine v
@@ -91,6 +93,8 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
 
+  forMachine _ ChainDB.TraceLastShutdownUnclean =
+    mconcat [ "kind" .= String "LastShutdownUnclean" ]
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceFollowerEvent v) =
@@ -114,6 +118,7 @@ instance (  LogFormatting (Header blk)
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
 
+  asMetrics ChainDB.TraceLastShutdownUnclean        = []
   asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceFollowerEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceCopyToImmutableDBEvent v) = asMetrics v
@@ -128,6 +133,8 @@ instance (  LogFormatting (Header blk)
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
+  namespaceFor ChainDB.TraceLastShutdownUnclean =
+    Namespace [] ["LastShutdownUnclean"]
   namespaceFor (ChainDB.TraceAddBlockEvent ev) =
     nsPrependInner "AddBlockEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceFollowerEvent ev) =
@@ -151,6 +158,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
 
+  severityFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Info
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -197,6 +205,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
   severityFor _ns _ = Nothing
 
+  privacyFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Public
   privacyFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -243,6 +252,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
   privacyFor _ _ = Nothing
 
+  detailsFor (Namespace _ ["LastShutdownUnclean"]) _ = Just DNormal
   detailsFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -313,6 +323,11 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     metricsDocFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk))
   metricsDocFor _ = []
 
+  documentFor (Namespace _ ["LastShutdownUnclean"]) = Just $ mconcat
+    [ "Last shutdown of the node didn't leave the ChainDB directory in a clean"
+    , " state. Therefore, revalidating all the immutable chunks is necessary to"
+    , " ensure the correctness of the chain."
+    ]
   documentFor (Namespace out ("AddBlockEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceAddBlockEvent blk))
   documentFor (Namespace out ("FollowerEvent" : tl)) =
@@ -338,7 +353,9 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   documentFor _ = Nothing
 
   allNamespaces =
-        map  (nsPrependInner "AddBlockEvent")
+        Namespace [] ["LastShutdownUnclean"]
+
+          : (map  (nsPrependInner "AddBlockEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceAddBlockEvent blk)])
           ++ map  (nsPrependInner "FollowerEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceFollowerEvent blk)])
@@ -360,6 +377,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (ImmDB.TraceEvent blk)])
           ++ map  (nsPrependInner "VolatileDbEvent")
                   (allNamespaces :: [Namespace (VolDB.TraceEvent blk)])
+            )
 
 
 --------------------------------------------------------------------------------
@@ -525,20 +543,20 @@ instance ( LogFormatting (Header blk)
   asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation selChangedInfo newChain 0
-    in  [ DoubleM "ChainDB.Density" (fromRational density)
-        , IntM    "ChainDB.SlotNum" (fromIntegral slots)
-        , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
-        , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
-        , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "density" (fromRational density)
+        , IntM    "slotNum" (fromIntegral slots)
+        , IntM    "blockNum" (fromIntegral blocks)
+        , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation selChangedInfo newChain 0
-    in  [ DoubleM "ChainDB.Density" (fromRational density)
-        , IntM    "ChainDB.SlotNum" (fromIntegral slots)
-        , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
-        , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
-        , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "density" (fromRational density)
+        , IntM    "slotNum" (fromIntegral slots)
+        , IntM    "blockNum" (fromIntegral blocks)
+        , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics _ = []
 
@@ -638,48 +656,48 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   detailsFor _ _ = Just DNormal
 
   metricsDocFor (Namespace _ ["SwitchedToAFork"]) =
-        [ ( "ChainDB.Density"
+        [ ( "density"
           , mconcat
             [ "The actual number of blocks created over the maximum expected number"
             , " of blocks that could be created over the span of the last @k@ blocks."
             ]
           )
-        , ( "ChainDB.SlotNum"
+        , ( "slotNum"
           , "Number of slots in this chain fragment."
           )
-        , ( "ChainDB.Blocks"
+        , ( "blockNum"
           , "Number of blocks in this chain fragment."
           )
-        , ( "ChainDB.SlotInEpoch"
+        , ( "slotInEpoch"
           , mconcat
             [ "Relative slot number of the tip of the current chain within the"
             , " epoch.."
             ]
           )
-        , ( "ChainDB.Epoch"
+        , ( "epoch"
           , "In which epoch is the tip of the current chain."
           )
         ]
   metricsDocFor (Namespace _ ["AddedToCurrentChain"]) =
-        [ ( "ChainDB.Density"
+        [ ( "density"
           , mconcat
             [ "The actual number of blocks created over the maximum expected number"
             , " of blocks that could be created over the span of the last @k@ blocks."
             ]
           )
-        , ( "ChainDB.SlotNum"
+        , ( "slotNum"
           , "Number of slots in this chain fragment."
           )
-        , ( "ChainDB.Blocks"
+        , ( "blockNum"
           , "Number of blocks in this chain fragment."
           )
-        , ( "ChainDB.SlotInEpoch"
+        , ( "slotInEpoch"
           , mconcat
             [ "Relative slot number of the tip of the current chain within the"
             , " epoch.."
             ]
           )
-        , ( "ChainDB.Epoch"
+        , ( "epoch"
           , "In which epoch is the tip of the current chain."
           )
         ]
@@ -1488,18 +1506,28 @@ instance MetaTrace (ChainDB.UnknownRange blk) where
 instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
-  forHuman (LedgerDB.TookSnapshot snap pt) =
-      "Took ledger snapshot " <> showT snap <>
+  forHuman (LedgerDB.TookSnapshot snap pt RisingEdge) =
+      "Taking ledger snapshot " <> showT snap <>
         " at " <> renderRealPointAsPhrase pt
+  forHuman (LedgerDB.TookSnapshot snap pt (FallingEdgeWith t)) =
+      "Took ledger snapshot " <> showT snap <>
+        " at " <> renderRealPointAsPhrase pt <> ", duration: " <> showT t
   forHuman (LedgerDB.DeletedSnapshot snap) =
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
-      "Invalid snapshot " <> showT snap <> showT failure
+      "Invalid snapshot " <> showT snap <> showT failure <> context
+    where
+      context = case failure of
+        LedgerDB.InitFailureRead{} ->
+             " This is most likely an expected change in the serialization format,"
+          <> " which currently requires a chain replay"
+        _ -> ""
 
-  forMachine dtals (LedgerDB.TookSnapshot snap pt) =
+  forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
              , "snapshot" .= forMachine dtals snap
-             , "tip" .= show pt ]
+             , "tip" .= show pt
+             , "enclosedTime" .= enclosedTiming]
   forMachine dtals (LedgerDB.DeletedSnapshot snap) =
     mconcat [ "kind" .= String "DeletedSnapshot"
              , "snapshot" .= forMachine dtals snap ]
@@ -1518,12 +1546,15 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["TookSnapshot"]) = Just
-          "A snapshot was written to disk."
+    documentFor (Namespace _ ["TookSnapshot"]) = Just $ mconcat
+         [ "A snapshot is being written to disk. Two events will be traced, one"
+         , " for when the node starts taking the snapshot and another one for"
+         , " when the snapshot has been written to the disk."
+         ]
     documentFor (Namespace _ ["DeletedSnapshot"]) = Just
-          "A snapshot was written to disk."
+          "A snapshot was deleted from the disk."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just
-          "An on disk snapshot was skipped because it was invalid."
+          "An on disk snapshot was invalid. Unless it was suffixed, it will be deleted"
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1541,9 +1572,9 @@ instance (StandardHash blk, ConvertRawHash blk)
           => LogFormatting (LedgerDB.TraceReplayEvent blk) where
   forHuman (LedgerDB.ReplayFromGenesis _replayTo) =
       "Replaying ledger from genesis"
-  forHuman (LedgerDB.ReplayFromSnapshot snap tip' _ _) =
-      "Replaying ledger from snapshot " <> showT snap <> " at " <>
-        renderRealPointAsPhrase tip'
+  forHuman (LedgerDB.ReplayFromSnapshot snap (ReplayStart tip') _goal) =
+      "Replaying ledger from snapshot " <> showT snap <> " at "
+      <> renderPointAsPhrase tip'
   forHuman (LedgerDB.ReplayedBlock
               pt
               _ledgerEvents
@@ -1565,7 +1596,7 @@ instance (StandardHash blk, ConvertRawHash blk)
 
   forMachine _dtal (LedgerDB.ReplayFromGenesis _replayTo) =
       mconcat [ "kind" .= String "ReplayFromGenesis" ]
-  forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip' _ _) =
+  forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip' _) =
       mconcat [ "kind" .= String "ReplayFromSnapshot"
                , "snapshot" .= forMachine dtal snap
                , "tip" .= show tip' ]

@@ -28,16 +28,19 @@ import           Cardano.Tracer.Utils
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async, link)
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
 #if RTVIEW
 import           Control.Concurrent.STM.TVar (newTVarIO)
 #endif
+import           Control.Exception (SomeException, try)
 import           Control.Monad
+import           Data.Aeson (decodeFileStrict')
 import           Data.Foldable (for_)
-#if !RTVIEW
-import           Data.Maybe (isJust)
-#endif
+import           Data.Maybe (fromMaybe)
+import qualified Data.Map.Strict as M (Map, empty, filter, toList)
+import           Data.Text as T (Text, null)
+import           Data.Text.Lazy.Builder as TB (Builder, fromText)
+
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
@@ -62,7 +65,7 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
 #if RTVIEW
     , ttWarnRTViewMissing = False
 #else
-    , ttWarnRTViewMissing = isJust (hasRTView config)
+    , ttWarnRTViewMissing = case hasRTView config of { Just{} -> True; Nothing -> False; }
 #endif
     }
 
@@ -92,6 +95,8 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
   connectedNodes      <- initConnectedNodes
   connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
+  mHelp               <- loadMetricsHelp $ metricsHelp config
+
 #if RTVIEW
   savedTO <- initSavedTraceObjects
 
@@ -129,6 +134,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
         , teReforwardTraceObjects = reforwardTraceObject
         , teRegistry              = registry
         , teStateDir              = rtViewStateDir
+        , teMetricsHelp           = mHelp
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -154,7 +160,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
     traceWith tr TracerShutdownComplete
 
   traceWith tr TracerInitDone
-  void . sequenceConcurrently $
+  sequenceConcurrently_
     [ runLogsRotator    tracerEnv
     , runMetricsServers tracerEnv
     , runAcceptors      tracerEnv tracerEnvRTView
@@ -162,3 +168,16 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
     , runRTView         tracerEnv tracerEnvRTView
 #endif
     ]
+
+-- NB. this fails silently if there's any read or decode error when an external JSON file is provided
+loadMetricsHelp :: Maybe FileOrMap -> IO [(Text, Builder)]
+loadMetricsHelp Nothing        = pure []
+loadMetricsHelp (Just (FOM x)) = do
+  result <- case x of
+    Left file -> do
+      inp :: Either SomeException (Maybe (M.Map Text Text))
+        <- try (decodeFileStrict' file)
+      pure $ either (const M.empty) (fromMaybe M.empty) inp
+    Right object ->
+      pure object
+  pure $ (M.toList . fmap TB.fromText . M.filter (not . T.null)) result

@@ -31,8 +31,9 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
-                   MempoolCapacityBytesOverride (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
@@ -91,7 +92,7 @@ data NodeConfiguration
           -- (logging, tracing, protocol, slot length etc)
        , ncConfigFile      :: !ConfigYamlFilePath
        , ncTopologyFile    :: !TopologyFile
-       , ncDatabaseFile    :: !DbFile
+       , ncDatabaseFile    :: !NodeDatabasePaths
        , ncProtocolFiles   :: !ProtocolFilepaths
        , ncValidateDB      :: !Bool
        , ncShutdownConfig  :: !ShutdownConfig
@@ -173,7 +174,7 @@ data PartialNodeConfiguration
          -- (logging, tracing, protocol, slot length etc)
        , pncConfigFile      :: !(Last ConfigYamlFilePath)
        , pncTopologyFile    :: !(Last TopologyFile)
-       , pncDatabaseFile    :: !(Last DbFile)
+       , pncDatabaseFile    :: !(Last NodeDatabasePaths)
        , pncProtocolFiles   :: !(Last ProtocolFilepaths)
        , pncValidateDB      :: !(Last Bool)
        , pncShutdownConfig  :: !(Last ShutdownConfig)
@@ -242,6 +243,7 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Node parameters, not protocol-specific
       pncSocketPath <- Last <$> v .:? "SocketPath"
+      pncDatabaseFile <- Last <$> v .:? "DatabasePath"
       pncDiffusionMode
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncNumOfDiskSnapshots
@@ -336,7 +338,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTraceForwardSocket = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
-           , pncDatabaseFile = mempty
+           , pncDatabaseFile
            , pncProtocolFiles = mempty
            , pncValidateDB = mempty
            , pncShutdownConfig = mempty
@@ -359,7 +361,7 @@ instance FromJSON PartialNodeConfiguration where
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
         where
-          parseNoOverride = fmap (MempoolCapacityBytesOverride . MempoolCapacityBytes) <$> v .:? "MempoolCapacityBytesOverride"
+          parseNoOverride = fmap (MempoolCapacityBytesOverride . ByteSize32) <$> v .:? "MempoolCapacityBytesOverride"
           parseOverride = do
             maybeString :: Maybe String <- v .:? "MempoolCapacityBytesOverride"
             case maybeString of
@@ -427,7 +429,7 @@ instance FromJSON PartialNodeConfiguration where
              }
 
       parseConwayProtocol v = do
-        npcConwayGenesisFile     <- v .:?  "ConwayGenesisFile"
+        npcConwayGenesisFile     <- v .:  "ConwayGenesisFile"
         npcConwayGenesisFileHash <- v .:? "ConwayGenesisHash"
         pure NodeConwayProtocolConfiguration {
                npcConwayGenesisFile
@@ -492,7 +494,7 @@ defaultPartialNodeConfiguration :: PartialNodeConfiguration
 defaultPartialNodeConfiguration =
   PartialNodeConfiguration
     { pncConfigFile = Last . Just $ ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
-    , pncDatabaseFile = Last . Just $ DbFile "mainnet/db/"
+    , pncDatabaseFile = Last . Just $ OnePathForAllDbs "mainnet/db/"
     , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode

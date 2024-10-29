@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 
 module Cardano.Node.Configuration.TopologyP2P
   ( TopologyError(..)
@@ -26,7 +25,6 @@ where
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
-import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
@@ -41,9 +39,7 @@ import           Control.Applicative (Alternative (..))
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Exception.Base (Exception (..))
-import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson
-import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
@@ -198,101 +194,46 @@ instance ToJSON NetworkTopology where
                                    , "bootstrapPeers"     .= ntUseBootstrapPeers
                                    ]
 
---
--- Legacy p2p topology file format
---
-
--- | A newtype wrapper which provides legacy 'FromJSON' instances.
---
-newtype Legacy a = Legacy { getLegacy :: a }
-
-instance FromJSON (Legacy a) => FromJSON (Legacy [a]) where
-  parseJSON = fmap (Legacy . map getLegacy) . parseJSONList
-
-instance FromJSON (Legacy LocalRootPeersGroup) where
-  parseJSON = withObject "LocalRootPeersGroup" $ \o -> do
-                hv@(HotValency v) <- o .: "hotValency"
-                wv <- o .:? "warmValency" .!= WarmValency v
-                fmap Legacy $ LocalRootPeersGroup
-                  <$> o .: "localRoots"
-                  <*> pure hv
-                  <*> pure wv
-                  <*> o .: "trustable"
-
-instance FromJSON (Legacy LocalRootPeersGroups) where
-  parseJSON = withObject "LocalRootPeersGroups" $ \o ->
-                Legacy . LocalRootPeersGroups . getLegacy
-                  <$> o .: "groups"
-
-instance FromJSON (Legacy PublicRootPeers) where
-  parseJSON = withObject "PublicRootPeers" $ \o ->
-                Legacy . PublicRootPeers
-                  <$> o .: "publicRoots"
-
-instance FromJSON (Legacy NetworkTopology) where
-  parseJSON = fmap Legacy
-            . withObject "NetworkTopology" (\o ->
-              RealNodeTopology <$> fmap getLegacy (o .: "LocalRoots")
-                               <*> fmap getLegacy (o .: "PublicRoots")
-                               <*> (o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers)
-                               <*> pure DontUseBootstrapPeers)
-
 -- | Read the `NetworkTopology` configuration from the specified file.
 --
-readTopologyFile :: Tracer IO (StartupTrace blk)
-                 -> NodeConfiguration -> IO (Either Text NetworkTopology)
-readTopologyFile tr nc = do
+readTopologyFile :: NodeConfiguration -> IO (Either Text NetworkTopology)
+readTopologyFile nc = do
   eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e
     Right bs ->
       let bs' = LBS.fromStrict bs in
-      (case eitherDecode bs' of
-        Left err -> Left (handlerJSON err)
-        Right t
-          | isValidTrustedPeerConfiguration t -> Right t
-          | otherwise                         -> Left handlerBootstrap
-      )
-      `combine`
-      first handlerJSON (eitherDecode bs')
+        return $ case eitherDecode bs' of
+          Left err -> Left (handlerJSON err)
+          Right t
+            | isValidTrustedPeerConfiguration t -> Right t
+            | otherwise                         -> Left handlerBootstrap
+  where
+    handler :: IOException -> Text
+    handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
+                          ++ displayException e
+    handlerJSON :: String -> Text
+    handlerJSON err = mconcat
+      [ "Is your topology file formatted correctly? "
+      , "Expecting P2P Topology file format. "
+      , "The port and valency fields should be numerical. "
+      , "If you specified the correct topology file "
+      , "make sure that you correctly setup EnableP2P "
+      , "configuration flag. "
+      , Text.pack err
+      ]
+    handlerBootstrap :: Text
+    handlerBootstrap = mconcat
+      [ "You seem to have not configured any trustable peers. "
+      , "This is important in order for the node to make progress "
+      , "in bootstrap mode. Make sure you provide at least one bootstrap peer "
+      , "source. "
+      ]
 
- where
-  combine :: Either Text NetworkTopology
-          -> Either Text (Legacy NetworkTopology)
-          -> IO (Either Text NetworkTopology)
-  combine a b = case (a, b) of
-    (Right {}, _)     -> return a
-    (_, Right {})     -> traceWith tr NetworkConfigLegacy
-                           >> return (getLegacy <$> b)
-    (Left _, Left _)  -> -- ignore parsing error of legacy format
-                         return a
-
-  handler :: IOException -> Text
-  handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                        ++ displayException e
-  handlerJSON :: String -> Text
-  handlerJSON err = mconcat
-    [ "Is your topology file formatted correctly? "
-    , "Expecting P2P Topology file format. "
-    , "The port and valency fields should be numerical. "
-    , "If you specified the correct topology file "
-    , "make sure that you correctly setup EnableP2P "
-    , "configuration flag. "
-    , Text.pack err
-    ]
-  handlerBootstrap :: Text
-  handlerBootstrap = mconcat
-    [ "You seem to have not configured any trustable peers. "
-    , "This is important in order for the node to make progress "
-    , "in bootstrap mode. Make sure you provide at least one bootstrap peer "
-    , "source. "
-    ]
-
-readTopologyFileOrError :: Tracer IO (StartupTrace blk)
-                        -> NodeConfiguration -> IO NetworkTopology
-readTopologyFileOrError tr nc =
-      readTopologyFile tr nc
+readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
+readTopologyFileOrError nc =
+      readTopologyFile nc
   >>= either (\err -> error $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
                            <> Text.unpack err)
              pure

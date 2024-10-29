@@ -29,7 +29,7 @@ profilesNoEraLatency =
         . P.latency
         . C.composeFiftytwo
         -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
-        . V.genesisVariantLast
+        . V.genesisVariantPreVoltaire
         . V.timescaleCompressed
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".

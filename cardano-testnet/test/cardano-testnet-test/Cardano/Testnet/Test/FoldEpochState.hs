@@ -12,11 +12,11 @@ import           Prelude
 
 import           Control.Concurrent.Async ()
 import           Control.Monad.Trans.State.Strict
+import           Data.Default.Class
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
 import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Types
 
 import           Hedgehog ((===))
 import qualified Hedgehog as H
@@ -28,15 +28,13 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
   conf <- TN.mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
-      era = BabbageEra
-      options = cardanoDefaultTestnetOptions
-        { cardanoNodeEra = AnyCardanoEra era
-        }
+      sbe = ShelleyBasedEraBabbage
+      options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
 
-  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
+  runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options def conf
 
   socketPathAbs <- do
-    socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
+    socketPath' <- H.sprocketArgumentName <$> H.headM (testnetSprockets runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   let handler :: ()

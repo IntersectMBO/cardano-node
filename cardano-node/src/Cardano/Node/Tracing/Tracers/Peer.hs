@@ -134,7 +134,7 @@ instance LogFormatting [PeerT blk] where
     [ "peers" .= toJSON (List.foldl' (\acc x -> forMachine dtal x : acc) [] xs)
     ]
   forHuman peers = Text.concat $ List.intersperse ", " (map ppPeer peers)
-  asMetrics peers = [IntM "Net.PeersFromNodeKernel" (fromIntegral (length peers))]
+  asMetrics peers = [IntM "peersFromNodeKernel" (fromIntegral (length peers))]
 
 instance LogFormatting (PeerT blk) where
   forMachine _dtal (PeerT cid _af status inflight) =
@@ -160,6 +160,6 @@ instance MetaTrace [PeerT blk] where
   documentFor _ns =
     Nothing
   metricsDocFor (Namespace _ ["PeersFromNodeKernel"]) =
-    [("Net.PeersFromNodeKernel","")]
+    [("peersFromNodeKernel","")]
   metricsDocFor _ns = []
   allNamespaces = [ Namespace [] ["PeersFromNodeKernel"]]

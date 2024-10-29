@@ -15,8 +15,8 @@ direct :: Monad m
 direct TraceObjectForwarder { recvMsgDone }
        (SendMsgDone mdone) =
   (,) <$> recvMsgDone <*> mdone
-direct TraceObjectForwarder { recvMsgTraceObjectsRequest }
+direct server@TraceObjectForwarder { recvMsgTraceObjectsRequest }
        (SendMsgTraceObjectsRequest blocking numOfTO mclient) = do
-  (reply, server) <- recvMsgTraceObjectsRequest blocking numOfTO
+  reply <- recvMsgTraceObjectsRequest blocking numOfTO
   client <- mclient reply
   direct server client

@@ -346,7 +346,17 @@
             10,
             38887044,
             32947,
-            10
+            10,
+            1292075,
+            24469,
+            74,
+            0,
+            1,
+            936157,
+            49601,
+            237,
+            0,
+            1
         ],
         "PlutusV3": [
             0,
@@ -631,7 +641,7 @@
         "major": 10,
         "minor": 0
     },
-    "stakeAddressDeposit": 0,
+    "stakeAddressDeposit": 400000,
     "stakePoolDeposit": 0,
     "stakePoolTargetNum": 100,
     "treasuryCut": 0.1,

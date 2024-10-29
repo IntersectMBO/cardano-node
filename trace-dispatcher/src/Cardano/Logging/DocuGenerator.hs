@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,6 +12,7 @@ module Cardano.Logging.DocuGenerator (
     documentTracer
   , documentTracer'
   , docuResultsToText
+  , docuResultsToMetricsHelptext
   -- Callbacks
   , docTracer
   , docTracerDatapoint
@@ -30,12 +33,14 @@ import           Prelude hiding (lines, unlines)
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as TR
+import           Data.Aeson (ToJSON)
 import qualified Data.Aeson.Encode.Pretty as AE
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
-import           Data.Text (Text, lines, pack, split, toLower, unlines)
+import           Data.Text as T (Text, empty, intercalate, lines, pack, split, stripPrefix, toLower,
+                   unlines)
 import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
@@ -618,4 +623,23 @@ accentuated t = if t == ""
                     then ">"
                     else "> " <> t'
 
+-- this reflects the type cardano-tracer expects the metrics help texts to be serialized from:
+-- simple key-value map
+newtype MetricsHelp = MH (Map.Map Text Text)
+        deriving ToJSON via (Map.Map Text Text)
 
+docuResultsToMetricsHelptext :: DocTracer -> Text
+docuResultsToMetricsHelptext DocTracer{dtBuilderList} =
+  toStrict $ toLazyText $
+    AE.encodePrettyToTextBuilder' conf mh
+  where
+    conf = AE.defConfig { AE.confCompare = compare, AE.confTrailingNewline = True }
+    mh = MH $ Map.fromList
+      [(intercalate "." ns, fromMaybe T.empty x)
+        | (ns, DocuMetric helpDescr) <- dtBuilderList
+
+        -- for now, just extract the helptext (if any) from the markdown paragraph:
+        -- it's the line that starts with "> "
+        , let xs  = T.lines $ toStrict $ toLazyText helpDescr
+        , let x   = mconcat $ map (stripPrefix "> ") xs
+      ]

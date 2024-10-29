@@ -52,6 +52,7 @@ import           Data.Foldable as Fold (forM_)
 import           Data.List as List (unwords)
 import           Data.Time.Format as Time (defaultTimeLocale, formatTime)
 import           Data.Time.Clock.System as Time (getSystemTime, systemToUTCTime)
+import           Foreign.C (Errno(..))
 import           GHC.Weak as Weak (deRefWeak)
 
 import           System.Posix.Signals as Sig (Handler (CatchInfo),
@@ -64,6 +65,7 @@ import           GHC.Conc.Sync as Conc (threadLabel)
 #endif
 
 #ifdef UNIX
+deriving instance Show Errno
 deriving instance Show SignalInfo
 deriving instance Show SignalSpecificInfo
 #endif

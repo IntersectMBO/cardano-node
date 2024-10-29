@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.2.4
+version:                0.3
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
@@ -17,9 +17,14 @@ extra-doc-files:        README.md
                         CHANGELOG.md
 
 flag rtview
-  Description: Enable RTView. False by default. Enable with `-f +rtview`.
-  Default: False
-  Manual:  True
+  description:          Enable RTView. False by default. Enable with `-f +rtview`.
+  default:              False
+  manual:               True
+
+flag systemd
+  description:          Enable systemd support.
+  default:              True
+  manual:               True
 
 common project-config
   default-language:     Haskell2010
@@ -34,6 +39,9 @@ common project-config
                       , ScopedTypeVariables
                       , StandaloneKindSignatures
                       , TypeApplications
+
+  if flag(systemd) && os(linux)
+    cpp-options:        -DSYSTEMD
 
   if flag(rtview)
     CPP-Options:        -DRTVIEW=1
@@ -147,11 +155,12 @@ library
                         cardano-git-rev ^>=0.2.2
                       , cassava
                       , threepenny-gui
+                      , utf8-string
                       , vector
 
   build-depends:        aeson
                       , async
-                      , async-extras
+                      , auto-update
                       , bimap
                       , blaze-html
                       , bytestring
@@ -160,21 +169,20 @@ library
                       , containers
                       , contra-tracer
                       , directory
-                      , ekg
                       , ekg-core
-                      , ekg-forward ^>= 0.5
+                      , ekg-forward >= 0.5
+                      , ekg-wai
                       , extra
                       , filepath
+                      , http-types
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.16.1
+                      , ouroboros-network ^>= 0.17
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
-                      , smtp-mail == 0.3.0.0
-                      , snap-blaze
-                      , snap-core
-                      , snap-server
+                      , slugify
+                      , smtp-mail ^>= 0.5
                       , stm
                       , string-qq
                       , text
@@ -183,9 +191,11 @@ library
                       , trace-forward
                       , trace-resources
                       , unordered-containers
+                      , wai ^>= 3.2
+                      , warp ^>= 3.4
                       , yaml
 
-  if os(linux)
+  if flag(systemd) && os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
 
   if os(windows)
@@ -247,6 +257,7 @@ library demo-forwarder-lib
                       , vector-algorithms
                       , QuickCheck
 
+
 executable demo-forwarder
   import:               project-config
 
@@ -272,8 +283,7 @@ library demo-acceptor-lib
 
   exposed-modules:      Cardano.Tracer.Test.Acceptor
 
-  build-depends:        async-extras
-                      , bytestring
+  build-depends:        bytestring
                       , cardano-tracer
                       , containers
                       , extra

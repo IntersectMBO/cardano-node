@@ -1,5 +1,9 @@
 # Revision history for trace-resources
 
+## 0,2,3
+
+* New names for metrics
+
 ## 0.2.1.0 -- Nov 2023
 
 * Optimized resource record creation on Linux

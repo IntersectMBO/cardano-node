@@ -1,28 +1,35 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Gov.GovActionTimeout
   ( hprop_check_gov_action_timeout
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
+import           Cardano.Api.Ledger (EpochInterval (..))
 
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import           Data.String (fromString)
+import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.DRep (makeActivityChangeProposal)
-import           Testnet.Process.Run (mkExecConfig)
+import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
+import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -45,25 +52,23 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
-        }
+      eraName = eraToString sbe
+      asbe = AnyShelleyBasedEra sbe
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
-    , wallets=wallet0:_
+    , testnetNodes
+    , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -81,10 +86,49 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
   govActionLifetime <- getGovActionLifetime epochStateView ceo
   H.note_ $ "govActionLifetime: " <> show govActionLifetime
 
+  -- Register stake address
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
+
+
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp stakeKeys
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
+
   -- Create a proposal
   (governanceActionTxId, _governanceActionIndex) <-
-    makeActivityChangeProposal execConfig epochStateView ceo baseDir "proposal"
-                               Nothing (EpochInterval 3) wallet0 (EpochInterval 2)
+    makeActivityChangeProposal execConfig epochStateView ceo (baseDir </> "proposal")
+                               Nothing (EpochInterval 3) stakeKeys wallet0 (EpochInterval 2)
 
   -- Wait for proposal to expire
   void $ waitForEpochs epochStateView (EpochInterval $ unEpochInterval govActionLifetime + 1)

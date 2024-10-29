@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Gov.DRepActivity
   ( hprop_check_drep_activity
@@ -10,6 +12,7 @@ module Cardano.Testnet.Test.Gov.DRepActivity
 
 import           Cardano.Api as Api
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
 
 import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
@@ -22,7 +25,9 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
+import           Data.Default.Class
 import qualified Data.Map as Map
+import qualified Data.Text as Text
 import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath ((</>))
@@ -30,9 +35,12 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep
+import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (mkExecConfig)
+import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (MonadTest, Property, annotateShow)
@@ -53,26 +61,25 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = cEra
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 1
         }
+      eraName = eraToString sbe
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -82,6 +89,45 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
+
+  -- Register stake address
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
+
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp stakeKeys
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
+
 
   -- This proposal should pass
   let minEpochsToWaitIfChanging = EpochInterval 0 -- We don't need a min wait since we are changing
@@ -95,7 +141,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
       maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case.
       firstTargetDRepActivity = EpochInterval 3
   void $ activityChangeProposalTest execConfig epochStateView ceo gov
-                                    "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
+                                    "firstProposal" stakeKeys wallet0 [(1, "yes")] firstTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just firstTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
 
@@ -118,7 +164,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- and we have the stake distributed evenly
   let secondTargetDRepActivity = EpochInterval (unEpochInterval firstTargetDRepActivity + 1)
   void $ activityChangeProposalTest execConfig epochStateView ceo gov
-                                    "failingProposal" wallet2 [(1, "yes")] secondTargetDRepActivity
+                                    "failingProposal" stakeKeys wallet2 [(1, "yes")] secondTargetDRepActivity
                                     minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
 
@@ -130,7 +176,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   let numOfFillerProposals = 4 :: Int
   sequence_
     [activityChangeProposalTest execConfig epochStateView ceo gov
-                                ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
+                                ("fillerProposalNum" ++ show proposalNum) stakeKeys wallet [(1, "yes")]
                                 (EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral proposalNum))
                                 minEpochsToWaitIfNotChanging Nothing
                                 maxEpochsToWaitAfterProposal
@@ -143,7 +189,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- Because 2 out of 3 DReps were inactive, prop should pass
   let lastTargetDRepActivity = EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral numOfFillerProposals + 1)
   void $ activityChangeProposalTest execConfig epochStateView ceo gov
-                                    "lastProposal" wallet0 [(1, "yes")] lastTargetDRepActivity
+                                    "lastProposal" stakeKeys wallet0 [(1, "yes")] lastTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just lastTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
 
@@ -159,6 +205,7 @@ activityChangeProposalTest
   -> ConwayEraOnwards era -- ^ The ConwayEraOnwards witness for current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> KeyPair StakeKey -- ^ Registered stake keys
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions.
   -> t (Int, String) -- ^ Votes to be casted for the proposal. Each tuple contains the number
                      -- of votes of each type and the type of vote (i.e: "yes", "no", "abstain").
@@ -171,7 +218,7 @@ activityChangeProposalTest
                    -- become expected value.
   -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView ceo work prefix
-                           wallet votes change minWait mExpected maxWait = do
+                           stakeKeys wallet votes change minWait mExpected maxWait = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
@@ -185,8 +232,8 @@ activityChangeProposalTest execConfig epochStateView ceo work prefix
   H.note_ $ "Epoch before \"" <> prefix <> "\" prop: " <> show epochBeforeProp
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
-    makeActivityChangeProposal execConfig epochStateView ceo baseDir "proposal"
-                               mPreviousProposalInfo change wallet maxWait
+    makeActivityChangeProposal execConfig epochStateView ceo (baseDir </> "proposal")
+                               mPreviousProposalInfo change stakeKeys wallet maxWait
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet
@@ -233,7 +280,7 @@ voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxI
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe baseDir "vote-tx-body"
                                      voteFiles wallet
 
-  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet:(defaultDRepKeyPair . snd <$> votes))
+  let signingKeys = Some <$> (paymentKeyInfoPair wallet:(defaultDRepKeyPair . snd <$> votes))
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp signingKeys
 
   submitTx execConfig cEra voteTxFp

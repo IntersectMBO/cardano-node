@@ -24,6 +24,7 @@ import           Prelude
 
 import           Control.Monad
 import           Data.Bifunctor (first)
+import           Data.Default.Class
 import           Data.Foldable
 import qualified Data.Map.Strict as Map
 import           Data.String
@@ -35,8 +36,10 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -45,7 +48,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
 hprop_ledger_events_info_action :: Property
-hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
 
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
@@ -55,25 +58,24 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      era = toCardanoEra sbe
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 200
-        , cardanoNodeEra = AnyCardanoEra era
-        }
+      asbe = AnyShelleyBasedEra sbe
+      eraName = eraToString sbe
+      fastTestnetOptions = def { cardanoNodeEra = asbe }
+      shelleyOptions = def { genesisEpochLength = 200 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -92,21 +94,51 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
-  let stakeVkeyFp = gov </> "stake.vkey"
-      stakeSKeyFp = gov </> "stake.skey"
+  -- Register stake address
+  let stakeCertFp = gov </> "stake.regcert"
+      stakeKeys =  KeyPair { verificationKey = File $ gov </> "stake.vkey"
+                           , signingKey = File $ gov </> "stake.skey"
+                           }
+  cliStakeAddressKeyGen stakeKeys
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  createStakeKeyRegistrationCertificate
+    tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
 
-  cliStakeAddressKeyGen
-     $ KeyPair { verificationKey = File stakeVkeyFp
-               , signingKey= File stakeSKeyFp
-               }
+  stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
+  stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
+
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
+    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 10_000_000
+    , "--certificate-file", stakeCertFp
+    , "--witness-override", show @Int 2
+    , "--out-file", stakeCertTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", stakeCertTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", signingKeyFp stakeKeys
+    , "--out-file", stakeCertTxSignedFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", stakeCertTxSignedFp
+    ]
 
   -- Create info action proposal
 
   void $ execCli' execConfig
-    [ "conway", "governance", "action", "create-info"
+    [ eraName, "governance", "action", "create-info"
     , "--testnet"
     , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--out-file", infoActionFp
@@ -118,7 +150,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   H.noteM_ $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
@@ -127,19 +159,19 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     ]
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "sign"
+    [ eraName, "transaction", "sign"
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
     , "--out-file", txbodySignedFp
     ]
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "submit"
+    [ eraName, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
 
   txidString <- mconcat . lines <$> execCli' execConfig
-    [ "transaction", "txid"
+    [ "latest", "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
 
@@ -153,7 +185,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   H.forConcurrently_ [1..3] $ \n -> do
     execCli' execConfig
-      [ "conway", "governance", "vote", "create"
+      [ eraName, "governance", "vote", "create"
       , "--yes"
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word16 governanceActionIndex
@@ -169,7 +201,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
 
   -- Submit votes
   void $ execCli' execConfig
-    [ "conway", "transaction", "build"
+    [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin3
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 3_000_000
@@ -182,7 +214,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
 
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "sign"
+    [ eraName, "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
@@ -192,7 +224,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     ]
 
   void $ execCli' execConfig
-    [ "conway", "transaction", "submit"
+    [ eraName, "transaction", "submit"
     , "--tx-file", voteTxFp
     ]
 

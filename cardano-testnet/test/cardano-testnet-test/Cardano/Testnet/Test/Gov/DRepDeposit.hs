@@ -5,6 +5,7 @@ module Cardano.Testnet.Test.Gov.DRepDeposit
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
@@ -12,6 +13,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
@@ -20,6 +22,7 @@ import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -42,24 +45,24 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoNodeEra = cEra
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 0
         }
+      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -82,7 +85,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
   drepRegTxBody1 <- createCertificatePublicationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
                                                        drepRegCert1 wallet0
   drepSignedRegTx1 <- signTx execConfig cEra drepDir1 "signed-reg-tx"
-                             drepRegTxBody1 [SomeKeyPair drepKeyPair1, SomeKeyPair $ paymentKeyInfoPair wallet0]
+                             drepRegTxBody1 [Some drepKeyPair1, Some $ paymentKeyInfoPair wallet0]
 
   failToSubmitTx execConfig cEra drepSignedRegTx1 "ConwayDRepIncorrectDeposit"
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Testnet.Test.Golden.Config
   ( goldenDefaultConfigYaml
@@ -22,39 +22,34 @@ import           Hedgehog
 import           Hedgehog.Extras.Test.Base (propertyOnce)
 import           Hedgehog.Extras.Test.Golden (diffVsGoldenFile)
 import qualified Hedgehog.Extras.Test.Process as H
+import Testnet.Components.Configuration (eraToString)
 
 goldenDefaultConfigYaml :: Property
 goldenDefaultConfigYaml = propertyOnce $ do
   base <- H.getProjectBase
-  let allEras = map (createConfigStringAndPath base) [minBound..maxBound]
+  let asbes = [minBound..maxBound]
+  let allEras = map (f base) asbes
   mapM_ (uncurry diffVsGoldenFile) allEras
+  where
+    f base (asbe :: AnyShelleyBasedEra) = do
+      AnyShelleyBasedEra sbe <- pure asbe
+      createConfigStringAndPath base sbe
 
-createConfigStringAndPath :: FilePath -> AnyCardanoEra -> (String, FilePath)
-createConfigStringAndPath base era =
-  let configStr = createConfigYamlString era
-      configPath = base </> createGoldenFilePath era
+createConfigStringAndPath :: FilePath -> ShelleyBasedEra era -> (String, FilePath)
+createConfigStringAndPath base sbe =
+  let configStr = createConfigYamlString sbe
+      configPath = base </> createGoldenFilePath sbe
   in (configStr, configPath)
 
-createGoldenFilePath :: AnyCardanoEra -> FilePath
-createGoldenFilePath = \case
-  AnyCardanoEra ByronEra ->
-    "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
-  AnyCardanoEra ShelleyEra ->
-    "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
-  AnyCardanoEra AllegraEra ->
-    "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
-  AnyCardanoEra MaryEra ->
-    "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
-  AnyCardanoEra AlonzoEra ->
-    "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
-  AnyCardanoEra BabbageEra ->
-    "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
-  AnyCardanoEra ConwayEra ->
-    "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
+createGoldenFilePath :: ShelleyBasedEra era -> FilePath
+createGoldenFilePath sbe =
+  "cardano-testnet/test/cardano-testnet-golden/files/golden/"
+    <> eraToString sbe
+    <> "_node_default_config.json"
 
-createConfigYamlString :: AnyCardanoEra -> String
-createConfigYamlString era =
+createConfigYamlString :: ShelleyBasedEra era -> String
+createConfigYamlString sbe =
   let configBs = LB.toStrict . encodePretty
-                  . Object . defaultYamlHardforkViaConfig $ era
+                  . Object . defaultYamlHardforkViaConfig $ sbe
       configStr = Text.unpack $ Text.decodeUtf8 configBs
   in configStr

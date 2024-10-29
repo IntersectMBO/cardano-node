@@ -23,6 +23,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import           Data.Default.Class
 import           Data.Function
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -31,6 +32,7 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.Query
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -42,11 +44,15 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Hedgehog.Extras (threadDelay)
 import           Hedgehog.Extras.Stock (sprocketSystemName)
+import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/kes-period-info/"'@
 hprop_kes_period_info :: Property
 hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -55,29 +61,26 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     <- mkConf tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      sbe = ShelleyBasedEraBabbage
-      era = toCardanoEra sbe
-      anyEra = AnyCardanoEra era
-      cTestnetOptions = cardanoDefaultTestnetOptions
-                          { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
-                          , cardanoActiveSlotsCoeff = 0.1
-                          }
+      ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      asbe = AnyShelleyBasedEra sbe
+      eraString = eraToString sbe
+      cTestnetOptions = def { cardanoNodeEra = asbe }
 
   runTime@TestnetRuntime
     { configurationFile
     , testnetMagic
     , wallets=wallet0:_
-    , poolNodes
-    } <- cardanoTestnetDefault cTestnetOptions conf
-  node1sprocket <- H.headM $ poolSprockets runTime
+    , testnetNodes
+    } <- cardanoTestnetDefault cTestnetOptions def conf
+  node1sprocket <- H.headM $ testnetSprockets runTime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
-      utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
+      utxoSKeyFile = signingKey $ paymentKeyInfoPair wallet0
   void $ execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
+    [ eraString, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -89,14 +92,19 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       termEpoch = EpochNo 3
-  (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
-    <- registerSingleSpo 1 tempAbsPath
+  epochStateView <- getEpochStateView configurationFile node1SocketPath
+  keyDeposit <- getKeyDeposit epochStateView ceo
+  (stakePoolId, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, _)
+    <- registerSingleSpo asbe 1 tempAbsPath
          configurationFile
          node1SocketPath
          termEpoch
-         cTestnetOptions
+         testnetMagic
+         keyDeposit
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)
+
+  H.noteShow_ $ "Test SPO stake pool id: " <> stakePoolId
 
   -- Create test stake address to delegate to the new stake pool
   -- NB: We need to fund the payment credential of the overall address
@@ -105,30 +113,32 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let testStakeDelegator = work </> "test-delegator"
 
   H.createDirectoryIfMissing_ testStakeDelegator
-  let testDelegatorVkeyFp = testStakeDelegator </> "test-delegator.vkey"
-      testDelegatorSKeyFp = testStakeDelegator </> "test-delegator.skey"
-      testDelegatorPaymentVKeyFp = testStakeDelegator </> "test-delegator-payment.vkey"
-      testDelegatorPaymentSKeyFp = testStakeDelegator </> "test-delegator-payment.skey"
+  let testDelegatorKeys = KeyPair
+        { signingKey = File $ testStakeDelegator </> "test-delegator.skey"
+        , verificationKey = File $ testStakeDelegator </> "test-delegator.vkey"
+        }
+      testDelegatorPaymentKeys = KeyPair
+        { signingKey = File $ testStakeDelegator </> "test-delegator-payment.skey"
+        , verificationKey = File $ testStakeDelegator </> "test-delegator-payment.vkey"
+        }
       testDelegatorRegCertFp = testStakeDelegator </> "test-delegator.regcert"
       testDelegatorDelegCert = testStakeDelegator </> "test-delegator.delegcert"
 
-  cliStakeAddressKeyGen
-    $ KeyPair (File testDelegatorVkeyFp) (File testDelegatorSKeyFp)
-  cliAddressKeyGen
-    $ KeyPair (File testDelegatorPaymentVKeyFp) (File testDelegatorPaymentSKeyFp)
+  cliStakeAddressKeyGen testDelegatorKeys
+  cliAddressKeyGen testDelegatorPaymentKeys
 
   -- NB: We must include the stake credential
   testDelegatorPaymentAddr <- execCli
-                [ "address", "build"
+                [ "latest", "address", "build"
                 , "--testnet-magic", show @Int testnetMagic
-                , "--payment-verification-key-file", testDelegatorPaymentVKeyFp
-                , "--stake-verification-key-file", testDelegatorVkeyFp
+                , "--payment-verification-key-file", verificationKeyFp testDelegatorPaymentKeys
+                , "--stake-verification-key-file", verificationKeyFp testDelegatorKeys
                 ]
   testDelegatorStakeAddress
     <- filter (/= '\n')
          <$> execCli
-               [ "stake-address", "build"
-               , "--stake-verification-key-file", testDelegatorVkeyFp
+               [ "latest", "stake-address", "build"
+               , "--stake-verification-key-file", verificationKeyFp testDelegatorKeys
                , "--testnet-magic", show @Int testnetMagic
                ]
 
@@ -136,15 +146,15 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   createStakeKeyRegistrationCertificate
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
-    testDelegatorVkeyFp
-    2_000_000
+    (verificationKey testDelegatorKeys)
+    keyDeposit
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
   createStakeDelegationCertificate
     tempAbsPath
-    (cardanoNodeEra cTestnetOptions)
-    testDelegatorVkeyFp
+    sbe
+    (verificationKey testDelegatorKeys)
     stakePoolId
     testDelegatorDelegCert
 
@@ -152,7 +162,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.note_  "Get updated UTxO"
 
   void $ execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
+    [ eraString, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-2.json"
@@ -164,8 +174,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraString = anyEraToString $ cardanoNodeEra cTestnetOptions
-      delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
+  let delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
     [ eraString
@@ -181,18 +190,18 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   let delegRegTestDelegatorTxFp = work </> "deleg-register-test-delegator.tx"
   void $ execCli
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", delegRegTestDelegatorTxBodyFp
     , "--testnet-magic", show @Int testnetMagic
-    , "--signing-key-file", utxoSKeyFile
-    , "--signing-key-file", testDelegatorSKeyFp
+    , "--signing-key-file", unFile utxoSKeyFile
+    , "--signing-key-file", signingKeyFp testDelegatorKeys
     , "--out-file", delegRegTestDelegatorTxFp
     ]
 
   H.note_ "Submitting test delegator registration and delegation certificates..."
 
   void $ execCli' execConfig
-           [ "transaction", "submit"
+           [ "latest", "transaction", "submit"
            , "--tx-file", delegRegTestDelegatorTxFp
            ]
 
@@ -213,8 +222,8 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   H.createDirectoryIfMissing_ testSpoDir
   let valency = 1
       topology = RealNodeTopology $
-        flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
-            RemoteAddress nodeIpv4 nodePort valency
+        flip map testnetNodes $ \TestnetNode{nodeIpv4,nodePort} ->
+            RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
   let testSpoVrfVKey = work </> "vrf.vkey"
@@ -229,7 +238,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let testSpoOperationalCertFp = testSpoDir </> "node-operational.cert"
 
   void $ execCli' execConfig
-    [ "node", "new-counter"
+    [ "latest", "node", "new-counter"
     , "--cold-verification-key-file", stakePoolColdVKey
     , "--counter-value", "0"
     , "--operational-certificate-issue-counter-file", testSpoOperationalCertFp
@@ -237,7 +246,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
 
   void $ execCli' execConfig
-      [ "node", "issue-op-cert"
+      [ "latest", "node", "issue-op-cert"
       , "--kes-period", "0"
       , "--kes-verification-key-file", testSpoKesVKey
       , "--cold-signing-key-file", stakePoolColdSigningKey
@@ -245,10 +254,11 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
+  jsonBS <- createConfigJson tempAbsPath sbe
   H.lbsWriteFile (unFile configurationFile) jsonBS
-  [newNodePortNumber] <- requestAvailablePortNumbers 1
-  eRuntime <- runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
+  newNodePortNumber <- H.randomPort testnetDefaultIpv4Address
+  eRuntime <- runExceptT . retryOnAddressInUseError $
+    startNode tempAbsPath "test-spo" testnetDefaultIpv4Address newNodePortNumber testnetMagic
         [ "run"
         , "--config", unFile configurationFile
         , "--topology", topologyFile
@@ -257,25 +267,25 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
         , "--shelley-vrf-key", testSpoVrfSKey
         , "--shelley-operational-certificate", testSpoOperationalCertFp
         ]
-  NodeRuntime{ nodeStdout } <- H.evalEither eRuntime
+  TestnetNode{nodeStdout} <- H.evalEither eRuntime
 
   threadDelay 5_000_000
 
   stakeSnapshot1 <- execCli' execConfig
-     [ "query", "stake-snapshot"
+     [ "latest", "query", "stake-snapshot"
      , "--all-stake-pools"
      ]
   H.writeFile (work </> "stake-snapshot-1.json") stakeSnapshot1
 
   ledgerStateJson <- execCli' execConfig
-    [ "query", "ledger-state"
+    [ "latest", "query", "ledger-state"
     , "--cardano-mode"
     ]
   H.writeFile (work </> "ledger-state-1.json") ledgerStateJson
 
   let kesPeriodInfoOutput = testSpoDir </> "kes-period-info-expected-success.json"
   void $ execCli' execConfig
-    [ "query", "kes-period-info"
+    [ "latest", "query", "kes-period-info"
     , "--op-cert-file", testSpoOperationalCertFp
     , "--out-file", kesPeriodInfoOutput
     ]
@@ -291,7 +301,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     ]
 
   void $ execCli' execConfig
-    [ "query",  "tip"
+    [ "latest", "query",  "tip"
     , "--out-file", work </> "current-tip.json"
     ]
 
@@ -319,7 +329,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
 
   void $ execCli' execConfig
-    [ "query",  "tip"
+    [ "latest", "query",  "tip"
     , "--out-file", work </> "current-tip-2.json"
     ]
 
@@ -339,13 +349,15 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
     , " certificate is valid"
     ]
   stakeSnapshot2 <- execCli' execConfig
-     [ "query", "stake-snapshot"
+     [ "latest", "query", "stake-snapshot"
      , "--all-stake-pools"
      ]
+
+  -- TODO: Create a check here that confirms there are four stake pools and each has stake!
   H.writeFile (work </> "stake-snapshot-2.json") stakeSnapshot2
 
   ledgerStateJson2 <- execCli' execConfig
-    [ "query", "ledger-state"
+    [ "latest", "query", "ledger-state"
     , "--cardano-mode"
     ]
   H.writeFile (work </> "ledger-state-2.json") ledgerStateJson2

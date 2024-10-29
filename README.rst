@@ -1,19 +1,16 @@
 .. raw:: html
 
   <p align="center">
-    <a href="https://github.com/intersectmbo/cardano-node/releases"><img src="https://img.shields.io/github/release-pre/intersectmbo/cardano-node.svg?style=for-the-badge" /></a>
+    <a href="https://github.com/intersectmbo/cardano-node/releases">
+      <img src="https://img.shields.io/github/release-pre/intersectmbo/cardano-node.svg?style=for-the-badge" />
+    </a>
+    <a href="https://github.com/intersectmbo/cardano-node/actions/workflows/haskell.yml?query=branch%3Amaster">
+      <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-node/haskell.yml?branch=master&label=master&style=for-the-badge" />
+    </a>
+    <a href="https://github.com/intersectmbo/cardano-node/actions/workflows/haskell.yml?query=branch%3Anightly">
+      <img alt="GitHub Workflow Status (nightly)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-node/haskell.yml?branch=nightly&label=nightly&style=for-the-badge" />
+    </a>
   </p>
-
-  <table align="center">
-    <tr><td colspan="2" align="center">GitHub Actions</td></tr>
-    <tr>
-      <td>
-        <a href="https://github.com/intersectmbo/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-node/haskell.yml?branch=master" /></a>
-        <a href="https://github.com/intersectmbo/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (branch)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-node/haskell.yml?branch=nightly" /></a>
-      </td>
-    </tr>
-  </table>
-
 .. contents:: Contents
 
 *******************************************
@@ -47,7 +44,7 @@ Obtaining ``cardano-node``
 Building from source
 ====================
 
-Documentation for building the node can be found `here <https://developers.cardano.org/docs/get-started/installing-cardano-node>`_.
+Documentation for building the node can be found `here <https://developers.cardano.org/docs/get-started/cardano-node/installing-cardano-node>`_.
 
 Executables
 ===========
@@ -154,7 +151,7 @@ Using ``cardano-cli``
 *********************
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
-Usage documentation can be found at ``https://github.com/input-output-hk/cardano-cli/tree/master/cardano-cli/README.md``.
+Usage documentation can be found at `<https://developers.cardano.org/docs/get-started/cardano-cli/get-started/>`_.
 
 The general synopsis is as follows:
 

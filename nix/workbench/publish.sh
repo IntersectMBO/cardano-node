@@ -135,6 +135,12 @@ publish() {
       bench-data-publish $@
     ;;
 
+    * )
+      # Needed dependencies in `nix/workbench/shell.nix`:
+      #   vault-bin yq norouter socat
+      fatal "Sorry, non-local functionality is currently not available!"
+    ;;
+
     cloud )
       local usage="USAGE: wb publish $op"
       # Publish script vars.

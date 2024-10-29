@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-06-23T23:01:13Z
-  , cardano-haskell-packages 2024-07-03T01:26:49Z
+  , hackage.haskell.org 2024-10-10T00:52:24Z
+  , cardano-haskell-packages 2024-10-23T20:55:17Z
 
 packages:
   cardano-node
@@ -48,19 +48,22 @@ package cryptonite
   flags: -support_rdrand
 
 package snap-server
-  flags: +openssl
+  flags: -openssl
 
 package bitvec
-   flags: -simd
+  flags: -simd
 
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
 constraints:
-  wai-extra < 3.1.15,
+  , wai-extra < 3.1.15
+  , Cabal < 3.14
 
-allow-newer: katip:Win32
+allow-newer:
+  , katip:Win32
+  , ekg-wai:time
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly

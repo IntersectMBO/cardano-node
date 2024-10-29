@@ -11,7 +11,6 @@
 , workbenchDevMode ? false
 ##
 , withHoogle ? true
-, withMainnet ? true
 }:
 
 with lib;
@@ -38,7 +37,7 @@ in project.shellFor {
 
     export WB_BACKEND=${backend.name}
     export WB_BACKEND_DATA=${backendData}
-    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-0}
+    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
     export WB_SHELL_PROFILE=${profileName}
@@ -86,7 +85,7 @@ in project.shellFor {
     }
     trap workbench_atexit EXIT
     ''
-    + optionalString withMainnet
+    + optionalString (profileData.value.scenario == "chainsync")
     ''
     export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
     ''
@@ -130,17 +129,16 @@ in project.shellFor {
     pkgs.moreutils
     pkgs.pstree
     pkgs.time
-    workbench-interactive-start
-    workbench-interactive-stop
-    workbench-interactive-restart
+    pkgs.util-linux
+    workbench-runner.workbench-interactive-start
+    workbench-runner.workbench-interactive-stop
+    workbench-runner.workbench-interactive-restart
   ]
   # Backend packages take precendence.
   ++ workbench-runner.backend.extraShellPkgs
   ++ [
       # Publish
       bench-data-publish
-      # Publish tunnel
-      yq nomad vault-bin norouter socat
       # Debugging
       postgresql
       # Performance report generation

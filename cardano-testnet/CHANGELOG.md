@@ -2,6 +2,12 @@
 
 ## Next version
 
+## 10.0.0
+
+* Bump for node 10
+
+##
+
 * Update `cardano-ping` dependency
 * Add `--num-dreps` parameter
 

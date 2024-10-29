@@ -11,12 +11,14 @@ module Cardano.Testnet.Test.Cli.Conway.Plutus
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
+import           Data.Default.Class
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
@@ -41,6 +43,8 @@ import qualified Hedgehog.Extras as H
 -- Certifying YES
 -- Voting NO
 -- Proposing NO
+-- Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV3/"'@
 hprop_plutus_v3 :: Property
 hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -50,40 +54,39 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    sbe = ShelleyBasedEraConway
+    ceo = ConwayEraOnwardsConway
+    sbe = conwayEraOnwardsToShelleyBasedEra ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
-    options = cardanoDefaultTestnetOptions
-                { cardanoNodeEra = anyEra -- TODO: We should only support the latest era and the upcoming era
-                }
+    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime
     { configurationFile
     , testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:wallet1:_
-    } <- cardanoTestnetDefault options conf
+    } <- cardanoTestnetDefault options def conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
       utxoSKeyFile2 = signingKeyFp $ paymentKeyInfoPair wallet1
-      socketPath = nodeSocketPath poolRuntime
+      socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
-  H.writeFile plutusScript $ Text.unpack plutusV3Script
+  H.writeFile plutusScript $ Text.unpack plutusV3SupplementalDatumScript
 
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
   plutusSpendingScriptAddr <-
     execCli' execConfig
-      [ "address", "build"
+      [ "latest", "address", "build"
       , "--payment-script-file", plutusScript
       ]
 
@@ -98,19 +101,24 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   scriptdatumhash <- filter (/= '\n') <$>
     execCli' execConfig
-      [ "transaction", "hash-script-data"
+      [ "latest", "transaction", "hash-script-data"
       , "--script-data-value", "0"
       ]
+
+  supplementalDatumJsonFile
+    <- H.note $ work </> "supplemental-datum.json"
+  H.writeFile supplementalDatumJsonFile "{\"int\":1}"
 
   scriptStakeRegistrationCertificate
     <- H.note $ work </> "script-stake-registration-certificate"
 
+  keyDeposit <- fromIntegral . L.unCoin <$> getKeyDeposit epochStateView ceo
   -- Create script stake registration certificate
   createScriptStakeRegistrationCertificate
     tempAbsPath
     anyEra
     plutusScript
-    0
+    keyDeposit
     scriptStakeRegistrationCertificate
 
   -- 1. Put UTxO and datum at Plutus spending script address
@@ -126,14 +134,14 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   let sendAdaToScriptAddressTx = work </> "send-ada-to-script-address-tx"
   void $ execCli' execConfig
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", sendAdaToScriptAddressTxBody
     , "--signing-key-file", utxoSKeyFile
     , "--out-file", sendAdaToScriptAddressTx
     ]
 
   void $ execCli' execConfig
-    [ "transaction", "submit"
+    [ "latest", "transaction", "submit"
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
@@ -148,6 +156,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
                       , "+", mintValue
                       ]
+      txoutWithSupplementalDatum = mconcat [utxoAddr, "+", show @Int 1_000_000]
 
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
@@ -164,19 +173,22 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--certificate-script-file", plutusScript
     , "--certificate-redeemer-value", "0"
     , "--tx-out", txout
+    , "--tx-out", txoutWithSupplementalDatum 
+    , "--tx-out-datum-embed-file", supplementalDatumJsonFile
     , "--out-file", spendScriptUTxOTxBody
     ]
 
   void $ execCli' execConfig
-    [ "transaction", "sign"
+    [ "latest", "transaction", "sign"
     , "--tx-body-file", spendScriptUTxOTxBody
     , "--signing-key-file", utxoSKeyFile2
     , "--out-file", spendScriptUTxOTx
     ]
 
   void $ execCli' execConfig
-    [ "transaction", "submit"
+    [ "latest", "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
     ]
+
   H.success
 

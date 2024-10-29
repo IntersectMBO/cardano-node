@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-global_genesis_format_version=March-14-2023
+global_genesis_format_version=September-01-2024
 
 usage_genesis() {
   usage "genesis" "Genesis" <<EOF
@@ -32,8 +32,8 @@ if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
     info genesis "$(red using modular configuration)"
 fi
 
-if [[ $WB_CREATE_TESTNET_DATA -eq 1 ]]; then
-    info genesis "$(red using create-testnet-data)"
+if [[ $WB_CREATE_TESTNET_DATA -ne 1 ]]; then
+    info genesis "$(red falling back to create-staked)"
 fi
 
 case "$op" in

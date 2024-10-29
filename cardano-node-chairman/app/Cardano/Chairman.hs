@@ -253,7 +253,12 @@ runChairman ::
                 (Anchor (Header (CardanoBlock StandardCrypto)))
                 (Header (CardanoBlock StandardCrypto))))
 runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
-    let initialChains :: Map SocketPath (AF.AnchoredSeq (WithOrigin SlotNo) (Anchor (Header (CardanoBlock StandardCrypto))) (Header (CardanoBlock StandardCrypto)))
+    let initialChains :: Map
+          SocketPath
+          (AF.AnchoredSeq
+            (WithOrigin SlotNo)
+            (Anchor (Header (CardanoBlock StandardCrypto)))
+            (Header (CardanoBlock StandardCrypto)))
         initialChains = Map.fromList
           [ (socketPath, AF.Empty AF.AnchorGenesis)
           | socketPath <- socketPaths]

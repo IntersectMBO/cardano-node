@@ -144,9 +144,11 @@ procCli = GHC.withFrozenCallStack $ H.procFlex "cardano-cli" "CARDANO_CLI"
 -- | Create a 'CreateProcess' describing how to start the cardano-node process
 -- and an argument list.
 procNode
-  :: [String]
+  :: HasCallStack
+  => MonadIO m
+  => [String]
   -- ^ Arguments to the CLI command
-  -> ExceptT ExecutableError IO CreateProcess
+  -> ExceptT ExecutableError m CreateProcess
   -- ^ Captured stdout
 procNode = GHC.withFrozenCallStack $ procFlexNew "cardano-node" "CARDANO_NODE"
 
@@ -234,31 +236,32 @@ resourceAndIOExceptionHandlers = [ Handler $ pure . ProcessIOException
                                  , Handler $ pure . ResourceException
                                  ]
 
-
 procFlexNew
-  :: String
+  :: MonadIO m
+  => String
   -- ^ Cabal package name corresponding to the executable
   -> String
   -- ^ Environment variable pointing to the binary to run
   -> [String]
   -- ^ Arguments to the CLI command
-  -> ExceptT ExecutableError IO CreateProcess
+  -> ExceptT ExecutableError m CreateProcess
   -- ^ Captured stdout
 procFlexNew = procFlexNew' H.defaultExecConfig
 
 procFlexNew'
-  :: H.ExecConfig
+  :: MonadIO m
+  => H.ExecConfig
   -> String
   -- ^ Cabal package name corresponding to the executable
   -> String
   -- ^ Environment variable pointing to the binary to run
   -> [String]
   -- ^ Arguments to the CLI command
-  -> ExceptT ExecutableError IO CreateProcess
+  -> ExceptT ExecutableError m CreateProcess
   -- ^ Captured stdout
 procFlexNew' execConfig pkg binaryEnv arguments = GHC.withFrozenCallStack $ do
   bin <- binFlexNew pkg binaryEnv
-  return (IO.proc bin arguments)
+  pure (IO.proc bin arguments)
     { IO.env = getLast $ H.execConfigEnv execConfig
     , IO.cwd = getLast $ H.execConfigCwd execConfig
     -- this allows sending signals to the created processes, without killing the test-suite process
@@ -267,11 +270,12 @@ procFlexNew' execConfig pkg binaryEnv arguments = GHC.withFrozenCallStack $ do
 
 -- | Compute the path to the binary given a package name or an environment variable override.
 binFlexNew
-  :: String
+  :: MonadIO m
+  => String
   -- ^ Package name
   -> String
   -- ^ Environment variable pointing to the binary to run
-  -> ExceptT ExecutableError IO FilePath
+  -> ExceptT ExecutableError m FilePath
   -- ^ Path to executable
 binFlexNew pkg binaryEnv = do
   maybeEnvBin <- liftIO $ IO.lookupEnv binaryEnv
@@ -308,7 +312,11 @@ data ExecutableError
   = CannotDecodePlanJSON FilePath String
   | RetrievePlanJsonFailure IOException
   | ReadFileFailure IOException
-  | MissingExecutable FilePath String
+  | ExecutableMissingInComponent FilePath String
+    -- ^ Component with key @component-name@ is found, but it is missing
+    -- the @bin-file@ key.
+  | ExecutableNotFoundInPlan String
+    -- ^ Component with key @component-name@ cannot be found
   deriving Show
 
 
@@ -316,9 +324,10 @@ data ExecutableError
 -- to a haskell package.  It is assumed that the project has already been configured and the
 -- executable has been built.
 binDist
-  :: String
+  :: MonadIO m
+  => String
   -- ^ Package name
-  -> ExceptT ExecutableError IO FilePath
+  -> ExceptT ExecutableError m FilePath
   -- ^ Path to executable
 binDist pkg = do
   pJsonFp <- handleIOExceptT RetrievePlanJsonFailure planJsonFile
@@ -328,8 +337,8 @@ binDist pkg = do
     Right plan -> case List.filter matching (plan & installPlan) of
       (component:_) -> case component & binFile of
         Just bin -> return $ addExeSuffix (Text.unpack bin)
-        Nothing -> left $ MissingExecutable pJsonFp $ "missing bin-file in: " <> show component
-      [] -> error $ "Cannot find exe:" <> pkg <> " in plan"
+        Nothing -> left $ ExecutableMissingInComponent pJsonFp $ "missing \"bin-file\" key in plan component: " <> show component
+      [] -> left $ ExecutableNotFoundInPlan $ "Cannot find \"component-name\" key with value \"exe:" <> pkg <> "\""
     Left message -> left $ CannotDecodePlanJSON pJsonFp $ "Cannot decode plan: " <> message
   where matching :: Component -> Bool
         matching component = case componentName component of

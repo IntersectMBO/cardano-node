@@ -4,21 +4,24 @@
 
 # Contents
 
-1. [Introduction](#Introduction)
-   1. [Motivation](#Motivation)
-   3. [Overview](#Overview)
-2. [Build and run](#Build-and-run)
-3. [Configuration](#Configuration)
-   1. [Distributed Scenario](#Distributed-scenario)
-   2. [Local Scenario](#Local-scenario)
-   3. [Network Magic](#Network-magic)
-   4. [Requests](#Requests)
-   5. [Logging](#Logging)
-   6. [Logs Rotation](#Logs-rotation)
-   7. [Prometheus](#Prometheus)
-   8. [EKG Monitoring](#EKG-monitoring)
-   9. [Verbosity](#Verbosity)
-   10. [RTView](#RTView)
+- [Cardano Tracer](#cardano-tracer)
+- [Contents](#contents)
+- [Introduction](#introduction)
+  - [Motivation](#motivation)
+  - [Overview](#overview)
+- [Build and run](#build-and-run)
+- [Configuration](#configuration)
+  - [Distributed Scenario](#distributed-scenario)
+    - [Important](#important)
+  - [Local Scenario](#local-scenario)
+  - [Network Magic](#network-magic)
+  - [Requests](#requests)
+  - [Logging](#logging)
+  - [Logs Rotation](#logs-rotation)
+  - [Prometheus](#prometheus)
+  - [EKG Monitoring](#ekg-monitoring)
+  - [Verbosity](#verbosity)
+  - [RTView](#rtview)
 
 # Introduction
 
@@ -31,6 +34,10 @@ Previously, the node handled all the logging by itself. Moreover, it provided mo
 You can think of Cardano node as a **producer** of logging/monitoring information, and `cardano-tracer` as a **consumer** of this information. After the network connection between them is established, `cardano-tracer` periodically asks for such an information, and the node replies with it.
 
 There are 3 kinds of such an information:
+
+> Attention: systemd is enabled by default on Linux. It can be
+> disabled manually with a cabal flag: `-f -systemd` when building on
+> systems without it.
 
 1. Trace object, which contains different logging data. `cardano-tracer` constantly asks for new trace objects each `N` seconds, receives them and stores them in the log files and/or in Linux `systemd`'s journal.
 2. EKG metric, which contains some system metric. Please [read EKG documentation](https://hackage.haskell.org/package/ekg-core) for more info. `cardano-tracer` constantly asks for new EKG metrics each `N` seconds, receives them and displays them using monitoring tools.
@@ -333,72 +340,166 @@ The fields `rpMaxAgeMinutes`, `rpMaxAgeHours` specify the lifetime of the log fi
 
 ## Prometheus
 
-The optional field `hasPrometheus` specifies the host and port of the web page with metrics. For example:
+At top-level route `/` Promtheus gives a list of connected nodes.
+
+The responses are either human-readable names (HTML) with clickable
+links, or JSON mapping from connected node names to relative URLs,
+depending on desired content type (`Accept:` header of the request).
+
+The routes dynamically depend on the connected nodes, the node names
+are [sluggified](https://hackage.haskell.org/package/slugify).
+
+The optional field `hasPrometheus` specifies the host and port of the
+web page with Prometheus metrics. For example:
 
 ```
 "hasPrometheus": {
   "epHost": "127.0.0.1",
-  "epPort": 3000
+  "epPort": 3200
 }
 ```
 
-Here the web page is available at `http://127.0.0.1:3000`. Please note that if you skip this field, the web page will not be available.
-
-After you open `http://127.0.0.1:3000` in your browser, you will see the list of identifiers of connected nodes (or the warning message, if there are no connected nodes yet), for example:
-
-```
-* tmp-forwarder.sock@0
-* tmp-forwarder.sock@1
-* tmp-forwarder.sock@2
-```
-
-Each identifier is a hyperlink to the page where you will see the **current** list of metrics received from the corresponding node, in such a format:
+With this example, the list of clickable identifiers of connected
+nodes will be available at `http://127.0.0.1:3200`, such as:
 
 ```
-rts_gc_par_tot_bytes_copied 0
-rts_gc_num_gcs 2
-rts_gc_max_bytes_slop 15880
-rts_gc_num_bytes_usage_samples 1
-rts_gc_wall_ms 4005
-...
-rts_gc_par_max_bytes_copied 0
-rts_gc_mutator_cpu_ms 57
-rts_gc_mutator_wall_ms 4004
-rts_gc_gc_cpu_ms 1
-rts_gc_cumulative_bytes_used 184824
+* 127.0.0.1:30004
+* 127.0.0.1:30001
+* 127.0.0.1:30005
+* 127.0.0.1:30000
+* 127.0.0.1:30003
+* 127.0.0.1:30002
+* TxGenerator
 ```
+
+Clicking an identifier will take you to its monitoring page. For
+example clicking on `127.0.0.1:30004` displays the monitoring metrics
+at `http://localhost:3200/12700130004`.
+
+Sending a HTTP GET request with a JSON Accept header gives the metrics
+of the top-level route, or identifier as JSON. `jq '.'` pretty-prints
+the JSON object.
+
+```
+$ curl --silent -H "Accept: application/json" '127.0.0.1:3200' | jq '.'
+{
+  "127.0.0.1:30000": "/12700130000",
+  "127.0.0.1:30001": "/12700130001",
+  "127.0.0.1:30002": "/12700130002",
+  "127.0.0.1:30003": "/12700130003",
+  "127.0.0.1:30004": "/12700130004",
+  "127.0.0.1:30005": "/12700130005",
+  "TxGenerator": "/txgenerator"
+}
+```
+
+Prometheus uses the text-based exposition format, complete with `# TYPE` and `# HELP` annotations. The latter ones have to be provided by the `metricsHelp` config value (see below).  
+
+The output should be [OpenMetrics](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#text-format) compliant. Example snippet:
+
+```
+$ curl '127.0.0.1:3200/12700130004'
+# TYPE Mem_resident_int gauge
+# HELP Mem_resident_int Kernel-reported RSS (resident set size)
+Mem_resident_int 103792640
+# TYPE rts_gc_max_bytes_used gauge
+rts_gc_max_bytes_used 5811512
+# TYPE rts_gc_gc_cpu_ms counter
+rts_gc_gc_cpu_ms 50
+# TYPE RTS_gcMajorNum_int gauge
+# HELP RTS_gcMajorNum_int Major GCs
+RTS_gcMajorNum_int 4
+# TYPE rts_gc_par_avg_bytes_copied gauge
+rts_gc_par_avg_bytes_copied 0
+# TYPE rts_gc_num_bytes_usage_samples counter
+rts_gc_num_bytes_usage_samples 4
+# TYPE remainingKESPeriods_int gauge
+remainingKESPeriods_int 62
+# TYPE rts_gc_bytes_copied counter
+rts_gc_bytes_copied 17114384
+# TYPE nodeCannotForge_int gauge
+# HELP nodeCannotForge_int How many times was this node unable to forge [a block]?
+# EOF
+```
+
+Passing metric help annotations to the service can be done in the config file, either as a key-value map from metric name to help text, or as a seperate JSON file containing such a map.
+The system's internal metric names have to be used as keys (cf. [metrics documentation](https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/new-tracing/tracers_doc_generated.md#metrics)).
+```
+"metricsHelp": "path/to/key-value-map.json"
+```
+or
+```
+"metricsHelp": {
+  "Mem.resident": "Kernel-reported RSS (resident set size)",
+  "RTS.gcMajorNum": "Major GCs",
+  "nodeCannotForge": "How many times was this node unable to forge [a block]?"
+}
+```
+
+
 
 ## EKG Monitoring
 
-The optional field `hasEKG` specifies the hosts and ports of two web pages:
+At top-level route `/` EKG gives a list of connected nodes.
 
-1. the list of identifiers of connected nodes,
-2. EKG monitoring page.
+The responses are either human-readable names (HTML) with clickable
+links, or JSON mapping from connected node names to relative URLs,
+depending on desired content type (`Accept:` header of the request).
 
-For example, if you use JSON configuration file:
+The routes dynamically depend on the connected nodes, the node names
+are [sluggified](https://hackage.haskell.org/package/slugify).
+
+The optional field `hasEKG` specifies the host and port of the web
+page with EKG metrics. For example:
 
 ```
-"hasEKG": [
-  {
-    "epHost": "127.0.0.1",
-    "epPort": 3100
+"hasEKG": {
+  "epHost": "127.0.0.1",
+  "epPort": 3100
+}
+```
+
+With this example, the list of clickable identifiers of connected
+nodes will be available at `http://127.0.0.1:3100`, such as:
+
+```
+* 127.0.0.1:30004
+* 127.0.0.1:30001
+* 127.0.0.1:30005
+* 127.0.0.1:30000
+* 127.0.0.1:30003
+* 127.0.0.1:30002
+* TxGenerator
+```
+
+Clicking an identifier will take you to its monitoring page. For
+example clicking on `127.0.0.1:30004` displays the monitoring metrics
+at `http://localhost:3100/12700130004`.
+
+Sending a HTTP GET request with a JSON Accept header gives the metrics
+of an identifier as JSON. `jq '.'` pretty-prints the JSON object.
+
+```
+$ curl --silent -H 'Accept: application/json' '127.0.0.1:3100/12700130004' | jq '.'
+{
+  "ChainSync": {
+    "HeadersServed_counter": {
+      "type": "c",
+      "val": 24
+    }
   },
-  {
-    "epHost": "127.0.0.1",
-    "epPort": 3101
-  }
-]
+  "Mem": {
+    "resident_int": {
+      "type": "g",
+      "val": 91877376
+    }
+  },
+  "RTS": {
+    "alloc_int": {
+      "type": "g",
+      "val": 1014189896
+    },
 ```
-
-The page with the list of identifiers of connected nodes will be available at `http://127.0.0.1:3100`, for example:
-
-```
-* tmp-forwarder.sock@0
-* tmp-forwarder.sock@1
-* tmp-forwarder.sock@2
-```
-
-Each identifier is a hyperlink, after clicking to it you will be redirected to `http://127.0.0.1:3101` where you will see EKG monitoring page for corresponding node.
 
 ## Verbosity
 

@@ -263,6 +263,10 @@ class MetaTrace a where
 
 Metrics are seamlessly incorporated into the system through regular trace messages implementing the `asMetrics` function within the `LogFormatting` typeclass. Unlike other trace components, metrics are not subjected to filtering and are consistently provided. This occurs as long as the `EKGBackend` is configured for the message. The `EKGBackend` then forwards these metrics to `cardano-tracer` for additional processing. Subsequently, they are dispatched as Prometheus metrics, extending their utility and visibility.
 
+It is essential to implement the metricsDoc function of the MetaTrace typeclass, as this information is utilized to optimize system performance.
+
+The configuration option TraceOptionMetricsPrefix can be used to prepend a prefix to any metrics name. For example, the prefix could be "cardano.node".
+
 ## Frequency Limiting in Trace Filtering
 
 Frequency filtering is an integral aspect of trace filtering, offering an optional mechanism to limit the observable frequency of individual trace messages.
@@ -331,6 +335,9 @@ TraceOptionForwarder: # Configure the forwarder
 
 # Frequency of Peer messages set to two seconds
 TraceOptionPeerFrequency: 2000
+
+# Any metrics emittted will get this prefix
+TraceOptionMetricsPrefix: "cardano.node"
 ```
 
 The same in JSON looks like this:
@@ -362,7 +369,8 @@ The same in JSON looks like this:
     },
     "mode": "Initiator"
   },
-  "TraceOptionPeerFrequency": 2000
+  "TraceOptionPeerFrequency": 2000,
+  "TraceOptionMetricsPrefix": "cardano.node"
 }
 ```
 
@@ -383,11 +391,11 @@ implement some advanced functionality.
 
 Presently, the process of adding a new tracer involves making changes in three specific modules. However, we anticipate that this requirement will be simplified once the old tracing system is phased out. The current modules where modifications are needed to add a new tracer are:
 
-- **Cardano.Node.Tracing.Tracers**
+- __Cardano.Node.Tracing.Tracers__
 
-- **Cardano.Node.Tracing.Documentation**
+- __Cardano.Node.Tracing.Documentation__
 
-- **Cardano.Node.Tracing.Consistency**
+- __Cardano.Node.Tracing.Consistency__
 
 ## Message Filtering based on Severity
 

@@ -25,9 +25,7 @@ import           Cardano.Logging
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
-
 import           Cardano.Node.Startup
-
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
@@ -56,7 +54,6 @@ import           Data.Text (Text, pack)
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
-
 import           Network.Socket (SockAddr)
 
 import           Paths_cardano_node (version)
@@ -230,10 +227,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "publicRoots" .= toJSON publicRoots
                , "useLedgerAfter" .= useLedgerPeers
                ]
-  forMachine _dtal NetworkConfigLegacy =
-      mconcat [ "kind" .= String "NetworkConfigLegacy"
-              , "message" .= String p2pNetworkConfigLegacyMessage
-              ]
   forMachine _dtal NonP2PWarning =
       mconcat [ "kind" .= String "NonP2PWarning"
                , "message" .= String nonP2PWarningMessage ]
@@ -285,6 +278,8 @@ instance ( Show (BlockNodeToNodeVersion blk)
         DisabledBlockForging -> 0
         NotEffective -> 0
       )]
+  asMetrics (BICommon BasicInfoCommon {..}) =
+    [ PrometheusM "basicInfo" [("nodeStartTime", (pack . show) biNodeStartTime)]]
   asMetrics _ = []
 
 instance MetaTrace  (StartupTrace blk) where
@@ -314,8 +309,6 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigUpdateError"]
   namespaceFor NetworkConfig {}  =
     Namespace [] ["NetworkConfig"]
-  namespaceFor NetworkConfigLegacy {}  =
-    Namespace [] ["NetworkConfigLegacy"]
   namespaceFor NonP2PWarning {}  =
     Namespace [] ["NonP2PWarning"]
   namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
@@ -368,8 +361,6 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["NetworkConfig"]) = Just
     ""
-  documentFor (Namespace [] ["NetworkConfigLegacy"]) = Just
-    ""
   documentFor (Namespace [] ["NonP2PWarning"]) = Just
     ""
   documentFor (Namespace [] ["WarningDevelopmentNodeToNodeVersions"]) = Just
@@ -409,6 +400,8 @@ instance MetaTrace  (StartupTrace blk) where
 
   metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
     [("forging_enabled","Can this node forge blocks? (Is it provided with block forging credentials) 0 = no, 1 = yes")]
+  metricsDocFor (Namespace _ ["Common"]) =
+    [("systemStartTime","The UTC time this node was started.")]
 
 
   metricsDocFor _ = []
@@ -426,7 +419,6 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
     , Namespace [] ["NetworkConfigUpdateError"]
     , Namespace [] ["NetworkConfig"]
-    , Namespace [] ["NetworkConfigLegacy"]
     , Namespace [] ["NonP2PWarning"]
     , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
     , Namespace [] ["WarningDevelopmentNodeToClientVersions"]
@@ -435,7 +427,6 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["Byron"]
     , Namespace [] ["Network"]
     ]
-
 
 nodeToClientVersionToInt :: NodeToClientVersion -> Int
 nodeToClientVersionToInt = \case
@@ -447,16 +438,13 @@ nodeToClientVersionToInt = \case
   NodeToClientV_14 -> 14
   NodeToClientV_15 -> 15
   NodeToClientV_16 -> 16
+  NodeToClientV_17 -> 17
+  NodeToClientV_18 -> 18
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case
-  NodeToNodeV_7 -> 7
-  NodeToNodeV_8 -> 8
-  NodeToNodeV_9 -> 9
-  NodeToNodeV_10 -> 10
-  NodeToNodeV_11 -> 11
-  NodeToNodeV_12 -> 12
   NodeToNodeV_13 -> 13
+  NodeToNodeV_14 -> 14
 
 -- | Pretty print 'StartupInfoTrace'
 --
@@ -538,7 +526,6 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
       UseLedgerPeers Always         ->
         "Use ledger peers in any slot."
   ]
-ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 
@@ -579,15 +566,6 @@ nonP2PWarningMessage :: Text
 nonP2PWarningMessage =
       "You are using legacy networking stack, "
    <> "consider upgrading to the p2p network stack."
-
-p2pNetworkConfigLegacyMessage :: Text
-p2pNetworkConfigLegacyMessage =
-    pack
-  $ intercalate "\n"
-  [ "You are using legacy p2p topology file format."
-  , "See https://github.com/intersectmbo/cardano-node/issues/4559"
-  , "Note that the legacy p2p format will be removed in `1.37` release."
-  ]
 
 -- | Pretty print 'SocketOrSocketInfo'.
 --

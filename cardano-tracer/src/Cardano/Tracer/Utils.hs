@@ -38,6 +38,7 @@ module Cardano.Tracer.Utils
   , modifyRegistry_
   , readRegistry
   , getProcessId
+  , sequenceConcurrently_
   ) where
 
 import           Cardano.Node.Startup (NodeInfo (..))
@@ -54,6 +55,7 @@ import           Control.Applicative (liftA3)
 import           Control.Applicative (liftA2, liftA3)
 #endif
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
+import           Control.Concurrent.Async (Concurrently(..))
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar_)
 import           Control.Concurrent.STM (atomically)
@@ -285,3 +287,6 @@ getProcessId =
   do CPid pid <- getProcessID
      return $ fromIntegral pid
 #endif
+
+sequenceConcurrently_ :: Traversable t => t (IO a) -> IO ()
+sequenceConcurrently_ = runConcurrently . traverse_ Concurrently

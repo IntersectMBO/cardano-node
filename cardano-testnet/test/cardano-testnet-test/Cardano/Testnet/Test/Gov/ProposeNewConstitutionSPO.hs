@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -19,6 +20,7 @@ import           Prelude
 
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Default.Class
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
@@ -33,6 +35,7 @@ import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
@@ -52,24 +55,28 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
-        , cardanoNodeEra = cEra
+      fastTestnetOptions = def
+        { cardanoNodeEra = AnyShelleyBasedEra sbe
+        , cardanoNodes =
+          [ SpoNodeOptions Nothing []
+          , SpoNodeOptions Nothing []
+          , SpoNodeOptions Nothing []
+          ]
         }
+      shelleyOptions = def { genesisEpochLength = 100 }
 
   TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:_
     , configurationFile
     }
-    <- cardanoTestnetDefault fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
 
-  PoolNode{poolRuntime} <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+  node <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let socketPath = nodeSocketPath poolRuntime
+  let socketPath = nodeSocketPath node
 
   epochStateView <- getEpochStateView configurationFile socketPath
 
@@ -129,7 +136,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
     , "--out-file", txBodyFp
     ]
 
-  txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+  txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [Some $ paymentKeyInfoPair wallet0]
 
   submitTx execConfig cEra txBodySigned
 
@@ -154,8 +161,8 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
   votesTxBody <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body" votes wallet0
 
   votesSignedTx <- signTx execConfig cEra work "vote-signed-tx"
-                     votesTxBody (SomeKeyPair (paymentKeyInfoPair wallet0)
-                                  :[SomeKeyPair $ defaultSpoColdKeyPair n | n <- [1..3]])
+                     votesTxBody (Some (paymentKeyInfoPair wallet0)
+                                  :[Some $ defaultSpoColdKeyPair n | n <- [1..3]])
 
   -- Call should fail, because SPOs are unallowed to vote on the constitution
   failToSubmitTx execConfig cEra votesSignedTx "DisallowedVoters"

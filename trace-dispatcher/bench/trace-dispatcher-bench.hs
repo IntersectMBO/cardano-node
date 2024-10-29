@@ -107,7 +107,7 @@ ekgTracers confState = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     ekgServer       <- forkServer "localhost" 8000
-    ekgTracer       <- ekgTracer (Right ekgServer)
+    ekgTracer       <- ekgTracer emptyTraceConfig (Right ekgServer)
     tr              <- mkCardanoTracer
                         stdoutTracer'
                         forwardTracer'

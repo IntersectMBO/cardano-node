@@ -1,0 +1,35 @@
+[
+    [
+        {
+            "keyHash": "<redacted>"
+        },
+        {
+            "anchor": null,
+            "deposit": 1000000,
+            "expiry": 1002,
+            "stake": 15000003000000
+        }
+    ],
+    [
+        {
+            "keyHash": "<redacted>"
+        },
+        {
+            "anchor": null,
+            "deposit": 1000000,
+            "expiry": 1002,
+            "stake": 15000003000000
+        }
+    ],
+    [
+        {
+            "keyHash": "<redacted>"
+        },
+        {
+            "anchor": null,
+            "deposit": 1000000,
+            "expiry": 1002,
+            "stake": 15000003000000
+        }
+    ]
+]

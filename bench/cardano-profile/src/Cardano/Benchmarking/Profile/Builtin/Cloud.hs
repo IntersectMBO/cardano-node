@@ -24,16 +24,26 @@ import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 
 --------------------------------------------------------------------------------
 
--- Use `base` and pick a duration.
-base :: Types.Profile -> Types.Profile
-base =
+baseInternal :: Types.Profile -> Types.Profile
+baseInternal =
     P.fixedLoaded
   . composeFiftytwo
-  . V.genesisVariantLast
   -- All cloud profiles use trace forwarding.
   . P.traceForwardingOn
   . P.initCooldown 45
   . P.analysisStandard
+
+-- Use `base` / `baseVoltaire` and pick a duration.
+
+base :: Types.Profile -> Types.Profile
+base =
+    baseInternal
+  . V.genesisVariantPreVoltaire
+
+baseVoltaire :: Types.Profile -> Types.Profile
+baseVoltaire =
+    baseInternal
+  . V.genesisVariantVoltaire
 
 --------------------------------------------------------------------------------
 
@@ -77,7 +87,6 @@ plutusBlstBase :: Types.Profile -> Types.Profile
 plutusBlstBase =
     P.tps 2
   . P.analysisSizeModerate2
-  . P.v9Preview
 
 --------------------------------------------------------------------------------
 
@@ -86,40 +95,49 @@ profilesNoEraCloud =
   ----------------------
   -- Release benchmarks.
   ----------------------
-  let value    = P.empty & base . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
-               . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
-      plutus   = P.empty & base . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
-               . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
+  let value      = P.empty & base         . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
+                 . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
+      plutus     = P.empty & base         . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
+                 . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
+      valueVolt  = P.empty & baseVoltaire . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
+                 . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
+      plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
+                 . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
       -- Loop.
-      loop     = plutus & plutusLoopBase . V.plutusTypeLoop
-      loop2024 = plutus & plutusLoopBase . V.plutusTypeLoop2024
+      loop     = plutus     & plutusLoopBase . V.plutusTypeLoop
+      loop2024 = plutus     & plutusLoopBase . V.plutusTypeLoop2024
+      loopVolt = plutusVolt & plutusLoopBase . V.plutusTypeLoop
       -- Secp.
-      ecdsa    = plutus & plutusSecpBase . V.plutusTypeECDSA
-      schnorr  = plutus & plutusSecpBase . V.plutusTypeSchnorr
-      blst     = plutus & plutusBlstBase . V.plutusTypeBLST
+      ecdsa    = plutus     & plutusSecpBase . V.plutusTypeECDSA
+      schnorr  = plutus     & plutusSecpBase . V.plutusTypeSchnorr
+      blst     = plutusVolt & plutusBlstBase . V.plutusTypeBLST
   in [
-  -- Value
-    value    & P.name "value-nomadperf"                                 . P.dreps      0 . P.newTracing . P.p2pOn
-  , value    & P.name "value-nomadperf-nop2p"                           . P.dreps      0 . P.newTracing . P.p2pOff
-  , value    & P.name "value-drep1k-nomadperf"                          . P.dreps   1000 . P.newTracing . P.p2pOn
-  , value    & P.name "value-drep2k-nomadperf"                          . P.dreps   2000 . P.newTracing . P.p2pOn
-  , value    & P.name "value-drep10k-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn
-  , value    & P.name "value-drep100k-nomadperf"                        . P.dreps 100000 . P.newTracing . P.p2pOn
-  , value    & P.name "value-oldtracing-nomadperf"                      . P.dreps      0 . P.oldTracing . P.p2pOn
-  , value    & P.name "value-oldtracing-nomadperf-nop2p"                . P.dreps      0 . P.oldTracing . P.p2pOff
-  -- Plutus
-  , loop     & P.name "plutus-nomadperf"                                . P.dreps      0 . P.newTracing . P.p2pOn
-  , loop     & P.name "plutus-nomadperf-nop2p"                          . P.dreps      0 . P.newTracing . P.p2pOff
-  , loop     & P.name "plutus-drep1k-nomadperf"                         . P.dreps   1000 . P.newTracing . P.p2pOn
-  , loop     & P.name "plutus-drep2k-nomadperf"                         . P.dreps   2000 . P.newTracing . P.p2pOn
-  , loop     & P.name "plutus-drep10k-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn
-  , loop     & P.name "plutus-drep100k-nomadperf"                       . P.dreps 100000 . P.newTracing . P.p2pOn
-  , loop2024 & P.name "plutus24-nomadperf"                              . P.dreps      0 . P.newTracing . P.p2pOn
-  , ecdsa    & P.name "plutus-secp-ecdsa-nomadperf"                     . P.dreps      0 . P.newTracing . P.p2pOn
-  , schnorr  & P.name "plutus-secp-schnorr-nomadperf"                   . P.dreps      0 . P.newTracing . P.p2pOn
-  , blst     & P.name "plutusv3-blst-nomadperf"                         . P.dreps      0 . P.newTracing . P.p2pOn
-  , blst     & P.name "plutusv3-blst-double-nomadperf" . P.doubleBudget . P.dreps      0 . P.newTracing . P.p2pOn
-  , blst     & P.name "plutusv3-blst-half-nomadperf"   . P.stepHalf     . P.dreps      0 . P.newTracing . P.p2pOn
+  -- Value (pre-Voltaire profiles)
+    value      & P.name "value-nomadperf"                                 . P.dreps      0 . P.newTracing . P.p2pOn
+  , value      & P.name "value-nomadperf-nop2p"                           . P.dreps      0 . P.newTracing . P.p2pOff
+  , value      & P.name "value-drep1k-nomadperf"                          . P.dreps   1000 . P.newTracing . P.p2pOn
+  , value      & P.name "value-drep2k-nomadperf"                          . P.dreps   2000 . P.newTracing . P.p2pOn
+  , value      & P.name "value-drep10k-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn
+  , value      & P.name "value-drep100k-nomadperf"                        . P.dreps 100000 . P.newTracing . P.p2pOn
+  , value      & P.name "value-oldtracing-nomadperf"                      . P.dreps      0 . P.oldTracing . P.p2pOn
+  , value      & P.name "value-oldtracing-nomadperf-nop2p"                . P.dreps      0 . P.oldTracing . P.p2pOff
+  -- Value (post-Voltaire profiles)
+  , valueVolt  & P.name "value-volt-nomadperf"                            . P.dreps  10000 . P.newTracing . P.p2pOn
+  -- Plutus (pre-Voltaire profiles)
+  , loop       & P.name "plutus-nomadperf"                                . P.dreps      0 . P.newTracing . P.p2pOn
+  , loop       & P.name "plutus-nomadperf-nop2p"                          . P.dreps      0 . P.newTracing . P.p2pOff
+  , loop       & P.name "plutus-drep1k-nomadperf"                         . P.dreps   1000 . P.newTracing . P.p2pOn
+  , loop       & P.name "plutus-drep2k-nomadperf"                         . P.dreps   2000 . P.newTracing . P.p2pOn
+  , loop       & P.name "plutus-drep10k-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loop       & P.name "plutus-drep100k-nomadperf"                       . P.dreps 100000 . P.newTracing . P.p2pOn
+  , loop2024   & P.name "plutus24-nomadperf"                              . P.dreps      0 . P.newTracing . P.p2pOn
+  , ecdsa      & P.name "plutus-secp-ecdsa-nomadperf"                     . P.dreps      0 . P.newTracing . P.p2pOn
+  , schnorr    & P.name "plutus-secp-schnorr-nomadperf"                   . P.dreps      0 . P.newTracing . P.p2pOn
+  , blst       & P.name "plutusv3-blst-nomadperf"                         . P.dreps      0 . P.newTracing . P.p2pOn
+  , blst       & P.name "plutusv3-blst-double-nomadperf" . P.doubleBudget . P.dreps      0 . P.newTracing . P.p2pOn
+  , blst       & P.name "plutusv3-blst-half-nomadperf"   . P.stepHalf     . P.dreps      0 . P.newTracing . P.p2pOn
+  -- Plutus (post-Voltaire profiles)
+  , loopVolt   & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
   ]
   ----------------------
   -- Testing benchmarks.
@@ -132,7 +150,7 @@ profilesNoEraCloud =
         -- TODO: Inconsistency: "fast-nomadperf*" uses 52+Explorer nodes   and "ci-test-nomadperf" 2+Explorer nodes.
         . composeFiftytwo
         -- TODO: Inconsistency: "fast-nomadperf*" uses the last know epoch and "ci-test-nomadperf" epoch 300.
-        . V.genesisVariantLast
+        . V.genesisVariantPreVoltaire
       ciNP = valueCI
         & E.ciTestDuration
         -- TODO: Inconsistency: "ci-test-nomadperf" uses 2+Explorer nodes and "fast-nomadperf*" 52+Explorer nodes.
