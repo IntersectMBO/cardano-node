@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.Gov.TransactionBuildWrongHash
+module Cardano.Testnet.Test.Gov.Transaction.HashMismatch
   ( hprop_transaction_build_wrong_hash
   ) where
 
