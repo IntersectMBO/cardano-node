@@ -4,6 +4,7 @@
 { haskell-nix
 , incl
 , CHaP
+, macOS-security
 }:
 let
 
@@ -281,7 +282,11 @@ let
                   unset TMPDIR
                   export TMPDIR=$(mktemp -d)
                   export TMP=$TMPDIR
-                '';
+                '' + (if pkgs.stdenv.hostPlatform.isDarwin
+                     then ''
+                  export PATH=${macOS-security}/bin:$PATH
+                          ''
+                     else '''');
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
