@@ -75,6 +75,7 @@ library
     Cardano.Benchmarking.PlutusScripts.Loop2024
     Cardano.Benchmarking.PlutusScripts.LoopV3
     Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop
+    Cardano.Benchmarking.PlutusScripts.SupplementalDatum
 
   --------------------------
   -- IOG dependencies

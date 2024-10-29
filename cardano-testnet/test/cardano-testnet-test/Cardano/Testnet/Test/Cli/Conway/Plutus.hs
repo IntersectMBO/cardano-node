@@ -80,7 +80,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
-  H.writeFile plutusScript $ Text.unpack plutusV3Script
+  H.writeFile plutusScript $ Text.unpack plutusV3SupplementalDatumScript
 
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
@@ -104,6 +104,10 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
       [ "latest", "transaction", "hash-script-data"
       , "--script-data-value", "0"
       ]
+
+  supplementalDatumJsonFile
+    <- H.note $ work </> "supplemental-datum.json"
+  H.writeFile supplementalDatumJsonFile "{\"int\":1}"
 
   scriptStakeRegistrationCertificate
     <- H.note $ work </> "script-stake-registration-certificate"
@@ -152,6 +156,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
                       , "+", mintValue
                       ]
+      txoutWithSupplementalDatum = mconcat [utxoAddr, "+", show @Int 1_000_000]
 
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
@@ -168,6 +173,8 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--certificate-script-file", plutusScript
     , "--certificate-redeemer-value", "0"
     , "--tx-out", txout
+    , "--tx-out", txoutWithSupplementalDatum 
+    , "--tx-out-datum-embed-file", supplementalDatumJsonFile
     , "--out-file", spendScriptUTxOTxBody
     ]
 
@@ -182,5 +189,6 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     [ "latest", "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
     ]
+
   H.success
 
