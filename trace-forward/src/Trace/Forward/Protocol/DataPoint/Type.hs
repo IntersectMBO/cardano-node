@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | The type of the 'DataPoint' forwarding/accepting protocol.
@@ -14,16 +16,16 @@ module Trace.Forward.Protocol.DataPoint.Type
   , DataPointValues
   , DataPointForward (..)
   , Message (..)
-  , ClientHasAgency (..)
-  , ServerHasAgency (..)
-  , NobodyHasAgency (..)
+  , SingDataPointForward (..)
   ) where
 
+import           Data.Singletons
+import           Network.TypedProtocol.Core
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Kind (Type)
 import           Data.Text (Text)
-import           Network.TypedProtocol.Core (Protocol (..))
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.
@@ -62,6 +64,25 @@ data DataPointForward where
 instance ShowProxy DataPointForward where
   showProxy _ = "DataPointForward"
 
+-- | Singleton type of DataPointForward. Same as:
+--
+-- @
+-- type SingDataPointForward :: DataPointForward -> Type
+-- type SingDataPointForward = TypeRep
+-- @
+type SingDataPointForward :: DataPointForward -> Type
+data SingDataPointForward dataPoint where
+  SingIdle :: SingDataPointForward 'StIdle
+  SingBusy :: SingDataPointForward 'StBusy
+  SingDone :: SingDataPointForward 'StDone
+
+type instance Sing = SingDataPointForward
+
+deriving instance Show (SingDataPointForward st)
+instance StateTokenI 'StIdle where stateToken = SingIdle
+instance StateTokenI 'StBusy where stateToken = SingBusy
+instance StateTokenI 'StDone where stateToken = SingDone
+
 instance Protocol DataPointForward where
 
   -- | The messages in the trace forwarding/accepting protocol.
@@ -95,27 +116,11 @@ instance Protocol DataPointForward where
   -- 1. ClientHasAgency (from 'Network.TypedProtocol.Core') corresponds to acceptor's agency.
   -- 3. ServerHasAgency (from 'Network.TypedProtocol.Core') corresponds to forwarder's agency.
   --
-  data ClientHasAgency st where
-    TokIdle :: ClientHasAgency 'StIdle
+  type StateAgency 'StIdle = 'ClientAgency
+  type StateAgency 'StBusy = 'ServerAgency
+  type StateAgency 'StDone = 'NobodyAgency
 
-  data ServerHasAgency st where
-    TokBusy :: ServerHasAgency 'StBusy
+  type StateToken = SingDataPointForward
 
-  data NobodyHasAgency st where
-    TokDone :: NobodyHasAgency 'StDone
-
-  -- | Impossible cases.
-  exclusionLemma_ClientAndServerHaveAgency TokIdle tok = case tok of {}
-  exclusionLemma_NobodyAndClientHaveAgency TokDone tok = case tok of {}
-  exclusionLemma_NobodyAndServerHaveAgency TokDone tok = case tok of {}
-
-instance Show (Message DataPointForward from to) where
-  show MsgDataPointsRequest{} = "MsgDataPointsRequest"
-  show MsgDataPointsReply{}   = "MsgDataPointsReply"
-  show MsgDone{}              = "MsgDone"
-
-instance Show (ClientHasAgency (st :: DataPointForward)) where
-  show TokIdle = "TokIdle"
-
-instance Show (ServerHasAgency (st :: DataPointForward)) where
-  show TokBusy{} = "TokBusy"
+deriving
+  instance Show (Message DataPointForward from to)
