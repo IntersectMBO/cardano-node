@@ -31,7 +31,8 @@ import           Cardano.Api.Shelley (GovernanceAction (..), LedgerProtocolParam
                    ShelleyLedgerEra, StakeCredential (..), VotingProcedure (..),
                    VotingProcedures (..), convertToLedgerProtocolParameters,
                    createProposalProcedure, createVotingProcedure, fromShelleyStakeCredential,
-                   protocolParamMaxTxExUnits, protocolParamPrices, toShelleyNetwork)
+                   protocolParamMaxTxExUnits, protocolParamPrices, singletonVotingProcedures,
+                   toShelleyNetwork)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -80,7 +81,7 @@ import           Data.Either.Extra (eitherToMaybe)
 import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
 import           Data.Kind (Type)
-import qualified Data.Map.Strict as Map
+import           Data.List.Extra ((!?))
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
@@ -461,7 +462,10 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
 data VoteCase = VoteCase
   { vcWalletName  :: String
   , vcPayMode     :: PayMode
-  , vcGovActId    :: Ledger.GovActionId Ledger.StandardCrypto
+  , vcGovActId    :: Int
+  -- ^ index into envGovStateSummary
+  --   It should retrieve something of type
+  --   @Ledger.GovActionId Ledger.StandardCrypto@
   , vcVote        :: Api.Vote -- yesOrNo
   , vcGenDRepCred :: Ledger.Credential 'Ledger.DRepRole Ledger.StandardCrypto
   -- anchor can likely be assumed Nothing at all times
@@ -480,10 +484,17 @@ voteCase GovCaseEnv {..} VoteCase {..}
   | TxGenTxParams {..} <- gcEnvTxParams
   , sbe <- shelleyBasedEra @era
   , cbe <- conwayBasedEra @era
+  , insufReadyProps :: Env.Error
+      <- Env.TxGenError $ TxGenError "insufficient ready proposals"
   = do ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets vcWalletName
-       (toUTxO, _addressOut) <- interpretPayMode vcPayMode
+       (toUTxO, _addressOut) :: (CreateAndStore IO era, String)
+         <- interpretPayMode vcPayMode
+       GovStateSummary { govProposals = GovernanceActionIds _govEra govIds }
+         <- getEnvGovSummary
+       govActId :: Ledger.GovActionId crypto
+         <- insufReadyProps `hoistMaybe` (govIds !? vcGovActId)
        let ptxTxGen :: TxGenerator era
            ptxTxGen = genTxVoting' gcEnvLedgerParams gcEnvFeeInEra vote
            fundSource :: FundSource IO
@@ -496,8 +507,7 @@ voteCase GovCaseEnv {..} VoteCase {..}
            voter :: Ledger.Voter crypto
            voter = Ledger.DRepVoter vcGenDRepCred
            vote :: VotingProcedures era
-           vote = VotingProcedures . Ledger.VotingProcedures $
-                    Map.fromList [(voter, Map.fromList [(vcGovActId, unVotingProcedure)])]
+           vote = singletonVotingProcedures cbe voter govActId unVotingProcedure
        ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
        handleE handlePreviewErr . void $ previewTx PreviewTxData
          { ptxInputs = 0, .. }

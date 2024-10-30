@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -190,7 +191,9 @@ data Generator where
   -- 'Vote issues a transaction to vote on a governance action proposal.
   Vote :: !String
        -> !PayMode
-       -> !(L.GovActionId L.StandardCrypto)
+       -> !Int
+       -- ^ index into `GovStateSummary` with a result of
+       -- @!(L.GovActionId L.StandardCrypto)@
        -> !Vote
        -> !(L.Credential 'L.DRepRole L.StandardCrypto)
        -> Maybe (Ledger.Url, Text)
@@ -247,10 +250,12 @@ data ProtocolParameterMode where
   ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode
 
 data GovernanceActionIds where
-  GovernanceActionIds ::
-    forall era. () => ShelleyBasedEra era
-                   -> [GovActionId (EraCrypto (ShelleyLedgerEra era))]
-                   -> GovernanceActionIds
+  GovernanceActionIds :: forall era ledgerEra .
+                       ( ledgerEra ~ ShelleyLedgerEra era
+                       , EraCrypto ledgerEra ~ L.StandardCrypto)
+                      => ShelleyBasedEra era
+                      -> [GovActionId L.StandardCrypto]
+                      -> GovernanceActionIds
 
 data GovStateSummary = GovStateSummary
   { govGovActionDeposit                 :: !L.Coin
