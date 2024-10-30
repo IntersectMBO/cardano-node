@@ -213,7 +213,7 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 0.1
+                      , typed-protocols >= 0.3
                       , yaml
 
 executable cardano-node
