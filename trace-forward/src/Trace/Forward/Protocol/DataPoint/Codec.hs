@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -13,8 +14,7 @@ import qualified Codec.CBOR.Encoding as CBOR
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadST (MonadST)
 import qualified Data.ByteString.Lazy as LBS
-import           Network.TypedProtocol.Codec (Codec, PeerHasAgency (..), PeerRole (..),
-                   SomeMessage (..))
+import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.CBOR (mkCodecCborLazyBS)
 import           Text.Printf (printf)
 
@@ -31,52 +31,52 @@ codecDataPointForward
            DeserialiseFailure m LBS.ByteString
 codecDataPointForward encodeRequest   decodeRequest
                       encodeReplyList decodeReplyList =
-  mkCodecCborLazyBS encode decode
+  mkCodecCborLazyBS encode' decode'
  where
   -- Encode messages.
-  encode
-    :: forall (pr  :: PeerRole)
-              (st  :: DataPointForward)
+  encode'
+    :: forall (st  :: DataPointForward)
               (st' :: DataPointForward).
-       PeerHasAgency pr st
-    -> Message DataPointForward st st'
+       Message DataPointForward st st'
     -> CBOR.Encoding
 
-  encode (ClientAgency TokIdle) (MsgDataPointsRequest request) =
+  encode' (MsgDataPointsRequest request) =
        CBOR.encodeListLen 2
     <> CBOR.encodeWord 1
     <> encodeRequest request
 
-  encode (ClientAgency TokIdle) MsgDone =
+  encode' MsgDone =
        CBOR.encodeListLen 1
     <> CBOR.encodeWord 2
 
-  encode (ServerAgency TokBusy) (MsgDataPointsReply reply) =
+  encode' (MsgDataPointsReply reply) =
        CBOR.encodeListLen 2
     <> CBOR.encodeWord 3
     <> encodeReplyList reply
 
   -- Decode messages
-  decode
-    :: forall (pr :: PeerRole)
-              (st :: DataPointForward) s.
-       PeerHasAgency pr st
+  decode'
+    :: forall (st :: DataPointForward) s.
+       ActiveState st
+    => StateToken st
     -> CBOR.Decoder s (SomeMessage st)
-  decode stok = do
+  decode' stok = do
     len <- CBOR.decodeListLen
     key <- CBOR.decodeWord
     case (key, len, stok) of
-      (1, 2, ClientAgency TokIdle) ->
+      (1, 2, SingIdle) ->
         SomeMessage . MsgDataPointsRequest <$> decodeRequest
 
-      (2, 1, ClientAgency TokIdle) ->
+      (2, 1, SingIdle) ->
         return $ SomeMessage MsgDone
 
-      (3, 2, ServerAgency TokBusy) ->
+      (3, 2, SingBusy) ->
         SomeMessage . MsgDataPointsReply <$> decodeReplyList
 
       -- Failures per protocol state
-      (_, _, ClientAgency TokIdle) ->
+      (_, _, SingIdle) ->
         fail (printf "codecDataPointForward (%s) unexpected key (%d, %d)" (show stok) key len)
-      (_, _, ServerAgency TokBusy) ->
+      (_, _, SingBusy) ->
         fail (printf "codecDataPointForward (%s) unexpected key (%d, %d)" (show stok) key len)
+
+      (_, _, SingDone) -> notActiveState stok

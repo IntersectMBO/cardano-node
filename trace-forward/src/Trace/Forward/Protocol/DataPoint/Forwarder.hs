@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -9,7 +10,7 @@ module Trace.Forward.Protocol.DataPoint.Forwarder
   , dataPointForwarderPeer
   ) where
 
-import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..), PeerRole (..))
+import           Network.TypedProtocol.Peer.Server
 
 import           Trace.Forward.Protocol.DataPoint.Type
 
@@ -29,22 +30,21 @@ data DataPointForwarder m a = DataPointForwarder
 dataPointForwarderPeer
   :: Monad m
   => DataPointForwarder m a
-  -> Peer DataPointForward 'AsServer 'StIdle m a
+  -> Server DataPointForward 'NonPipelined 'StIdle m a
 dataPointForwarderPeer DataPointForwarder{recvMsgDataPointsRequest, recvMsgDone} = go
   where
     go =
       -- In the 'StIdle' state the forwarder is awaiting a request message
       -- from the acceptor.
-      Await (ClientAgency TokIdle) $ \case
+      Await \case
         -- The acceptor sent us a request for new 'DataPoint's, so now we're
         -- in the 'StBusy' state which means it's the forwarder's turn to send
         -- a reply.
-        MsgDataPointsRequest request -> Effect $ do
+        MsgDataPointsRequest request -> Effect do
           reply <- recvMsgDataPointsRequest request
-          return $ Yield (ServerAgency TokBusy)
-                         (MsgDataPointsReply reply)
+          return $ Yield (MsgDataPointsReply reply)
                          go
 
         -- The acceptor sent the done transition, so we're in the 'StDone' state
         -- so all we can do is stop using 'done', with a return value.
-        MsgDone -> Effect $ Done TokDone <$> recvMsgDone
+        MsgDone -> Effect $ Done <$> recvMsgDone

@@ -12,12 +12,12 @@ import           Test.Trace.Forward.Protocol.DataPoint.Item
 
 import           Trace.Forward.Protocol.DataPoint.Type
 
-instance Arbitrary (AnyMessageAndAgency DataPointForward) where
+instance Arbitrary (AnyMessage DataPointForward) where
   arbitrary = oneof
-    [ pure $ AnyMessageAndAgency (ClientAgency TokIdle) (MsgDataPointsRequest ["NodeInfo"])
-    , pure $ AnyMessageAndAgency (ServerAgency TokBusy) (MsgDataPointsReply [("NodeInfo", Nothing)])
-    , pure $ AnyMessageAndAgency (ServerAgency TokBusy) (MsgDataPointsReply [("NodeInfo", Just ni)])
-    , pure $ AnyMessageAndAgency (ClientAgency TokIdle) MsgDone
+    [ pure $ AnyMessage (MsgDataPointsRequest ["NodeInfo"])
+    , pure $ AnyMessage (MsgDataPointsReply [("NodeInfo", Nothing)])
+    , pure $ AnyMessage (MsgDataPointsReply [("NodeInfo", Just ni)])
+    , pure $ AnyMessage MsgDone
     ]
    where
     ni = A.encode $ TestNodeInfo
