@@ -44,7 +44,7 @@ tests = testGroup "Trace.Forward.Protocol.DataPoint"
   ]
 
 prop_codec_DataPointForward
-  :: AnyMessageAndAgency DataPointForward
+  :: AnyMessage DataPointForward
   -> Bool
 prop_codec_DataPointForward msg = runST $
   prop_codecM
@@ -53,7 +53,7 @@ prop_codec_DataPointForward msg = runST $
     msg
 
 prop_codec_splits2_DataPointForward
-  :: AnyMessageAndAgency DataPointForward
+  :: AnyMessage DataPointForward
   -> Bool
 prop_codec_splits2_DataPointForward msg = runST $
   prop_codec_splitsM
@@ -64,7 +64,7 @@ prop_codec_splits2_DataPointForward msg = runST $
 
 
 prop_codec_splits3_DataPointForward
-  :: AnyMessageAndAgency DataPointForward
+  :: AnyMessage DataPointForward
   -> Bool
 prop_codec_splits3_DataPointForward msg = runST $
   prop_codec_splitsM
@@ -108,7 +108,7 @@ prop_connect f n = do
   forwarder <- dataPointForwarderPeer <$> dataPointForwarderCount
   result <- connect forwarder (dataPointAcceptorPeer $ dataPointAcceptorApply f 0 n)
   case result of
-    (s, c, TerminalStates TokDone TokDone) ->
+    (s, c, TerminalStates SingDone SingDone) ->
       pure $ (s, c) == (n, foldr ($) 0 (replicate n f))
 
 prop_channel

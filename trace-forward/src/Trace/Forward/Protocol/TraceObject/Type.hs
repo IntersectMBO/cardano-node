@@ -1,11 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | The type of the trace forwarding/accepting protocol.
@@ -13,23 +15,23 @@
 
 module Trace.Forward.Protocol.TraceObject.Type
   ( TraceObjectForward (..)
+  , SingTraceObjectForward(..)
   , TokBlockingStyle (..)
   , Message (..)
-  , ClientHasAgency (..)
-  , ServerHasAgency (..)
-  , NobodyHasAgency (..)
   , NumberOfTraceObjects (..)
   , BlockingReplyList (..)
+  , StBlockingStyle(..)
   ) where
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
+import           Data.Kind (Type)
+import           Data.Singletons
 import           Codec.Serialise (Serialise (..))
 import           Data.List.NonEmpty (NonEmpty)
-import           Data.Proxy (Proxy (..))
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
-import           Network.TypedProtocol.Core (Protocol (..))
+import           Network.TypedProtocol.Core -- (Protocol (..))
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.
@@ -49,10 +51,11 @@ import           Network.TypedProtocol.Core (Protocol (..))
 -- | The acceptor will send this request to the forwarder.
 newtype NumberOfTraceObjects = NumberOfTraceObjects
   { nTraceObjects :: Word16
-  } deriving (Eq, Generic, Show)
-
-instance ShowProxy NumberOfTraceObjects
-instance Serialise NumberOfTraceObjects
+  }
+  deriving stock
+    (Eq, Generic, Show)
+  deriving anyclass
+    (ShowProxy, Serialise)
 
 data TraceObjectForward lo where
 
@@ -84,6 +87,13 @@ instance (ShowProxy lo)
     , ")"
     ]
 
+-- | Singleton type of TraceObjectForward.
+type SingTraceObjectForward :: TraceObjectForward lo -> Type
+data SingTraceObjectForward traceObj where
+  SingIdle :: SingTraceObjectForward 'StIdle
+  SingBusy :: TokBlockingStyle blockStyle -> SingTraceObjectForward ('StBusy blockStyle)
+  SingDone :: SingTraceObjectForward 'StDone
+
 data StBlockingStyle where
   -- | In this sub-state the reply need not be prompt. There is no timeout.
   StBlocking    :: StBlockingStyle
@@ -100,6 +110,18 @@ data TokBlockingStyle (k :: StBlockingStyle) where
 
 deriving instance Eq   (TokBlockingStyle b)
 deriving instance Show (TokBlockingStyle b)
+
+type instance Sing = SingTraceObjectForward
+type instance Sing = TokBlockingStyle
+
+deriving stock
+  instance Show (SingTraceObjectForward traceObj)
+instance StateTokenI 'StIdle where stateToken = SingIdle
+instance StateTokenI 'StDone where stateToken = SingDone
+instance SingI blockStyle => StateTokenI ('StBusy blockStyle) where stateToken = SingBusy sing
+
+instance SingI 'StBlocking    where sing = TokBlocking
+instance SingI 'StNonBlocking where sing = TokNonBlocking
 
 -- | We have requests for lists of things. In the blocking case the
 -- corresponding reply must be non-empty, whereas in the non-blocking case
@@ -154,28 +176,11 @@ instance Protocol (TraceObjectForward lo) where
   -- 1. ClientHasAgency (from 'Network.TypedProtocol.Core') corresponds to acceptor's agency.
   -- 3. ServerHasAgency (from 'Network.TypedProtocol.Core') corresponds to forwarder's agency.
   --
-  data ClientHasAgency st where
-    TokIdle :: ClientHasAgency 'StIdle
+  type StateAgency 'StIdle = 'ClientAgency
+  type StateAgency ('StBusy blocking) = 'ServerAgency
+  type StateAgency 'StDone = 'NobodyAgency
 
-  data ServerHasAgency st where
-    TokBusy :: TokBlockingStyle blocking -> ServerHasAgency ('StBusy blocking)
+  type StateToken = SingTraceObjectForward
 
-  data NobodyHasAgency st where
-    TokDone :: NobodyHasAgency 'StDone
-
-  -- | Impossible cases.
-  exclusionLemma_ClientAndServerHaveAgency TokIdle tok = case tok of {}
-  exclusionLemma_NobodyAndClientHaveAgency TokDone tok = case tok of {}
-  exclusionLemma_NobodyAndServerHaveAgency TokDone tok = case tok of {}
-
-instance Show lo
-      => Show (Message (TraceObjectForward lo) from to) where
-  show MsgTraceObjectsRequest{} = "MsgTraceObjectsRequest"
-  show MsgTraceObjectsReply{}   = "MsgTraceObjectsReply"
-  show MsgDone{}                = "MsgDone"
-
-instance Show (ClientHasAgency (st :: TraceObjectForward lo)) where
-  show TokIdle = "TokIdle"
-
-instance Show (ServerHasAgency (st :: TraceObjectForward lo)) where
-  show TokBusy{} = "TokBusy"
+deriving stock
+  instance Show lo => Show (Message (TraceObjectForward lo) from to)
