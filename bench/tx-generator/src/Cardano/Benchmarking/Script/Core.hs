@@ -32,7 +32,7 @@ import           Cardano.Api.Shelley (GovernanceAction (..), LedgerProtocolParam
                    VotingProcedures (..), convertToLedgerProtocolParameters,
                    createProposalProcedure, createVotingProcedure, fromShelleyStakeCredential,
                    protocolParamMaxTxExUnits, protocolParamPrices, singletonVotingProcedures,
-                   toShelleyNetwork)
+                   toShelleyNetwork, toShelleyTxId)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -432,6 +432,7 @@ data ProposeCase = ProposeCase
 proposeCase :: forall era ledgerEra . ()
   => IsShelleyBasedEra era
   => ledgerEra ~ ShelleyLedgerEra era
+  => Ledger.EraCrypto ledgerEra ~ Ledger.StandardCrypto
   => GovCaseEnv era
   -> ProposeCase
   -> ActionM (TxStream IO era)
@@ -457,8 +458,19 @@ proposeCase GovCaseEnv {..} ProposeCase {..}
        ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
        handleE handlePreviewErr . void $ previewTx PreviewTxData
          { ptxInputs = 0, .. }
-       pure . Streaming.effect $ Streaming.yield <$>
-           sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
+       eitherTx
+         <- liftIO $ sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
+       whenJust (eitherToMaybe eitherTx) \tx -> do
+         let body = getTxBody tx
+             txId' = getTxId body
+         gs@GovStateSummary {..} <- getEnvGovSummary
+         let GovernanceActionIds _ gaids = govProposals
+             gaId = Ledger.GovActionId
+               { gaidTxId = toShelleyTxId txId'
+               , gaidGovActionIx = Ledger.GovActionIx 0 }
+         setEnvGovSummary gs
+           { govProposals = GovernanceActionIds sbe $ gaids ++ [gaId] }
+       pure . Streaming.effect $ Streaming.yield <$> pure eitherTx
 
 data VoteCase crypto = VoteCase
   { vcWalletName  :: String
