@@ -1,6 +1,11 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-|
@@ -38,12 +43,24 @@ import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Exception (AssertionFailed (..), throw)
+import           Control.Monad (forM_, replicateM)
 import           Control.Monad.Extra (maybeM)
+import           Control.Monad.ST (ST)
+import qualified Control.Monad.ST as ST (runST)
+import           Control.Monad.Trans.RWS (RWST)
+import qualified Control.Monad.Trans.RWS as RWS (asks, evalRWST, get, gets, put, modify, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
+import qualified Data.Foldable as Fold (toList)
+import           Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap (empty, insert, keys, update)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
+import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq (singleton)
 import           Data.String
+import qualified Data.Tuple.Extra as Tuple (uncurry3)
+import           Numeric.Natural (Natural)
 import           System.FilePath ((</>))
 
 import           Paths_tx_generator
@@ -170,6 +187,98 @@ testScript protocolFile submitMode =
       = Submit anyAllegraEra submitMode txParams . Take txCount . Cycle $
           SplitN src (PayToAddr key dest) outputs
 
+data GAScrEnv = GAScrEnv
+  { gaseIdxCtr :: Natural
+  , gaseIdxLive :: IntMap Natural
+  } deriving (Eq, Ord, Read, Show)
+
+data GAScrConsts = GAScrConsts
+  { gascBatch :: Natural
+  , gascQuorum :: Natural
+  } deriving (Eq, Ord, Read, Show)
+
+type GAScrMonad monad t = RWST GAScrConsts (Seq Generator) GAScrEnv monad t
+
+gaScrConsts :: GAScrConsts
+gaScrConsts = GAScrConsts
+  { gascBatch = 5
+  , gascQuorum = 10 }
+
+gaScrEnvInit :: GAScrEnv
+gaScrEnvInit = GAScrEnv
+  { gaseIdxCtr = 0
+  , gaseIdxLive = IntMap.empty }
+
+gaScrTell :: Monad monad => Generator -> GAScrMonad monad ()
+gaScrTell = RWS.tell . Seq.singleton
+
+evalGAScr :: Monad monad => GAScrMonad monad t -> monad (t, Seq Generator)
+evalGAScr = Tuple.uncurry3 RWS.evalRWST . (, gaScrConsts, gaScrEnvInit)
+
+mkGovActGen :: Int -> Generator
+mkGovActGen n = Sequence . Fold.toList . snd $ ST.runST stGen where
+  batch = fromIntegral $ gascBatch gaScrConsts
+  n' = (n + batch - 1) `quot` batch
+  stGen :: forall s . ST s ([[Natural]], Seq Generator)
+  stGen = evalGAScr $ replicateM n' mkProposalBatch
+
+mkProposalBatch :: Monad monad => GAScrMonad monad [Natural]
+mkProposalBatch = do
+  batch <- fromIntegral <$> RWS.asks gascBatch
+  replicateM batch mkProposal
+
+mkProposal :: Monad monad => GAScrMonad monad Natural
+mkProposal = do
+  quorum <- RWS.asks gascQuorum
+  GAScrEnv { gaseIdxCtr = idx, gaseIdxLive = refCounts } <- RWS.get
+  let idx' = fromIntegral idx
+  RWS.put GAScrEnv
+    { gaseIdxCtr = idx + 1
+    , gaseIdxLive = IntMap.insert idx' quorum refCounts }
+  gaScrTell $ Propose genesisWallet payMode proposalCoins stakeCred anchor
+  pure idx
+
+-- This is intended to accommodate future less-rigid ordering of
+-- quorum-reaching.
+mkVoteBatch :: Monad monad => GAScrMonad monad ()
+mkVoteBatch = do
+  idxs <- IntMap.keys <$> RWS.gets gaseIdxLive
+  forM_ idxs \idx -> do
+    gaScrTell $
+      Vote genesisWallet payMode idx Yes drepCred Nothing
+    RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
+      gase { gaseIdxLive = Tuple.uncurry3 IntMap.update $
+        (, idx, liveIdxs) \case refCount
+                                   | refCount == 0
+                                   -> error $ "gaseMkVoteBatch: refCount underflow"
+                                   | refCount == 1
+                                   -> Nothing
+                                   | otherwise
+                                   -> Just $ refCount - 1 }
+ 
+anchor :: L.Anchor L.StandardCrypto
+anchor = L.Anchor {..} where
+  anchorUrl = fromJust $ L.textToUrl 999 "example.com"
+  anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 $
+    L.urlToText anchorUrl
+
+anyConwayEra :: AnyCardanoEra
+anyConwayEra = AnyCardanoEra ConwayEra
+
+payMode :: PayMode
+payMode = PayToAddr key genesisWallet
+
+proposalCoins :: L.Coin
+proposalCoins = L.Coin $ fundAmount `div` fromIntegral nrProposals
+
+stakeCred :: L.Credential 'L.Staking L.StandardCrypto
+stakeCred = L.KeyHashObj . L.hashKey $ unStakeVerificationKey stakeKey
+
+stakeKey :: VerificationKey StakeKey
+stakeKey = error "could not parse hardcoded stake key" `fromRight`
+  parseStakeKeyBase16 ("5820bbbfe3f3b71b00d1d61f4fe2a82526"
+                    <> "597740f61a0aa06f1324557925803c7d3e")
+
 testScriptVoting :: FilePath -> SubmitMode -> [Action]
 testScriptVoting protocolFile submitMode =
   [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
@@ -198,26 +307,3 @@ testScriptVoting protocolFile submitMode =
       [Sequence . replicate nrProposals $
          Vote genesisWallet payMode k Yes drepCred Nothing | k <- [0 .. nrProposals - 1]]
   ]
-  where
-    anchor :: L.Anchor L.StandardCrypto
-    anchor = L.Anchor {..} where
-      anchorUrl = fromJust $ L.textToUrl 999 "example.com"
-      anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 $
-        L.urlToText anchorUrl
-
-    anyConwayEra :: AnyCardanoEra
-    anyConwayEra = AnyCardanoEra ConwayEra
-
-    payMode :: PayMode
-    payMode = PayToAddr key genesisWallet
-
-    proposalCoins :: L.Coin
-    proposalCoins = L.Coin $ fundAmount `div` fromIntegral nrProposals
-
-    stakeCred :: L.Credential 'L.Staking L.StandardCrypto
-    stakeCred = L.KeyHashObj . L.hashKey $ unStakeVerificationKey stakeKey
-
-    stakeKey :: VerificationKey StakeKey
-    stakeKey = error "could not parse hardcoded stake key" `fromRight`
-      parseStakeKeyBase16 ("5820bbbfe3f3b71b00d1d61f4fe2a82526"
-                        <> "597740f61a0aa06f1324557925803c7d3e")
