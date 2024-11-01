@@ -8,6 +8,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 {-|
 Module      : Cardano.Benchmarking.Script.Selftest
 Description : Run self-tests using statically-defined data.
@@ -44,16 +45,17 @@ import           Prelude
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Exception (AssertionFailed (..), throw)
 import           Control.Monad (forM_, replicateM)
-import           Control.Monad.Extra (maybeM)
+import           Control.Monad.Extra (maybeM, whileM)
 import           Control.Monad.ST (ST)
 import qualified Control.Monad.ST as ST (runST)
 import           Control.Monad.Trans.RWS (RWST)
-import qualified Control.Monad.Trans.RWS as RWS (asks, evalRWST, get, gets, put, modify, tell)
+import qualified Control.Monad.Trans.RWS as RWS (ask, asks, evalRWST, get, gets, put, modify, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
 import           Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap (empty, insert, keys, update)
+import qualified Data.IntMap as IntMap (empty, insert, keysSet, null, restrictKeys, split, update)
+import qualified Data.IntSet as IntSet (null)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.Sequence (Seq)
@@ -215,12 +217,14 @@ gaScrTell = RWS.tell . Seq.singleton
 evalGAScr :: Monad monad => GAScrMonad monad t -> monad (t, Seq Generator)
 evalGAScr = Tuple.uncurry3 RWS.evalRWST . (, gaScrConsts, gaScrEnvInit)
 
-mkGovActGen :: Int -> Generator
-mkGovActGen n = Sequence . Fold.toList . snd $ ST.runST stGen where
-  batch = fromIntegral $ gascBatch gaScrConsts
+mkGovActGen :: Natural -> Generator
+mkGovActGen batch = Sequence . Fold.toList . snd . ST.runST $ stGen batch where
+  batchSize = fromIntegral $ gascBatch gaScrConsts
   n' = (n + batch - 1) `quot` batch
-  stGen :: forall s . ST s ([[Natural]], Seq Generator)
-  stGen = evalGAScr $ replicateM n' mkProposalBatch
+  stGen :: Natural -> forall s . ST s ([[Natural]], Seq Generator)
+  stGen (fromIntegral -> batch) = evalGAScr do
+    mkProposalBatch
+    mkVoteBatch batch
 
 mkProposalBatch :: Monad monad => GAScrMonad monad [Natural]
 mkProposalBatch = do
@@ -240,21 +244,30 @@ mkProposal = do
 
 -- This is intended to accommodate future less-rigid ordering of
 -- quorum-reaching.
-mkVoteBatch :: Monad monad => GAScrMonad monad ()
-mkVoteBatch = do
-  idxs <- IntMap.keys <$> RWS.gets gaseIdxLive
-  forM_ idxs \idx -> do
-    gaScrTell $
-      Vote genesisWallet payMode idx Yes drepCred Nothing
-    RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
-      gase { gaseIdxLive = Tuple.uncurry3 IntMap.update $
-        (, idx, liveIdxs) \case refCount
-                                   | refCount == 0
-                                   -> error $ "gaseMkVoteBatch: refCount underflow"
-                                   | refCount == 1
-                                   -> Nothing
-                                   | otherwise
-                                   -> Just $ refCount - 1 }
+mkVoteBatch :: Monad monad => Natural -> GAScrMonad monad ()
+mkVoteBatch (fromIntegral -> batch) = do
+  GAScrConsts {..} <- RWS.ask
+  GAScrEnv {..} <- RWS.get
+  let trimLow
+        | batch > 0
+        = snd $ IntMap.split (batch * gascBatch' - 1) gaseIdxLive
+        | otherwise = gaseIdxLive
+      trimHi = fst $ IntMap.split ((batch + 1) * gascBatch') trimLow
+      gascBatch' = fromIntegral gascBatch
+      idxs = IntMap.keysSet trimHi
+  whenM (not . IntSet.null . flip IntMap.restrictKeys idxs <$> RWS.gets gaseIdxLive) do
+    forM_ idxs \idx -> do
+      gaScrTell $
+        Vote genesisWallet payMode idx Yes drepCred Nothing
+      RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
+        gase { gaseIdxLive = Tuple.uncurry3 IntMap.update $
+          (, idx, liveIdxs) \case refCount
+                                     | refCount == 0
+                                     -> error $ "gaseMkVoteBatch: refCount underflow"
+                                     | refCount == 1
+                                     -> Nothing
+                                     | otherwise
+                                     -> Just $ refCount - 1 }
  
 anchor :: L.Anchor L.StandardCrypto
 anchor = L.Anchor {..} where
