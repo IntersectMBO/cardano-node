@@ -1279,9 +1279,10 @@ instance
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-  asMetrics (TraceMempoolRemoveTxs _txs mpSz) =
+  asMetrics (TraceMempoolRemoveTxs txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
+    , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)

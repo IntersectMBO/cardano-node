@@ -102,6 +102,7 @@ import           Data.Proxy (Proxy (..))
 import qualified Data.Text.IO as T
 import           GHC.Generics (Generic)
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
+import           Network.Mux.Trace (TraceLabelPeer (..))
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
@@ -315,6 +316,10 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [blockFetchServerTr]
     blockFetchServerTrDoc <- documentTracer (blockFetchServerTr ::
       Trace IO (TraceBlockFetchServerEvent blk))
+
+    servedBlockLatestTr <- servedBlockLatest mbTrEKG
+    servedBlockLatestTrDoc <- documentTracer (servedBlockLatestTr ::
+      Trace IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk)))
 
     forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -713,6 +718,7 @@ docTracersFirstPhase condConfigFileName = do
             <> blockFetchClientTrDoc
             <> blockFetchClientMetricsDoc
             <> blockFetchServerTrDoc
+            <> servedBlockLatestTrDoc
             <> forgeKESInfoTrDoc
             <> txInboundTrDoc
             <> txOutboundTrDoc
