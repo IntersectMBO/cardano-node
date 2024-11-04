@@ -6,7 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -39,10 +38,11 @@ import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), TraceGDDEvent (..), GDDDebugInfo (..))
+import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
+                   TraceGDDEvent (..))
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId, HasTxId,
-                   LedgerSupportsMempool, txForgetValidated, txId, ByteSize32 (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
+                   HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -76,7 +76,7 @@ import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
-import           Data.Foldable (Foldable(toList))
+import           Data.Foldable (Foldable (toList))
 import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
@@ -501,8 +501,8 @@ instance MetaTrace (TraceChainSyncServerEvent blk) where
 --------------------------------------------------------------------------------
 
 data CdfCounter = CdfCounter {
-    limit   :: ! Int64
-  , counter :: ! Int64
+    limit   :: !Int64
+  , counter :: !Int64
 }
 
 decCdf :: a -> CdfCounter -> CdfCounter
@@ -517,9 +517,9 @@ incCdf v cdf =
 
 data ClientMetrics = ClientMetrics {
     cmSlotMap   :: IntPSQ Word64 NominalDiffTime
-  , cmCdf1sVar  :: ! CdfCounter
-  , cmCdf3sVar  :: ! CdfCounter
-  , cmCdf5sVar  :: ! CdfCounter
+  , cmCdf1sVar  :: !CdfCounter
+  , cmCdf3sVar  :: !CdfCounter
+  , cmCdf5sVar  :: !CdfCounter
   , cmDelay     :: Double
   , cmBlockSize :: Word32
   , cmTraceIt   :: Bool
@@ -1726,7 +1726,7 @@ instance ( tx ~ GenTx blk
   asMetrics (TraceNoLedgerView slot _) =
     [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceLedgerView _) = []
-  asMetrics (TraceBlockContext _ _ _) = []
+  asMetrics TraceBlockContext {} = []
   asMetrics (TraceLedgerState _ _) = []
   asMetrics (TraceNodeCannotForge slot _reason) =
     [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
