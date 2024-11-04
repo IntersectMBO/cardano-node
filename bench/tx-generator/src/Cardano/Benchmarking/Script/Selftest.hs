@@ -16,7 +16,7 @@ Description : Run self-tests using statically-defined data.
 The statically-defined data is the action list to execute, 'testScript'.
 It actually does use a protocol file taken in from IO.
 -}
-module Cardano.Benchmarking.Script.Selftest
+module Cardano.Benchmarking.Script.Selftest (printJSON, runSelftest)
 where
 
 import           Cardano.Api hiding (Env)
@@ -48,7 +48,7 @@ import           Control.Monad (replicateM)
 import           Control.Monad.Extra (maybeM, whenM)
 import qualified Control.Monad.ST as ST (runST)
 import           Control.Monad.Trans.RWS (RWST)
-import qualified Control.Monad.Trans.RWS as RWS (ask, asks, evalRWST, get, gets, put, modify, tell)
+import qualified Control.Monad.Trans.RWS as RWS (ask, asks, get, gets, put, modify, runRWST, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
@@ -213,14 +213,10 @@ gaScrEnvInit = GAScrEnv
 gaScrTell :: Monad monad => Generator -> GAScrMonad monad ()
 gaScrTell = RWS.tell . Seq.singleton
 
-evalGAScr :: Monad monad => GAScrMonad monad t -> monad (t, Seq Generator)
-evalGAScr = Tuple.uncurry3 RWS.evalRWST . (, gaScrConsts, gaScrEnvInit)
-
-mkGovActGen :: Natural -> Generator
-mkGovActGen batch = Sequence $ Fold.toList genSeq where
-  (_, genSeq) = ST.runST $ evalGAScr do
-    _ <- mkProposalBatch
-    mkVoteBatch batch
+runGAScr :: GAScrEnv
+         -> GAScrMonad monad t
+         -> monad (t, GAScrEnv, Seq Generator)
+runGAScr st = Tuple.uncurry3 RWS.runRWST . (, gaScrConsts, st)
 
 mkProposalBatch :: Monad monad => GAScrMonad monad [Natural]
 mkProposalBatch = do
@@ -238,21 +234,28 @@ mkProposal = do
   gaScrTell $ Propose genesisWallet payMode proposalCoins stakeCred anchor
   pure idx
 
+intMapWithinRange :: (Int, Int) -> IntMap t -> IntMap t
+intMapWithinRange (a, b) im = fst $ IntMap.split (b + 1) trimLo where
+  trimLo
+    | a > 0
+    = snd $ IntMap.split (a - 1) im
+    | otherwise = im
+
+whileM' :: Monad monad => monad Bool -> monad t -> monad ()
+whileM' p act = whenM p do _ <- act
+                           whileM' p act
+
 -- This is intended to accommodate future less-rigid ordering of
 -- quorum-reaching.
 mkVoteBatch :: Monad monad => Natural -> GAScrMonad monad ()
 mkVoteBatch (fromIntegral -> batch) = do
   GAScrConsts {..} <- RWS.ask
   GAScrEnv {..} <- RWS.get
-  let trimLow
-        | batch > 0
-        = snd $ IntMap.split (batch * gascBatch' - 1) gaseIdxLive
-        | otherwise = gaseIdxLive
-      trimHi = fst $ IntMap.split ((batch + 1) * gascBatch') trimLow
-      gascBatch' = fromIntegral gascBatch
-      idxs = IntMap.keysSet trimHi
-      whileM' p act = whenM p do _ <- act
-                                 whileM' p act
+  let gascBatch' = fromIntegral gascBatch
+      idxLo = batch * gascBatch'
+      idxHi = (batch + 1) * gascBatch'
+      liveWithinBatch = intMapWithinRange (idxLo, idxHi) gaseIdxLive
+      idxs = IntMap.keysSet liveWithinBatch
       getIdxsInBatch = RWS.gets \GAScrEnv { gaseIdxLive = live } ->
         IntMap.restrictKeys live idxs
   whileM' (not . IntMap.null <$> getIdxsInBatch) do
@@ -301,8 +304,7 @@ testScriptVoting protocolFile submitMode =
   -- manually inject an (unnamed) DRep key into the Env by means of an Action constructor
   , DefineDRepKey drepKey
 
-  , Submit anyConwayEra submitMode txParams . Sequence . replicate nrProposals $
-      Propose genesisWallet payMode proposalCoins stakeCred anchor
+  , Submit anyConwayEra submitMode txParams . Sequence $ Fold.toList proposals
 
   -- In principle, one could construct votes according to
   -- GovActionIds here. The approach taken instead was to
@@ -312,7 +314,7 @@ testScriptVoting protocolFile submitMode =
 
   -- There will be more point to this once there is more of a way to cast
   -- votes as several distinct credential-holders.
-  , Submit anyConwayEra submitMode txParams . Take nrProposals $ RoundRobin
-      [Sequence . replicate nrProposals $
-         Vote genesisWallet payMode k Yes drepCred Nothing | k <- [0 .. nrProposals - 1]]
-  ]
+  , Submit anyConwayEra submitMode txParams . Sequence $ Fold.toList votes
+  ] where
+      (_, st, proposals) = ST.runST $ runGAScr gaScrEnvInit mkProposalBatch
+      (_, _, votes) = ST.runST $ runGAScr st do mkVoteBatch 0
