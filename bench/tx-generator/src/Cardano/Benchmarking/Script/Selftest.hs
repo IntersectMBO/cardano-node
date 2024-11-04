@@ -39,25 +39,18 @@ import qualified Cardano.Ledger.Keys as L
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
-import           Cardano.Prelude (encodeUtf8, forM, forM_)
+import           Cardano.Prelude (encodeUtf8, forM_)
 import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Exception (AssertionFailed (..), throw)
-import           Control.Monad (replicateM_)
 import           Control.Monad.Extra (maybeM)
-import qualified Control.Monad.ST as ST (runST)
-import           Control.Monad.Trans.RWS (RWST)
-import qualified Control.Monad.Trans.RWS as RWS (ask, asks, runRWST, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
-import qualified Data.Foldable as Fold (toList)
-import qualified Data.List as List (unwords)
+import           Data.Functor ((<&>))
+import qualified Data.List as List (genericReplicate, unwords)
 import           Data.Maybe (fromJust)
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq (singleton)
 import           Data.String
-import qualified Data.Tuple.Extra as Tuple (uncurry3)
 import           Numeric.Natural (Natural)
 import           System.FilePath ((</>))
 
@@ -187,60 +180,24 @@ testScript protocolFile submitMode =
 
 data GAScrEnv = GAScrEnv { } deriving (Eq, Ord, Read, Show)
 
-data GAScrConsts = GAScrConsts
-  { gascBatch :: Natural
-  , gascQuorum :: Natural
-  } deriving (Eq, Ord, Read, Show)
+batch :: Natural
+batch = 5
 
-type GAScrMonad monad t = RWST GAScrConsts (Seq Generator) GAScrEnv monad t
-
-gaScrConsts :: GAScrConsts
-gaScrConsts = GAScrConsts
-  { gascBatch = 5
-  , gascQuorum = 10 }
-
-gaScrEnvInit :: GAScrEnv
-gaScrEnvInit = GAScrEnv { }
-
-gaScrTell :: Monad monad => Generator -> GAScrMonad monad ()
-gaScrTell = RWS.tell . Seq.singleton
-
-runGAScr :: GAScrEnv
-         -> GAScrMonad monad t
-         -> monad (t, GAScrEnv, Seq Generator)
-runGAScr st = Tuple.uncurry3 RWS.runRWST . (, gaScrConsts, st)
-
+quorum :: Natural
+quorum = 10
 
 genProposals :: [Generator]
-genProposals = Fold.toList proposals where
-  (_, _, proposals) = ST.runST $ runGAScr gaScrEnvInit mkProposalBatch
-
-mkProposalBatch :: Monad monad => GAScrMonad monad ()
-mkProposalBatch = do
-  batch <- fromIntegral <$> RWS.asks gascBatch
-  replicateM_ batch mkProposal
-
-mkProposal :: Monad monad => GAScrMonad monad ()
-mkProposal = gaScrTell $
+genProposals = List.genericReplicate batch $
   Propose genesisWallet payMode proposalCoins stakeCred anchor
 
-genVotes :: Natural -> [Generator]
-genVotes n = Fold.toList votes where
-  (_, _, votes) = ST.runST $ runGAScr gaScrEnvInit do mkVoteBatch n
+genVotes :: Natural -> Generator
+genVotes n = RoundRobin $ [idxLo .. idxHi] <&> \idx ->
+    Take (fromIntegral quorum) .  Cycle $
+      Vote genesisWallet payMode idx Yes drepCred Nothing
+  where
+    idxLo = fromIntegral $ n * batch
+    idxHi = fromIntegral $ (n + 1) * batch - 1
 
--- This is intended to accommodate future less-rigid ordering of
--- quorum-reaching.
-mkVoteBatch :: Monad monad => Natural -> GAScrMonad monad ()
-mkVoteBatch (fromIntegral -> batch) = do
-  GAScrConsts {..} <- RWS.ask
-  let gascBatch' = fromIntegral gascBatch
-      idxLo = batch * gascBatch'
-      idxHi = (batch + 1) * gascBatch'
-  gaScrTell . RoundRobin =<<
-    forM [idxLo .. idxHi - 1] \idx -> do
-      pure . Take (fromIntegral gascQuorum) . Cycle $
-        Vote genesisWallet payMode idx Yes drepCred Nothing
- 
 anchor :: L.Anchor L.StandardCrypto
 anchor = L.Anchor {..} where
   anchorUrl = fromJust $ L.textToUrl 999 "example.com"
@@ -287,5 +244,5 @@ testScriptVoting protocolFile submitMode =
 
   -- There will be more point to this once there is more of a way to cast
   -- votes as several distinct credential-holders.
-  , Submit anyConwayEra submitMode txParams . Sequence $ genVotes 0
+  , Submit anyConwayEra submitMode txParams $ genVotes 0
   ]
