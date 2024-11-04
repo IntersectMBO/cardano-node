@@ -52,8 +52,8 @@ import qualified Control.Monad.Trans.RWS as RWS (ask, asks, get, put, modify, ru
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
-import           Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap (assocs, delete, empty, insert, split)
+import           Data.IntSet (IntSet)
+import qualified Data.IntSet as IntSet (delete, empty, insert, split, toList)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.Sequence (Seq)
@@ -189,7 +189,7 @@ testScript protocolFile submitMode =
 
 data GAScrEnv = GAScrEnv
   { gaseIdxCtr :: Natural
-  , gaseIdxLive :: IntMap Natural
+  , gaseIdxLive :: IntSet
   } deriving (Eq, Ord, Read, Show)
 
 data GAScrConsts = GAScrConsts
@@ -207,7 +207,7 @@ gaScrConsts = GAScrConsts
 gaScrEnvInit :: GAScrEnv
 gaScrEnvInit = GAScrEnv
   { gaseIdxCtr = 0
-  , gaseIdxLive = IntMap.empty }
+  , gaseIdxLive = IntSet.empty }
 
 gaScrTell :: Monad monad => Generator -> GAScrMonad monad ()
 gaScrTell = RWS.tell . Seq.singleton
@@ -224,20 +224,19 @@ mkProposalBatch = do
 
 mkProposal :: Monad monad => GAScrMonad monad Natural
 mkProposal = do
-  quorum <- RWS.asks gascQuorum
-  GAScrEnv { gaseIdxCtr = idx, gaseIdxLive = refCounts } <- RWS.get
+  GAScrEnv { gaseIdxCtr = idx, gaseIdxLive = live } <- RWS.get
   let idx' = fromIntegral idx
   RWS.put GAScrEnv
     { gaseIdxCtr = idx + 1
-    , gaseIdxLive = IntMap.insert idx' quorum refCounts }
+    , gaseIdxLive = IntSet.insert idx' live }
   gaScrTell $ Propose genesisWallet payMode proposalCoins stakeCred anchor
   pure idx
 
-intMapWithinRange :: (Int, Int) -> IntMap t -> IntMap t
-intMapWithinRange (a, b) im = fst $ IntMap.split (b + 1) trimLo where
+intSetWithinRange :: (Int, Int) -> IntSet -> IntSet
+intSetWithinRange (a, b) im = fst $ IntSet.split (b + 1) trimLo where
   trimLo
     | a > 0
-    = snd $ IntMap.split (a - 1) im
+    = snd $ IntSet.split (a - 1) im
     | otherwise = im
 
 -- This is intended to accommodate future less-rigid ordering of
@@ -249,12 +248,12 @@ mkVoteBatch (fromIntegral -> batch) = do
   let gascBatch' = fromIntegral gascBatch
       idxLo = batch * gascBatch'
       idxHi = (batch + 1) * gascBatch'
-      liveWithinBatch = intMapWithinRange (idxLo, idxHi) gaseIdxLive
+      liveWithinBatch = intSetWithinRange (idxLo, idxHi) gaseIdxLive
   gaScrTell . RoundRobin =<<
-    forM (IntMap.assocs liveWithinBatch) \(idx, refCount) -> do
+    forM (IntSet.toList liveWithinBatch) \idx -> do
       RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
-        gase { gaseIdxLive = IntMap.delete idx liveIdxs }
-      pure . Take (fromIntegral refCount) . Cycle $
+        gase { gaseIdxLive = IntSet.delete idx liveIdxs }
+      pure . Take (fromIntegral gascQuorum) . Cycle $
         Vote genesisWallet payMode idx Yes drepCred Nothing
  
 anchor :: L.Anchor L.StandardCrypto
