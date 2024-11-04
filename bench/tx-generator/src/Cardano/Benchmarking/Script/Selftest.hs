@@ -39,14 +39,13 @@ import qualified Cardano.Ledger.Keys as L
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
-import           Cardano.Prelude (encodeUtf8)
+import           Cardano.Prelude (encodeUtf8, forM_)
 import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Exception (AssertionFailed (..), throw)
-import           Control.Monad (forM_, replicateM)
-import           Control.Monad.Extra (maybeM, whileM)
-import           Control.Monad.ST (ST)
+import           Control.Monad (replicateM)
+import           Control.Monad.Extra (maybeM, whenM)
 import qualified Control.Monad.ST as ST (runST)
 import           Control.Monad.Trans.RWS (RWST)
 import qualified Control.Monad.Trans.RWS as RWS (ask, asks, evalRWST, get, gets, put, modify, tell)
@@ -55,7 +54,7 @@ import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap (empty, insert, keysSet, null, restrictKeys, split, update)
-import qualified Data.IntSet as IntSet (null)
+import qualified Data.IntSet as IntSet (toList)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.Sequence (Seq)
@@ -144,7 +143,7 @@ runSelftest env envConsts@EnvConsts { .. } doVoting outFile
             | otherwise = testScriptVoting protocolFile submitMode
        (result, Env {  }, ()) <- flip (Env.runActionMEnv env) envConsts do
              Env.setBenchTracers initNullTracers
-             mapM_ action useThisScript
+             forM_ useThisScript action
        pure result `maybeM` const (throw abcException) $
          STM.atomically do STM.readTVar envThreads
 
@@ -218,12 +217,9 @@ evalGAScr :: Monad monad => GAScrMonad monad t -> monad (t, Seq Generator)
 evalGAScr = Tuple.uncurry3 RWS.evalRWST . (, gaScrConsts, gaScrEnvInit)
 
 mkGovActGen :: Natural -> Generator
-mkGovActGen batch = Sequence . Fold.toList . snd . ST.runST $ stGen batch where
-  batchSize = fromIntegral $ gascBatch gaScrConsts
-  n' = (n + batch - 1) `quot` batch
-  stGen :: Natural -> forall s . ST s ([[Natural]], Seq Generator)
-  stGen (fromIntegral -> batch) = evalGAScr do
-    mkProposalBatch
+mkGovActGen batch = Sequence $ Fold.toList genSeq where
+  (_, genSeq) = ST.runST $ evalGAScr do
+    _ <- mkProposalBatch
     mkVoteBatch batch
 
 mkProposalBatch :: Monad monad => GAScrMonad monad [Natural]
@@ -255,8 +251,8 @@ mkVoteBatch (fromIntegral -> batch) = do
       trimHi = fst $ IntMap.split ((batch + 1) * gascBatch') trimLow
       gascBatch' = fromIntegral gascBatch
       idxs = IntMap.keysSet trimHi
-  whenM (not . IntSet.null . flip IntMap.restrictKeys idxs <$> RWS.gets gaseIdxLive) do
-    forM_ idxs \idx -> do
+  whenM (not . IntMap.null . flip IntMap.restrictKeys idxs <$> RWS.gets \GAScrEnv { gaseIdxLive = live } -> live) do
+    forM_ (IntSet.toList idxs) \idx -> do
       gaScrTell $
         Vote genesisWallet payMode idx Yes drepCred Nothing
       RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
