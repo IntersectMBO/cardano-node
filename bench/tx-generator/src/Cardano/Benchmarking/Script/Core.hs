@@ -88,6 +88,7 @@ import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (Text, unpack)
 import           Data.Tuple.Extra (dupe)
 import           System.FilePath ((</>))
+import qualified System.IO as IO (IOMode (..), openFile)
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -295,7 +296,9 @@ submitInEra submitMode generator txParams era = do
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes tpsRate txCount -> benchmarkTxStream txStream nodes tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
-    DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
+    DumpToFile filePath -> liftIO do
+      handle <- IO.openFile filePath IO.AppendMode
+      Streaming.toHandle handle $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
   forceTx (Right _) = return ()
@@ -435,11 +438,13 @@ proposeCase :: forall era ledgerEra . ()
   => Ledger.EraCrypto ledgerEra ~ Ledger.StandardCrypto
   => GovCaseEnv era
   -> ProposeCase
+  -> ConwayEraOnwards era
   -> ActionM (TxStream IO era)
-proposeCase GovCaseEnv {..} ProposeCase {..}
+proposeCase GovCaseEnv {..} ProposeCase {..} eon
   | TxGenTxParams {..} <- gcEnvTxParams
   , sbe <- shelleyBasedEra @era
-  = do network :: Ledger.Network <- toShelleyNetwork <$> getEnvNetworkId
+  = conwayEraOnwardsConstraints eon do
+       network :: Ledger.Network <- toShelleyNetwork <$> getEnvNetworkId
        ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets pcWalletName
@@ -623,8 +628,8 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                       , gcEnvTxParams = txParams
                       , gcEnvLedgerParams = ledgerParameters
                       , gcEnvFeeInEra = feeInEra }
-          -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") \case
-               ConwayEraOnwardsConway -> proposeCase env args
+          -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") $
+               proposeCase env args
 
         Vote vcWalletName vcPayMode vcGovActId vcVote vcGenDRepCred vcAnchor
           | args <- VoteCase {..}
