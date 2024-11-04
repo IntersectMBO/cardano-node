@@ -44,11 +44,11 @@ import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Exception (AssertionFailed (..), throw)
-import           Control.Monad (replicateM)
+import           Control.Monad (replicateM_)
 import           Control.Monad.Extra (maybeM)
 import qualified Control.Monad.ST as ST (runST)
 import           Control.Monad.Trans.RWS (RWST)
-import qualified Control.Monad.Trans.RWS as RWS (ask, asks, get, put, runRWST, tell)
+import qualified Control.Monad.Trans.RWS as RWS (ask, asks, runRWST, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
@@ -185,9 +185,7 @@ testScript protocolFile submitMode =
       = Submit anyAllegraEra submitMode txParams . Take txCount . Cycle $
           SplitN src (PayToAddr key dest) outputs
 
-data GAScrEnv = GAScrEnv
-  { gaseIdxCtr :: Natural
-  } deriving (Eq, Ord, Read, Show)
+data GAScrEnv = GAScrEnv { } deriving (Eq, Ord, Read, Show)
 
 data GAScrConsts = GAScrConsts
   { gascBatch :: Natural
@@ -202,7 +200,7 @@ gaScrConsts = GAScrConsts
   , gascQuorum = 10 }
 
 gaScrEnvInit :: GAScrEnv
-gaScrEnvInit = GAScrEnv { gaseIdxCtr = 0 }
+gaScrEnvInit = GAScrEnv { }
 
 gaScrTell :: Monad monad => Generator -> GAScrMonad monad ()
 gaScrTell = RWS.tell . Seq.singleton
@@ -212,17 +210,23 @@ runGAScr :: GAScrEnv
          -> monad (t, GAScrEnv, Seq Generator)
 runGAScr st = Tuple.uncurry3 RWS.runRWST . (, gaScrConsts, st)
 
-mkProposalBatch :: Monad monad => GAScrMonad monad [Natural]
+
+genProposals :: [Generator]
+genProposals = Fold.toList proposals where
+  (_, _, proposals) = ST.runST $ runGAScr gaScrEnvInit mkProposalBatch
+
+mkProposalBatch :: Monad monad => GAScrMonad monad ()
 mkProposalBatch = do
   batch <- fromIntegral <$> RWS.asks gascBatch
-  replicateM batch mkProposal
+  replicateM_ batch mkProposal
 
-mkProposal :: Monad monad => GAScrMonad monad Natural
-mkProposal = do
-  GAScrEnv { gaseIdxCtr = idx } <- RWS.get
-  RWS.put GAScrEnv { gaseIdxCtr = idx + 1 }
-  gaScrTell $ Propose genesisWallet payMode proposalCoins stakeCred anchor
-  pure idx
+mkProposal :: Monad monad => GAScrMonad monad ()
+mkProposal = gaScrTell $
+  Propose genesisWallet payMode proposalCoins stakeCred anchor
+
+genVotes :: Natural -> [Generator]
+genVotes n = Fold.toList votes where
+  (_, _, votes) = ST.runST $ runGAScr gaScrEnvInit do mkVoteBatch n
 
 -- This is intended to accommodate future less-rigid ordering of
 -- quorum-reaching.
@@ -273,7 +277,7 @@ testScriptVoting protocolFile submitMode =
   -- manually inject an (unnamed) DRep key into the Env by means of an Action constructor
   , DefineDRepKey drepKey
 
-  , Submit anyConwayEra submitMode txParams . Sequence $ Fold.toList proposals
+  , Submit anyConwayEra submitMode txParams $ Sequence genProposals
 
   -- In principle, one could construct votes according to
   -- GovActionIds here. The approach taken instead was to
@@ -283,7 +287,5 @@ testScriptVoting protocolFile submitMode =
 
   -- There will be more point to this once there is more of a way to cast
   -- votes as several distinct credential-holders.
-  , Submit anyConwayEra submitMode txParams . Sequence $ Fold.toList votes
-  ] where
-      (_, st, proposals) = ST.runST $ runGAScr gaScrEnvInit mkProposalBatch
-      (_, _, votes) = ST.runST $ runGAScr st do mkVoteBatch 0
+  , Submit anyConwayEra submitMode txParams . Sequence $ genVotes 0
+  ]
