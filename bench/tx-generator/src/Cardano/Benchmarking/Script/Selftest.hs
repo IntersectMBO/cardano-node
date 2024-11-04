@@ -251,7 +251,11 @@ mkVoteBatch (fromIntegral -> batch) = do
       trimHi = fst $ IntMap.split ((batch + 1) * gascBatch') trimLow
       gascBatch' = fromIntegral gascBatch
       idxs = IntMap.keysSet trimHi
-  whenM (not . IntMap.null . flip IntMap.restrictKeys idxs <$> RWS.gets \GAScrEnv { gaseIdxLive = live } -> live) do
+      whileM' p act = whenM p do _ <- act
+                                 whileM' p act
+      getIdxsInBatch = RWS.gets \GAScrEnv { gaseIdxLive = live } ->
+        IntMap.restrictKeys live idxs
+  whileM' (not . IntMap.null <$> getIdxsInBatch) do
     forM_ (IntSet.toList idxs) \idx -> do
       gaScrTell $
         Vote genesisWallet payMode idx Yes drepCred Nothing
