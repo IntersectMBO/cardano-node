@@ -39,7 +39,7 @@ import qualified Cardano.Ledger.Keys as L
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
-import           Cardano.Prelude (encodeUtf8, forM_)
+import           Cardano.Prelude (encodeUtf8, forM, forM_)
 import           Prelude
 
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
@@ -53,15 +53,14 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
 import           Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap (empty, insert, keysSet, null, restrictKeys, split, update)
-import qualified Data.IntSet as IntSet (toList)
+import qualified Data.IntMap as IntMap (assocs, delete, empty, insert, keysSet, null, restrictKeys, split)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq (singleton)
 import           Data.String
 import qualified Data.Tuple.Extra as Tuple (uncurry3)
-import           Numeric.Natural (Natural, minusNaturalMaybe)
+import           Numeric.Natural (Natural)
 import           System.FilePath ((</>))
 
 import           Paths_tx_generator
@@ -259,14 +258,12 @@ mkVoteBatch (fromIntegral -> batch) = do
       getIdxsInBatch = RWS.gets \GAScrEnv { gaseIdxLive = live } ->
         IntMap.restrictKeys live idxs
   whileM' (not . IntMap.null <$> getIdxsInBatch) do
-    forM_ (IntSet.toList idxs) \idx -> do
-      gaScrTell $
-        Vote genesisWallet payMode idx Yes drepCred Nothing
-      RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
-        gase { gaseIdxLive = Tuple.uncurry3 IntMap.update $
-          -- subtract one, but turn 0 into Nothing
-          (, idx, liveIdxs) \refCnt ->
-              succ <$> refCnt `minusNaturalMaybe` 2 }
+    gaScrTell . RoundRobin =<<
+      forM (IntMap.assocs liveWithinBatch) \(idx, refCount) -> do
+        RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
+          gase { gaseIdxLive = IntMap.delete idx liveIdxs }
+        pure . Take (fromIntegral refCount) . Cycle $
+          Vote genesisWallet payMode idx Yes drepCred Nothing
  
 anchor :: L.Anchor L.StandardCrypto
 anchor = L.Anchor {..} where
