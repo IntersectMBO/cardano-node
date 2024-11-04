@@ -45,15 +45,15 @@ import           Prelude
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Exception (AssertionFailed (..), throw)
 import           Control.Monad (replicateM)
-import           Control.Monad.Extra (maybeM, whenM)
+import           Control.Monad.Extra (maybeM)
 import qualified Control.Monad.ST as ST (runST)
 import           Control.Monad.Trans.RWS (RWST)
-import qualified Control.Monad.Trans.RWS as RWS (ask, asks, get, gets, put, modify, runRWST, tell)
+import qualified Control.Monad.Trans.RWS as RWS (ask, asks, get, put, modify, runRWST, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
 import           Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap (assocs, delete, empty, insert, keysSet, null, restrictKeys, split)
+import qualified Data.IntMap as IntMap (assocs, delete, empty, insert, split)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.Sequence (Seq)
@@ -240,10 +240,6 @@ intMapWithinRange (a, b) im = fst $ IntMap.split (b + 1) trimLo where
     = snd $ IntMap.split (a - 1) im
     | otherwise = im
 
-whileM' :: Monad monad => monad Bool -> monad t -> monad ()
-whileM' p act = whenM p do _ <- act
-                           whileM' p act
-
 -- This is intended to accommodate future less-rigid ordering of
 -- quorum-reaching.
 mkVoteBatch :: Monad monad => Natural -> GAScrMonad monad ()
@@ -254,16 +250,12 @@ mkVoteBatch (fromIntegral -> batch) = do
       idxLo = batch * gascBatch'
       idxHi = (batch + 1) * gascBatch'
       liveWithinBatch = intMapWithinRange (idxLo, idxHi) gaseIdxLive
-      idxs = IntMap.keysSet liveWithinBatch
-      getIdxsInBatch = RWS.gets \GAScrEnv { gaseIdxLive = live } ->
-        IntMap.restrictKeys live idxs
-  whileM' (not . IntMap.null <$> getIdxsInBatch) do
-    gaScrTell . RoundRobin =<<
-      forM (IntMap.assocs liveWithinBatch) \(idx, refCount) -> do
-        RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
-          gase { gaseIdxLive = IntMap.delete idx liveIdxs }
-        pure . Take (fromIntegral refCount) . Cycle $
-          Vote genesisWallet payMode idx Yes drepCred Nothing
+  gaScrTell . RoundRobin =<<
+    forM (IntMap.assocs liveWithinBatch) \(idx, refCount) -> do
+      RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
+        gase { gaseIdxLive = IntMap.delete idx liveIdxs }
+      pure . Take (fromIntegral refCount) . Cycle $
+        Vote genesisWallet payMode idx Yes drepCred Nothing
  
 anchor :: L.Anchor L.StandardCrypto
 anchor = L.Anchor {..} where
