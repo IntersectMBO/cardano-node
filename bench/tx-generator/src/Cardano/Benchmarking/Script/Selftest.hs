@@ -48,12 +48,10 @@ import           Control.Monad (replicateM)
 import           Control.Monad.Extra (maybeM)
 import qualified Control.Monad.ST as ST (runST)
 import           Control.Monad.Trans.RWS (RWST)
-import qualified Control.Monad.Trans.RWS as RWS (ask, asks, get, put, modify, runRWST, tell)
+import qualified Control.Monad.Trans.RWS as RWS (ask, asks, get, put, runRWST, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
 import qualified Data.Foldable as Fold (toList)
-import           Data.IntSet (IntSet)
-import qualified Data.IntSet as IntSet (delete, empty, insert, split, toList)
 import qualified Data.List as List (unwords)
 import           Data.Maybe (fromJust)
 import           Data.Sequence (Seq)
@@ -189,7 +187,6 @@ testScript protocolFile submitMode =
 
 data GAScrEnv = GAScrEnv
   { gaseIdxCtr :: Natural
-  , gaseIdxLive :: IntSet
   } deriving (Eq, Ord, Read, Show)
 
 data GAScrConsts = GAScrConsts
@@ -205,9 +202,7 @@ gaScrConsts = GAScrConsts
   , gascQuorum = 10 }
 
 gaScrEnvInit :: GAScrEnv
-gaScrEnvInit = GAScrEnv
-  { gaseIdxCtr = 0
-  , gaseIdxLive = IntSet.empty }
+gaScrEnvInit = GAScrEnv { gaseIdxCtr = 0 }
 
 gaScrTell :: Monad monad => Generator -> GAScrMonad monad ()
 gaScrTell = RWS.tell . Seq.singleton
@@ -224,35 +219,21 @@ mkProposalBatch = do
 
 mkProposal :: Monad monad => GAScrMonad monad Natural
 mkProposal = do
-  GAScrEnv { gaseIdxCtr = idx, gaseIdxLive = live } <- RWS.get
-  let idx' = fromIntegral idx
-  RWS.put GAScrEnv
-    { gaseIdxCtr = idx + 1
-    , gaseIdxLive = IntSet.insert idx' live }
+  GAScrEnv { gaseIdxCtr = idx } <- RWS.get
+  RWS.put GAScrEnv { gaseIdxCtr = idx + 1 }
   gaScrTell $ Propose genesisWallet payMode proposalCoins stakeCred anchor
   pure idx
-
-intSetWithinRange :: (Int, Int) -> IntSet -> IntSet
-intSetWithinRange (a, b) im = fst $ IntSet.split (b + 1) trimLo where
-  trimLo
-    | a > 0
-    = snd $ IntSet.split (a - 1) im
-    | otherwise = im
 
 -- This is intended to accommodate future less-rigid ordering of
 -- quorum-reaching.
 mkVoteBatch :: Monad monad => Natural -> GAScrMonad monad ()
 mkVoteBatch (fromIntegral -> batch) = do
   GAScrConsts {..} <- RWS.ask
-  GAScrEnv {..} <- RWS.get
   let gascBatch' = fromIntegral gascBatch
       idxLo = batch * gascBatch'
       idxHi = (batch + 1) * gascBatch'
-      liveWithinBatch = intSetWithinRange (idxLo, idxHi) gaseIdxLive
   gaScrTell . RoundRobin =<<
-    forM (IntSet.toList liveWithinBatch) \idx -> do
-      RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
-        gase { gaseIdxLive = IntSet.delete idx liveIdxs }
+    forM [idxLo .. idxHi - 1] \idx -> do
       pure . Take (fromIntegral gascQuorum) . Cycle $
         Vote genesisWallet payMode idx Yes drepCred Nothing
  
