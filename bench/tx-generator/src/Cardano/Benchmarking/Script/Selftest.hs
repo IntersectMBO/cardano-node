@@ -61,7 +61,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq (singleton)
 import           Data.String
 import qualified Data.Tuple.Extra as Tuple (uncurry3)
-import           Numeric.Natural (Natural)
+import           Numeric.Natural (Natural, minusNaturalMaybe)
 import           System.FilePath ((</>))
 
 import           Paths_tx_generator
@@ -261,13 +261,9 @@ mkVoteBatch (fromIntegral -> batch) = do
         Vote genesisWallet payMode idx Yes drepCred Nothing
       RWS.modify \gase@GAScrEnv { gaseIdxLive = liveIdxs } ->
         gase { gaseIdxLive = Tuple.uncurry3 IntMap.update $
-          (, idx, liveIdxs) \case refCount
-                                     | refCount == 0
-                                     -> error $ "gaseMkVoteBatch: refCount underflow"
-                                     | refCount == 1
-                                     -> Nothing
-                                     | otherwise
-                                     -> Just $ refCount - 1 }
+          -- subtract one, but turn 0 into Nothing
+          (, idx, liveIdxs) \refCnt ->
+              succ <$> refCnt `minusNaturalMaybe` 2 }
  
 anchor :: L.Anchor L.StandardCrypto
 anchor = L.Anchor {..} where
