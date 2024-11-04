@@ -774,8 +774,13 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["ChurnAction"]) =
-      [ ("peerSelection.churn", "Duration of a churn action")
-      ]
+      [ ("peerSelection.churn.DecreasedActivePeers.duration", "")
+     , ("peerSelection.churn.DecreasedActiveBigLedgerPeers.duration", "")
+     , ("peerSelection.churn.DecreasedEstablishedPeers.duration", "")
+     , ("peerSelection.churn.DecreasedEstablishedBigLedgerPeers.duration", "")
+     , ("peerSelection.churn.DecreasedKnownPeers.duration", "")
+     , ("peerSelection.churn.DecreasedKnownBigLedgerPeers.duration", "")
+     ]
     metricsDocFor _ = []
 
     allNamespaces = [
@@ -921,29 +926,29 @@ instance LogFormatting PeerSelectionCounters where
       PeerSelectionCountersHWC {..} ->
         -- Deprecated metrics; they will be removed in a future version.
         [ IntM
-            "peerSelection.cold"
+            "peerSelection.Cold"
             (fromIntegral numberOfColdPeers)
         , IntM
-            "peerSelection.warm"
+            "peerSelection.Warm"
             (fromIntegral numberOfWarmPeers)
         , IntM
-            "peerSelection.hot"
+            "peerSelection.Hot"
             (fromIntegral numberOfHotPeers)
         , IntM
-            "peerSelection.coldBigLedgerPeers"
+            "peerSelection.ColdBigLedgerPeers"
             (fromIntegral numberOfColdBigLedgerPeers)
         , IntM
-            "peerSelection.warmBigLedgerPeers"
+            "peerSelection.WarmBigLedgerPeers"
             (fromIntegral numberOfWarmBigLedgerPeers)
         , IntM
-            "peerSelection.hotBigLedgerPeers"
+            "peerSelection.HotBigLedgerPeers"
             (fromIntegral numberOfHotBigLedgerPeers)
 
         , IntM
-            "peerSelection.warmLocalRoots"
+            "peerSelection.WarmLocalRoots"
             (fromIntegral $ numberOfActiveLocalRootPeers psc)
         , IntM
-            "peerSelection.hotLocalRoots"
+            "peerSelection.HotLocalRoots"
             (fromIntegral $ numberOfEstablishedLocalRootPeers psc
                           - numberOfActiveLocalRootPeers psc)
         ]

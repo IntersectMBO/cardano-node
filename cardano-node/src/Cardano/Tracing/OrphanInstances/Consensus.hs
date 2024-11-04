@@ -34,14 +34,15 @@ import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol
                    Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, headerPoint,
                    pointHash, realPointHash, realPointSlot, withOriginToMaybe)
 import           Ouroboros.Consensus.Block.SupportsSanityCheck
-import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), TraceGDDEvent (..), GDDDebugInfo (..))
+import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
+                   TraceGDDEvent (..))
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent (..), LedgerUpdate,
                    LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxId,
-                   LedgerSupportsMempool, TxId, txForgetValidated, txId, ByteSize32 (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTx,
+                   GenTxId, HasTxId, LedgerSupportsMempool, TxId, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -65,7 +66,8 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
                    chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
-import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart (..), Pushing (..), ReplayStart (..))
+import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart (..), Pushing (..),
+                   ReplayStart (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Consensus.Util.Condense

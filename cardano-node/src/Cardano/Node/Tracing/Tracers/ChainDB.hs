@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -32,7 +32,8 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
-import           Ouroboros.Consensus.Storage.LedgerDB (UpdateLedgerDbTraceEvent (..), ReplayStart (..))
+import           Ouroboros.Consensus.Storage.LedgerDB (ReplayStart (..),
+                   UpdateLedgerDbTraceEvent (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -540,23 +541,26 @@ instance ( LogFormatting (Header blk)
         ]
 
 
-  asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
-    let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
-          chainInformation selChangedInfo newChain 0
+  asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo oldChain newChain) =
+    let forkIt = not $ AF.withinFragmentBounds (AF.headPoint oldChain)
+                              newChain
+        ChainInformation { .. } = chainInformation selChangedInfo forkIt newChain 0
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
+        , CounterM "forks" (Just (if fork then 1 else 0))
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo _oldChain newChain) =
-    let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
-          chainInformation selChangedInfo newChain 0
+    let ChainInformation { .. } =
+          chainInformation selChangedInfo False newChain 0
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
+        , CounterM "forks" (Just (if fork then 1 else 0))
         ]
   asMetrics _ = []
 
@@ -2096,21 +2100,24 @@ data ChainInformation = ChainInformation
   , blocksUncoupledDelta :: Int64
     -- ^ The net change in number of blocks forged since last restart not on the
     -- current chain.
+  , fork :: Bool
   }
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
   => ChainDB.SelectionChangedInfo blk
+  -> Bool
   -> AF.AnchoredFragment (Header blk)
   -> Int64
   -> ChainInformation
-chainInformation selChangedInfo frag blocksUncoupledDelta = ChainInformation
+chainInformation selChangedInfo fork frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
     , epoch = ChainDB.newTipEpoch selChangedInfo
     , slotInEpoch = ChainDB.newTipSlotInEpoch selChangedInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
+    , fork = fork
     }
 
 fragmentChainDensity ::
