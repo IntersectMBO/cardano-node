@@ -95,7 +95,7 @@ main
         genesisValidate genesis
 
       sigKey :: SigningKey PaymentKey <-
-        hoistEither =<< handleIOExceptT IOError (readSigningKeyFile $ _nix_sigKey nixService)
+        hoistEither =<< handleIOExceptT IOError (readPaymentKeyFile $ _nix_sigKey nixService)
 
       pure (nixService, nc, genesis, sigKey)
 

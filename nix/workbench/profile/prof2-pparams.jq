@@ -32,7 +32,6 @@ def overlays:
   , "v9-preview":   v9preview::delta
   , "v10-preview":  v10preview::delta
   , "blocksize64k": blocksizes::delta_64kblocks
-  , "voting":       voting::delta_voting
   };
 
 def pParamsWithOverlays(epoch; overlay_names):
