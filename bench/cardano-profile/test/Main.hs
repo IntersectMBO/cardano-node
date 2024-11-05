@@ -19,6 +19,7 @@ import           Test.Tasty.HUnit
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile as Profiles
 import qualified Cardano.Benchmarking.Profile.Types as Types
+import qualified Cardano.Benchmarking.Profile.NodeSpecs.Tests as NodeSpecs
 import qualified Paths_cardano_profile as Paths
 
 --------------------------------------------------------------------------------
@@ -32,6 +33,7 @@ tests =  Tasty.testGroup "cardano-profile"
     testGroupTypes
   , testGroupMap
   , testGroupOverlay
+  , NodeSpecs.tests
   ]
 
 --------------------------------------------------------------------------------
