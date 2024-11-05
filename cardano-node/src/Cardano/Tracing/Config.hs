@@ -28,6 +28,7 @@ module Cardano.Tracing.Config
   , TraceChainSyncClient
   , TraceChainSyncBlockServer
   , TraceChainSyncHeaderServer
+  , TraceChainSyncJumping
   , TraceChainSyncProtocol
   , TraceConnectionManager
   , TraceConnectionManagerCounters
@@ -131,6 +132,7 @@ type TraceChainDB = ("TraceChainDb" :: Symbol)
 type TraceChainSyncClient = ("TraceChainSyncClient" :: Symbol)
 type TraceChainSyncBlockServer = ("TraceChainSyncBlockServer" :: Symbol)
 type TraceChainSyncHeaderServer = ("TraceChainSyncHeaderServer" :: Symbol)
+type TraceChainSyncJumping = ("TraceChainSyncJumping" :: Symbol)
 type TraceChainSyncProtocol = ("TraceChainSyncProtocol" :: Symbol)
 type TraceConnectionManager = ("TraceConnectionManager" :: Symbol)
 type TraceConnectionManagerCounters = ("TraceConnectionManagerCounters" :: Symbol)
@@ -202,6 +204,7 @@ data TraceSelection
   , traceChainSyncBlockServer :: OnOff TraceChainSyncBlockServer
   , traceChainSyncClient :: OnOff TraceChainSyncClient
   , traceChainSyncHeaderServer :: OnOff TraceChainSyncHeaderServer
+  , traceChainSyncJumping :: OnOff TraceChainSyncJumping
   , traceChainSyncProtocol :: OnOff TraceChainSyncProtocol
   , traceConnectionManager :: OnOff TraceConnectionManager
   , traceConnectionManagerCounters :: OnOff TraceConnectionManagerCounters
@@ -267,6 +270,7 @@ data PartialTraceSelection
       , pTraceChainSyncBlockServer :: Last (OnOff TraceChainSyncBlockServer)
       , pTraceChainSyncClient :: Last (OnOff TraceChainSyncClient)
       , pTraceChainSyncHeaderServer :: Last (OnOff TraceChainSyncHeaderServer)
+      , pTraceChainSyncJumping :: Last (OnOff TraceChainSyncJumping)
       , pTraceChainSyncProtocol :: Last (OnOff TraceChainSyncProtocol)
       , pTraceConnectionManager :: Last (OnOff TraceConnectionManager)
       , pTraceConnectionManagerCounters :: Last (OnOff TraceConnectionManagerCounters)
@@ -333,6 +337,7 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceChainSyncBlockServer) v
       <*> parseTracer (Proxy @TraceChainSyncClient) v
       <*> parseTracer (Proxy @TraceChainSyncHeaderServer) v
+      <*> parseTracer (Proxy @TraceChainSyncJumping) v
       <*> parseTracer (Proxy @TraceChainSyncProtocol) v
       <*> parseTracer (Proxy @TraceConnectionManager) v
       <*> parseTracer (Proxy @TraceConnectionManagerCounters) v
@@ -396,6 +401,7 @@ defaultPartialTraceConfiguration =
     , pTraceChainSyncBlockServer = pure $ OnOff False
     , pTraceChainSyncClient = pure $ OnOff True
     , pTraceChainSyncHeaderServer = pure $ OnOff False
+    , pTraceChainSyncJumping = pure $ OnOff False
     , pTraceChainSyncProtocol = pure $ OnOff False
     , pTraceConnectionManager = pure $ OnOff True
     , pTraceConnectionManagerCounters = pure $ OnOff True
@@ -461,6 +467,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceChainSyncClient <- proxyLastToEither (Proxy @TraceChainSyncClient) pTraceChainSyncClient
    traceChainSyncBlockServer <- proxyLastToEither (Proxy @TraceChainSyncBlockServer) pTraceChainSyncBlockServer
    traceChainSyncHeaderServer <- proxyLastToEither (Proxy @TraceChainSyncHeaderServer) pTraceChainSyncHeaderServer
+   traceChainSyncJumping <- proxyLastToEither (Proxy @TraceChainSyncJumping) pTraceChainSyncJumping
    traceChainSyncProtocol <- proxyLastToEither (Proxy @TraceChainSyncProtocol) pTraceChainSyncProtocol
    traceConnectionManager <- proxyLastToEither (Proxy @TraceConnectionManager) pTraceConnectionManager
    traceConnectionManagerCounters <- proxyLastToEither (Proxy @TraceConnectionManagerCounters) pTraceConnectionManagerCounters
@@ -519,6 +526,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceChainSyncBlockServer = traceChainSyncBlockServer
              , traceChainSyncClient = traceChainSyncClient
              , traceChainSyncHeaderServer = traceChainSyncHeaderServer
+             , traceChainSyncJumping = traceChainSyncJumping
              , traceChainSyncProtocol = traceChainSyncProtocol
              , traceConnectionManager = traceConnectionManager
              , traceConnectionManagerCounters = traceConnectionManagerCounters
@@ -581,6 +589,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceChainSyncBlockServer <- proxyLastToEither (Proxy @TraceChainSyncBlockServer) pTraceChainSyncBlockServer
   traceChainSyncClient <- proxyLastToEither (Proxy @TraceChainSyncClient) pTraceChainSyncClient
   traceChainSyncHeaderServer <- proxyLastToEither (Proxy @TraceChainSyncHeaderServer) pTraceChainSyncHeaderServer
+  traceChainSyncJumping <- proxyLastToEither (Proxy @TraceChainSyncJumping) pTraceChainSyncJumping
   traceChainSyncProtocol <- proxyLastToEither (Proxy @TraceChainSyncProtocol) pTraceChainSyncProtocol
   traceConnectionManager <- proxyLastToEither (Proxy @TraceConnectionManager) pTraceConnectionManager
   traceConnectionManagerCounters <- proxyLastToEither (Proxy @TraceConnectionManagerCounters) pTraceConnectionManagerCounters
@@ -639,6 +648,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceChainSyncBlockServer = traceChainSyncBlockServer
             , traceChainSyncClient = traceChainSyncClient
             , traceChainSyncHeaderServer = traceChainSyncHeaderServer
+            , traceChainSyncJumping = traceChainSyncJumping
             , traceChainSyncProtocol = traceChainSyncProtocol
             , traceConnectionManager = traceConnectionManager
             , traceConnectionManagerCounters = traceConnectionManagerCounters

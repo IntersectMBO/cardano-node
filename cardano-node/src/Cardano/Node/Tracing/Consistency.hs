@@ -38,6 +38,7 @@ import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTim
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Ledger.Query (Query)
+import           Ouroboros.Consensus.Genesis.Governor (TraceGDDEvent)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
 import           Ouroboros.Consensus.Mempool (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -46,11 +47,13 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.GSM (TraceGsmEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as CSJumping
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace as BlockFetch
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
@@ -150,9 +153,7 @@ getAllNamespaces =
         chainSyncServerBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "ServerBlock"])
                         (allNamespaces :: [Namespace (TraceChainSyncServerEvent blk)])
         blockFetchDecisionNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Decision"])
-                        (allNamespaces :: [Namespace [BlockFetch.TraceLabelPeer
-                                                      remotePeer
-                                                      (FetchDecision [Point (Header blk)])]])
+                        (allNamespaces :: [Namespace (TraceDecisionEvent remotePeer (Header blk))])
         blockFetchClientNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                                                       remotePeer
@@ -183,6 +184,15 @@ getAllNamespaces =
 
         blockchainTimeNS = map (nsGetTuple . nsReplacePrefix  ["BlockchainTime"])
                         (allNamespaces :: [Namespace (TraceBlockchainTimeEvent RelativeTime)])
+
+        gsmEventNS = map (nsGetTuple . nsReplacePrefix  ["GsmEvent"])
+                         (allNamespaces :: [Namespace (TraceGsmEvent selection)])
+
+        csjEventNS = map nsGetTuple
+                         (allNamespaces :: [Namespace (CSJumping.TraceEvent peer)])
+
+        gddEventNS = map nsGetTuple
+                         (allNamespaces :: [Namespace (TraceGDDEvent peer blk)])
 
 -- Node to client
         keepAliveClientNS = map (nsGetTuple . nsReplacePrefix ["Net"])
@@ -389,6 +399,9 @@ getAllNamespaces =
             <> mempoolNS
             <> forgeNS
             <> blockchainTimeNS
+            <> gsmEventNS
+            <> csjEventNS
+            <> gddEventNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

@@ -39,6 +39,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
@@ -61,10 +62,10 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Bootstrap
-import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..), DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
-                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
-                   peerSelectionStateToCounters)
+import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..),
+                   DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
+                   PeerSelectionState (..), PeerSelectionTargets (..), PeerSelectionView (..),
+                   TracePeerSelection (..), peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -2646,3 +2647,24 @@ instance FromJSON PeerTrustable where
 instance ToJSON PeerTrustable where
   toJSON IsTrustable = Bool True
   toJSON IsNotTrustable = Bool False
+
+
+instance HasPrivacyAnnotation (TraceDecisionEvent peer header) where
+instance HasSeverityAnnotation (TraceDecisionEvent peer header) where
+  getSeverityAnnotation _ = Debug
+instance ToObject peer
+      => Transformable Text IO (TraceDecisionEvent peer header) where
+  trTransformer = trStructuredText
+instance HasTextFormatter (TraceDecisionEvent peer header) where
+
+instance ToObject peer => ToObject (TraceDecisionEvent peer header) where
+  toObject verb (PeersFetch decisions) =
+    mconcat
+      [ "kind" .= String "PeersFetch"
+      , "decisions" .= toObject verb decisions
+      ]
+  toObject verb (PeerStarvedUs peer) =
+    mconcat
+      [ "kind" .= String "PeerStarvedUs"
+      , "peer" .= toObject verb peer
+      ]

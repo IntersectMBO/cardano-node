@@ -9,11 +9,12 @@ module Cardano.Node.Orphans () where
 import           Cardano.Api ()
 
 import           Ouroboros.Consensus.Node
-import qualified Data.Text as Text
+import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Data.Aeson.Types
+import qualified Data.Text as Text
 import           Text.Printf (PrintfArg (..))
 
 deriving instance Eq NodeDatabasePaths
@@ -46,11 +47,23 @@ instance FromJSON AcceptedConnectionsLimit where
       <*> v .: "delay"
 
 instance FromJSON NodeDatabasePaths where
-  parseJSON o@(Object{})= 
-    withObject "NodeDatabasePaths" 
+  parseJSON o@(Object{})=
+    withObject "NodeDatabasePaths"
      (\v -> MultipleDbPaths
               <$> v .: "ImmutableDbPath"
               <*> v .: "VolatileDbPath"
      ) o
   parseJSON (String s) = return . OnePathForAllDbs $ Text.unpack s
   parseJSON _ = fail "NodeDatabasePaths must be an object or a string"
+
+instance FromJSON GenesisConfigFlags where
+  parseJSON = withObject "GenesisConfigFlags" $ \v ->
+    GenesisConfigFlags
+      <$> v .:? "EnableCSJ"       .!= True
+      <*> v .:? "EnableLoEAndGDD" .!= True
+      <*> v .:? "EnableLoP"       .!= True
+      <*> v .:? "BlockFetchGracePeriod"
+      <*> v .:? "BucketCapacity"
+      <*> v .:? "BucketRate"
+      <*> v .:? "CSJJumpSize"
+      <*> v .:? "GDDRateLimit"

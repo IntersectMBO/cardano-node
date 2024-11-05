@@ -70,8 +70,8 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool, ByteSize32 (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTx,
+                   GenTxId, HasTxs, LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -87,11 +87,12 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..),
                    StandardHash, blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
@@ -292,18 +293,20 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   reportelided t tr ev count = defaultelidedreporting  t tr ev count
 
 instance (StandardHash header, Eq peer) => ElidingTracer
-  (WithSeverity [TraceLabelPeer peer (FetchDecision [Point header])]) where
+  (WithSeverity (TraceDecisionEvent peer header)) where
   -- equivalent by type and severity
   isEquivalent (WithSeverity s1 _peers1)
                (WithSeverity s2 _peers2) = s1 == s2
   -- the types to be elided
-  doelide (WithSeverity _ peers) =
+  doelide (WithSeverity _ (PeersFetch peers)) =
     let checkDecision :: TraceLabelPeer peer (Either FetchDecline result) -> Bool
         checkDecision (TraceLabelPeer _peer (Left FetchDeclineChainNotPlausible)) = True
         checkDecision (TraceLabelPeer _peer (Left (FetchDeclineConcurrencyLimit _ _))) = True
         checkDecision (TraceLabelPeer _peer (Left (FetchDeclinePeerBusy _ _ _))) = True
         checkDecision _ = False
     in any checkDecision peers
+  doelide (WithSeverity _ (PeerStarvedUs _)) = False
+
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding tverb tr ev (_old, count) = do
       when (count > 0 && count `mod` 1000 == 0) $  -- report every 1000th message
@@ -509,6 +512,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
       , Consensus.gsmTracer = nullTracer
+      , Consensus.csjTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -810,6 +814,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
+    , Consensus.csjTracer = tracerOnOff (traceChainSyncJumping trSel) verb "ChainSync Jumping" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1453,9 +1458,9 @@ teeTraceBlockFetchDecision
        , ToObject peer
        )
     => TracingVerbosity
-    -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
+    -> MVar (Maybe (WithSeverity (TraceDecisionEvent peer (Header blk))),Integer)
     -> Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecision verb eliding tr =
   Tracer $ \ev -> do
     traceWith (teeTraceBlockFetchDecision' meTr) ev
@@ -1466,12 +1471,14 @@ teeTraceBlockFetchDecision verb eliding tr =
 
 teeTraceBlockFetchDecision'
     :: Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecision' tr =
-    Tracer $ \(WithSeverity _ peers) -> do
-      meta <- mkLOMeta Info Confidential
-      let tr' = appendName "peers" tr
-      traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
+    Tracer $ \case
+      WithSeverity _ (PeersFetch peers) -> do
+        meta <- mkLOMeta Info Confidential
+        let tr' = appendName "peers" tr
+        traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
+      WithSeverity _ (PeerStarvedUs _) -> pure ()
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer
@@ -1480,9 +1487,9 @@ teeTraceBlockFetchDecisionElide
        , ToObject peer
        )
     => TracingVerbosity
-    -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
+    -> MVar (Maybe (WithSeverity (TraceDecisionEvent peer (Header blk))),Integer)
     -> Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecisionElide = elideToLogObject
 
 --------------------------------------------------------------------------------

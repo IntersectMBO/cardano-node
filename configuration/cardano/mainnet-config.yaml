@@ -293,3 +293,16 @@ hasPrometheus:
 # Examples:
 #   MempoolCapacityBytesOverride: 1000000 (1MB)
 #   MempoolCapacityBytesOverride: NoOverride (default)
+
+# # Enable or disable the Genesis syncing algorithm
+# # All values are set to their default.
+# EnableGenesis: False
+# LowLevelGenesisOptions:
+#   EnableCSJ:        True
+#   EnableLoEAndGDD:  True
+#   EnableLoP:        True
+#   BlockFetchGracePeriod: 10 # seconds
+#   BucketCapacity:  100000 # tokens
+#   BucketRate:         500 # tokens per second
+#   CSJJumpSize:       4320 # slots. This value is 2*k
+#   GDDRateLimit:       1.0 # seconds

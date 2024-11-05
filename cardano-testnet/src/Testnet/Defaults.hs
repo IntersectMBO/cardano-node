@@ -236,6 +236,7 @@ defaultYamlHardforkViaConfig sbe =
     , (proxyName (Proxy @TraceChainSyncClient), False)
     , (proxyName (Proxy @TraceChainSyncBlockServer), False)
     , (proxyName (Proxy @TraceChainSyncHeaderServer), False)
+    , (proxyName (Proxy @TraceChainSyncJumping), Aeson.Bool False)
     , (proxyName (Proxy @TraceChainSyncProtocol), False)
     , (proxyName (Proxy @TraceDnsResolver), True)
     , (proxyName (Proxy @TraceDnsSubscription), True)

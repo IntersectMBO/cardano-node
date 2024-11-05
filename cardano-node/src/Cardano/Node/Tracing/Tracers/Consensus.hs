@@ -50,7 +50,7 @@ import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
-                   JumpInstruction (..), JumpResult (..))
+                   JumpInstruction (..), JumpResult (..), TraceEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -61,11 +61,11 @@ import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -661,48 +661,61 @@ calculateBlockFetchClientMetrics cm _lc _ = pure cm
 --------------------------------------------------------------------------------
 
 instance (LogFormatting peer, Show peer) =>
-    LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
-  forMachine DMinimal _ = mempty
-  forMachine _ []       = mconcat
+    LogFormatting (TraceDecisionEvent peer header) where
+  forMachine DMinimal (PeersFetch _) = mempty
+  forMachine _ (PeersFetch [])       = mconcat
     [ "kind"  .= String "EmptyPeersFetch"]
-  forMachine _ xs       = mconcat
+  forMachine _ (PeersFetch xs)       = mconcat
     [ "kind"  .= String "PeersFetch"
     , "peers" .= toJSON
       (List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
+  forMachine dtal (PeerStarvedUs peer) = mconcat
+    [ "kind" .= String "PeerStarvedUs"
+    , "peer" .= forMachine dtal peer ]
 
-  asMetrics peers = [IntM "connectedPeers" (fromIntegral (length peers))]
+  asMetrics (PeersFetch peers) = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
+  asMetrics (PeerStarvedUs _) = []
 
-instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
-  namespaceFor (a : _tl) = (nsCast . namespaceFor) a
-  namespaceFor [] = Namespace [] ["EmptyPeersFetch"]
+instance MetaTrace (TraceDecisionEvent peer header) where
+  namespaceFor (PeersFetch (a : _tl)) = (nsCast . namespaceFor) a
+  namespaceFor (PeersFetch []) = Namespace [] ["EmptyPeersFetch"]
+  namespaceFor (PeerStarvedUs _) = Namespace [] ["PeerStarvedUs"]
 
   severityFor (Namespace [] ["EmptyPeersFetch"]) _ = Just Debug
   severityFor ns Nothing =
     severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  severityFor ns (Just []) =
+  severityFor ns (Just (PeersFetch [])) =
     severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  severityFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+  severityFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     severityFor (nsCast ns) (Just a)
+  severityFor (Namespace [] ["PeerStarvedUs"]) _ = Just Debug
+  severityFor _ _ = Nothing
 
   privacyFor (Namespace _ ["EmptyPeersFetch"]) _ = Just Public
   privacyFor ns Nothing =
     privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  privacyFor ns (Just []) =
+  privacyFor ns (Just (PeersFetch [])) =
     privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  privacyFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+  privacyFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     privacyFor (nsCast ns) (Just a)
+  privacyFor (Namespace _ ["PeerStarvedUs"]) _ = Just Public
+  privacyFor _ _ = Nothing
 
   detailsFor (Namespace _ ["EmptyPeersFetch"]) _ = Just DNormal
   detailsFor ns Nothing =
     detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  detailsFor ns (Just []) =
+  detailsFor ns (Just (PeersFetch [])) =
     detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
-  detailsFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+  detailsFor ns (Just (PeersFetch ((TraceLabelPeer _ a) : _tl))) =
     detailsFor (nsCast ns) (Just a)
+  detailsFor _ _ = Just DNormal
+
   documentFor ns = documentFor (nsCast ns :: Namespace (FetchDecision [Point header]))
   metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace (FetchDecision [Point header]))
-  allNamespaces = Namespace [] ["EmptyPeersFetch"]
-    : map nsCast (allNamespaces :: [Namespace (FetchDecision [Point header])])
+  allNamespaces =
+    [ Namespace [] ["EmptyPeersFetch"]
+    , Namespace [] ["PeerStarvedUs"]
+    ] ++ map nsCast (allNamespaces :: [Namespace (FetchDecision [Point header])])
 
 instance LogFormatting (FetchDecision [Point header]) where
   forMachine _dtal (Left decline) =
@@ -742,28 +755,16 @@ instance MetaTrace (FetchDecision [Point header]) where
 -- BlockFetchClientState Tracer
 --------------------------------------------------------------------------------
 
-instance (HasHeader header, ConvertRawHash header) =>
+instance (HasHeader header, ConvertRawHash header, ConvertRawHash (Header header)) =>
   LogFormatting (BlockFetch.TraceFetchClientState header) where
     forMachine _dtal BlockFetch.AddedFetchRequest {} =
       mconcat [ "kind" .= String "AddedFetchRequest" ]
     forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
       mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-    forMachine _dtal (BlockFetch.SendFetchRequest af _) =
+    forMachine dtal (BlockFetch.SendFetchRequest af _) =
       mconcat [ "kind" .= String "SendFetchRequest"
-              , "head" .= String (renderChainHash
-                                  (renderHeaderHash (Proxy @header))
-                                  (AF.headHash af))
-              , "length" .= toJSON (fragmentLength' af)]
-        where
-          -- NOTE: this ignores the Byron era with its EBB complication:
-          -- the length would be underestimated by 1, if the AF is anchored
-          -- at the epoch boundary.
-          fragmentLength' :: AF.AnchoredFragment header -> Int
-          fragmentLength' f = fromIntegral . unBlockNo $
-              case (f, f) of
-                (AS.Empty{}, AS.Empty{}) -> 0
-                (firstHdr AS.:< _, _ AS.:> lastHdr) ->
-                  blockNo lastHdr - blockNo firstHdr + 1
+              , "fragment" .= forMachine dtal af
+              ]
     forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
       mconcat [ "kind"  .= String "CompletedBlockFetch"
               , "delay" .= (realToFrac delay :: Double)
@@ -773,12 +774,18 @@ instance (HasHeader header, ConvertRawHash header) =>
                   GenesisPoint -> "Genesis"
                   BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
               ]
-    forMachine _dtal BlockFetch.CompletedFetchBatch {} =
-      mconcat [ "kind" .= String "CompletedFetchBatch" ]
-    forMachine _dtal BlockFetch.StartedFetchBatch {} =
-      mconcat [ "kind" .= String "StartedFetchBatch" ]
-    forMachine _dtal BlockFetch.RejectedFetchBatch {} =
-      mconcat [ "kind" .= String "RejectedFetchBatch" ]
+    forMachine dtal (BlockFetch.CompletedFetchBatch range _ _ _) =
+      mconcat [ "kind"  .= String "CompletedFetchBatch"
+              , "range" .= forMachine dtal range
+              ]
+    forMachine dtal (BlockFetch.StartedFetchBatch range _ _ _) =
+      mconcat [ "kind"  .= String "StartedFetchBatch"
+              , "range" .= forMachine dtal range
+              ]
+    forMachine dtal (BlockFetch.RejectedFetchBatch range _ _ _) =
+      mconcat [ "kind"  .= String "RejectedFetchBatch"
+              , "range" .= forMachine dtal range
+              ]
     forMachine _dtal (BlockFetch.ClientTerminating outstanding) =
       mconcat [ "kind" .= String "ClientTerminating"
               , "outstanding" .= outstanding
@@ -854,6 +861,15 @@ instance MetaTrace (BlockFetch.TraceFetchClientState header) where
        , Namespace [] ["RejectedFetchBatch"]
        , Namespace [] ["ClientTerminating"]
       ]
+
+instance StandardHash blk => LogFormatting (BlockFetch.ChainRange (Point blk)) where
+  forMachine _dtal (BlockFetch.ChainRange start end) =
+    mconcat [ "kind"  .= String "ChainRange"
+            , "start" .= (String $ showT start)
+            , "end" .= (String $ showT end)
+            ]
+
+  forHuman = forHumanOrMachine
 
 --------------------------------------------------------------------------------
 -- BlockFetchServerEvent
@@ -2188,6 +2204,43 @@ instance MetaTrace (TraceGsmEvent selection) where
     , Namespace [] ["LeaveCaughtUp"]
     , Namespace [] ["GsmEventPreSyncingToSyncing"]
     , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    ]
+
+--------------------------------------------------------------------------------
+-- CSJ Tracer
+--------------------------------------------------------------------------------
+
+instance ( LogFormatting peer, Show peer
+         ) => LogFormatting (TraceEvent peer) where
+  forMachine dtal =
+    \case
+      RotatedDynamo oldPeer newPeer ->
+        mconcat
+          [ "kind" .= String "RotatedDynamo"
+          , "oldPeer" .= forMachine dtal oldPeer
+          , "newPeer" .= forMachine dtal newPeer
+          ]
+  forHuman = showT
+
+
+instance MetaTrace (TraceEvent peer) where
+  namespaceFor =
+    \case
+      RotatedDynamo {}        -> Namespace [] ["RotatedDynamo"]
+
+  severityFor ns _ =
+    case ns of
+      Namespace _ ["RotatedDynamo"]               -> Just Info
+      Namespace _ _                               -> Nothing
+
+  documentFor = \case
+    Namespace _ ["RotatedDynamo"] ->
+      Just "The ChainSync Jumping module has been asked to rotate its dynamo"
+    Namespace _ _ ->
+      Nothing
+
+  allNamespaces =
+    [ Namespace [] ["RotatedDynamo"]
     ]
 
 --------------------------------------------------------------------------------

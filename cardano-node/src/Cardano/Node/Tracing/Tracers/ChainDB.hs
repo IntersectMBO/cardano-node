@@ -93,6 +93,7 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHumanOrMachine v
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
+  forHuman (ChainDB.TraceChainSelStarvationEvent v)= forHumanOrMachine v
 
   forMachine _ ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "LastShutdownUnclean" ]
@@ -118,6 +119,8 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
+  forMachine details (ChainDB.TraceChainSelStarvationEvent v) =
+    forMachine details v
 
   asMetrics ChainDB.TraceLastShutdownUnclean        = []
   asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
@@ -131,6 +134,7 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceLedgerReplayEvent v)      = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
+  asMetrics (ChainDB.TraceChainSelStarvationEvent v)     = asMetrics v
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
@@ -158,6 +162,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
+  namespaceFor (ChainDB.TraceChainSelStarvationEvent ev) =
+    nsPrependInner "ChainSelStarvationEvent" (namespaceFor ev)
 
   severityFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Info
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
@@ -204,6 +210,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk)) Nothing
+  severityFor (Namespace out ("ChainSelStarvationEvent" : tl)) (Just (ChainDB.TraceChainSelStarvationEvent ev')) =
+    severityFor (Namespace out tl) (Just ev')
+  severityFor (Namespace out ("ChainSelStarvationEvent" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (ChainDB.TraceChainSelStarvationEvent blk)) Nothing
   severityFor _ns _ = Nothing
 
   privacyFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Public
@@ -298,6 +308,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("VolatileDbEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: (Namespace (VolDB.TraceEvent blk))) Nothing
+  detailsFor (Namespace out ("ChainSelStarvationEvent" : tl)) (Just (ChainDB.TraceChainSelStarvationEvent ev')) =
+    detailsFor (Namespace out tl) (Just ev')
+  detailsFor (Namespace out ("ChainSelStarvationEvent" : tl)) Nothing =
+    detailsFor (Namespace out tl :: (Namespace (ChainDB.TraceChainSelStarvationEvent blk))) Nothing
   detailsFor _ _ = Nothing
 
   metricsDocFor (Namespace out ("AddBlockEvent" : tl)) =
@@ -322,6 +336,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     metricsDocFor (Namespace out tl :: Namespace (ImmDB.TraceEvent blk))
   metricsDocFor (Namespace out ("VolatileDbEvent" : tl)) =
     metricsDocFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk))
+  metricsDocFor (Namespace out ("ChainSelStarvationEvent" : tl)) =
+    metricsDocFor (Namespace out tl :: Namespace (ChainDB.TraceChainSelStarvationEvent blk))
   metricsDocFor _ = []
 
   documentFor (Namespace _ ["LastShutdownUnclean"]) = Just $ mconcat
@@ -351,6 +367,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     documentFor (Namespace out tl :: Namespace (ImmDB.TraceEvent blk))
   documentFor (Namespace out ("VolatileDbEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (VolDB.TraceEvent blk))
+  documentFor (Namespace out ("ChainSelStarvationEvent" : tl)) =
+    documentFor (Namespace out tl :: Namespace (ChainDB.TraceChainSelStarvationEvent blk))
   documentFor _ = Nothing
 
   allNamespaces =
@@ -378,8 +396,9 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (ImmDB.TraceEvent blk)])
           ++ map  (nsPrependInner "VolatileDbEvent")
                   (allNamespaces :: [Namespace (VolDB.TraceEvent blk)])
+          ++ map  (nsPrependInner "ChainSelStarvationEvent")
+                  (allNamespaces :: [Namespace (ChainDB.TraceChainSelStarvationEvent blk)])
             )
-
 
 --------------------------------------------------------------------------------
 -- AddBlockEvent
@@ -1128,6 +1147,47 @@ instance MetaTrace (ChainDB.TraceValidationEvent blk) where
       [ Namespace [] ["ValidCandidate"]
       , Namespace [] ["InvalidBlock"]
       , Namespace [] ["UpdateLedgerDb"]
+      ]
+
+--------------------------------------------------------------------------------
+-- TraceChainSelStarvationEvent
+--------------------------------------------------------------------------------
+
+instance ConvertRawHash blk
+          => LogFormatting (ChainDB.TraceChainSelStarvationEvent blk) where
+  forHuman (ChainDB.ChainSelStarvationStarted time) =
+      "Chain selection starvation started at " <> showT time
+  forHuman (ChainDB.ChainSelStarvationEnded time pt) =
+      "Chain selection starvation ended at " <> showT time <>
+      " because of " <> renderRealPointAsPhrase pt
+
+  forMachine _dtal (ChainDB.ChainSelStarvationStarted time) =
+    mconcat [ "kind" .= String "ChainSelStarvationStarted"
+            , "time" .= String (showT time) ]
+  forMachine dtal (ChainDB.ChainSelStarvationEnded time pt) =
+    mconcat [ "kind" .= String "ChainSelStarvationEnded"
+             , "time" .= String (showT time)
+             , "point" .= forMachine dtal pt ]
+
+instance MetaTrace (ChainDB.TraceChainSelStarvationEvent blk) where
+    namespaceFor ChainDB.ChainSelStarvationStarted {} =
+      Namespace [] ["ChainSelStarvationStarted"]
+    namespaceFor ChainDB.ChainSelStarvationEnded {} =
+      Namespace [] ["ChainSelStarvationEnded"]
+
+    severityFor (Namespace _ ["ChainSelStarvationStarted"]) _ = Just Debug
+    severityFor (Namespace _ ["ChainSelStarvationEnded"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["ChainSelStarvationStarted"]) = Just
+      "Chain selection starvation started."
+    documentFor (Namespace _ ["ChainSelStarvationEnded"]) = Just
+      "Chain selection starvation ended."
+    documentFor _ = Nothing
+
+    allNamespaces =
+      [ Namespace [] ["ChainSelStarvationStarted"]
+      , Namespace [] ["ChainSelStarvationEnded"]
       ]
 
 --------------------------------------------------------------------------------

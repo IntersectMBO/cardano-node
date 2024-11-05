@@ -126,6 +126,8 @@ nodeRunParser = do
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncEnableGenesis = mempty
+           , pncGenesisConfigFlags = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
