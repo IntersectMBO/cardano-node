@@ -82,6 +82,10 @@ data TxGenConfig = TxGenConfig
   }
   deriving (Show, Eq)
 
+data TxGenGovActParams = TxGenGovActParams
+  { gapBatchSize :: Natural
+  , gapQuorum :: Natural
+  } deriving (Eq, Read, Show, Generic, FromJSON, ToJSON)
 
 data TxGenPlutusType
   = LimitSaturationLoop                         -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx script budget

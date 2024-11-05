@@ -15,6 +15,7 @@ module Cardano.TxGenerator.Setup.NixService
        , getNodeAlias
        , getNodeConfigFile
        , setNodeConfigFile
+       , txGenGovActParams
        , txGenTxParams
        , txGenConfig
        , txGenPlutusParams
@@ -52,6 +53,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_init_cooldown    :: Double
   , _nix_era              :: AnyCardanoEra
   , _nix_plutus           :: Maybe TxGenPlutusParams
+  , _nix_govAct           :: Maybe TxGenGovActParams
   , _nix_keepalive        :: Maybe Integer
   , _nix_drep_voting      :: Maybe Bool
   , _nix_nodeConfigFile       :: Maybe FilePath
@@ -160,6 +162,9 @@ txGenConfig NixServiceOptions{..}
   , confTxsInputs = _nix_inputs_per_tx
   , confTxsOutputs = _nix_outputs_per_tx
   }
+
+txGenGovActParams :: NixServiceOptions -> Maybe TxGenGovActParams
+txGenGovActParams NixServiceOptions{..} = _nix_govAct
 
 txGenPlutusParams :: NixServiceOptions -> TxGenPlutusParams
 txGenPlutusParams
