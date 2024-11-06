@@ -30,9 +30,9 @@ import           Cardano.Api.Shelley (GovernanceAction (..), LedgerProtocolParam
                    PlutusScriptOrReferenceInput (..), Proposal (..), ProtocolParameters,
                    ShelleyLedgerEra, StakeCredential (..), VotingProcedure (..),
                    VotingProcedures (..), convertToLedgerProtocolParameters,
-                   createProposalProcedure, createVotingProcedure, fromShelleyStakeCredential,
-                   protocolParamMaxTxExUnits, protocolParamPrices, singletonVotingProcedures,
-                   toShelleyNetwork, toShelleyTxId)
+                   createProposalProcedure, createVotingProcedure, 
+                   protocolParamMaxTxExUnits, protocolParamPrices,
+                   singletonVotingProcedures, toShelleyNetwork, toShelleyTxId)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -82,6 +82,7 @@ import           Data.IntervalMap.Interval as IM (Interval (..), upperBound)
 import           Data.IntervalMap.Lazy as IM (adjust, containing, delete, insert, null, toList)
 import           Data.Kind (Type)
 import           Data.List.Extra ((!?))
+import           Data.Maybe (fromJust)
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Ratio ((%))
 import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
@@ -166,7 +167,7 @@ readStakeCredentials ncFile = do
   genesis <- onNothing throwKeyErr $ getGenesisDirectory <$> liftIOSafe (mkNodeConfig ncFile)
   -- "cache-entry" is a link or copy of the actual genesis folder created by "create-testnet-data"
   -- in the workbench's run directory structure, this link or copy is created for each run - by workbench
-  ks <- liftIOSafe . Genesis.genesisLoadStakeKeys $ genesis
+  ks <- liftIOSafe $ Genesis.genesisLoadStakeKeys genesis
   setEnvStakeCredentials $ map (StakeCredentialByKey . verificationKeyHash) ks
   traceDebug $ "StakeCredentials loaded: " ++ show (length ks) ++ " from: " ++ genesis
   where
@@ -428,9 +429,16 @@ data ProposeCase = ProposeCase
   { pcWalletName   :: String
   , pcPayMode      :: PayMode
   , pcCoin         :: L.Coin
-  , pcGenStakeCred :: StakeCredential
+  , pcStakeCredIdx :: Int
+  -- ^ index into
+  -- `Cardano.Benchmarking.Script.Env.envStakeCredentials`
+  -- yielding a `StakeCredential`
   , pcAnchor       :: Ledger.Anchor Ledger.StandardCrypto
   } deriving Eq
+
+infixl 7 <!?>
+(<!?>) :: Functor f => f [t] -> Int -> f (Maybe t)
+ellm <!?> n = fmap (!? n) ellm
 
 proposeCase :: forall era ledgerEra . ()
   => IsShelleyBasedEra era
@@ -449,17 +457,19 @@ proposeCase GovCaseEnv {..} ProposeCase {..} eon
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        wallet <- getEnvWallets pcWalletName
        (toUTxO, _addressOut) <- interpretPayMode pcPayMode
-       let ptxTxGen :: TxGenerator era
-           ptxTxGen = genTxProposal' gcEnvLedgerParams gcEnvFeeInEra unProposal
-           ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
+       let ptxMangledUTxOs :: CreateAndStoreList IO era [L.Coin]
            ptxMangledUTxOs = mangle $ repeat toUTxO
            fundSource :: FundSource IO
            fundSource = walletSource wallet 1
            ptxInToOut :: [L.Coin] -> [L.Coin]
            ptxInToOut = Utils.inputsToOutputsWithFee txParamFee 1
+       stakeCred :: StakeCredential
+         <- fromJust <$> getEnvStakeCredentials <!?> pcStakeCredIdx
+       let Proposal {..} = createProposalProcedure sbe network pcCoin stakeCred govAction pcAnchor
+           ptxTxGen :: TxGenerator era
+           ptxTxGen = genTxProposal' gcEnvLedgerParams gcEnvFeeInEra unProposal
            govAction :: GovernanceAction era
-           govAction = TreasuryWithdrawal [(network, pcGenStakeCred, pcCoin)] SNothing
-           Proposal {..} = createProposalProcedure sbe network pcCoin pcGenStakeCred govAction pcAnchor
+           govAction = TreasuryWithdrawal [(network, stakeCred, pcCoin)] SNothing
        ptxFund :: [Fund] <- liftIO $ walletPreview wallet 0
        handleE handlePreviewErr . void $ previewTx PreviewTxData
          { ptxInputs = 0, .. }
@@ -620,16 +630,15 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
                 pure . Streaming.effect $ Streaming.yield <$>
                   sourceToStoreTransactionNew ptxTxGen fundSource ptxInToOut ptxMangledUTxOs
 
-        Propose pcWalletName pcPayMode pcCoin pcGenStakeCred' pcAnchor
-          | pcGenStakeCred <- fromShelleyStakeCredential pcGenStakeCred'
-          , args <- ProposeCase {..}
+        Propose pcWalletName pcPayMode pcCoin pcStakeCredIdx pcAnchor
+          | args <- ProposeCase {..}
           , env  <- GovCaseEnv
                       { gcEnvEra = era
                       , gcEnvTxParams = txParams
                       , gcEnvLedgerParams = ledgerParameters
                       , gcEnvFeeInEra = feeInEra }
-          -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") $
-               proposeCase env args
+         -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") $
+              proposeCase env args
 
         Vote vcWalletName vcPayMode vcGovActId vcVote vcGenDRepCred vcAnchor
           | args <- VoteCase {..}

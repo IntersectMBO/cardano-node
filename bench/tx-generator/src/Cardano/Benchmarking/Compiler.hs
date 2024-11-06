@@ -7,17 +7,16 @@ module Cardano.Benchmarking.Compiler
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (createAnchor)
 
 import           Cardano.Benchmarking.Script.Types
 import qualified Cardano.Ledger.BaseTypes as L
-import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Crypto as L
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
+import           Cardano.Prelude (encodeUtf8)
 import           Prelude
 
 import           Control.Monad
@@ -141,16 +140,16 @@ splittingPhase srcWallet = do
           SplitWithChange lovelace count ->
             Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
-        stakeCredential :: L.StakeCredential L.StandardCrypto
-        stakeCredential = undefined
-        anchorUrl :: L.Url
-        anchorUrl = undefined `fromMaybe` L.textToUrl 1024 undefined
-        -- The anchorData ByteString is usually represented as Text
-        anchorData :: BS.ByteString
-        anchorData = undefined
         anchor :: L.Anchor L.StandardCrypto
-        anchor = createAnchor anchorUrl anchorData
-        govActGen = Propose dstWallet payMode (L.Coin 1) stakeCredential anchor
+        anchor = L.Anchor {..} where
+          anchorUrl = fromJust $ L.textToUrl 999 "example.com"
+          anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 $
+            L.urlToText anchorUrl
+        stakeCredCount = case split of
+          SplitWithChange _ count -> count
+          FullSplits count -> count
+        govActGen = RoundRobin $ Take stakeCredCount . Cycle <$>
+          [Propose dstWallet payMode (L.Coin 1) stakeCredIdx anchor | stakeCredIdx <- [0 .. stakeCredCount]]
     emit . Submit era LocalSocket txParams $ RoundRobin [generator, govActGen]
     delay
     logMsg "Splitting step: Done"

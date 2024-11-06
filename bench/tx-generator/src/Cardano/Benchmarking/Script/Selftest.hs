@@ -188,7 +188,7 @@ quorum = 10
 
 genProposals :: [Generator]
 genProposals = List.genericReplicate batch $
-  Propose genesisWallet payMode proposalCoins stakeCred anchor
+  Propose genesisWallet payMode proposalCoins 0 anchor
 
 genVotes :: Natural -> Generator
 genVotes n = RoundRobin $ [idxLo .. idxHi] <&> \idx ->
@@ -212,9 +212,6 @@ payMode = PayToAddr key genesisWallet
 
 proposalCoins :: L.Coin
 proposalCoins = L.Coin $ fundAmount `div` fromIntegral nrProposals
-
-stakeCred :: L.Credential 'L.Staking L.StandardCrypto
-stakeCred = L.KeyHashObj . L.hashKey $ unStakeVerificationKey stakeKey
 
 stakeKey :: VerificationKey StakeKey
 stakeKey = error "could not parse hardcoded stake key" `fromRight`

@@ -37,7 +37,6 @@ import           Cardano.Api.Shelley
 import           Cardano.Ledger.Conway.Governance (GovActionId)
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Credential as Ledger
 
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
@@ -165,7 +164,11 @@ data Generator where
   Propose :: !String
           -> !PayMode
           -> !L.Coin
-          -> !(Ledger.StakeCredential L.StandardCrypto)
+          -> !Int
+          -- ^ index into
+          -- `Cardano.Benchmarking.Script.Env.envStakeCredentials`
+          -- with a result of
+          -- @!(Ledger.StakeCredential L.StandardCrypto)@
           -> !(Ledger.Anchor L.StandardCrypto)
           -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
