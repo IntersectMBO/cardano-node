@@ -127,6 +127,7 @@ library
                       , containers
                       , directory
                       , dlist
+                      , either
                       , extra
                       , filepath
                       , formatting

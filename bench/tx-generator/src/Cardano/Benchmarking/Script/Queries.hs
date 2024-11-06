@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Benchmarking.Script.Queries
@@ -36,8 +37,10 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Exception (SomeException (..), catch, try)
 import           Control.Monad (forever, void)
+import           Control.Monad.Extra (whenJust)
 import           Data.Bifunctor (first)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import qualified Data.Either.Combinators as Either (whenRight)
 import qualified Data.Foldable as Foldable
 import           Data.Ratio
 import           Data.Time (defaultTimeLocale, formatTime)
@@ -130,15 +133,16 @@ queryGovernanceState = do
 -- NB. This must NEVER be used during an actual benchmark, as this query potentially forces the ledger pulser.
 --
 debugDumpProposalsPeriodically :: NixServiceOptions -> IO ()
-debugDumpProposalsPeriodically NixServiceOptions{..}
-  | not (or _nix_drep_voting) = pure ()
-  | otherwise                 = try setup >>= \case
-      Left SomeException{}  -> pure ()
-      Right (connInfo, era) -> case era of
-        AnyCardanoEra ConwayEra  -> forkTheThread ConwayEraOnwardsConway connInfo
-        _                        -> pure ()
+debugDumpProposalsPeriodically NixServiceOptions{..} =
+  whenJust _nix_govAct \_ ->
+    whenRightM (try @SomeException setup) \(connInfo, _) ->
+      forkTheThread ConwayEraOnwardsConway connInfo
 
   where
+    whenRightM :: Monad m => m (Either e t) -> (t -> m ()) -> m ()
+    whenRightM mx f = do
+      x <- mx
+      Either.whenRight x f
     setup :: IO (LocalNodeConnectInfo, AnyCardanoEra)
     setup = do
       proto <- startProtocol _nix_nodeConfigFile

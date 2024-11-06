@@ -67,7 +67,7 @@ compileToScript = do
   tc <- askNixOption _nix_cardanoTracerSocket
   emit $ StartProtocol nc tc
 
-  whenM (fromMaybe False <$> askNixOption _nix_drep_voting) do
+  whenJustM (askNixOption txGenGovActParams) \TxGenGovActParams {} -> do
     emit $ ReadDRepKeys nc
     emit $ ReadStakeKeys nc
     logMsg "Importing DRep SigningKeys and StakeCredentials. Done."
