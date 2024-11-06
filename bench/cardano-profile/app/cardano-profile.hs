@@ -6,6 +6,8 @@ import           Prelude
 import           System.Environment (lookupEnv)
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
+-- Package: aeson-pretty
+import           Data.Aeson.Encode.Pretty as Aeson
 -- Package: bytestring.
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 -- Package: optparse-applicative-fork.
@@ -21,7 +23,7 @@ data Cli =
     Names
   | NamesCloudNoEra
   | All
-  | ByName String
+  | ByName Bool String              -- 1st arg: True for pretty-printing
   | LibMK
   | NodeSpecs FilePath FilePath
   | ToJson String
@@ -42,12 +44,14 @@ main = do
       obj <- lookupOverlay
       BSL8.putStrLn $ Aeson.encode $ Profiles.profiles obj
     -- Print a single profiles, with an optional overlay.
-    (ByName profileName) -> do
+    (ByName prettyPrint profileName) -> do
       obj <- lookupOverlay
       case Profiles.byName profileName obj of
         Nothing -> error $ "No profile named \"" ++ profileName ++ "\""
         (Just profile) ->
-          let aeson = Aeson.encode profile
+          let
+            prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
+            aeson       = (if prettyPrint then Aeson.encodePretty' prettyConf else Aeson.encode) profile
           in BSL8.putStrLn aeson
     LibMK -> do
       mapM_ putStrLn Profiles.libMk
@@ -114,8 +118,14 @@ cliParser = OA.hsubparser $
   <>
       OA.command "by-name"
         (OA.info
-          (ByName <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName False <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name" <> OA.progDesc "Create profile")
+        )
+  <>
+      OA.command "by-name-pretty"
+        (OA.info
+          (ByName True <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (OA.fullDesc <> OA.header "by-name-pretty" <> OA.progDesc "Create profile (pretty-printed)")
         )
   <>
       OA.command "lib-make"

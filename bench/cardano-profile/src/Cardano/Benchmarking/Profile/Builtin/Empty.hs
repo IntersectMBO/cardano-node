@@ -1,6 +1,8 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{- HLINT ignore "Use :" -}
+
 -- All the `FixedLoaded`, `timescaleCompressed` and `datasetEmpty` profiles!
 --------------------------------------------------------------------------------
 

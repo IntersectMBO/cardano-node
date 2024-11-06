@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 
+{- HLINT ignore "Use tuple-section" -}
+
 -- A beta version / direct replacement of `jq` code (not efficient or nice).
 --------------------------------------------------------------------------------
 
