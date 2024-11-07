@@ -774,7 +774,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["ChurnAction"]) =
-      [ ("peerSelection.churn.DecreasedActivePeers.duration", "")
+     [ ("peerSelection.churn.DecreasedActivePeers.duration", "")
      , ("peerSelection.churn.DecreasedActiveBigLedgerPeers.duration", "")
      , ("peerSelection.churn.DecreasedEstablishedPeers.duration", "")
      , ("peerSelection.churn.DecreasedEstablishedBigLedgerPeers.duration", "")

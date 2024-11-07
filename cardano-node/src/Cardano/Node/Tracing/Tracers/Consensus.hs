@@ -556,7 +556,7 @@ instance LogFormatting ClientMetrics where
 
 instance MetaTrace ClientMetrics where
   namespaceFor _ = Namespace [] ["ClientMetrics"]
-  severityFor _ _ = Nothing
+  severityFor _ _ = Just Debug
   documentFor _ = Just ""
 
   metricsDocFor (Namespace _ ["ClientMetrics"]) =
@@ -882,7 +882,6 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
     metricsDocFor (Namespace [] ["SendBlock"]) =
       [("served.block", "This counter metric indicates how many blocks this node has served.")
       ,("served.block.latest", "This counter metric indicates how many chain tip blocks this node has served.")]
-
     metricsDocFor _ = []
 
     documentFor (Namespace [] ["SendBlock"]) = Just
@@ -893,6 +892,7 @@ instance MetaTrace (TraceBlockFetchServerEvent blk) where
 
 --------------------------------------------------------------------------------
 -- Metric for server block latest
+-- Only traces to EKG, no complete tracer!
 --------------------------------------------------------------------------------
 
 data ServedBlock = ServedBlock {
@@ -1284,20 +1284,13 @@ instance
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
     ]
-  asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
+  asMetrics (TraceMempoolManuallyRemovedTxs _txs _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-  asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
-    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
-    , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
-    ]
-
   asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
     [ IntM "txsSyncDuration" (round $ 1000 * duration)
     ]
-
   asMetrics (TraceMempoolSynced RisingEdge) = []
 
 
