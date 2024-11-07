@@ -3,15 +3,20 @@
 --------------------------------------------------------------------------------
 
 import           Prelude
+
+import           Data.Function ((&))
 import           System.Environment (lookupEnv)
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
+-- Package: aeson-pretty
+import           Data.Aeson.Encode.Pretty as Aeson
 -- Package: bytestring.
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 -- Package: optparse-applicative-fork.
 import qualified Options.Applicative as OA
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile as Profiles
+import qualified Cardano.Benchmarking.Profile.NodeSpecs as NodeSpecs
 import qualified Cardano.Benchmarking.Profile.Types as Types
 
 --------------------------------------------------------------------------------
@@ -20,10 +25,15 @@ data Cli =
     Names
   | NamesCloudNoEra
   | All
-  | ByName String
+  | ByName PrettyPrint String
   | LibMK
+  | NodeSpecs FilePath FilePath
   | ToJson String
   | FromJson String
+
+data PrettyPrint =
+    PrettyPrint
+  | SingleLine
 
 --------------------------------------------------------------------------------
 
@@ -40,15 +50,31 @@ main = do
       obj <- lookupOverlay
       BSL8.putStrLn $ Aeson.encode $ Profiles.profiles obj
     -- Print a single profiles, with an optional overlay.
-    (ByName profileName) -> do
+    (ByName prettyPrint profileName) -> do
       obj <- lookupOverlay
       case Profiles.byName profileName obj of
         Nothing -> error $ "No profile named \"" ++ profileName ++ "\""
         (Just profile) ->
-          let aeson = Aeson.encode profile
+          let
+            prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
+            aeson       = profile & case prettyPrint of
+              PrettyPrint -> Aeson.encodePretty' prettyConf
+              SingleLine  -> Aeson.encode
           in BSL8.putStrLn aeson
     LibMK -> do
       mapM_ putStrLn Profiles.libMk
+    (NodeSpecs profilePath topologyPath) -> do
+      eitherProfile <- Aeson.eitherDecodeFileStrict profilePath
+      let profile = case eitherProfile of
+                      (Left errorMsg) ->
+                        error $ "Not a valid profile: " ++ errorMsg
+                      (Right value) -> value
+      eitherTopology <- Aeson.eitherDecodeFileStrict topologyPath
+      let topology = case eitherTopology of
+                      (Left errorMsg) ->
+                        error $ "Not a valid topology: " ++ errorMsg
+                      (Right value) -> value
+      BSL8.putStrLn $ Aeson.encode $ NodeSpecs.nodeSpecs profile topology
     -- Print a single profiles, with an optional overlay.
     (ToJson filePath) -> print filePath
 --      str <- readFile filePath
@@ -100,14 +126,29 @@ cliParser = OA.hsubparser $
   <>
       OA.command "by-name"
         (OA.info
-          (ByName <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName SingleLine <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name" <> OA.progDesc "Create profile")
+        )
+  <>
+      OA.command "by-name-pretty"
+        (OA.info
+          (ByName PrettyPrint <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (OA.fullDesc <> OA.header "by-name-pretty" <> OA.progDesc "Create profile (pretty-printed)")
         )
   <>
       OA.command "lib-make"
         (OA.info
           (pure LibMK)
           (OA.fullDesc <> OA.header "lib-make" <> OA.progDesc "Makefile include")
+        )
+  <>
+      OA.command "node-specs"
+        (OA.info
+          (     NodeSpecs
+            <$> OA.argument OA.str (OA.metavar "PROFILE-JSON-FILEPATH" )
+            <*> OA.argument OA.str (OA.metavar "TOPOLOGY-JSON-FILEPATH")
+          )
+          (OA.fullDesc <> OA.header "node-specs" <> OA.progDesc "Create the profile's node-specs.json file")
         )
   <>
       OA.command "to-json"

@@ -1,28 +1,8 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost        #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE PatternSynonyms            #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE Strict                     #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE ViewPatterns               #-}
-{-# OPTIONS_GHC -fno-full-laziness #-}
-{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
-{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-{-# OPTIONS_GHC -fno-spec-constr #-}
-{-# OPTIONS_GHC -fno-specialise #-}
-{-# OPTIONS_GHC -fno-strictness #-}
-{-# OPTIONS_GHC -fno-unbox-small-strict-fields #-}
-{-# OPTIONS_GHC -fno-unbox-strict-fields #-}
-{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Benchmarking.PlutusScripts.SupplementalDatum (script) where
 
@@ -65,6 +45,7 @@ However this result is hex encoded. Therefore we have to convert to decimal nota
 supplementalDatumHash :: V3.DatumHash
 supplementalDatumHash = V3.DatumHash $ PlutusTx.integerToByteString PlutusTx.BigEndian 0 107688188478553082748947992068553556338831975613033640413719911361848497815077
 
+{-# INLINABLE untypedValidator  #-}
 untypedValidator :: BuiltinData -> BuiltinUnit 
 untypedValidator ctx = 
   PlutusTx.check (typedValidator (PlutusTx.unsafeFromBuiltinData ctx) )

@@ -28,6 +28,7 @@ import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop as ECDSA
 import qualified Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd as HashG2Add
 import qualified Cardano.Benchmarking.PlutusScripts.Loop2024 as Loop2024
 import qualified Cardano.Benchmarking.PlutusScripts.LoopV3 as LoopV3
+import qualified Cardano.Benchmarking.PlutusScripts.Ripemd160 as Ripemd160
 import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop as Schnorr
 import qualified Cardano.Benchmarking.PlutusScripts.SupplementalDatum as SupplementalDatum
 import           Cardano.Benchmarking.ScriptAPI
@@ -40,6 +41,7 @@ getAllScripts =
   , HashG2Add.script
   , Loop2024.script
   , LoopV3.script
+  , Ripemd160.script
   , Schnorr.script
   , SupplementalDatum.script
   ]

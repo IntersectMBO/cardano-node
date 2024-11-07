@@ -39,24 +39,31 @@ profilesNoEraPlutuscall =
         . compressedFor15Epochs
         . V.datasetSmall
         . V.fundsDefault
-        . V.plutusDoubleSaturation
         . P.p2pOff
         . P.traceForwardingOn . P.newTracing
         . P.analysisStandard . P.analysisEpoch3Plus
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . P.desc "Small dataset, honest 15 epochs duration"
-      loop    = plutusCall & V.plutusTypeLoop
-      ecdsa   = plutusCall & V.plutusTypeECDSA
-      schnorr = plutusCall & V.plutusTypeSchnorr
+      loop            = plutusCall & V.plutusTypeLoop     . V.plutusDoubleSaturation
+      ecdsa           = plutusCall & V.plutusTypeECDSA    . V.plutusDoubleSaturation
+      schnorr         = plutusCall & V.plutusTypeSchnorr  . V.plutusDoubleSaturation
+
+      loopVolt        = plutusCall & V.plutusTypeLoop     . V.plutusDoublePlusSaturation
+      blstVolt        = plutusCall & V.plutusTypeBLST     . V.plutusDoublePlusSaturation
+      ripemdVolt      = plutusCall & V.plutusTypeRIPEMD   . V.plutusDoublePlusSaturation
   in [
   -- TODO: after dropping jq profiles, bump all to genesisVariantVoltaire
-    loop    & P.name "plutuscall-loop-plain"          . V.genesisVariantPreVoltaire
-  , loop    & P.name "plutuscall-loop-half"           . V.genesisVariant300  . P.stepHalf     . P.v8Preview
-  , loop    & P.name "plutuscall-loop-double"         . V.genesisVariant300  . P.doubleBudget . P.v8Preview
-  , ecdsa   & P.name "plutuscall-secp-ecdsa-plain"    . V.genesisVariantPreVoltaire
-  , ecdsa   & P.name "plutuscall-secp-ecdsa-half"     . V.genesisVariant300  . P.stepHalf     . P.v8Preview
-  , ecdsa   & P.name "plutuscall-secp-ecdsa-double"   . V.genesisVariant300  . P.doubleBudget . P.v8Preview
-  , schnorr & P.name "plutuscall-secp-schnorr-plain"  . V.genesisVariantPreVoltaire
-  , schnorr & P.name "plutuscall-secp-schnorr-half"   . V.genesisVariant300  . P.stepHalf     . P.v8Preview
-  , schnorr & P.name "plutuscall-secp-schnorr-double" . V.genesisVariant300  . P.doubleBudget . P.v8Preview
+    loop        & P.name "plutuscall-loop-plain"          . V.genesisVariantPreVoltaire
+  , loop        & P.name "plutuscall-loop-half"           . V.genesisVariant300  . P.stepHalf     . P.v8Preview
+  , loop        & P.name "plutuscall-loop-double"         . V.genesisVariant300  . P.doubleBudget . P.v8Preview
+  , ecdsa       & P.name "plutuscall-secp-ecdsa-plain"    . V.genesisVariantPreVoltaire
+  , ecdsa       & P.name "plutuscall-secp-ecdsa-half"     . V.genesisVariant300  . P.stepHalf     . P.v8Preview
+  , ecdsa       & P.name "plutuscall-secp-ecdsa-double"   . V.genesisVariant300  . P.doubleBudget . P.v8Preview
+  , schnorr     & P.name "plutuscall-secp-schnorr-plain"  . V.genesisVariantPreVoltaire
+  , schnorr     & P.name "plutuscall-secp-schnorr-half"   . V.genesisVariant300  . P.stepHalf     . P.v8Preview
+  , schnorr     & P.name "plutuscall-secp-schnorr-double" . V.genesisVariant300  . P.doubleBudget . P.v8Preview
+
+  , loopVolt    & P.name "plutuscall-volt-loop"           . V.genesisVariantVoltaire              . P.v10Preview
+  , blstVolt    & P.name "plutuscall-volt-blst"           . V.genesisVariantVoltaire              . P.v10Preview
+  , ripemdVolt  & P.name "plutuscall-volt-ripemd"         . V.genesisVariantVoltaire              . P.v10Preview
   ]

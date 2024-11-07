@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-profile
-version:                8.6.0
+version:                8.7.0
 synopsis:               A Cardano benchmarking profile generator
 description:            A Cardano benchmarking profile generator.
 category:               Cardano,
@@ -17,6 +17,12 @@ data-files:             data/all-profiles.json
                         data/ci-test-bage.json
                         data/genesis/epoch-timeline.json
                         data/genesis/overlays/*.json
+                        data/test/default-coay/*.json
+                        data/test/chainsync-early-alonzo-coay/*.json
+                        data/test/chainsync-early-byron-coay/*.json
+                        data/test/ci-test-coay/*.json
+                        data/test/ci-test-dense10-coay/*.json
+                        data/test/fast-nomadperf-coay/*.json
 
 common project-config
   build-depends:        base >= 4.14 && < 5
@@ -37,6 +43,7 @@ library
   other-modules:        Paths_cardano_profile
   autogen-modules:      Paths_cardano_profile
   exposed-modules:      Cardano.Benchmarking.Profile
+                      -- Profile definitions.
                       , Cardano.Benchmarking.Profile.Builtin.Cloud
                       , Cardano.Benchmarking.Profile.Builtin.Empty
                       , Cardano.Benchmarking.Profile.Builtin.ForgeStress
@@ -52,6 +59,7 @@ library
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Idle
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly
                       , Cardano.Benchmarking.Profile.Extra.Scaling
+                      , Cardano.Benchmarking.Profile.NodeSpecs
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
@@ -70,6 +78,7 @@ executable cardano-profile
   hs-source-dirs:       app/
   main-is:              cardano-profile.hs
   build-depends:        aeson
+                      , aeson-pretty
                       , vector
                       , bytestring
                       , optparse-applicative-fork
@@ -81,7 +90,8 @@ test-suite cardano-profile-test
   hs-source-dirs:       test/
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
-  other-modules:        Paths_cardano_profile
+  other-modules:        Cardano.Benchmarking.Profile.NodeSpecs.Tests
+                      , Paths_cardano_profile
   autogen-modules:      Paths_cardano_profile
   build-depends:        base
                       , aeson

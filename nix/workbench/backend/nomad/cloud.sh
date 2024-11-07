@@ -878,12 +878,12 @@ deploy-genesis-nomadcloud() {
   if ! backend_nomad deploy-genesis-wget "${dir}" "${s3_uri}"/"${genesis_file_name}"
   then
     # File kept for debugging!
-    msg "$(red "FATAL: deploy-genesis-wget \"${dir}\" \"${uri}\"")"
+    msg "$(red "FATAL: deploy-genesis-wget \"${dir}\" \"${s3_uri}\"")"
     # Already "fatal" -> ignore errors!
     backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-    fatal "Deploy of genesis \"${uri}\" failed"
+    fatal "Deploy of genesis \"${s3_uri}\" failed"
   else
-    msg "$(green "Genesis \"${uri}\" deployed successfully")"
+    msg "$(green "Genesis \"${s3_uri}\" deployed successfully")"
     # Don't keep the file once ready, it's not free!
     msg "$(blue Removing) genesis file from $(yellow "\"s3://${s3_bucket_name}\"") ..."
     aws s3 rm                                         \
