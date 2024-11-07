@@ -3,6 +3,8 @@
 --------------------------------------------------------------------------------
 
 import           Prelude
+
+import           Data.Function ((&))
 import           System.Environment (lookupEnv)
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
@@ -23,11 +25,15 @@ data Cli =
     Names
   | NamesCloudNoEra
   | All
-  | ByName Bool String              -- 1st arg: True for pretty-printing
+  | ByName PrettyPrint String
   | LibMK
   | NodeSpecs FilePath FilePath
   | ToJson String
   | FromJson String
+
+data PrettyPrint =
+    PrettyPrint
+  | SingleLine
 
 --------------------------------------------------------------------------------
 
@@ -51,7 +57,9 @@ main = do
         (Just profile) ->
           let
             prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
-            aeson       = (if prettyPrint then Aeson.encodePretty' prettyConf else Aeson.encode) profile
+            aeson       = profile & case prettyPrint of
+              PrettyPrint -> Aeson.encodePretty' prettyConf
+              SingleLine  -> Aeson.encode
           in BSL8.putStrLn aeson
     LibMK -> do
       mapM_ putStrLn Profiles.libMk
@@ -118,13 +126,13 @@ cliParser = OA.hsubparser $
   <>
       OA.command "by-name"
         (OA.info
-          (ByName False <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName SingleLine <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name" <> OA.progDesc "Create profile")
         )
   <>
       OA.command "by-name-pretty"
         (OA.info
-          (ByName True <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName PrettyPrint <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name-pretty" <> OA.progDesc "Create profile (pretty-printed)")
         )
   <>
