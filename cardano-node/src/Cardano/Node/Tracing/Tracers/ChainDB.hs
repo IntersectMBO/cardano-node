@@ -544,23 +544,22 @@ instance ( LogFormatting (Header blk)
   asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo oldChain newChain) =
     let forkIt = not $ AF.withinFragmentBounds (AF.headPoint oldChain)
                               newChain
-        ChainInformation { .. } = chainInformation selChangedInfo forkIt newChain 0
+        ChainInformation { .. } = chainInformation selChangedInfo newChain 0
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
-        , CounterM "forks" (Just (if fork then 1 else 0))
+        , CounterM "forks" (Just (if forkIt then 1 else 0))
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { .. } =
-          chainInformation selChangedInfo False newChain 0
+          chainInformation selChangedInfo newChain 0
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
-        , CounterM "forks" (Just (if fork then 1 else 0))
         ]
   asMetrics _ = []
 
@@ -2098,26 +2097,21 @@ data ChainInformation = ChainInformation
     -- ^ Relative slot number of the tip of the current chain within the
     -- epoch.
   , blocksUncoupledDelta :: Int64
-    -- ^ The net change in number of blocks forged since last restart not on the
-    -- current chain.
-  , fork :: Bool
   }
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
   => ChainDB.SelectionChangedInfo blk
-  -> Bool
   -> AF.AnchoredFragment (Header blk)
   -> Int64
   -> ChainInformation
-chainInformation selChangedInfo fork frag blocksUncoupledDelta = ChainInformation
+chainInformation selChangedInfo frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
     , epoch = ChainDB.newTipEpoch selChangedInfo
     , slotInEpoch = ChainDB.newTipSlotInEpoch selChangedInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
-    , fork = fork
     }
 
 fragmentChainDensity ::
