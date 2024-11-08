@@ -613,11 +613,11 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
         Just (_, minSlotNo, minDelay, slotMap'') ->
           if minSlotNo == slotNo
             then pure cm { cmTraceIt = False, cmSlotMap = slotMap' }
-            else let updatedMetrics = updateCDFs minDelay forgeDelay
+            else let (cdf1sVar, cdf3sVar, cdf5sVar) = updateCDFs minDelay forgeDelay
                  in pure cm
-                      { cmCdf1sVar  = fst3 updatedMetrics
-                      , cmCdf3sVar  = snd3 updatedMetrics
-                      , cmCdf5sVar  = thd3 updatedMetrics
+                      { cmCdf1sVar  = cdf1sVar
+                      , cmCdf3sVar  = cdf3sVar
+                      , cmCdf5sVar  = cdf5sVar
                       , cmDelay     = realToFrac forgeDelay
                       , cmBlockSize = getSizeInBytes blockSize
                       , cmTraceVars = True
@@ -625,21 +625,21 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
                       , cmSlotMap   = slotMap'' }
 
     updateMetrics slotMap' _slotNo =
-      let updatedMetrics = updateCDFs 0 forgeDelay
+      let (cdf1sVar, cdf3sVar, cdf5sVar) = updateCDFs 0 forgeDelay
       in if Pq.size slotMap' >= 45
             then pure cm
-                 { cmCdf1sVar  = fst3 updatedMetrics
-                 , cmCdf3sVar  = snd3 updatedMetrics
-                 , cmCdf5sVar  = thd3 updatedMetrics
+                 { cmCdf1sVar  = cdf1sVar
+                 , cmCdf3sVar  = cdf3sVar
+                 , cmCdf5sVar  = cdf5sVar
                  , cmDelay     = realToFrac forgeDelay
                  , cmBlockSize = getSizeInBytes blockSize
                  , cmTraceVars = True
                  , cmTraceIt   = True
                  , cmSlotMap   = slotMap' }
             else pure cm
-                 { cmCdf1sVar  = fst3 updatedMetrics
-                 , cmCdf3sVar  = snd3 updatedMetrics
-                 , cmCdf5sVar  = thd3 updatedMetrics
+                 { cmCdf1sVar  = cdf1sVar
+                 , cmCdf3sVar  = cdf3sVar
+                 , cmCdf5sVar  = cdf5sVar
                  , cmDelay     = realToFrac forgeDelay
                  , cmBlockSize = getSizeInBytes blockSize
                  , cmTraceVars = False
@@ -651,9 +651,6 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
       , incCdf forgeDelay' (decCdf minDelay cmCdf3sVar)
       , incCdf forgeDelay' (decCdf minDelay cmCdf5sVar) )
 
-    fst3 (x, _, _) = x
-    snd3 (_, y, _) = y
-    thd3 (_, _, z) = z
 
 calculateBlockFetchClientMetrics cm _lc _ = pure cm
 
@@ -918,10 +915,11 @@ servedBlockLatest mbTrEKG =
                   (metricsFormatter
                     (mkMetricsTracer mbTrEKG))
 
-calculateServedBlockLatest :: ServedBlock
+calculateServedBlockLatest :: (Monad m)
+                          =>ServedBlock
                           -> LoggingContext
                           -> TraceLabelPeer peer (TraceBlockFetchServerEvent blk)
-                          -> IO ServedBlock
+                          -> m ServedBlock
 calculateServedBlockLatest ServedBlock{..} _lc (TraceLabelPeer _ (TraceBlockFetchServerSendBlock p)) =
     case pointSlot p of
       Origin    -> return $ ServedBlock maxSlotNo localUp servedBlocksLatest
