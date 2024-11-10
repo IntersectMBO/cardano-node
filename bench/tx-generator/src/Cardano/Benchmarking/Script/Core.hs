@@ -89,7 +89,7 @@ import           Data.Sequence as Seq (ViewL (..), fromList, viewl, (|>))
 import qualified Data.Text as Text (Text, unpack)
 import           Data.Tuple.Extra (dupe)
 import           System.FilePath ((</>))
-import qualified System.IO as IO (IOMode (..), openFile)
+import qualified System.IO as IO (BufferMode (..), IOMode (..), hSetBuffering, openFile)
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -299,6 +299,7 @@ submitInEra submitMode generator txParams era = do
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
     DumpToFile filePath -> liftIO do
       handle <- IO.openFile filePath IO.AppendMode
+      IO.hSetBuffering handle IO.NoBuffering
       Streaming.toHandle handle $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
