@@ -495,9 +495,14 @@ data VoteCase crypto = VoteCase
   --   It should retrieve something of type
   --   @Ledger.GovActionId Ledger.StandardCrypto@
   , vcVote        :: Api.Vote -- yesOrNo
-  , vcGenDRepCred :: Ledger.Credential 'Ledger.DRepRole crypto
-  -- anchor can likely be assumed Nothing at all times
-  , vcAnchor      :: Maybe (Ledger.Url, Text.Text) }
+  , vcDRepCredIdx :: Int
+  -- ^ index into
+  -- `Cardano.Benchmarking.Script.Env.envDRepCredentials`
+  -- yielding a
+  -- @Ledger.Credential 'Ledger.DRepRole Ledger.StandardCrypto@
+  , vcAnchor      :: Maybe (Ledger.Url, Text.Text)
+  -- ^ vcAnchor can likely be assumed Nothing at all times
+  }
 
 unsuppErr :: String -> ActionM t
 unsuppErr s = liftTxGenError . TxGenError $
@@ -521,9 +526,12 @@ voteCase GovCaseEnv {..} VoteCase {..} eon
       <- Env.TxGenError $ TxGenError "insufficient ready proposals"
   , ptxInToOut :: [L.Coin] -> [L.Coin]
       <- Utils.inputsToOutputsWithFee txParamFee 1
-  , voter :: Ledger.Voter crypto
-      <- Ledger.DRepVoter vcGenDRepCred
   = conwayEraOnwardsConstraints eon do
+       DRepVerificationKey vkey
+         <- getVerificationKey . fromJust <$>
+              getEnvDRepKeys <!?> vcDRepCredIdx
+       let voter :: Ledger.Voter crypto
+           voter = Ledger.DRepVoter . Ledger.KeyHashObj $ Ledger.hashKey vkey
        ptxLedgerPParams :: Maybe (Ledger.PParams ledgerEra)
          <- eitherToMaybe . toLedgerPParams sbe <$> getProtocolParameters
        (wallet, fundSource)
@@ -640,7 +648,7 @@ evalGenerator generator txParams@TxGenTxParams{..} era = do
          -> forShelleyBasedEraInEon sbe (unsuppErr "Propose") $
               proposeCase env args
 
-        Vote vcWalletName vcPayMode vcGovActId vcVote vcGenDRepCred vcAnchor
+        Vote vcWalletName vcPayMode vcGovActId vcVote vcDRepCredIdx vcAnchor
           | args <- VoteCase {..}
           , env  <- GovCaseEnv { gcEnvEra = era
                                , gcEnvTxParams = txParams

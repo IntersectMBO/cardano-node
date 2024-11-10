@@ -20,7 +20,7 @@ module Cardano.Benchmarking.Script.Selftest (printJSON, runSelftest)
 where
 
 import           Cardano.Api hiding (Env)
-import           Cardano.Api.Shelley (Vote (..))
+import           Cardano.Api.Shelley (Vote (..), fromShelleyStakeCredential)
 
 import           Cardano.Benchmarking.LogTypes (EnvConsts (..))
 import           Cardano.Benchmarking.Script.Action
@@ -29,7 +29,6 @@ import           Cardano.Benchmarking.Script.Env as Env (Env (..))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error, runActionMEnv, setBenchTracers)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
-import qualified Cardano.Crypto.DSIGN as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
@@ -69,15 +68,6 @@ drepKey :: SigningKey DRepKey
 drepKey = error "could not parse hardcoded drep key" `fromRight`
   parseDRepKeyBase16 ("5820aa7f780a2dcd099762ebc31a43860c"
                    <> "1373970c2e2062fcd02cceefe682f39ed8")
-
-drepCred :: forall crypto . ()
-         => L.Crypto crypto
-         => L.DSIGN crypto ~ Crypto.Ed25519DSIGN
-         => L.Credential L.DRepRole crypto
-drepCred
-  | DRepSigningKey unDRepSigningKey <- drepKey
-  , drepVerKey <- Crypto.deriveVerKeyDSIGN unDRepSigningKey
-  = L.KeyHashObj . L.hashKey $ L.VKey drepVerKey
 
 nrProposals :: Int
 nrProposals = 4
@@ -129,9 +119,12 @@ runSelftest env envConsts@EnvConsts { .. } doVoting outFile
          "data" </> if doVoting then "protocol-parameters-conway-voting.json"
                                 else "protocol-parameters.json"
        let useThisScript
-            | not doVoting = testScript protocolFile submitMode
-            | otherwise = testScriptVoting protocolFile submitMode
-       (result, Env {  }, ()) <- flip (Env.runActionMEnv env) envConsts do
+             | not doVoting = testScript protocolFile submitMode
+             | otherwise = testScriptVoting protocolFile submitMode
+           env' = env { envDRepKeys = [drepKey]
+                      , envStakeCredentials = [stakeCred] }
+       (result, Env { }, ())
+         <- flip (Env.runActionMEnv env') envConsts do
              Env.setBenchTracers initNullTracers
              forM_ useThisScript action
        pure result `maybeM` const (throw abcException) $
@@ -193,7 +186,7 @@ genProposals = List.genericReplicate batch $
 genVotes :: Natural -> Generator
 genVotes n = RoundRobin $ [idxLo .. idxHi] <&> \idx ->
     Take (fromIntegral quorum) .  Cycle $
-      Vote genesisWallet payMode idx Yes drepCred Nothing
+      Vote genesisWallet payMode idx Yes 0 {- drep idx -} Nothing
   where
     idxLo = fromIntegral $ n * batch
     idxHi = fromIntegral $ (n + 1) * batch - 1
@@ -217,6 +210,9 @@ stakeKey :: VerificationKey StakeKey
 stakeKey = error "could not parse hardcoded stake key" `fromRight`
   parseStakeKeyBase16 ("5820bbbfe3f3b71b00d1d61f4fe2a82526"
                     <> "597740f61a0aa06f1324557925803c7d3e")
+
+stakeCred :: StakeCredential
+stakeCred = fromShelleyStakeCredential . L.KeyHashObj . L.hashKey $ unStakeVerificationKey stakeKey
 
 testScriptVoting :: FilePath -> SubmitMode -> [Action]
 testScriptVoting protocolFile submitMode =

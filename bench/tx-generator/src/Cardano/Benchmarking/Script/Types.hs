@@ -198,7 +198,9 @@ data Generator where
        -- ^ index into `GovStateSummary` with a result of
        -- @!(L.GovActionId L.StandardCrypto)@
        -> !Vote
-       -> !(L.Credential 'L.DRepRole L.StandardCrypto)
+       -> !Int
+       -- ^ index into `envDRepKeys` with a result of
+       -- @!(L.Credential 'L.DRepRole L.StandardCrypto)@
        -> Maybe (Ledger.Url, Text)
        -> Generator
   -- | 'EmptyStream' will yield an empty stream. For testing only.
