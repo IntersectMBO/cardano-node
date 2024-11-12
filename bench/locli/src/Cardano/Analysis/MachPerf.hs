@@ -47,7 +47,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
   $ foldl' (timelineStep run f) zeroTimelineAccum xs
   & (aRunScalars &&& reverse . aSlotStats)
  where
-   xs = filter (not . (`textRefEquals` "DecodeError") . loKind) xs'
+   xs = filter (not . ("DecodeError" `textRefEquals`) . loKind) xs'
 
    firstRelevantLogObjectTime :: UTCTime
    firstRelevantLogObjectTime = loAt (head xs) `max` systemStart genesis

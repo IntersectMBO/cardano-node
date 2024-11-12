@@ -1,5 +1,12 @@
 # Revision history for locli
 
+## 2.0 -- Dec 2024
+
+* New database (DB) persistence backend for log objects using serverless SQLite DBs
+* New CLI commands `prepare-db` and `unlog-db` to create and read from that persistence layer respectively
+* Tweak GC to mitigate high RAM requirements
+* New executable `locli-quick` which aims to be a development testbed for (upcoming) DB-backed quick queries.
+
 ## 1.36 -- Nov 2024
 
 * Add `CHANGELOG.md` for `locli`

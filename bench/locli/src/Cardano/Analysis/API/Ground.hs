@@ -1,6 +1,7 @@
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Analysis.API.Ground
   ( module Cardano.Analysis.API.Ground
@@ -10,28 +11,28 @@ module Cardano.Analysis.API.Ground
   )
 where
 
-import Prelude                          as P (show)
-import Cardano.Prelude                  hiding (head, toText)
-import Unsafe.Coerce                    qualified as Unsafe
+import           Cardano.Prelude hiding (head, toText)
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Cardano.Util
+import           Ouroboros.Network.Block (BlockNo (..))
 
-import Data.Aeson
-import Data.Aeson.Types                 (toJSONKeyText)
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.Map.Strict                  qualified as Map
-import Data.Text                        qualified as T
-import Data.Text.Short                  qualified as SText
-import Data.Text.Short                  (ShortText, fromText, toText)
-import Data.Time.Clock                  (UTCTime, NominalDiffTime)
-import Options.Applicative
-import Options.Applicative              qualified as Opt
-import System.FilePath                  qualified as F
+import           Prelude as P (show)
 
-import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block          (BlockNo(..))
+import           Data.Aeson
+import           Data.Aeson.Types (toJSONKeyText)
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.CDF
+import           Data.Data (Data)
+import           Data.DataDomain
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import           Data.Text.Short (ShortText, fromText, toText)
+import qualified Data.Text.Short as SText
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
+import           Options.Applicative as Opt
+import qualified System.FilePath as F
 
-import Data.CDF
-import Data.DataDomain
-import Cardano.Util
+import qualified Unsafe.Coerce as Unsafe
 
 
 newtype FieldName = FieldName { unFieldName :: Text }
@@ -51,7 +52,7 @@ instance Show TId where
   show = ("TId " ++) . P.show . unTId
 
 newtype Hash = Hash { unHash :: ShortText }
-  deriving (Eq, Generic, Ord)
+  deriving (Eq, Generic, Ord, Data)
   deriving newtype (FromJSON, ToJSON)
   deriving anyclass NFData
 
@@ -154,6 +155,10 @@ newtype CsvOutputFile
   = CsvOutputFile { unCsvOutputFile :: FilePath }
   deriving (Show, Eq)
 
+newtype SqliteOutputFile
+  = SqliteOutputFile { unSqliteOutputFile :: FilePath }
+  deriving (Show, Eq)
+
 newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
@@ -163,8 +168,11 @@ newtype OutputFile
 ---
 deriving newtype instance Real      BlockNo
 deriving newtype instance Divisible BlockNo
+deriving         instance Data      BlockNo
+
 deriving newtype instance Real      SlotNo
 deriving newtype instance Divisible SlotNo
+deriving         instance Data      SlotNo
 
 ---
 --- Readers
@@ -255,6 +263,14 @@ optCsvOutputFile optname desc =
       <> metavar "CSV-OUTFILE"
       <> help desc
 
+optSqliteOutputFile :: String -> String -> Parser SqliteOutputFile
+optSqliteOutputFile optname desc =
+  fmap SqliteOutputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "SQLITE-OUTFILE"
+      <> help desc
+
 optOutputFile :: String -> String -> Parser OutputFile
 optOutputFile optname desc =
   fmap OutputFile $
@@ -279,6 +295,12 @@ optWord optname desc def =
     <> metavar "INT"
     <> help desc
     <> value def
+
+optString :: String -> String -> Parser String
+optString optname desc =
+  Opt.option Opt.str $
+    long optname <> metavar "STRING" <> Opt.help desc
+
 -- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
 hostFromLogfilename :: JsonLogfile -> Host
 hostFromLogfilename (JsonLogfile f) =

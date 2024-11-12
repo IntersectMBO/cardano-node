@@ -21,6 +21,7 @@ import Options.Applicative              qualified as Opt
 
 import System.Directory                 (doesFileExist)
 import System.FilePath
+import System.Mem                       qualified as Mem (performGC)
 import System.Posix.Files               qualified as IO
 
 import Cardano.Analysis.API
@@ -29,6 +30,8 @@ import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Summary
 import Cardano.Render
 import Cardano.Report
+import Cardano.Unlog.BackendDB
+import Cardano.Unlog.BackendFile
 import Cardano.Unlog.LogObject
 import Cardano.Util             hiding (head)
 
@@ -50,9 +53,10 @@ data ChainCommand
   =        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
   |        WriteMetaGenesis TextOutputFile              TextOutputFile
 
-  |        Unlog            (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
+  |                 Unlog   (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
-
+  |             PrepareDB   String [TextInputFile] SqliteOutputFile
+  |               UnlogDB   (JsonInputFile (RunLogs ()))
   |    ValidateHashTimeline (JsonInputFile [LogObject])
 
   |        BuildMachViews
@@ -122,6 +126,15 @@ parseChainCommand =
             (some
              (optLOAnyType      "ok-loany"        "[MULTI] Allow a particular LOAnyType"))
      )
+   , op "unlog-db" "Read logs from DBs"
+     (UnlogDB
+       <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
+     )
+   , op "prepare-db" "Prepare an SQLite DB from a host's log output"
+     (PrepareDB
+       <$> optString                  "mach"            "host's machine name"
+       <*> some (optTextInputFile     "log"             "[MULTI] host log file(s)")
+       <*> optSqliteOutputFile        "db"              "DB output file")
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
    , op "hash-timeline" "Quickly validate timeline by hashes"
@@ -417,6 +430,19 @@ runChainCommand s
              & firstExceptT (CommandError c)
   pure s { sRunLogs = Just runLogs }
 
+runChainCommand s
+  c@(UnlogDB rlf) = do
+  progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
+  runLogsBare <- Aeson.eitherDecode @(RunLogs ())
+                 <$> LBS.readFile (unJsonInputFile rlf)
+                 & newExceptT
+                 & firstExceptT (CommandError c . pack)
+  progress "logs" (Q $ printf "loading logs from DBs for %d hosts" $
+                   Map.size $ rlHostLogs runLogsBare)
+  runLogs <- runLiftLogObjectsDB runLogsBare
+             & firstExceptT (CommandError c)
+  pure s { sRunLogs = Just runLogs }
+
 runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
   c@DumpLogObjects = do
   progress "logobjs" (Q $ printf "dumping %d logobject streams" $ length objs)
@@ -426,6 +452,13 @@ runChainCommand _ c@DumpLogObjects = missingCommandData c
   ["lifted log objects"]
 
 -- runChainCommand s c@(ReadMachViews _ _)    -- () -> [(JsonLogfile, MachView)]
+
+runChainCommand s
+  c@(PrepareDB machName inFiles outFile) = do
+    progress "prepare-db" (Q $ printf "preparing DB %s from '%s' logs" (unSqliteOutputFile outFile) machName)
+    prepareDB machName (map unTextInputFile inFiles) (unSqliteOutputFile outFile)
+      & firstExceptT (CommandError c)
+    pure s
 
 runChainCommand s
   c@(ValidateHashTimeline timelineJson) = do
@@ -446,6 +479,7 @@ runChainCommand s
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do
   progress "machviews" (Q $ printf "building %d machviews" $ length objs)
+  performGC
   mvs <- buildMachViews run objs & liftIO
   pure s { sMachViews = Just mvs }
 runChainCommand _ c@BuildMachViews = missingCommandData c
@@ -520,7 +554,8 @@ runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
   forM_ ignores $
     progress "perf-ignored-log" . R . unJsonLogfile
-  progress "slots" (Q $ printf "building slot %d timelines" $ length objs)
+  progress "slots" (Q $ printf "building %d slot timelines" $ length objs)
+  performGC
   (scalars, slotsRaw) <-
     fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
@@ -648,6 +683,7 @@ runChainCommand _ c@RenderMultiPropagation{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@ComputeMachPerf = do
   progress "machperf" (Q $ printf "computing %d machine performances" $ length slots)
+  performGC
   perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
           & fmap sequence
           & newExceptT
@@ -832,6 +868,10 @@ _reportBanner fnames inputfp = mconcat
 fromAnalysisError :: ChainCommand -> AnalysisCmdError -> CommandError
 fromAnalysisError c (AnalysisCmdError t) = CommandError c t
 fromAnalysisError c o = CommandError c (show o)
+
+
+performGC :: ExceptT CommandError IO ()
+performGC = liftIO Mem.performGC
 
 runCommand :: Command -> ExceptT CommandError IO ()
 
