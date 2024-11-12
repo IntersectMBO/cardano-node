@@ -1,5 +1,9 @@
 # Revision history for locli
 
+## NEXT
+
+* New database persistence backend for log objects
+
 ## 1.36 -- Nov 2024
 
 * Add `CHANGELOG.md` for `locli`

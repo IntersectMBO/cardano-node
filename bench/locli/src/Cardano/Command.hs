@@ -29,6 +29,7 @@ import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Summary
 import Cardano.Render
 import Cardano.Report
+import Cardano.Unlog.BackendFile
 import Cardano.Unlog.LogObject
 import Cardano.Util             hiding (head)
 
