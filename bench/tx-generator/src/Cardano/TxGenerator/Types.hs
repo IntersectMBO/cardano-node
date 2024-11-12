@@ -84,6 +84,9 @@ data TxGenConfig = TxGenConfig
 
 data TxGenGovActParams = TxGenGovActParams
   { gapBatchSize :: Natural
+  , gapDRepKeys :: Natural
+  , gapStakeKeys :: Natural
+  , gapProposalBatches :: Natural
   , gapQuorum :: Natural
   } deriving (Eq, Read, Show, Generic, FromJSON, ToJSON)
 

@@ -7,6 +7,7 @@ module Cardano.Benchmarking.Compiler
 where
 
 import           Cardano.Api
+import           Cardano.Api.Shelley (Vote (..))
 
 import           Cardano.Benchmarking.Script.Types
 import qualified Cardano.Ledger.BaseTypes as L
@@ -145,12 +146,16 @@ splittingPhase srcWallet = do
           anchorUrl = fromJust $ L.textToUrl 999 "example.com"
           anchorDataHash = L.hashAnchorData . L.AnchorData . encodeUtf8 $
             L.urlToText anchorUrl
-        stakeCredCount = case split of
-          SplitWithChange _ count -> count
-          FullSplits count -> count
-        govActGen = RoundRobin $ Take stakeCredCount . Cycle <$>
-          [Propose dstWallet payMode (L.Coin 1) stakeCredIdx anchor | stakeCredIdx <- [0 .. stakeCredCount]]
-    emit . Submit era LocalSocket txParams $ RoundRobin [generator, govActGen]
+    askNixOption _nix_govAct >>= \case
+      Just TxGenGovActParams {..}
+        | gapStakeKeys' <- fromIntegral gapStakeKeys
+        , totalProposals <- fromIntegral $ gapBatchSize * gapProposalBatches
+        , coin <- L.Coin 1
+        , mkProposal <- \idx ->
+            Propose dstWallet payMode coin (idx `mod` gapStakeKeys') anchor
+        -> emit . Submit era LocalSocket txParams .  RoundRobin $
+             generator : map mkProposal [0 .. totalProposals - 1]
+      Nothing -> emit $ Submit era LocalSocket txParams generator
     delay
     logMsg "Splitting step: Done"
 
@@ -223,7 +228,22 @@ benchmarkingPhase wallet collateralWallet = do
         then LocalSocket
         else Benchmark targetNodes tps txCount
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
-  emit $ Submit era submitMode txParams generator
+  askNixOption _nix_govAct >>= \case
+    Just TxGenGovActParams {..}
+      | mkVote <- \propIdx drepIdx ->
+          Vote wallet payMode propIdx Yes drepIdx Nothing
+      , mkBatchDRep <- \propIdx ->
+          Take (fromIntegral gapQuorum) . Cycle . Sequence $
+              map (mkVote propIdx) [0 .. fromIntegral gapDRepKeys - 1]
+      , mkBatchProp <- \batchIdx ->
+          let batchLo = batchIdx * fromIntegral gapBatchSize
+              batchHi = batchLo  + fromIntegral gapBatchSize - 1
+           in RoundRobin $ map mkBatchDRep [batchLo .. batchHi]
+      , voteGen <- Sequence $
+          map mkBatchProp [0 .. fromIntegral gapProposalBatches - 1]
+      -> emit . Submit era submitMode txParams $
+           RoundRobin [generator, voteGen]
+    Nothing -> emit $ Submit era submitMode txParams generator
   unless debugMode $ do
     emit WaitBenchmark
   return doneWallet
