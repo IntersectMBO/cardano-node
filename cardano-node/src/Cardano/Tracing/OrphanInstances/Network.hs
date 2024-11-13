@@ -1346,12 +1346,19 @@ instance ( ToJSON txid
       , "requestedTxsInflightSize" .= getSizeInBytes requestedTxsInflightSize
       , "requestedTxsInflight" .= requestedTxsInflight
       , "unknownTxs" .= unknownTxs
+      , "score" .= score
+      , "scoreTs" .= scoreTs
+      , "downloadedTxs" .= Map.keys downloadedTxs
+      , "toMempoolTxs" .= Map.keys toMempoolTxs
       ]
+
+instance Aeson.ToJSONKey Time where
 
 instance ( ToJSON txid
          , ToObject tx
          , Aeson.ToJSONKey peer
          , Aeson.ToJSONKey txid
+         , Aeson.ToJSONKey Time
          ) => ToObject (SharedTxState peer txid tx) where
   toObject verb SharedTxState {..} =
     mconcat
@@ -1361,6 +1368,8 @@ instance ( ToJSON txid
       , "inflightTxsSize" .= getSizeInBytes inflightTxsSize
       , "bufferedTxs" .= fmap (toObject verb <$>) bufferedTxs
       , "referenceCounts" .= referenceCounts
+      , "limboTxs" .= limboTxs
+      , "timedTxs" .= timedTxs
       ]
 
 instance ( ToJSON txid
