@@ -22,19 +22,22 @@ import           Cardano.Benchmarking.LogTypes (AsyncBenchmarkControl (..), Benc
                    EnvConsts (..), TraceBenchTxSubmit (..))
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
-import           Cardano.Benchmarking.Script.Env as Env (emptyEnv, newEnvConsts)
+import           Cardano.Benchmarking.Script.Core (readDRepKeys, readStakeCredentials)
+import           Cardano.Benchmarking.Script.Env as Env (emptyEnv, getEnvDRepKeys, getEnvStakeCredentials, newEnvConsts, runActionMEnv)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 import           Cardano.Benchmarking.Script.Queries (debugDumpProposalsPeriodically)
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.TxGenerator.PlutusContext (readScriptData)
 import           Cardano.TxGenerator.Setup.NixService
-import           Cardano.TxGenerator.Types (TxGenPlutusParams (..))
+import           Cardano.TxGenerator.Types (TxGenPlutusParams (..), TxGenGovActParams (..))
 import           Data.Aeson (fromJSON)
 import           Data.ByteString.Lazy as BSL
 import           Data.Foldable (for_)
-import           Data.Maybe (catMaybes)
+import           Data.List (genericLength)
+import           Data.Maybe (catMaybes, fromJust)
 import           Data.Text as T
 import           Data.Text.IO as T
+import           Data.Tuple.Extra (fst3)
 import           Options.Applicative as Opt
 import           Ouroboros.Network.NodeToClient (IOManager, withIOManager)
 
@@ -91,17 +94,39 @@ runCommand' iocp = do
       opts <- parseJSONFile fromJSON nixSvcOptsFile
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
       let consts = envConsts { envNixSvcOpts = Just finalOpts }
+          govAct = fromJust $ _nix_govAct finalOpts
+
+      (finalOpts', consts')
+        <- case _nix_drep_voting finalOpts of
+             Just True
+               | Just nc <- getNodeConfigFile finalOpts
+               -> do eitherCounts
+                       <- fst3 <$> flip (runActionMEnv emptyEnv) consts do
+                            readStakeCredentials nc
+                            readDRepKeys nc
+                            nrDRepKeys <- genericLength <$> getEnvDRepKeys
+                            nrStakeCreds <- genericLength <$> getEnvStakeCredentials
+                            pure (nrDRepKeys, nrStakeCreds)
+                     case eitherCounts of
+                       Right (drepKeys, stakeCreds)
+                         | govAct'' <- govAct { gapDRepKeys = drepKeys
+                                              , gapStakeKeys = stakeCreds }
+                         , finalOpts'' <- finalOpts { _nix_govAct = Just govAct'' }
+                         , consts'' <- envConsts { envNixSvcOpts = Just finalOpts'' }
+                         -> pure (finalOpts'', consts'')
+                       _ -> pure (finalOpts, consts)
+             _ -> pure (finalOpts, consts)
 
       Prelude.putStrLn $
           "--> initial options:\n" ++ show opts ++
-        "\n--> final options:\n" ++ show finalOpts
+        "\n--> final options:\n" ++ show finalOpts'
 
-      quickTestPlutusDataOrDie finalOpts
+      quickTestPlutusDataOrDie finalOpts'
 
-      debugDumpProposalsPeriodically finalOpts
+      debugDumpProposalsPeriodically finalOpts'
 
-      case compileOptions finalOpts of
-        Right script -> runScript emptyEnv script consts >>= handleError . fst
+      case compileOptions finalOpts' of
+        Right script -> runScript emptyEnv script consts' >>= handleError . fst
         err -> die $ "tx-generator:Cardano.Command.runCommand JsonHL: " ++ show err
     Compile file -> do
       o <- parseJSONFile fromJSON file
