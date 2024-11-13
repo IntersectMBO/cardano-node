@@ -136,20 +136,21 @@ testPartialYamlConfig =
     , pncTimeWaitTimeout = mempty
     , pncChainSyncIdleTimeout = mempty
     , pncAcceptedConnectionsLimit = mempty
-    , pncTargetNumberOfRootPeers = mempty
-    , pncTargetNumberOfKnownPeers = mempty
-    , pncTargetNumberOfEstablishedPeers = mempty
-    , pncTargetNumberOfActivePeers = mempty
-    , pncTargetNumberOfKnownBigLedgerPeers = mempty
-    , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
-    , pncTargetNumberOfActiveBigLedgerPeers = mempty
-    , pncGenesisTargetNumberOfActivePeers = mempty
-    , pncGenesisTargetNumberOfKnownBigLedgerPeers = mempty
-    , pncGenesisTargetNumberOfEstablishedBigLedgerPeers = mempty
-    , pncGenesisTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncDeadlineTargetOfRootPeers = mempty
+    , pncDeadlineTargetOfKnownPeers = mempty
+    , pncDeadlineTargetOfEstablishedPeers = mempty
+    , pncDeadlineTargetOfActivePeers = mempty
+    , pncDeadlineTargetOfKnownBigLedgerPeers = mempty
+    , pncDeadlineTargetOfEstablishedBigLedgerPeers = mempty
+    , pncDeadlineTargetOfActiveBigLedgerPeers = mempty
+    , pncSyncTargetNumberOfActivePeers = mempty
+    , pncSyncTargetNumberOfKnownBigLedgerPeers = mempty
+    , pncSyncTargetNumberOfEstablishedBigLedgerPeers = mempty
+    , pncSyncTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncMinBigLedgerPeersForTrustedState = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
-    , pncConsensusMode = Last (Just PraosMode)
+    , pncConsensusMode = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -182,20 +183,21 @@ testPartialCliConfig =
     , pncTimeWaitTimeout = mempty
     , pncChainSyncIdleTimeout = mempty
     , pncAcceptedConnectionsLimit = mempty
-    , pncTargetNumberOfRootPeers = mempty
-    , pncTargetNumberOfKnownPeers = mempty
-    , pncTargetNumberOfEstablishedPeers = mempty
-    , pncTargetNumberOfActivePeers = mempty
-    , pncTargetNumberOfKnownBigLedgerPeers = mempty
-    , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
-    , pncTargetNumberOfActiveBigLedgerPeers = mempty
-    , pncGenesisTargetNumberOfActivePeers = mempty
-    , pncGenesisTargetNumberOfKnownBigLedgerPeers = mempty
-    , pncGenesisTargetNumberOfEstablishedBigLedgerPeers = mempty
-    , pncGenesisTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncDeadlineTargetNumberOfRootPeers = mempty
+    , pncDeadlineTargetNumberOfKnownPeers = mempty
+    , pncDeadlineTargetNumberOfEstablishedPeers = mempty
+    , pncDeadlineTargetNumberOfActivePeers = mempty
+    , pncDeadlineTargetNumberOfKnownBigLedgerPeers = mempty
+    , pncDeadlineTargetNumberOfEstablishedBigLedgerPeers = mempty
+    , pncDeadlineTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncSyncTargetNumberOfActivePeers = mempty
+    , pncSyncTargetNumberOfKnownBigLedgerPeers = mempty
+    , pncSyncTargetNumberOfEstablishedBigLedgerPeers = mempty
+    , pncSyncTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
-    , pncConsensusMode = Last (Just GenesisMode)
+    , pncConsensusMode = Last (Just PraosMode)
     }
 
 -- | Expected final NodeConfiguration
@@ -234,20 +236,21 @@ eExpectedConfig = do
           , acceptedConnectionsSoftLimit = 384
           , acceptedConnectionsDelay     = 5
           }
-    , ncTargetNumberOfRootPeers = 60
-    , ncTargetNumberOfKnownPeers = 85
-    , ncTargetNumberOfEstablishedPeers = 40
-    , ncTargetNumberOfActivePeers = 15
-    , ncTargetNumberOfKnownBigLedgerPeers = 15
-    , ncTargetNumberOfEstablishedBigLedgerPeers = 10
-    , ncTargetNumberOfActiveBigLedgerPeers = 5
-    , ncGenesisTargetNumberOfActivePeers = 0
-    , ncGenesisTargetNumberOfKnownBigLedgerPeers = 100
-    , ncGenesisTargetNumberOfEstablishedBigLedgerPeers = 50
-    , ncGenesisTargetNumberOfActiveBigLedgerPeers = 30
+    , ncDeadlineTargetNumberOfRootPeers = 60
+    , ncDeadlineTargetNumberOfKnownPeers = 85
+    , ncDeadlineTargetNumberOfEstablishedPeers = 40
+    , ncDeadlineTargetNumberOfActivePeers = 15
+    , ncDeadlineTargetNumberOfKnownBigLedgerPeers = 15
+    , ncDeadlineTargetNumberOfEstablishedBigLedgerPeers = 10
+    , ncDeadlineTargetNumberOfActiveBigLedgerPeers = 5
+    , ncSyncTargetNumberOfActivePeers = 0
+    , ncSyncTargetNumberOfKnownBigLedgerPeers = 100
+    , ncSyncTargetNumberOfEstablishedBigLedgerPeers = 50
+    , ncSyncTargetNumberOfActiveBigLedgerPeers = 30
+    , ncMinBigLedgerPeersForTrustedState = defaultMinBigLedgerPeersForTrustedState
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
-    , ncConsensusMode = GenesisMode
+    , ncConsensusMode = PraosMode
     }
 
 -- -----------------------------------------------------------------------------

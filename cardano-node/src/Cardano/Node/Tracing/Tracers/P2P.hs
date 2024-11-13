@@ -784,7 +784,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor (Namespace [] ["DebugState"]) = Just
       "peer selection internal state"
     documentFor (Namespace [] ["VerifyPeerSnapshot"]) = Just
-      "Big ledger peer snapshot file failed integrity check against the ledger"
+      "Verification outcome of big ledger peer snapshot"
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["ChurnAction"]) =
