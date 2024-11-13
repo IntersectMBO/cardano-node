@@ -902,7 +902,7 @@ mkP2PArguments NodeConfiguration {
                  ncSyncTargetOfKnownBigLedgerPeers,
                  ncSyncTargetOfEstablishedBigLedgerPeers,
                  ncSyncTargetOfActiveBigLedgerPeers,
-                 ncSyncMinTrusted,
+                 ncMinBigLedgerPeersForTrustedState,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
                  ncPeerSharing,
@@ -930,7 +930,7 @@ mkP2PArguments NodeConfiguration {
       , P2P.daBulkChurnInterval     = Configuration.defaultBulkChurnInterval
       , P2P.daOwnPeerSharing        = ncPeerSharing
       , P2P.daConsensusMode         = ncConsensusMode
-      , P2P.daMinBigLedgerPeersForTrustedState = ncSyncMinTrusted
+      , P2P.daMinBigLedgerPeersForTrustedState = ncMinBigLedgerPeersForTrustedState
       }
   where
     deadlineTargets = Configuration.defaultDeadlineTargets {
