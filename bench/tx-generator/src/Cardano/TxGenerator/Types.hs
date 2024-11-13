@@ -87,7 +87,8 @@ data TxGenGovActParams = TxGenGovActParams
   , gapDRepKeys :: Natural
   , gapStakeKeys :: Natural
   , gapProposalBatches :: Natural
-  , gapQuorum :: Natural
+  , gapQuorum :: Double
+  , gapTPS :: Double
   } deriving (Eq, Read, Show, Generic, FromJSON, ToJSON)
 
 data TxGenPlutusType

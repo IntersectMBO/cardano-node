@@ -232,15 +232,27 @@ benchmarkingPhase wallet collateralWallet = do
     Just TxGenGovActParams {..}
       | mkVote <- \propIdx drepIdx ->
           Vote wallet payMode propIdx Yes drepIdx Nothing
-      , mkBatchDRep <- \propIdx ->
-          Take (fromIntegral gapQuorum) . Cycle . Sequence $
+      , stripeDRepsAcrossProp <- \propIdx ->
+          -- The number of DRep keys might be lower than the batch size,
+          -- so cycling in this manner is intended to stripe the votes to
+          -- issue across DRep keys.
+          -- Batches are meant to be restricted to a set of votes issued
+          -- within an epoch having a corresponding set of proposals only
+          -- ever voted on during that particular epoch.
+          Take (fromIntegral gapBatchSize) . Cycle . Sequence $
               map (mkVote propIdx) [0 .. fromIntegral gapDRepKeys - 1]
-      , mkBatchProp <- \batchIdx ->
+      , voteOnPropsForBatch <- \batchIdx ->
+          -- mkBatchEpoch is intended to represent the set of votes to
+          -- issue within a given batch / epoch. This layer of the call
+          -- stack is intended to stripe the votes across the proposals
+          -- of a batch / epoch.
           let batchLo = batchIdx * fromIntegral gapBatchSize
               batchHi = batchLo  + fromIntegral gapBatchSize - 1
-           in RoundRobin $ map mkBatchDRep [batchLo .. batchHi]
+           in RoundRobin $ map stripeDRepsAcrossProp [batchLo .. batchHi]
       , voteGen <- Sequence $
-          map mkBatchProp [0 .. fromIntegral gapProposalBatches - 1]
+          -- Enforcing the correspondence between batches and epochs
+          -- needs as-of-yet unimplemented logic.
+          map voteOnPropsForBatch [0 .. fromIntegral gapProposalBatches - 1]
       -> emit . Submit era submitMode txParams $
            RoundRobin [generator, voteGen]
     Nothing -> emit $ Submit era submitMode txParams generator

@@ -55,6 +55,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_plutus           :: Maybe TxGenPlutusParams
   , _nix_govAct           :: Maybe TxGenGovActParams
   , _nix_keepalive        :: Maybe Integer
+  , _nix_drep_voting      :: Maybe Bool
   , _nix_nodeConfigFile       :: Maybe FilePath
   , _nix_cardanoTracerSocket  :: Maybe FilePath
   , _nix_sigKey               :: SigningKeyFile In

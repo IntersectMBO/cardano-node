@@ -2,6 +2,16 @@ pkgs:
 let
   cleanNixServiceOptions = cfg: with cfg;
     {
+      govAct = if (!cfg.drep_voting or null) == null then null else
+        {
+          # Default values until they land in the workbench profile.
+          gapBatchSize = 5000;
+          gapProposalBatches = 1;
+          gapQuorum = 51;
+          # These need to be fixed.
+          gapDRepKeys = 100;
+          gapStakeKeys = 100;
+        };
       plutus = if (cfg.plutus.type or null) == null then null else
         {
           inherit (cfg.plutus) type;
@@ -101,6 +111,38 @@ in pkgs.commonLib.defServiceModule
         };
 
         drep_voting           = mayOpt bool "Activate DRep voting workload (mutually excl. with plutus)";
+        govAct                = {
+          # My suspicion is that batches may be meant to correspond to
+          # epochs. The staging is then:
+          # 1. Issue all proposals to ever use at the beginning.
+          # 2. During each epoch (gapProposalBatches epochs?):
+          #    A. vote on the gapBatchSize proposals in the batch
+          #    B. stripe the votes cyclically across available DReps
+          #    C. keep doing it for long enough to fill the epoch
+          # 3. When the grand total proposal pool runs out, stop
+          # trying to keep running the tx-generator in new epochs.
+          gapBatchSize        = mayOpt int   "Governance action batch size.";
+          gapProposalBatches  = mayOpt int   "Number of batches of proposals.";
+
+          # Bug, does the Conway genesis value need to be used?
+          # I likely had in mind the ShelleyGenesis sgUpdateQuorum
+          # It may not have been intended to be used for govAct votes.
+          # Is quorum logic even used for govActs?
+          # dRepVotingThresholds in the sample Conway genesis files seems
+          # to be closer to the fraction seen elsewhere.
+          # The controlling parameter seems to be the batch size.
+          # Voting thresholds would be fractions, which are meaningless
+          # because the only votes ever issued are Yes votes.
+          # There is no reason to use a quorum as a limit to the number
+          # of votes to issue, because the number of votes to issue is
+          # the gapBatchSize.
+          gapQuorum           = opt int 51   "Number of votes needed to ratify proposals.";
+          # could be inconsistent with the number elsewhere
+          gapDRepKeys         = mayOpt int   "Number of DRep keys.";
+          gapStakeKeys        = mayOpt int   "Number of stake keys.";
+          gapTPS              = opt (either float int) 0.2
+                                             "TPS of governeance actions";
+        };
 
         # Overrides the usage of Nix Store paths by default.
         plutusRedeemerFile = mayOpt str "Plutus redeemer file path.";

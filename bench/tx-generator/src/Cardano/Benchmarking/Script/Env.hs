@@ -45,6 +45,7 @@ module Cardano.Benchmarking.Script.Env (
         , getBenchTracers
         , setBenchTracers
         , getEnvDRepKeys
+        , getEnvDRepKeyByIdx
         , setEnvDRepKeys
         , getEnvGenesis
         , setEnvGenesis
@@ -61,6 +62,7 @@ module Cardano.Benchmarking.Script.Env (
         , getEnvSocketPath
         , setEnvSocketPath
         , getEnvStakeCredentials
+        , getEnvStakeCredentialByIdx
         , setEnvStakeCredentials
         , getEnvThreads
         , setEnvThreads
@@ -90,12 +92,14 @@ import           Prelude
 
 import           Control.Concurrent.STM (STM)
 import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
+import           Control.Monad (guard)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra (hoistEither)
 import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
+import           Data.List.Extra ((!?))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ratio
@@ -315,6 +319,20 @@ getEnvDRepKeys = lift $ RWS.gets envDRepKeys
 
 getEnvStakeCredentials :: ActionM [StakeCredential]
 getEnvStakeCredentials = lift $ RWS.gets envStakeCredentials
+
+getEnvValByIdx :: (Env -> [t]) -> Int -> ActionM (Maybe t)
+getEnvValByIdx accessor idx = do
+  vals <- lift $ RWS.gets accessor
+  let listLength = length vals
+  pure do
+    guard $ listLength /= 0
+    vals !? (idx `mod` listLength)
+
+getEnvDRepKeyByIdx :: Int -> ActionM (Maybe (SigningKey DRepKey))
+getEnvDRepKeyByIdx = getEnvValByIdx envDRepKeys
+
+getEnvStakeCredentialByIdx :: Int -> ActionM (Maybe StakeCredential)
+getEnvStakeCredentialByIdx = getEnvValByIdx envStakeCredentials
 
 -- | Read accessor for `envNetworkId`.
 getEnvNetworkId :: ActionM NetworkId
