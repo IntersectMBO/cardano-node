@@ -169,6 +169,10 @@ data NodeConfiguration
          -- by the diffusion layer when syncing
        , ncConsensusMode :: !ConsensusMode
 
+         -- Minimum number of active big ledger peers we must be connected to
+         -- in Genesis mode
+       , ncMinBigLedgerPeersForTrustedState :: MinBigLedgerPeersForTrustedState
+
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
 
@@ -236,7 +240,9 @@ data PartialNodeConfiguration
        , pncSyncTargetOfKnownBigLedgerPeers       :: !(Last Int)
        , pncSyncTargetOfEstablishedBigLedgerPeers :: !(Last Int)
        , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
-       , pncSyncMinTrusted :: !(Last MinBigLedgerPeersForTrustedState)
+         -- Minimum number of active big ledger peers we must be connected to
+         -- in Genesis mode
+       , pncMinBigLedgerPeersForTrustedState :: !(Last MinBigLedgerPeersForTrustedState)
 
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
@@ -334,7 +340,9 @@ instance FromJSON PartialNodeConfiguration where
       pncSyncTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "SyncTargetNumberOfKnownBigLedgerPeers"
       pncSyncTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "SyncTargetNumberOfEstablishedBigLedgerPeers"
       pncSyncTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "SyncTargetNumberOfActiveBigLedgerPeers"
-      pncSyncMinTrusted <- Last <$> v .:? "SyncMinNumberOfBigLedgerPeersForTrustedState"
+      -- Minimum number of active big ledger peers we must be connected to
+      -- in Genesis mode
+      pncMinBigLedgerPeersForTrustedState <- Last <$> v .:? "MinBigLedgerPeersForTrustedState"
 
       pncConsensusMode <- Last <$> v .:? "ConsensusMode"
 
@@ -350,7 +358,7 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Peer Sharing
       -- DISABLED BY DEFAULT
-      pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just Configuration.PeerSharingDisabled
+      pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -389,7 +397,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncSyncTargetOfKnownBigLedgerPeers
            , pncSyncTargetOfEstablishedBigLedgerPeers
            , pncSyncTargetOfActiveBigLedgerPeers
-           , pncSyncMinTrusted
+           , pncMinBigLedgerPeersForTrustedState
            , pncConsensusMode
            , pncEnableP2P
            , pncPeerSharing
@@ -572,10 +580,10 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
     , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
     , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
-    , pncSyncMinTrusted = Last (Just defaultMinBigLedgerPeersForTrustedState)
-    , pncConsensusMode = mempty
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncConsensusMode = Last (Just defaultConsensusMode)
     , pncEnableP2P     = Last (Just EnabledP2PMode)
-    , pncPeerSharing   = Last (Just Configuration.PeerSharingDisabled)
+    , pncPeerSharing   = Last (Just defaultPeerSharing)
     }
   where
     Configuration.PeerSelectionTargets {
@@ -646,9 +654,9 @@ makeNodeConfiguration pnc = do
   ncSyncTargetOfActiveBigLedgerPeers <-
     lastToEither "Missing SyncTargetNumberOfActiveBigLedgerPeers"
     $ pncSyncTargetOfActiveBigLedgerPeers pnc
-  ncSyncMinTrusted <-
-    lastToEither "Missing SyncMinNumberOfBigLedgerPeersForTrustedState"
-    $ pncSyncMinTrusted pnc
+  ncMinBigLedgerPeersForTrustedState <-
+    lastToEither "Missing MinBigLedgerPeersForTrustedState"
+    $ pncMinBigLedgerPeersForTrustedState pnc
   ncConsensusMode <-
     lastToEither "Missing ConsensusMode"
     $ pncConsensusMode pnc
@@ -722,7 +730,7 @@ makeNodeConfiguration pnc = do
              , ncSyncTargetOfKnownBigLedgerPeers
              , ncSyncTargetOfEstablishedBigLedgerPeers
              , ncSyncTargetOfActiveBigLedgerPeers
-             , ncSyncMinTrusted
+             , ncMinBigLedgerPeersForTrustedState
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
