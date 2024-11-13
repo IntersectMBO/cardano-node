@@ -12,9 +12,87 @@
   "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
   "ShelleyGenesisHash": "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81",
   "TurnOnLogging": true,
-  "UseTraceDispatcher": true,
-  "TraceOptionPeerFrequency": 3000,
-  "TraceOptionResourceFrequency": 4000,
   "TurnOnLogMetrics": true,
-  "TraceOptions": {}
+  "UseTraceDispatcher": true,
+  "TraceOptionForwarder": null,
+  "TraceOptionMetricsPrefix": null,
+  "TraceOptionNodeName": null,
+  "TraceOptionPeerFrequency": 2000,
+  "TraceOptionResourceFrequency": 1000,
+  "TraceOptions": {
+    "": {
+      "backends": [
+        "Stdout MachineFormat",
+        "EKGBackend",
+        "Forwader"
+      ],
+      "severity": "Notice"
+    },
+    "BlockFetch.Decision": {
+      "severity": "Info"
+    },
+    "ChainDB": {
+      "severity": "Info"
+    },
+    "ChainSync.Client": {
+      "severity": "Info"
+    },
+    "Net.ConnectionManager.Remote": {
+      "severity": "Info"
+    },
+    "Net.Subscription.DNS": {
+      "severity": "Info"
+    },
+    "Startup.DiffusionInit": {
+      "severity": "Info"
+    },
+    "Net.ErrorPolicy": {
+      "severity": "Info"
+    },
+    "Forge.Loop": {
+      "severity": "Info"
+    },
+    "Forge.StateInfo": {
+      "severity": "Info"
+    },
+    "Net.InboundGovernor.Remote": {
+      "severity": "Info"
+    },
+    "Net.Subscription.IP": {
+      "severity": "Info"
+    },
+    "Net.ErrorPolicy.Local": {
+      "severity": "Info"
+    },
+    "Mempool": {
+      "severity": "Info"
+    },
+    "Net.Mux.Remote": {
+      "severity": "Info"
+    },
+    "Net.PeerSelection": {
+      "severity": "Info"
+    },
+    "Resources": {
+      "severity": "Info"
+    },
+    "ChainDB.AddBlockEvent.AddedBlockToQueue": {
+      "maxFrequency": 2.0
+    },
+    "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
+      "maxFrequency": 2.0
+    },
+    "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
+      "maxFrequency": 2.0
+    },
+    "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
+      "maxFrequency": 2.0
+    },
+    "ChainSync.Client.DownloadedHeader": {
+      "maxFrequency": 2.0
+    },
+    "BlockFetch.Client.CompletedBlockFetch": {
+      "maxFrequency": 2.0
+    }
+  }
 }
