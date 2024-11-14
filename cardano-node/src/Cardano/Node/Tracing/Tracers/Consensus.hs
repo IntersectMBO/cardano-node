@@ -1241,33 +1241,27 @@ instance
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-      where
-        ByteSize32 w = msNumBytes mpSz
+
   asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-      where
-        ByteSize32 w = msNumBytes mpSz
+
   asMetrics (TraceMempoolRemoveTxs _txs mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-      where
-        ByteSize32 w = msNumBytes mpSz
+
   asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     ]
-      where
-        ByteSize32 w = msNumBytes mpSz
+
   asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
     [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "mempoolBytes" (fromIntegral . unByteSize32 . msNumBytes $ mpSz)
     , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
     ]
-      where
-        ByteSize32 w = msNumBytes mpSz
 
   asMetrics (TraceMempoolSynced (FallingEdgeWith duration)) =
     [ IntM "txsSyncDuration" (round $ 1000 * duration)

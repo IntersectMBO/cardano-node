@@ -250,7 +250,6 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       TraceLedgerPeersDomains {}     -> Debug
       TraceLedgerPeersResult {}      -> Debug
       TraceLedgerPeersFailure {}     -> Debug
-      UsingBigLedgerPeerSnapshot {}  -> Info
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
 instance HasSeverityAnnotation (WithAddr addr ErrorPolicyTrace) where
@@ -490,8 +489,6 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceChurnTimeout {} -> Notice
 
       TraceDebugState {} -> Info
-
-      TraceVerifyPeerSnapshot {} -> Info
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1541,11 +1538,6 @@ instance ToObject TraceLedgerPeers where
       , "domainAccessPoint" .= show dap
       , "error" .= show reason
       ]
-  toObject _verb UsingBigLedgerPeerSnapshot =
-    mconcat
-      [ "kind" .= String "UsingBigLedgerPeerSnapshot"
-      ]
-
 
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
@@ -2063,10 +2055,6 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
             , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
             , "associationMode" .= dpssAssociationMode ds
-            ]
-  toObject _verb (TraceVerifyPeerSnapshot b) =
-    mconcat [ "kind" .= String "VerifyPeerSnapshot"
-            , "value" .= b
             ]
 
 -- Connection manager abstract state.  For explanation of each state see

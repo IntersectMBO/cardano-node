@@ -557,11 +557,6 @@ instance LogFormatting (TracePeerSelection SockAddr) where
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
             ]
-  forMachine _dtal (TraceVerifyPeerSnapshot b) =
-    mconcat [ "kind" .= String "VerifyPeerSnapshot"
-            , "value" .= b
-            ]
-
   forHuman = pack . show
 
   asMetrics (TraceChurnAction duration action _) =
@@ -685,8 +680,6 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnTimeout"]
     namespaceFor TraceDebugState {} =
       Namespace [] ["DebugState"]
-    namespaceFor TraceVerifyPeerSnapshot {} =
-      Namespace [] ["VerifyPeerSnapshot"]
 
     severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
     severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice
@@ -722,7 +715,6 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     severityFor (Namespace [] ["ChurnAction"]) _ = Just Info
     severityFor (Namespace [] ["ChurnTimeout"]) _ = Just Notice
     severityFor (Namespace [] ["DebugState"]) _ = Just Info
-    severityFor (Namespace [] ["VerifyPeerSnapshot"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace [] ["LocalRootPeersChanged"]) = Just  ""

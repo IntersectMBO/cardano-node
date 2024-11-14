@@ -851,10 +851,6 @@ instance LogFormatting TraceLedgerPeers where
       , "domainAccessPoint" .= show dap
       , "error" .= show reason
       ]
-  forMachine _dtal UsingBigLedgerPeerSnapshot =
-    mconcat
-      [ "kind" .= String "UsingBigLedgerPeerSnapshot"
-      ]
 
 instance MetaTrace TraceLedgerPeers where
     namespaceFor PickedLedgerPeer {} =
@@ -889,8 +885,6 @@ instance MetaTrace TraceLedgerPeers where
       Namespace [] ["TraceLedgerPeersResult"]
     namespaceFor TraceLedgerPeersFailure {} =
       Namespace [] ["TraceLedgerPeersFailure"]
-    namespaceFor UsingBigLedgerPeerSnapshot {} =
-      Namespace [] ["UsingBigLedgerPeerSnapshot"]
 
     severityFor (Namespace _ ["PickedPeer"]) _ = Just Debug
     severityFor (Namespace _ ["PickedPeers"]) _ = Just Info

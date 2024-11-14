@@ -37,9 +37,7 @@ import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
-import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode,
-                   MinBigLedgerPeersForTrustedState, defaultConsensusMode,
-                   defaultMinBigLedgerPeersForTrustedState, defaultPeerSharing)
+import           Ouroboros.Network.Diffusion.Configuration (defaultPeerSharing)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.TxSubmission.Inbound.Server (EnableNewTxSubmissionProtocol (..))
@@ -168,12 +166,6 @@ data NodeConfiguration
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
 
-         -- Which consensus mode to enable: Praos or Genesis
-       , ncConsensusMode :: ConsensusMode
-         -- Minimum number of active big ledger peers we must be connected to
-         -- in Genesis mode
-       , ncMinBigLedgerPeersForTrustedState :: MinBigLedgerPeersForTrustedState
-
          -- Enable new TX Submission Protocol
        , ncEnableNewTxSubmissionProtocol :: EnableNewTxSubmissionProtocol
        } deriving (Eq, Show)
@@ -239,12 +231,6 @@ data PartialNodeConfiguration
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
-
-         -- Which consensus mode to enable: Praos or Genesis
-       , pncConsensusMode :: !(Last ConsensusMode)
-         -- Minimum number of active big ledger peers we must be connected to
-         -- in Genesis mode
-       , pncMinBigLedgerPeersForTrustedState :: !(Last MinBigLedgerPeersForTrustedState)
 
          -- Enable new TX Submission Protocol
        , pncEnableNewTxSubmissionProtocol :: !(Last EnableNewTxSubmissionProtocol)
@@ -345,13 +331,6 @@ instance FromJSON PartialNodeConfiguration where
       -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
-      -- Which consensus mode to enable: Praos or Genesis
-      pncConsensusMode <- Last <$> v .:? "ConsensusMode"
-
-      -- Minimum number of active big ledger peers we must be connected to
-      -- in Genesis mode
-      pncMinBigLedgerPeersForTrustedState <- Last <$> v .:? "MinBigLedgerPeersForTrustedState"
-
       -- Enable new TX Submission Protocol
       newTxSubmissionProtocol <- v .:? "EnableNewTxSubmissionProtocol"
       let pncEnableNewTxSubmissionProtocol =
@@ -394,8 +373,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfActiveBigLedgerPeers
            , pncEnableP2P
            , pncPeerSharing
-           , pncConsensusMode
-           , pncMinBigLedgerPeersForTrustedState
            , pncEnableNewTxSubmissionProtocol
            }
     where
@@ -573,8 +550,6 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
     , pncEnableP2P                      = Last (Just EnabledP2PMode)
     , pncPeerSharing                    = Last (Just defaultPeerSharing)
-    , pncConsensusMode                  = Last (Just defaultConsensusMode)
-    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
     , pncEnableNewTxSubmissionProtocol  = Last (Just EnableNewTxSubmissionProtocol) -- defaultEnableNewTxSubmissionProtocol)
     }
 
@@ -641,13 +616,6 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing PeerSharing"
     $ pncPeerSharing pnc
 
-  ncConsensusMode <-
-    lastToEither "Missing ConsensusMode"
-    $ pncConsensusMode pnc
-
-  ncMinBigLedgerPeersForTrustedState <-
-    lastToEither "Missing MinBigLedgerPeersForTrustedState"
-    $ pncMinBigLedgerPeersForTrustedState pnc
 
   ncEnableNewTxSubmissionProtocol <-
     lastToEither "Missing EnableNewTxSubmissionProtocol"
@@ -700,8 +668,6 @@ makeNodeConfiguration pnc = do
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
-             , ncConsensusMode
-             , ncMinBigLedgerPeersForTrustedState
              , ncEnableNewTxSubmissionProtocol
              }
 
