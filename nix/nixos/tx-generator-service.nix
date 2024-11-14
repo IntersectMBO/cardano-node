@@ -11,6 +11,7 @@ let
           # These need to be fixed.
           gapDRepKeys = 100;
           gapStakeKeys = 100;
+          gapTPS = 0.2;
         };
       plutus = if (cfg.plutus.type or null) == null then null else
         {
