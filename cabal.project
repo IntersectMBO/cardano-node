@@ -72,7 +72,7 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 532f2673cec49c6052948209de4d6f7cfc502961
+  tag: 247425d42c6878a6e3161828cd9dfda1b7cc60c4
   --sha256: sha256-Sx/5LfkP0ZQaSRV3bJy+AIOlVQArKI4dJdp025++wss=
   subdir:
     cardano-client
@@ -91,7 +91,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: b2991e38a95376b1feb9fd19628dc7d7a9fe2383
+  tag: d16db6e8b9f22e19d36a3c1cfcfcdb453a1dd288
   --sha256: sha256-+zulgi/GDmxopeU3k4FKF9gBHnP8OvODw2G+oNqXBzk=
   subdir:
     ouroboros-consensus

@@ -125,7 +125,6 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 import           Paths_cardano_node (version)
-import Ouroboros.Network.Diffusion.Configuration (ConsensusModePeerTargets(..), defaultDeadlineTargets, defaultSyncTargets)
 import Data.Aeson (ToJSONKey)
 import Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import Ouroboros.Network.TxSubmission.Inbound.Server (EnableNewTxSubmissionProtocol (..))
@@ -495,7 +494,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
                   (readTVar useBootstrapVar)
-                  (return Nothing) -- retry -- TODO: IMPLEMENT
           in
           Node.run
             nodeArgs {
@@ -857,7 +855,6 @@ mkP2PArguments
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerPeers
   -> STM IO UseBootstrapPeers
-  -> STM IO (Maybe LedgerPeerSnapshot)
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfRootPeers,
@@ -869,43 +866,33 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfActiveBigLedgerPeers,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
-                 ncPeerSharing,
-                 ncConsensusMode,
-                 ncMinBigLedgerPeersForTrustedState
+                 ncPeerSharing
                }
                daReadLocalRootPeers
                daReadPublicRootPeers
                daReadUseLedgerPeers
-               daReadUseBootstrapPeers
-               daReadLedgerPeerSnapshot =
+               daReadUseBootstrapPeers =
     Diffusion.P2PArguments P2P.ArgumentsExtra
-      { P2P.daPeerTargets
+      { P2P.daPeerSelectionTargets
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerPeers
       , P2P.daReadUseBootstrapPeers
-      , P2P.daReadLedgerPeerSnapshot
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300
       , P2P.daBulkChurnInterval     = 900
       , P2P.daOwnPeerSharing        = ncPeerSharing
-      , P2P.daConsensusMode         = ncConsensusMode
-      , P2P.daMinBigLedgerPeersForTrustedState = ncMinBigLedgerPeersForTrustedState
       }
   where
-    daPeerTargets = ConsensusModePeerTargets {
-        deadlineTargets =
-          defaultDeadlineTargets
-            { targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
-              targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
-              targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
-              targetNumberOfActivePeers      = ncTargetNumberOfActivePeers,
-              targetNumberOfKnownBigLedgerPeers       = ncTargetNumberOfKnownBigLedgerPeers,
-              targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
-              targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
-            },
-        syncTargets = defaultSyncTargets
+    daPeerSelectionTargets = PeerSelectionTargets {
+        targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
+        targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
+        targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
+        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers       = ncTargetNumberOfKnownBigLedgerPeers,
+        targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
     }
 
 mkNonP2PArguments
