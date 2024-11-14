@@ -77,9 +77,9 @@ TraceOptionResourceFrequency: 1000
 TraceOptions:
   "":
     backends:
-      - "Stdout MachineFormat"
+      - "Stdout HumanFormatColoured"
       - "EKGBackend"
-      - "Forwader"
+      - "Forwarder"
     severity: "Notice"
   BlockFetch.Decision:
     severity: "Info"

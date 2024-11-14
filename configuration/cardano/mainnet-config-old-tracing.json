@@ -60,6 +60,7 @@
   "TracingVerbosity": "NormalVerbosity",
   "TurnOnLogMetrics": true,
   "TurnOnLogging": true,
+  "UseTraceDispatcher": false,
   "defaultBackends": [
     "KatipBK"
   ],
