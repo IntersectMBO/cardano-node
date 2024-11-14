@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,7 +35,7 @@ import           Data.Aeson (fromJSON)
 import           Data.ByteString.Lazy as BSL
 import           Data.Foldable (for_)
 import           Data.List (genericLength)
-import           Data.Maybe (catMaybes, fromJust)
+import           Data.Maybe (catMaybes)
 import           Data.Text as T
 import           Data.Text.IO as T
 import           Data.Tuple.Extra (fst3)
@@ -94,28 +95,26 @@ runCommand' iocp = do
       opts <- parseJSONFile fromJSON nixSvcOptsFile
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
       let consts = envConsts { envNixSvcOpts = Just finalOpts }
-          govAct = fromJust $ _nix_govAct finalOpts
 
       (finalOpts', consts')
-        <- case _nix_drep_voting finalOpts of
-             Just True
-               | Just nc <- getNodeConfigFile finalOpts
-               -> do eitherCounts
-                       <- fst3 <$> flip (runActionMEnv emptyEnv) consts do
-                            readStakeCredentials nc
-                            readDRepKeys nc
-                            nrDRepKeys <- genericLength <$> getEnvDRepKeys
-                            nrStakeCreds <- genericLength <$> getEnvStakeCredentials
-                            pure (nrDRepKeys, nrStakeCreds)
-                     case eitherCounts of
-                       Right (drepKeys, stakeCreds)
-                         | govAct'' <- govAct { gapDRepKeys = drepKeys
-                                              , gapStakeKeys = stakeCreds }
-                         , finalOpts'' <- finalOpts { _nix_govAct = Just govAct'' }
-                         , consts'' <- envConsts { envNixSvcOpts = Just finalOpts'' }
-                         -> pure (finalOpts'', consts'')
-                       _ -> pure (finalOpts, consts)
-             _ -> pure (finalOpts, consts)
+        <- if | or $ _nix_drep_voting finalOpts
+              , Just nc <- getNodeConfigFile finalOpts
+              , Just govAct <- _nix_govAct finalOpts
+              , sizingAction <- do
+                  readStakeCredentials nc
+                  readDRepKeys nc
+                  nrDRepKeys <- genericLength <$> getEnvDRepKeys
+                  nrStakeCreds <- genericLength <$> getEnvStakeCredentials
+                  pure (nrDRepKeys, nrStakeCreds)
+              -> fst3 <$> runActionMEnv emptyEnv sizingAction consts >>= \case
+                   Right (drepKeys, stakeCreds)
+                     | govAct'' <- govAct { gapDRepKeys = drepKeys
+                                          , gapStakeKeys = stakeCreds }
+                     , finalOpts'' <- finalOpts { _nix_govAct = Just govAct'' }
+                     , consts'' <- envConsts { envNixSvcOpts = Just finalOpts'' }
+                     -> pure (finalOpts'', consts'')
+                   _ -> pure (finalOpts, consts)
+              | otherwise -> pure (finalOpts, consts)
 
       Prelude.putStrLn $
           "--> initial options:\n" ++ show opts ++
