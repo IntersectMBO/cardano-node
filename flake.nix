@@ -89,6 +89,11 @@
       inherit (iohkNix.lib) prefixNamesWith;
       removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
 
+      macOS-security = pkgs:
+        # make `/usr/bin/security` available in `PATH`, which is needed for stack
+        # on darwin which calls this binary to find certificates
+        pkgs.writeScriptBin "security" ''exec /usr/bin/security "$@"'';
+
       supportedSystems = import ./nix/supported-systems.nix;
       defaultSystem = head supportedSystems;
       customConfig = recursiveUpdate
@@ -144,6 +149,9 @@
         inherit (pkgs.commonLib) eachEnv environments mkSupervisordCluster;
         inherit (pkgs.stdenv) hostPlatform;
         project = pkgs.cardanoNodeProject;
+
+        macOS-security =
+          utils.writeScriptBin "security" ''exec /usr/bin/security "$@"'';
 
         # This is used by `nix develop .` to open a devShell
         devShells =
@@ -401,6 +409,7 @@
           inherit (final) haskell-nix;
           inherit (std) incl;
           inherit CHaP;
+          macOS-security = macOS-security (final.pkgs);
         }).appendModule [
           customConfig.haskellNix
         ];

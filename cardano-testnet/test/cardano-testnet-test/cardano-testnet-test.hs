@@ -20,6 +20,7 @@ import qualified Cardano.Testnet.Test.Gov.GovActionTimeout as Gov
 import qualified Cardano.Testnet.Test.Gov.InfoAction as LedgerEvents
 import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
+import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
@@ -68,6 +69,7 @@ tests = do
                , ignoreOnMacAndWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
                , ignoreOnWindows "PParam change fails for SPO" Gov.hprop_check_pparam_fails_spo
                , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
+               , ignoreOnWindows "Transaction Build Wrong Hash" WrongHash.hprop_transaction_build_wrong_hash
                ]
             , T.testGroup "Plutus"
                 [ ignoreOnWindows "PlutusV3" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3]

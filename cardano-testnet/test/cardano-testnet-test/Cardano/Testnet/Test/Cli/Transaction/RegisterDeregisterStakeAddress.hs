@@ -40,7 +40,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/register deregister stake address in transaction build/"'@
 hprop_tx_register_deregister_stake_address :: Property
-hprop_tx_register_deregister_stake_address = integrationWorkspace "register-deregister-stake-address" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_tx_register_deregister_stake_address = integrationWorkspace "register-deregister-stake-addr" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

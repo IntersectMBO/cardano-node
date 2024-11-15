@@ -36,7 +36,7 @@ library
                       , ansi-terminal
                       , bytestring
                       , cardano-api ^>= 10.1
-                      , cardano-cli ^>= 10.1
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -65,6 +65,7 @@ library
                       , hedgehog-extras ^>= 0.6.4
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mono-traversable
                       , mtl
                       , network
@@ -204,6 +205,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
                         Cardano.Testnet.Test.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.Gov.Transaction.HashMismatch
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
@@ -220,7 +222,7 @@ test-suite cardano-testnet-test
                       , base16-bytestring
                       , bytestring
                       , cardano-api:{cardano-api, internal}
-                      , cardano-cli
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib}
                       , cardano-crypto-class
                       , cardano-ledger-conway
                       , cardano-ledger-core
@@ -240,6 +242,7 @@ test-suite cardano-testnet-test
                       , lens
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mtl
                       , process
                       , regex-compat
