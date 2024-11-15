@@ -144,12 +144,14 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
     ( \port -> do
         let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
 
+        minDepositAmount <- getMinGovActionDeposit epochStateView ceo
+
         void $
           execCli'
             execConfig'
             [ eraName, "governance", "action", "create-info"
             , "--testnet"
-            , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
+            , "--governance-action-deposit", show minDepositAmount
             , "--deposit-return-stake-verification-key-file", stakeVkeyFp
             , "--anchor-url", "ipfs://" ++ proposalAnchorDataIpfsHash
             , "--anchor-data-hash", tamperedHash
