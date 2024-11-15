@@ -10,6 +10,7 @@ module Cardano.Testnet.Test.Gov.Transaction.HashMismatch
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Ledger (Coin (unCoin))
 
 import           Cardano.Testnet
 
@@ -93,11 +94,12 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
   cliStakeAddressKeyGen stakeKeys
 
   -- Register stake address
+  keyDeposit <- getKeyDeposit epochStateView ceo
 
   void $ execCli' execConfig
     [ eraName, "stake-address", "registration-certificate"
     , "--stake-verification-key-file", stakeVkeyFp
-    , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
+    , "--key-reg-deposit-amt", show $ unCoin keyDeposit
     , "--out-file", stakeCertFp
     ]
 
