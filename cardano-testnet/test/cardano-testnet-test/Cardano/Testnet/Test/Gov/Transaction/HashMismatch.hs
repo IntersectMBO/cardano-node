@@ -171,5 +171,5 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
 
         H.note_ stderrOutput
 
-        H.assert ("Hashes do not match!" `Text.isInfixOf` Text.pack stderrOutput)
+        H.assertWith (Text.pack stderrOutput) ("Hashes do not match!" `Text.isInfixOf`)
     )
