@@ -110,7 +110,8 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   proposalDataFp <- H.note $ gov </> "sample-proposal-data"
   updateCommitteeFp <- H.note $ gov </> "update-cc.action"
 
-  H.writeFile proposalAnchorFp "dummy anchor data"
+  H.writeFile proposalAnchorFp $
+    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
   H.writeFile proposalDataFp "dummy proposal data"
 
   proposalAnchorDataHash <- execCli' execConfig

@@ -46,6 +46,7 @@ import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
 -- | Execute me with:
@@ -102,13 +103,16 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
-  consitutionFile <- H.note $ gov </> "sample-constitution"
+  constitutionFile <- H.note $ gov </> "sample-constitution"
   constitutionActionFp <- H.note $ gov </> "constitution.action"
 
-  H.writeFile proposalAnchorFile "dummy anchor data"
-  H.writeFile consitutionFile "dummy constitution data"
+  H.writeFile proposalAnchorFile $
+    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
+  H.copyFile
+    "test/cardano-testnet-test/files/input/sample-constitution.txt"
+    constitutionFile
   constitutionHash <- execCli' execConfig
-    [ "hash", "anchor-data", "--file-text", consitutionFile
+    [ "hash", "anchor-data", "--file-text", constitutionFile
     ]
 
   proposalAnchorDataHash <- execCli' execConfig
@@ -232,7 +236,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   length votes === fromIntegral numVotes
 
   -- We check that constitution was succcessfully ratified
-  void . H.leftFailM . evalIO . runExceptT $
+  void . H.leftFailM . H.evalIO . runExceptT $
     foldEpochState
       configurationFile
       socketPath
