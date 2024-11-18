@@ -47,6 +47,7 @@ let
       "Forge.Loop".severity = "Debug";
       "Forge.StateInfo".severity = "Debug";
       "Mempool".severity = "Debug";
+      "Mempool.Synced".severity = "Silence";
       "Net".severity = "Notice";
       "Net.AcceptPolicy".severity = "Debug";
       "Net.ConnectionManager.Local".severity = "Debug";
