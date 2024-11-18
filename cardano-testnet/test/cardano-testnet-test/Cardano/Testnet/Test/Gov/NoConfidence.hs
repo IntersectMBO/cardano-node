@@ -145,7 +145,8 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   -- Create proposal to add a new member to the committee
 
   proposalAnchorFile <- H.note $ work </> "sample-proposal-anchor"
-  H.writeFile proposalAnchorFile "dummy anchor data"
+  H.writeFile proposalAnchorFile $
+    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
 
   proposalAnchorDataHash <- H.execCli' execConfig
     [ "hash", "anchor-data", "--file-text", proposalAnchorFile

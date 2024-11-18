@@ -88,7 +88,9 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
   proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
   infoActionFp <- H.note $ work </> gov </> "info.action"
 
-  H.writeFile proposalAnchorFile "dummy anchor data"
+  -- pls configure your editors to trim trailing whitespace >.>
+  H.writeFile proposalAnchorFile $
+    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
 
   proposalAnchorDataHash <- execCli' execConfig
     [ "hash", "anchor-data", "--file-text", proposalAnchorFile

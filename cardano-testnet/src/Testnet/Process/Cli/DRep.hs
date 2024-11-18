@@ -362,7 +362,9 @@ makeActivityChangeProposal execConfig epochStateView ceo work
   baseDir <- H.createDirectoryIfMissing work
 
   proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
-  H.writeFile proposalAnchorFile "dummy anchor data"
+  H.writeFile proposalAnchorFile $
+    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
+
 
   proposalAnchorDataHash <- execCli' execConfig
     [ "hash", "anchor-data", "--file-text", proposalAnchorFile
