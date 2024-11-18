@@ -1306,6 +1306,7 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["RejectedTx"]
       , Namespace [] ["RemoveTxs"]
       , Namespace [] ["ManuallyRemovedTxs"]
+      , Namespace [] ["Synced"]
       ]
 
 --------------------------------------------------------------------------------

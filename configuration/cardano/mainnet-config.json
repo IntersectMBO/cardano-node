@@ -21,8 +21,8 @@
   "TraceOptionForwarder": null,
   "TraceOptionMetricsPrefix": null,
   "TraceOptionNodeName": null,
-  "TraceOptionPeerFrequency": 2000,
-  "TraceOptionResourceFrequency": 1000,
+  "TraceOptionPeerFrequency": 3000,
+  "TraceOptionResourceFrequency": 5000,
   "TraceOptions": {
     "": {
       "backends": [
@@ -33,10 +33,13 @@
       "severity": "Notice"
     },
     "BlockFetch.Decision": {
-      "severity": "Info"
+      "severity": "Silence"
     },
     "ChainDB": {
       "severity": "Info"
+    },
+    "ChainDB.AddBlockEvent.AddBlockValidation": {
+      "severity": "Silence"
     },
     "ChainSync.Client": {
       "severity": "Info"
@@ -70,6 +73,9 @@
     },
     "Mempool": {
       "severity": "Info"
+    },
+    "Mempool.Synced": {
+      "severity": "Silence"
     },
     "Net.Mux.Remote": {
       "severity": "Info"
