@@ -74,7 +74,7 @@ let
             (filterAttrs (_: spec: spec.isProducer) nodeSpecs);
 
           dsmPassthrough = {
-            # rtsOpts = ["-xc"];
+            rtsOpts = ["-xc"];
           };
         }
         //
