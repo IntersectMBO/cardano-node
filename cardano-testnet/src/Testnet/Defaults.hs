@@ -290,7 +290,7 @@ defaultYamlConfig =
     , ("EnableLogging", Aeson.Bool True)
 
     -- Genesis filepaths
-    , ("ByronGenesisFile", "byron/genesis.json")
+    , ("ByronGenesisFile", genesisPath ByronEra)
     , ("ShelleyGenesisFile", genesisPath ShelleyEra)
     , ("AlonzoGenesisFile",  genesisPath AlonzoEra)
     , ("ConwayGenesisFile",  genesisPath ConwayEra)
