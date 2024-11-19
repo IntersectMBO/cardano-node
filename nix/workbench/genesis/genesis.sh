@@ -734,14 +734,31 @@ genesis-create-testnet-data() {
     mkdir -p "$dir/utxo-keys"
     link_keys utxo-keys utxo-keys
 
-    info genesis "removing delegator keys."
-    rm "$dir/stake-delegators" -rf
-
     local is_voting
     is_voting=$(jq --raw-output '.generator.drep_voting' "$profile_json")
     if [[ "$is_voting" == "true" ]];
-    then info genesis "voting workload specified - skipping deletion of DRep keys"
+    then
+        info genesis "voting workload specified - keeping one stake key per producer"
+        mv "$dir/stake-delegators" "$dir/stake-delegators.bak"
+        mkdir "$dir/stake-delegators"
+        local pools
+        pools="$(jq --raw-output '.composition.n_pools' "${profile_json}")"
+        for i in $(seq 1 "$pools")
+        do
+          if test -d "$dir/stake-delegators.bak/delegator${i}"
+          then
+            local from_dir to_dir
+            from_dir="$dir/stake-delegators.bak/delegator${i}"
+            to_dir="$dir/stake-delegators/delegator$((i - 1))"
+            mkdir "$to_dir"
+            cp "$from_dir"/{payment,staking}.{skey,vkey} "$to_dir"/
+          fi
+        done
+        rm "$dir/stake-delegators.bak" -rf
+        info genesis "voting workload specified - skipping deletion of DRep keys"
     else
+      info genesis "removing delegator keys."
+      rm "$dir/stake-delegators" -rf
       info genesis "removing dreps keys."
       rm "$dir"/drep-keys -rf
     fi
