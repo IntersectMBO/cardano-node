@@ -13,6 +13,7 @@ let
   {
     UseTraceDispatcher   = true;
     TraceOptionResourceFrequency = 1000;
+    TraceOptionNodeName = nodeSpec.name;
 
   ## Please see the generated tracing configuration reference at:
   ##
@@ -129,6 +130,10 @@ let
     TraceBlockFetchServer       = true;
     TraceChainSyncHeaderServer  = true;
     TraceChainSyncClient        = true;
+
+    ## needs to be explicit when new tracing is the node's default
+    UseTraceDispatcher          = false;
+
     options = {
       mapBackends = {
         "cardano.node.resources" = [ "KatipBK" ];
