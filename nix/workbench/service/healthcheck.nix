@@ -355,8 +355,8 @@ let
             else
               local tip block slot
               # Returns nothing/empty/"" when the node is exiting
-              tip=$(${cardano-cli}/bin/cardano-cli query tip \
-                --testnet-magic "''${network_magic}"         \
+              tip=$(${cardano-cli}/bin/cardano-cli conway query tip \
+                --testnet-magic "''${network_magic}"                \
                 --socket-path "../''${node}/node.socket"
               )
               block=$(${coreutils}/bin/echo "''${tip}" | ${jq}/bin/jq .block)
