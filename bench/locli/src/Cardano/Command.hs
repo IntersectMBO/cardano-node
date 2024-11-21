@@ -47,10 +47,7 @@ newtype Command
   deriving Show
 
 data ChainCommand
-  = ListLogobjectKeys       TextOutputFile
-  | ListLogobjectKeysLegacy TextOutputFile
-
-  |        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
+  =        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
   |        WriteMetaGenesis TextOutputFile              TextOutputFile
 
   |        Unlog            (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
@@ -104,12 +101,6 @@ data ChainCommand
 parseChainCommand :: Parser ChainCommand
 parseChainCommand =
   subparser (mconcat [ commandGroup "Common data:  logobject keys, run metafile & genesis"
-   , op "list-logobject-keys" "List logobject keys that analyses care about"
-     (ListLogobjectKeys
-       <$> optTextOutputFile  "keys"           "Text file to write logobject keys to")
-   , op "list-logobject-keys-legacy" "List legacy logobject keys that analyses care about"
-     (ListLogobjectKeysLegacy
-       <$> optTextOutputFile  "keys-legacy"     "Text file to write logobject keys to")
    , op "read-meta-genesis" "Read the run metadata:  meta.json and Shelley genesis"
      (ReadMetaGenesis
        <$> optJsonInputFile "run-metafile"    "The meta.json file from the benchmark run"
@@ -391,21 +382,8 @@ sAnchor State{sTags=[]} = error "sAnchor with no run or multi-summary."
 sAnchor s@State{sTags}
   = stateAnchor sTags s
 
-quote :: T.Text -> T.Text
-quote = (<> "\"") . ("\"" <>)
 
 runChainCommand :: State -> ChainCommand -> ExceptT CommandError IO State
-
-runChainCommand s
-  c@(ListLogobjectKeys f) = do
-  dumpText "logobject-keys" (quote . toText <$> logObjectStreamInterpreterKeys) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand s
-  c@(ListLogobjectKeysLegacy f) = do
-  dumpText "logobject-keys-legacy" (quote . toText <$> logObjectStreamInterpreterKeysLegacy) f
-    & firstExceptT (CommandError c)
-  pure s
 
 runChainCommand s
   c@(ReadMetaGenesis runMeta shelleyGenesis) = do
@@ -601,7 +579,7 @@ runChainCommand s@State{sRun=Just _run, sSlots=Just slots}
 runChainCommand _ c@TimelineSlots{} = missingCommandData c
   ["run metadata & genesis", "filtered slots"]
 
-runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}, sRunLogs}
+runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}}
   c@ComputePropagation = do
   progress "block-propagation" $ J (cDomBlocks, cDomSlots)
   prop <- pure (blockProp run chain)
@@ -615,9 +593,11 @@ runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}, sRunLogs}
        renderBlockPropError e
        <> maybe "" ((".\n\n  Missing traces in run logs (not all are fatal):\n\n    " <>)
                     . T.intercalate "\n    "
-                    . fmap toText
-                    . rlMissingTraces)
-                sRunLogs
+                    . const []
+                   )
+                Nothing
+                -- TODO: reactivate output once there's a proper evaluation of raw data
+
 runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 

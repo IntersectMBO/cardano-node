@@ -556,18 +556,7 @@ EOF
         local adir=$dir/analysis
         mkdir -p "$adir"/{cdf,png}
 
-        ## 0. ask locli what it cares about
-        local keyfile="$adir"/substring-keys
-        local key_old=$(sha256sum 2>/dev/null "$keyfile" | cut -d' ' -f1)
-        local tracing_backend=$(jq '.node.tracing_backend // "iohk-monitoring"' --raw-output $dir/profile.json)
-        case "$tracing_backend" in
-             trace-dispatcher ) locli 'list-logobject-keys'        --keys        "$keyfile";;
-             iohk-monitoring  ) locli 'list-logobject-keys-legacy' --keys-legacy "$keyfile";;
-             * ) fail "Unknown tracing backend:  $tracing_backend"
-        esac
-        local key_new=$(sha256sum "$keyfile" | cut -d' ' -f1)
-
-        ## 1. unless already done, filter logs according to locli's requirements
+        ## unless already done, filter logs to contain trace objects only
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
         local run_logs=$adir/log-manifest.json
 
@@ -599,27 +588,18 @@ EOF
                     local  out="$adir"/logs-$mach
                     cat ${logfiles[*]} | grep '^{'        > "$out".flt.json       &
                     trace_frequencies_json ${logfiles[*]} > "$out".tracefreq.json &
-                    { cat ${logfiles[*]} |
-                      sha256sum |
-                      cut -d' ' -f1 |
-                      xargs echo -n
-                    } > "$out".sha256 &
-
                     jq_fmutate "$run_logs" '
                       .rlHostLogs["'"$mach"'"] =
                         { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} |
                                                   sed 's/ /", "/')"'"]
                         , hlRawLines:       '"$(cat ${logfiles[*]} | wc -l)"'
-                        , hlRawSha256:      ""
                         , hlRawTraceFreqs:  {}
                         , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
-                        , hlFilteredSha256: ""
                         , hlProfile:        []
                         }
                      | .rlFilterDate = ('$(if test -z "$without_datever_meta"
                                            then echo -n now
                                            else echo -n 0; fi)' | todate)
-                     | .rlFilterKeys = []
                      '
 
                     local ghc_rts_prof=$d/cardano-node.prof
@@ -647,21 +627,10 @@ EOF
         progress "analyse" "log manifest updating for consolidated logs"
         for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
         do jq_fmutate "$run_logs" '
-             .rlHostLogs[$mach].hlRawSha256      = $raw_sha256
-           | .rlHostLogs[$mach].hlRawTraceFreqs  = $freqs[0]
-
-           | ($freqs[0] | keys | map (split(":"))) as $keypairs
-           | .rlHostLogs[$mach].hlMissingTraces  =
-              (($keys | split("\n"))
-               - ($keypairs | map (.[0]))    # new tracing namespace entries
-               - ($keypairs | map (.[1]))    # old tracing .kinds
-               - ["", "unknown0", "unknown1"]
-               | unique)
+             .rlHostLogs[$mach].hlRawTraceFreqs  = $freqs[0]
            ' --sort-keys                                                         \
-             --arg                mach         $mach                             \
-             --rawfile      raw_sha256 "$adir"/logs-$mach.sha256                 \
-             --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json         \
-             --rawfile            keys $keyfile
+             --arg               mach          $mach                             \
+             --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json
         done
 
         local ht_json=$adir/hash-timeline.json
@@ -669,24 +638,7 @@ EOF
         then progress "analyse" "hash timeline up to date"
         else progress "analyse" "building hash timeline"
           grep -h 'TraceForgedBlock\|DownloadedHeader' $adir/logs-*.flt.json | sort > $ht_json
-
-          # skip checksumming consolidated logs for now, to facilitate fast truncation of long runs
-          #for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
-          #do jq_fmutate "$run_logs" '
-          #    .rlHostLogs[$mach].hlFilteredSha256 = $filtered_sha256
-          #  ' --arg                mach         $mach                             \
-          #    --arg     filtered_sha256 $(sha256sum < $adir/logs-$mach.flt.json | \
-          #                                cut -d' ' -f1 | xargs echo -n)
-          #done
-        fi
-
-        jq_fmutate "$run_logs" '
-          .rlMissingTraces =
-             ( .rlHostLogs
-             | map(.hlMissingTraces)
-             | add
-             | unique
-             )';;
+        fi;;
 
     trace-frequencies | trace-freq | freq | tf )
         local new_only= sargs=()

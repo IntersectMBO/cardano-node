@@ -71,7 +71,6 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
   sumMeta                <- summariseMetadata $ xs <&> sumMeta
   sumFilters             <- allEqOrElse (xs <&> sumFilters) SEIncoherentRunFilters
 
-  cdfLogLinesEmitted     <- sumCDF2 $ xs <&> cdfLogLinesEmitted
   cdfLogObjectsEmitted   <- sumCDF2 $ xs <&> cdfLogObjectsEmitted
   cdfLogObjects          <- sumCDF2 $ xs <&> cdfLogObjects
   cdfRuntime             <- sumCDF2 $ xs <&> cdfRuntime
@@ -172,7 +171,6 @@ computeSummary sumAnalysisTime
   --
   , cdfLogObjects        = cdf stdCentiles (objLists <&> length)
   , cdfLogObjectsEmitted = cdf stdCentiles logObjectsEmitted
-  , cdfLogLinesEmitted   = cdf stdCentiles textLinesEmitted
   , cdfRuntime           = cdf stdCentiles runtimes
   , ..
   }
@@ -183,7 +181,7 @@ computeSummary sumAnalysisTime
     rlHostLogs
     & Map.elems
 
-   (,) logObjectsEmitted textLinesEmitted =
+   (logObjectsEmitted, textLinesEmitted) =
      hostLogs
      & fmap (hlRawLogObjects &&& hlRawLines)
      & unzip
@@ -198,7 +196,7 @@ computeSummary sumAnalysisTime
    lineRates  = zipWith (/) (textLinesEmitted <&> fromIntegral)
                             (runtimes <&> fromIntegral @Int . truncate)
 
-   (,,) sumDomainTime sumStartSpread sumStopSpread =
+   (sumDomainTime, sumStartSpread, sumStopSpread) =
      slotDomains sumGenesis (losFirsts, losLasts) mpDomainSlots
 
    sumChainRejectionStats :: [(ChainFilter, Int)]

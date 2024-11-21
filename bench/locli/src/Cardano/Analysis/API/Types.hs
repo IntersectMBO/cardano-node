@@ -50,7 +50,6 @@ data Summary f where
     , sumDomainBlocks        :: !(DataDomain f BlockNo)
     , sumProfilingData       :: !(Maybe (ProfilingData (CDF I)))
 
-    , cdfLogLinesEmitted     :: !(CDF f Int)
     , cdfLogObjectsEmitted   :: !(CDF f Int)
     , cdfLogObjects          :: !(CDF f Int)
     , cdfRuntime             :: !(CDF f NominalDiffTime)
