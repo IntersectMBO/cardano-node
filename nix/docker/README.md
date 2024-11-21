@@ -7,22 +7,24 @@ https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-usin
 # Build + Install the cardano node
 nix build .#mainnet/node -o ~/bin/cardano-node
 
-# Build + Install the cardano Docker image
-nix run .#dockerImage/node/load \
-  && GITHASH=`git log -n1 --pretty='%H'` \
-  && docker tag inputoutput/cardano-node:$GITHASH inputoutput/cardano-node:dev \
-  && docker rmi inputoutput/cardano-node:$GITHASH
+# Build + Install the cardano Docker image from bash shell
+nix build .#dockerImage/node \
+  && RES=$(docker load -i result) \
+  && LOADED="${RES##Loaded image: }" \
+  && GITHASH=$(git log -n1 --pretty='%H') \
+  && docker tag "$LOADED" ghcr.io/intersectmbo/cardano-node:dev \
+  && docker rmi "$LOADED"
 
-GITTAG=`git describe --exact-match --tags $GITHASH`
+GITTAG=$(git describe --exact-match --tags $GITHASH)
 if [ $? -eq 0 ]; then
   echo "Current tag: $GITTAG"
-  docker tag inputoutput/cardano-node:dev inputoutput/cardano-node:$GITTAG
+  docker tag ghcr.io/intersectmbo/cardano-node:dev "ghcr.io/intersectmbo/cardano-node:$GITTAG"
 fi
 
 # Bash into the node to look around
 docker run --rm -it --entrypoint=bash \
   -v node-data:/opt/cardano/data \
-  inputoutput/cardano-node:dev
+  ghcr.io/intersectmbo/cardano-node:dev
 
 cardano-node run \
   --config /opt/cardano/config/mainnet-config.json \
@@ -50,7 +52,7 @@ docker run --rm -it \
   -p 3001:3001 \
   -e NETWORK=mainnet \
   -v node-data:/data/db \
-  inputoutput/cardano-node:dev
+  ghcr.io/intersectmbo/cardano-node:dev
 ```
 
 Run -e NETWORK=mainnet and check graceful shutdown SIGTERM with --detach
@@ -62,7 +64,7 @@ docker run --detach \
   -p 3001:3001 \
   -e NETWORK=mainnet \
   -v node-data:/data/db \
-  inputoutput/cardano-node:dev
+  ghcr.io/intersectmbo/cardano-node:dev
 
 docker logs -f relay
 ```
@@ -75,7 +77,7 @@ Check graceful shutdown SIGINT with -it
 docker run --rm -it \
   -p 3001:3001 \
   -v node-data:/opt/cardano/data \
-  inputoutput/cardano-node:dev run
+  ghcr.io/intersectmbo/cardano-node:dev run
 ```
 
 Check graceful shutdown SIGTERM with --detach
@@ -87,7 +89,7 @@ docker run --detach \
   -p 3001:3001 \
   -v node-data:/opt/cardano/data \
   -v node-ipc:/opt/cardano/ipc \
-  inputoutput/cardano-node:dev run
+  ghcr.io/intersectmbo/cardano-node:dev run
 
 docker logs -f relay
 ```
@@ -97,7 +99,7 @@ docker logs -f relay
 ```
 alias cardano-cli="docker run --rm -it \
   -v node-ipc:/opt/cardano/ipc \
-  inputoutput/cardano-node:dev cli"
+  ghcr.io/intersectmbo/cardano-node:dev cli"
 
 cardano-cli query tip --mainnet
 ```

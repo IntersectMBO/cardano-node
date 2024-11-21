@@ -3,25 +3,26 @@
 #
 # To build and load into the Docker engine:
 #
-#   nix run .#dockerImage/node/load
+#   nix build .#dockerImage/node
+#   docker load -i result
 #
 # To launch with pre-loaded configuration, using the NETWORK env.
 # An example using a docker volume to persist state:
 #
-#   docker run -v /data -e NETWORK=mainnet inputoutput/cardano-node
+#   docker run -v /data -e NETWORK=mainnet ghcr.io/intersectmbo/cardano-node
 #
 # Provide a complete command otherwise:
 #
-#   docker run -v $PWD/configuration/defaults/byron-mainnet:/configuration \
-#     inputoutput/cardano-node run \
-#      --config /configuration/configuration.yaml \
-#      --topology /configuration/topology.json \
+#   docker run -v $PWD/configuration/cardano:/configuration \
+#     ghcr.io/intersectmbo/cardano-node run \
+#      --config /configuration/mainnet-config.yaml \
+#      --topology /configuration/mainnet-topology.json \
 #      --database-path /db
 #
 # Mount a volume into /ipc for establishing cross-container communication via node.socket
 #
-#   docker run -v node-ipc:/ipc inputoutput/cardano-node
-#   docker run -v node-ipc:/ipc inputoutput/some-node-client
+#   docker run -v node-ipc:/ipc -e NETWORK=mainnet ghcr.io/intersectmbo/cardano-node
+#   docker run -v node-ipc:/ipc -e NETWORK=mainnet ghcr.io/intersectmbo/some-node-client
 ############################################################################
 
 { pkgs
@@ -38,7 +39,6 @@
 
 # Other things to include in the image.
 , bashInteractive
-, buildPackages
 , cacert
 , coreutils
 , curl
@@ -48,12 +48,10 @@
 , iputils
 , socat
 , utillinux
-, writeScriptBin
-, runtimeShell
 , lib
 , exe
 , script
-, repoName ? "inputoutput/${exe}"
+, repoName ? "ghcr.io/intersectmbo/${exe}"
 }:
 
 let
@@ -83,6 +81,7 @@ let
       mkdir -m 0777 tmp
     '';
   };
+
   # Image with all iohk-nix network configs or utilizes a configuration volume mount
   # To choose a network, use `-e NETWORK testnet`
   clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
@@ -135,6 +134,7 @@ in
       ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -s ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
     '';
+
     config = {
       EntryPoint = [ "entrypoint" ];
     };
