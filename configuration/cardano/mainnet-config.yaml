@@ -54,6 +54,9 @@ TurnOnLogging: True
 # be directed to the logs or monitoring backends.
 TurnOnLogMetrics: True
 
+# Use legacy tracing
+UseTraceDispatcher: False
+
 # Global logging severity filter. Messages must have at least this severity to
 # pass. Typical values would be Warning, Notice, Info or Debug.
 minSeverity: Info
