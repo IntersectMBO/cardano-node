@@ -109,7 +109,7 @@ let
   # Mainnet configuration used by the 'run' option
   mainnetConfigFile = builtins.toFile "mainnet-config.json"
     (builtins.toJSON commonLib.environments.mainnet.nodeConfig);
-  mainnetTopologyFile = commonLib.mkEdgeTopology { edgeNodes = [ commonLib.environments.mainnet.relaysNew ]; valency = 2; };
+  mainnetTopologyFile = commonLib.mkTopology commonLib.environments.mainnet;
 
 in
   dockerTools.buildImage {
