@@ -51,10 +51,13 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
         (AcceptAt (LocalSocket socket), mFwdNames, forwConf) -> do
           (fwdsink, dpStore :: DataPointStore) <- withIOManager $ \iomgr -> do
             traceWith teTracer TracerStartedReforwarder
-            initForwarding iomgr forwConf
+            (fwdsink, dpStore, kickoffForwarder) <-
+              initForwarding iomgr forwConf
                                  (NetworkMagic networkMagic)
                                  Nothing
                                  (Just (socket, Log.Responder))
+            kickoffForwarder
+            pure (fwdsink, dpStore)
           pure $ Just ( filteredWriteToSink
                           (traceObjectHasPrefixIn mFwdNames)
                           fwdsink

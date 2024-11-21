@@ -57,27 +57,32 @@ import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
 
+-- We allow for delayed initialization of the forwarding connection by
+-- returning an IO action to do so.
+-- For initializing right away, you should call the IO action immediately
+-- after the call to initForwarding.
 initForwarding :: forall m. (MonadIO m)
   => IOManager
   -> TraceOptionForwarder
   -> NetworkMagic
   -> Maybe EKG.Store
   -> Maybe (FilePath, ForwarderMode)
-  -> m (ForwardSink TraceObject, DataPointStore)
+  -> m (ForwardSink TraceObject, DataPointStore, IO ())
 initForwarding iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   forwardSink <- initForwardSink tfConfig handleOverflow
   dpStore <- initDataPointStore
-  launchForwarders
-    iomgr
-    magic
-    ekgConfig
-    tfConfig
-    dpfConfig
-    ekgStore
-    forwardSink
-    dpStore
-    tracerSocketMode
-  pure (forwardSink, dpStore)
+  let
+    kickoffForwarder = launchForwarders
+      iomgr
+      magic
+      ekgConfig
+      tfConfig
+      dpfConfig
+      ekgStore
+      forwardSink
+      dpStore
+      tracerSocketMode
+  pure (forwardSink, dpStore, kickoffForwarder)
  where
   p = maybe "" fst tracerSocketMode
   connSize = tofConnQueueSize config
