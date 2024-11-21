@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -123,8 +124,8 @@ initTxGenTracers mbForwarding = do
   prepareForwardingTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
         let forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
-        (forwardSink :: ForwardSink TraceObject, dpStore) <-
-          initForwarding iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
+        (forwardSink :: ForwardSink TraceObject, dpStore, kickoffForwarder) <-
+            initForwardingDelayed iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
         -- to the acceptor application (for example, 'cardano-tracer').
@@ -132,8 +133,10 @@ initTxGenTracers mbForwarding = do
           dpt :: Trace IO DataPoint
           dpt = dataPointTracer dpStore
         nodeInfoTracer <- mkDataPointTracer dpt
-        prepareGenInfo >>= traceWith nodeInfoTracer
+        !genInfo <- prepareGenInfo
+        traceWith nodeInfoTracer genInfo
 
+        kickoffForwarder
         pure $ forwardTracer forwardSink
 
   prepareGenInfo :: IO NodeInfo
