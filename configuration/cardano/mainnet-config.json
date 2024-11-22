@@ -19,7 +19,7 @@
   "TurnOnLogMetrics": true,
   "UseTraceDispatcher": true,
   "TraceOptionForwarder": null,
-  "TraceOptionMetricsPrefix": "cardano.node.",
+  "TraceOptionMetricsPrefix": "cardano.node.metrics.",
   "TraceOptionNodeName": "mainnetsingle",
   "TraceOptionPeerFrequency": 2000,
   "TraceOptionResourceFrequency": 1000,
