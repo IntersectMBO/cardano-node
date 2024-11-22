@@ -931,6 +931,10 @@ def all_profile_variants:
     ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $plutusvolt_nomadperf_template
   |
+  # P&T Nomad cluster: 52 nodes, P2P by default - plutus+voting workload
+    ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $genesis_voting
+    ) as $plutusvoting_nomadperf_template
+  |
   # P&T Nomad cluster: 52 nodes, P2P by default - PlutusV3 BLST workload
     ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $plutusv3blst_nomadperf_template
@@ -1267,17 +1271,55 @@ def all_profile_variants:
 
 ## As "value" above with an extra voting workload
   , $valuevoting_nomadperf_template * $dreps_large *
+    { name: "value-voting-utxo-volt-nomadperf"
+    , generator: {drep_voting: true}
+    , workload: [
+      { submit_vote: false }
+    ]
+    }
+  , $valuevoting_nomadperf_template * $dreps_large *
     { name: "value-voting-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      {votes_per_tx: 1}
+      { submit_vote: true
+      , votes_per_tx: 1
+      }
     ]
     }
   , $valuevoting_nomadperf_template * $dreps_large *
     { name: "value-voting-double-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      {votes_per_tx: 2}
+      { submit_vote: true
+      , votes_per_tx: 2
+      }
+    ]
+    }
+
+## As "plutus" above with an extra voting workload
+  , $plutusvoting_nomadperf_template * $dreps_large *
+    { name: "plutus-voting-utxo-volt-nomadperf"
+    , generator: {drep_voting: true}
+    , workload: [
+      { submit_vote: false }
+    ]
+    }
+  , $plutusvoting_nomadperf_template * $dreps_large *
+    { name: "plutus-voting-volt-nomadperf"
+    , generator: {drep_voting: true}
+    , workload: [
+      { submit_vote: true
+      , votes_per_tx: 1
+      }
+    ]
+    }
+  , $plutusvoting_nomadperf_template * $dreps_large *
+    { name: "plutus-voting-double-volt-nomadperf"
+    , generator: {drep_voting: true}
+    , workload: [
+      { submit_vote: true
+      , votes_per_tx: 2
+      }
     ]
     }
 

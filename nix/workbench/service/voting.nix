@@ -16,7 +16,7 @@ let
   # Script params!
   ################
 
-  testnetMagic = profile.genesis.network_magic;
+  testnet_magic = profile.genesis.network_magic;
   gov_action_deposit = profile.genesis.conway.govActionDeposit;
   # Where to obtain the genesis funds from.
   genesis_funds_vkey = "../genesis/cache-entry/utxo-keys/utxo2.vkey";
@@ -79,7 +79,7 @@ let
   ;
   dreps_per_producer = builtins.floor (profile.genesis.dreps / producers_count);
   # Max number of '--tx-out' when splitting funds.
-  outs_per_transaction = 193; # 193 produced too many timeouts.
+  outs_per_split_transaction = 193; # 193 produced too many timeouts.
 
   # Sleeps.
   # Used when splitting funds to wait for funds to arrive, as this initial funds
@@ -101,7 +101,9 @@ let
   wait_proposals_count_sleep = 10; # 25 minutes in 10s steps.
 
   # No decimals also needed because of how the Bash script treats this number.
-  votes_per_tx = builtins.ceil (builtins.elemAt profile.workload 0).votes_per_tx;
+  votes_per_tx = builtins.ceil (
+    (builtins.elemAt profile.workload 0).votes_per_tx or 1)
+  ;
   # The most important one. To calculate and achieve a predictable TPS.
   # For reference:
   ### A local 2-node cluster with no tx-generator, max TPS was:
@@ -120,7 +122,7 @@ let
   create_proposals = true;
   build_vote       = true; use_build_raw = true;
   sign_vote        = true;
-  submit_vote      = true;
+  submit_vote      = (builtins.elemAt profile.workload 0).submit_vote or true;
 
 in ''
 
@@ -269,7 +271,7 @@ function is_tx_in_mempool {
   )"
     ${cardano-cli}/bin/cardano-cli conway query tx-mempool           \
         tx-exists         "''${tx_id}"                               \
-      --testnet-magic     ${toString testnetMagic}                   \
+      --testnet-magic     ${toString testnet_magic}                  \
       --socket-path       "''${socket_path}"                         \
   | ${jq}/bin/jq --raw-output                                        \
       .exists
@@ -309,7 +311,7 @@ function funds_submit_retry {
 
       # (Re)Submit transaction ignoring errors.
         ${cardano-cli}/bin/cardano-cli conway transaction submit              \
-          --testnet-magic         ${toString testnetMagic}                    \
+          --testnet-magic         ${toString testnet_magic}                   \
           --socket-path           "''${socket_path}"                          \
           --tx-file               "''${tx_signed}"                            \
       || true
@@ -332,7 +334,7 @@ function funds_submit_retry {
         ${coreutils}/bin/echo "funds_submit_retry: wait_utxo_id: ''${utxo_id} (''${utxo_tries})"
         contains_addr="$(                                      \
             ${cardano-cli}/bin/cardano-cli conway query utxo   \
-              --testnet-magic     ${toString testnetMagic}     \
+              --testnet-magic     ${toString testnet_magic}    \
               --socket-path       "''${socket_path}"           \
               --address           "''${addr}"                  \
               --output-json                                    \
@@ -372,14 +374,14 @@ function funds_from_to {
   local funds_addr
   funds_addr="$( \
     ${cardano-cli}/bin/cardano-cli address build       \
-      --testnet-magic ${toString testnetMagic}         \
+      --testnet-magic ${toString testnet_magic}        \
       --payment-verification-key-file "''${utxo_vkey}" \
   )"
   # This three only needed for the first batch and to calculate funds per node.
   local funds_json funds_tx funds_lovelace
   funds_json="$( \
     ${cardano-cli}/bin/cardano-cli conway query utxo \
-      --testnet-magic ${toString testnetMagic}       \
+      --testnet-magic ${toString testnet_magic}      \
       --socket-path "''${socket_path}"               \
       --address "''${funds_addr}"                    \
       --output-json                                  \
@@ -416,7 +418,7 @@ function funds_from_to {
              - $reminder
              - $donation
              - ( 550000
-               * ( ($denominator / ${toString outs_per_transaction}) | ceil )
+               * ( ($denominator / ${toString outs_per_split_transaction}) | ceil )
                )
              )
            / $denominator
@@ -427,7 +429,7 @@ function funds_from_to {
   # Split the funds in batchs (donations only happen in the first batch).
   local i=0
   local txOuts_args_array=() txOuts_addrs_array=()
-  local batch=${toString outs_per_transaction}
+  local batch=${toString outs_per_split_transaction}
   local tx_in tx_filename
   local treasury_donation_args_array=()
   for addr in "''${addrs_array[@]}"
@@ -441,7 +443,7 @@ function funds_from_to {
     # We send if last addr in the for loop or batch max exceeded.
     if test "$i" -ge "''${#addrs_array[@]}" || test "$i" -ge "$batch"
     then
-      if test "$batch" -eq ${toString outs_per_transaction}
+      if test "$batch" -eq ${toString outs_per_split_transaction}
       then
         # First transaction.
         # The input comes from the function arguments.
@@ -467,7 +469,7 @@ function funds_from_to {
       # Build transaction.
       tx_filename=../"''${node_str}"/funds_from_to."''${funds_addr}"."''${i}"
       ${cardano-cli}/bin/cardano-cli conway transaction build               \
-        --testnet-magic         ${toString testnetMagic}                    \
+        --testnet-magic         ${toString testnet_magic}                   \
         --socket-path           "''${socket_path}"                          \
         --tx-in                 "''${tx_in}"                                \
         ''${txOuts_args_array[@]}                                           \
@@ -476,7 +478,7 @@ function funds_from_to {
         --out-file              "''${tx_filename}.raw"
       # Sign transaction.
       ${cardano-cli}/bin/cardano-cli conway transaction sign                \
-        --testnet-magic         ${toString testnetMagic}                    \
+        --testnet-magic         ${toString testnet_magic}                   \
         --signing-key-file      "''${utxo_skey}"                            \
         --tx-body-file          "''${tx_filename}.raw"                      \
         --out-file              "''${tx_filename}.signed"
@@ -504,7 +506,7 @@ function funds_from_to {
 
       # Reset variables for next batch iteration.
       txOuts_args_array=() txOuts_addrs_array=()
-      batch="$((batch + ${toString outs_per_transaction}))"
+      batch="$((batch + ${toString outs_per_split_transaction}))"
     fi
   done
 }
@@ -535,7 +537,7 @@ function wait_any_utxo {
     fi
     utxos_json="$( \
       ${cardano-cli}/bin/cardano-cli conway query utxo     \
-        --testnet-magic     ${toString testnetMagic}       \
+        --testnet-magic     ${toString testnet_magic}      \
         --socket-path       "''${socket_path}"             \
         --address           "''${addr}"                    \
         --output-json                                      \
@@ -582,7 +584,7 @@ function wait_proposal_id {
       # No "--output-json" needed.
       contains_proposal="$(                                       \
           ${cardano-cli}/bin/cardano-cli conway query gov-state   \
-            --testnet-magic     ${toString testnetMagic}          \
+            --testnet-magic     ${toString testnet_magic}         \
             --socket-path       "''${socket_path}"                \
         | ${jq}/bin/jq --raw-output                               \
             --argjson tx_id "\"''${tx_id}\""                      \
@@ -624,7 +626,7 @@ function wait_proposals_count {
       # No "--output-json" needed.
       contains_proposals="$(                                      \
           ${cardano-cli}/bin/cardano-cli conway query gov-state   \
-            --testnet-magic     ${toString testnetMagic}          \
+            --testnet-magic     ${toString testnet_magic}         \
             --socket-path       "''${socket_path}"                \
         | ${jq}/bin/jq --raw-output                               \
             --argjson count "''${count}"                          \
@@ -734,7 +736,7 @@ function build_node_prop_drep_address {
   then
     local vkey="''${filename}".vkey
       ${cardano-cli}/bin/cardano-cli address build  \
-        --testnet-magic ${toString testnetMagic}    \
+        --testnet-magic ${toString testnet_magic}   \
         --payment-verification-key-file "''${vkey}" \
     > "''${addr}"
   fi
@@ -911,7 +913,7 @@ function governance_create_constitution {
   local node_addr
   node_addr="$( \
     ${cardano-cli}/bin/cardano-cli address build  \
-      --testnet-magic ${toString testnetMagic}    \
+      --testnet-magic ${toString testnet_magic}   \
       --payment-verification-key-file "''${utxo_vkey}"
   )"
 
@@ -927,7 +929,7 @@ function governance_create_constitution {
 
   # Show current gov-state.
     ${cardano-cli}/bin/cardano-cli conway query gov-state            \
-      --testnet-magic ${toString testnetMagic}                       \
+      --testnet-magic ${toString testnet_magic}                      \
       --socket-path "''${socket_path}"                               \
   | ${jq}/bin/jq -r                                                  \
       '.nextRatifyState.nextEnactState.prevGovActionIds'
@@ -962,7 +964,7 @@ function governance_create_constitution {
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
-    --testnet-magic ${toString testnetMagic}                         \
+    --testnet-magic ${toString testnet_magic}                        \
     --socket-path "''${socket_path}"                                 \
     --tx-in "''${funds_tx}"                                          \
     --change-address "''${node_addr}"                                \
@@ -971,13 +973,13 @@ function governance_create_constitution {
   > /dev/null
   # Sign transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction sign             \
-    --testnet-magic ${toString testnetMagic}                         \
+    --testnet-magic ${toString testnet_magic}                        \
     --signing-key-file "''${utxo_skey}"                              \
     --tx-body-file "''${tx_filename}".raw                            \
     --out-file     "''${tx_filename}".signed
   # Submit transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction submit           \
-    --testnet-magic ${toString testnetMagic}                         \
+    --testnet-magic ${toString testnet_magic}                        \
     --socket-path "''${socket_path}"                                 \
     --tx-file     "''${tx_filename}".signed                          \
   > /dev/null
@@ -1037,7 +1039,7 @@ function governance_create_withdrawal {
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
-    --testnet-magic ${toString testnetMagic}                         \
+    --testnet-magic ${toString testnet_magic}                        \
     --socket-path "''${socket_path}"                                 \
     --tx-in "''${funds_tx}"                                          \
     --change-address "''${node_drep_addr}"                           \
@@ -1046,13 +1048,13 @@ function governance_create_withdrawal {
   > /dev/null
   # Sign transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction sign             \
-    --testnet-magic ${toString testnetMagic}                         \
+    --testnet-magic ${toString testnet_magic}                        \
     --signing-key-file "''${node_drep_skey}"                         \
     --tx-body-file "''${tx_filename}".raw                            \
     --out-file     "''${tx_filename}".signed
   # Submit transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction submit           \
-    --testnet-magic ${toString testnetMagic}                         \
+    --testnet-magic ${toString testnet_magic}                        \
     --socket-path "''${socket_path}"                                 \
     --tx-file     "''${tx_filename}".signed                          \
   > /dev/null
@@ -1141,7 +1143,7 @@ function governance_vote_all {
   local txIdsJSON proposal_tx_ids_array
   txIdsJSON="$( \
       ${cardano-cli}/bin/cardano-cli conway query gov-state          \
-        --testnet-magic ${toString testnetMagic}                     \
+        --testnet-magic ${toString testnet_magic}                    \
         --socket-path "''${socket_path}"                             \
     | ${jq}/bin/jq '.proposals | map(.actionId.txId)'                \
   )"
@@ -1257,7 +1259,7 @@ function governance_vote_proposal {
   ''
   else ''
   ${cardano-cli}/bin/cardano-cli conway transaction build        \
-    --testnet-magic ${toString testnetMagic}                     \
+    --testnet-magic ${toString testnet_magic}                    \
     --socket-path "''${socket_path}"                             \
     --tx-in "''${funds_tx}"                                      \
     --change-address "''${funds_addr}"                           \
@@ -1275,7 +1277,7 @@ function governance_vote_proposal {
   then ''
   # Sign it with the DRep key:
   ${cardano-cli}/bin/cardano-cli conway transaction sign         \
-    --testnet-magic ${toString testnetMagic}                     \
+    --testnet-magic ${toString testnet_magic}                    \
     ''${signing_key_file_params_array[@]}                        \
     --tx-body-file "''${tx_filename}".raw                        \
     --out-file "''${tx_filename}".signed
@@ -1288,7 +1290,7 @@ function governance_vote_proposal {
   then ''
   # Submit the transaction:
   ${cardano-cli}/bin/cardano-cli conway transaction submit       \
-    --testnet-magic ${toString testnetMagic}                     \
+    --testnet-magic ${toString testnet_magic}                    \
     --socket-path "''${socket_path}"                             \
     --tx-file "''${tx_filename}".signed                          \
   >/dev/null
@@ -1315,7 +1317,7 @@ function workflow_generator_log_proposals {
   while true
   do
         ${cardano-cli}/bin/cardano-cli conway query gov-state                \
-          --testnet-magic ${toString testnetMagic}                           \
+          --testnet-magic ${toString testnet_magic}                          \
           --socket-path "''${socket_path}"                                   \
       | ${jq}/bin/jq '.proposals'                                            \
     > ../"''${node_str}"/proposals."''$(${coreutils}/bin/date +"%Y-%m-%d-%H-%M-%S-%3N")".json
@@ -1388,7 +1390,7 @@ function workflow_producer {
   socket_path="$(get_socket_path "''${node_str}")"
   # Store actual gov-state
     ${cardano-cli}/bin/cardano-cli conway query gov-state            \
-      --testnet-magic ${toString testnetMagic}                       \
+      --testnet-magic ${toString testnet_magic}                      \
       --socket-path "''${socket_path}"                               \
   > "../''${node_str}/gov-state.start.json"
   ${coreutils}/bin/echo "governance_vote_all:             Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
@@ -1397,7 +1399,7 @@ function workflow_producer {
   socket_path="$(get_socket_path "''${node_str}")"
   # Store actual gov-state
     ${cardano-cli}/bin/cardano-cli conway query gov-state            \
-      --testnet-magic ${toString testnetMagic}                       \
+      --testnet-magic ${toString testnet_magic}                      \
       --socket-path "''${socket_path}"                               \
   > "../''${node_str}/gov-state.end.json"
   #----------------------------------------------------------------------------#
