@@ -10,14 +10,12 @@ module Cardano.Analysis.API.Ground
   )
 where
 
-import Prelude                          (show)
+import Prelude                          as P (show)
 import Cardano.Prelude                  hiding (head, toText)
 import Unsafe.Coerce                    qualified as Unsafe
 
 import Data.Aeson
 import Data.Aeson.Types                 (toJSONKeyText)
-import Data.Attoparsec.Text             qualified as Atto
-import Data.Attoparsec.Time             qualified as Iso8601
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Map.Strict                  qualified as Map
 import Data.Text                        qualified as T
@@ -26,7 +24,6 @@ import Data.Text.Short                  (ShortText, fromText, toText)
 import Data.Time.Clock                  (UTCTime, NominalDiffTime)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
-import Quiet                            (Quiet (..))
 import System.FilePath                  qualified as F
 
 import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
@@ -41,13 +38,17 @@ newtype FieldName = FieldName { unFieldName :: Text }
   deriving (Eq, Generic, Ord)
   deriving newtype (FromJSON, IsString, ToJSON)
   deriving anyclass NFData
-  deriving Show via Quiet FieldName
+
+instance Show FieldName where
+  show = ("FieldName " ++) . P.show . unFieldName
 
 newtype TId = TId { unTId :: ShortText }
   deriving (Eq, Generic, Ord)
   deriving newtype (FromJSON, ToJSON)
   deriving anyclass NFData
-  deriving Show via Quiet TId
+
+instance Show TId where
+  show = ("TId " ++) . P.show . unTId
 
 newtype Hash = Hash { unHash :: ShortText }
   deriving (Eq, Generic, Ord)
@@ -95,7 +96,9 @@ newtype Host = Host { unHost :: ShortText }
   deriving (Eq, Generic, Ord)
   deriving newtype (IsString, FromJSON, ToJSON)
   deriving anyclass NFData
-  deriving Show via Quiet Host
+
+instance Show Host where
+  show = ("Host " ++) . P.show . unHost
 
 newtype EpochSlot = EpochSlot { unEpochSlot :: Word64 }
   deriving stock (Eq, Generic, Ord, Show)
@@ -268,26 +271,6 @@ pSlotNo name desc =
      <> Opt.metavar "SLOT"
      <> Opt.help desc
      )
-
-optUTCTime :: String -> String -> Parser UTCTime
-optUTCTime optname desc =
-  Opt.option (readerFromAttoParser Iso8601.utcTime)
-    $ long optname
-    <> metavar "ISO8601-TIME"
-    <> help desc
- where
-   -- Stolen from: cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
-   readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
-   readerFromAttoParser p =
-     Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . T.pack)
-
-optDuration :: String -> String -> NominalDiffTime -> Parser NominalDiffTime
-optDuration optname desc def=
-  Opt.option ((realToFrac :: Double -> NominalDiffTime) <$> Opt.auto)
-    $ long optname
-    <> metavar "SEC"
-    <> help desc
-    <> value def
 
 optWord :: String -> String -> Word64 -> Parser Word64
 optWord optname desc def =

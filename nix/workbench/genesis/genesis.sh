@@ -251,16 +251,60 @@ case "$op" in
           return
         fi
 
-        progress "genesis" "deriving from cache:  $cache_entry -> $outdir"
+        progress "genesis" "finalizing retrieved cache entry in:  $outdir"
 
         local system_start_epoch
         system_start_epoch="$(jq '.start' -r <<<"$timing")"
 
         genesis-byron "$system_start_epoch" "$dir" "$profile_json"
 
-        jq '. * { systemStart: $timing.systemStart }' --argjson timing "$timing" \
+        # The genesis cache entry in $outdir needs post-processing:
+        # * the system start date might get an adjustment offset into the future
+        # * some workbench profile content not captured by the genesis cache key will be patched in
+
+        # For devs: this should cover all fields modified by
+        # * nix/workbench/profile/pparams/delta-*.jq (workbench)
+        # * bench/cardano-profile/data/genesis/overlays/*.json (cardano-profile)
+        # These modifications are small deltas to base profiles, which do not, and should
+        # not, result in recreation of the entire staked genesis, as that is large on-disk
+        # and takes long to create.
+
+        # Shelley: startTime, protocolVersion, maxBlockBodySize
+        jq '$prof[0].genesis.shelley as $shey
+             | $shey.protocolParams.protocolVersion   as $pver
+             | $shey.protocolParams.maxBlockBodySize  as $bsize
+             | . * { systemStart: $timing.systemStart }
+             | if $pver  != null then . * { protocolParams: { protocolVersion:  $pver  } } else . end
+             | if $bsize != null then . * { protocolParams: { maxBlockBodySize: $bsize } } else . end' \
+          --argjson timing "$timing" \
+          --slurpfile prof "$profile_json" \
           "$dir"/genesis-shelley.json |
           sponge "$dir"/genesis-shelley.json
+
+        # Alonzo: Execution budgets
+        # NB. PlutusV1 and PlutusV2 cost models are *NOT* covered here; they're encoded
+        #     as key-value-map in the profile, but need to be [Integer] in genesis.
+        jq '$prof[0].genesis.alonzo as $alzo
+             | $alzo.maxBlockExUnits.exUnitsMem   as $bl_mem
+             | $alzo.maxBlockExUnits.exUnitsSteps as $bl_steps
+             | $alzo.maxTxExUnits.exUnitsMem      as $tx_mem
+             | $alzo.maxTxExUnits.exUnitsSteps    as $tx_steps
+             | if $bl_mem   != null then . * { maxBlockExUnits: { memory: $bl_mem}   } else . end
+             | if $bl_steps != null then . * { maxBlockExUnits: { steps:  $bl_steps} } else . end
+             | if $tx_mem   != null then . * { maxTxExUnits:    { memory: $tx_mem}   } else . end
+             | if $tx_steps != null then . * { maxTxExUnits:    { steps:  $tx_steps} } else . end' \
+          --slurpfile prof "$profile_json" \
+          "$dir"/genesis.alonzo.json |
+          sponge "$dir"/genesis.alonzo.json
+
+        # Conway: plutusV3CostModel
+        jq '$prof[0].genesis.conway as $coay
+             | $coay.plutusV3CostModel as $pv3cost
+             | if $pv3cost != null then . * { plutusV3CostModel: $pv3cost } else . end' \
+          --slurpfile prof "$profile_json" \
+          "$dir"/genesis.conway.json |
+          sponge "$dir"/genesis.conway.json
+
         ;;
 
     * )

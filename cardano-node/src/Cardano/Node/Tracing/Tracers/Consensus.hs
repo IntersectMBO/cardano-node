@@ -1311,7 +1311,7 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
     severityFor (Namespace _ ["RemoveTxs"]) _ = Just Info
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Info
-    severityFor (Namespace _ ["Synced"]) _ = Just Info
+    severityFor (Namespace _ ["Synced"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1331,11 +1331,9 @@ instance MetaTrace (TraceEventMempool blk) where
       , ("mempoolBytes", "Byte size of the mempool")
       , ("txsProcessedNum", "")
       ]
-
     metricsDocFor (Namespace _ ["Synced"]) =
       [ ("txsSyncDuration", "Time to sync the mempool in ms after block adoption")
       ]
-
     metricsDocFor _ = []
 
     documentFor (Namespace _ ["AddedTx"]) = Just
@@ -1358,6 +1356,7 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["RejectedTx"]
       , Namespace [] ["RemoveTxs"]
       , Namespace [] ["ManuallyRemovedTxs"]
+      , Namespace [] ["Synced"]
       ]
 
 --------------------------------------------------------------------------------
@@ -1417,8 +1416,8 @@ instance MetaTrace  (ForgeTracerType blk) where
   privacyFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["StartLeadershipCheckPlus"]) =
-      [ ("Forge.UtxoSize", "")
-      , ("Forge.DelegMapSize", "")
+      [ ("Forge.UtxoSize", "UTxO set size")
+      , ("Forge.DelegMapSize", "Delegation map size")
       ]
   metricsDocFor ns =
     metricsDocFor (nsCast ns :: Namespace (TraceForgeEvent blk))

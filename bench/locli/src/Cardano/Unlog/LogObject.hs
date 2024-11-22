@@ -87,11 +87,8 @@ data HostLogs a
   = HostLogs
     { hlRawLogfiles    :: [FilePath]
     , hlRawLines       :: Int
-    , hlRawSha256      :: Hash
     , hlRawTraceFreqs  :: Map Text Int
-    , hlMissingTraces  :: [Text]
     , hlLogs           :: (JsonLogfile, a)
-    , hlFilteredSha256 :: Hash
     , hlProfile        :: [ProfileEntry I]
     , hlRawFirstAt     :: Maybe UTCTime
     , hlRawLastAt      :: Maybe UTCTime
@@ -107,8 +104,6 @@ hlRawLogObjects = sum . Map.elems . hlRawTraceFreqs
 data RunLogs a
   = RunLogs
     { rlHostLogs      :: Map.Map Host (HostLogs a)
-    , rlMissingTraces :: [Text]
-    , rlFilterKeys    :: [Text]
     , rlFilterDate    :: UTCTime
     }
   deriving (Generic, FromJSON, ToJSON)

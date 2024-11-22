@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                1.35
+version:                1.36
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -12,6 +12,7 @@ maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
+extra-doc-files:        CHANGELOG.md
 build-type:             Simple
 
 common project-config
@@ -95,11 +96,8 @@ library
   autogen-modules:      Paths_locli
 
   build-depends:        aeson
-                      , Histogram
                       , aeson-pretty
                       , async
-                      , attoparsec
-                      , attoparsec-iso8601
                       , bytestring
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-core
@@ -110,27 +108,16 @@ library
                       , directory
                       , ede
                       , extra
-                      , file-embed
                       , filepath
                       , fingertree
                       , hashable
-                      , gnuplot
-                      , iohk-monitoring
-                      , optparse-applicative-fork
-                      , optparse-generic
+                      , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus
-                      -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.17
-                      , ouroboros-network-api
-                      , process
-                      , quiet
-                      , scientific
+                      , ouroboros-network-api ^>= 0.10
                       , sop-core
                       , split
                       , statistics
                       , strict-sop-core
-                      , system-filepath
-                      , template-haskell
                       , text
                       , text-short
                       , time
@@ -139,10 +126,8 @@ library
                       , transformers-except
                       , unix
                       , unordered-containers
-                      , utf8-string
                       , vector
                       , witherable
-                      , cardano-strict-containers ^>= 0.1
 
 executable locli
   import:               project-config
@@ -150,7 +135,6 @@ executable locli
   hs-source-dirs:       app
   main-is:              locli.hs
   ghc-options:          -threaded
-                        -Wall
                         -rtsopts
                         "-with-rtsopts=-T -N7 -A2m -qb -H64m"
 

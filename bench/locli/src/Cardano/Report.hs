@@ -80,6 +80,7 @@ data Workload
   | WPlutusLoopCountdown
   | WPlutusLoopSECP
   | WPlutusLoopBLST
+  | WPlutusLoopRipemd
   | WPlutusUnknown
 
 instance ToJSON Workload where
@@ -88,6 +89,7 @@ instance ToJSON Workload where
     WPlutusLoopCountdown -> "Plutus countdown loop"
     WPlutusLoopSECP      -> "Plutus SECP loop"
     WPlutusLoopBLST      -> "Plutus BLST loop"
+    WPlutusLoopRipemd    -> "Plutus RIPEMD-160 loop"
     WPlutusUnknown       -> "Plutus (other)"
 
 filenameInfix :: Workload -> Text
@@ -95,6 +97,7 @@ filenameInfix = \case
   WPlutusLoopCountdown  -> "plutus"
   WPlutusLoopSECP       -> "plutus-secp"
   WPlutusLoopBLST       -> "plutus-blst"
+  WPlutusLoopRipemd     -> "plutus-ripemd"
   WValue                -> "value-only"
   _                     -> "unknown"
 
@@ -150,6 +153,7 @@ liftTmplRun Summary{sumWorkload=generatorProfile
         | script == "EcdsaSecp256k1Loop"    -> WPlutusLoopSECP
         | script == "SchnorrSecp256k1Loop"  -> WPlutusLoopSECP
         | script == "HashOntoG2AndAdd"      -> WPlutusLoopBLST
+        | script == "Ripemd160"             -> WPlutusLoopRipemd
         | otherwise                         -> WPlutusUnknown
   }
 
