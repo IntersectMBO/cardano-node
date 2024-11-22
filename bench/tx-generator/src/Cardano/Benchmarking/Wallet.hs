@@ -95,7 +95,17 @@ walletSource ref munch = modifyMVar ref $ \fifo -> return $ case removeFunds mun
 walletPreview :: WalletRef -> Int -> IO [Fund]
 walletPreview ref munch = do
   fifo <- readMVar ref
-  return $ maybe (toList fifo) snd (removeFunds munch fifo)
+  case removeFunds munch fifo of
+    Just (_remainder, funds@(_:_)) ->
+      pure funds
+    -- While technically redundant, this documents cases where some
+    -- element of subtlety happens.
+    -- Before this change, it was written as:
+    -- return $ maybe (toList fifo) snd (removeFunds munch fifo)
+    Just (_unalteredFifo, []) ->
+      pure $ toList fifo
+    Nothing ->
+      pure $ toList fifo
 
 -- | The second argument to 'mangleWithChange' is hidden in the
 -- 'CreateAndStoreList' type. When there is change to be made,
