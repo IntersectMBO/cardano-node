@@ -1259,7 +1259,7 @@ instance MetaTrace (TraceEventMempool blk) where
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
     severityFor (Namespace _ ["RemoveTxs"]) _ = Just Info
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Info
-    severityFor (Namespace _ ["Synced"]) _ = Just Info
+    severityFor (Namespace _ ["Synced"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =

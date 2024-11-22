@@ -1,0 +1,30 @@
+{
+  "ekgRequestFreq": 1,
+  "hasEKG": {
+    "epHost": "127.0.0.1",
+    "epPort": 3100
+  },
+  "hasPrometheus": {
+    "epHost": "127.0.0.1",
+    "epPort": 3200
+  },
+  "logging": [
+    {
+      "logFormat": "ForMachine",
+      "logMode": "FileMode",
+      "logRoot": "mainnetsingle"
+    }
+  ],
+  "network": {
+    "contents": "mainnetsingle/socket/tracer.socket",
+    "tag": "AcceptAt"
+  },
+  "networkMagic": 764824073,
+  "resourceFreq": null,
+  "rotation": {
+    "rpFrequencySecs": 15,
+    "rpKeepFilesNum": 10,
+    "rpLogLimitBytes": 1000000000,
+    "rpMaxAgeHours": 24
+  }
+}
