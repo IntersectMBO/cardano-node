@@ -3,23 +3,24 @@
 #
 # To build and load into the Docker engine:
 #
-#   nix run .#DockerImage/submit-api/load
+#   nix run .#dockerImage/submit-api
+#   docker load -i result
 #
 # cardano-submit-api
 #   To launch with provided mainnet configuration
 #
-#    docker run -e NETWORK=mainnet inputoutput/cardano-submit-api:<TAG>
+#     docker run -e NETWORK=mainnet ghcr.io/intersectmbo/cardano-submit-api:<TAG>
 #
-#  To launch with provided testnet configuration
+#   To launch with provided testnet configuration
 #
-#    docker run -e NETWORK=testnet inputoutput/cardano-submit-api:<TAG>
+#     docker run -e NETWORK=testnet ghcr.io/intersectmbo/cardano-submit-api:<TAG>
 #
 #   Provide a complete command otherwise:
 #
-#    docker run -v $PWD/config.yaml:/config.yaml inputoutput/cardano-submit-api:<TAG> \
-#      --config /config.yaml --mainnet --socket-path /node-ipc/node.socket
+#     docker run -v $PWD/config.yaml:/config.yaml ghcr.io/intersectmbo/cardano-submit-api:<TAG> \
+#       --config /config.yaml --mainnet --socket-path /node-ipc/node.socket
 #
-#  See the docker-compose.yml for demonstration of using Docker secrets instead of mounting a pgpass
+# See the docker-compose.yml for demonstration of using Docker secrets instead of mounting a pgpass
 #
 ############################################################################
 
@@ -50,7 +51,7 @@
 , lib
 , exe
 , script
-, repoName ? "inputoutput/${exe}"
+, repoName ? "ghcr.io/intersectmbo/${exe}"
 }:
 
 let
@@ -79,6 +80,7 @@ let
       mkdir -m 0777 tmp
     '';
   };
+
   # Image with all iohk-nix network configs or utilizes a configuration volume mount
   # To choose a network, use `-e NETWORK testnet`
   clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
@@ -87,6 +89,7 @@ let
       elif [[ "$NETWORK" == "${env}" ]]; then
         exec ${scriptBin}/bin/${scriptBin.name} $@
     '') scripts);
+
   nodeDockerImage = let
     entry-point = writeScriptBin "entry-point" ''
       #!${runtimeShell}
@@ -97,16 +100,19 @@ let
         echo "Managed configuration for network "$NETWORK" does not exist"
       fi
     '';
+
   in dockerTools.buildImage {
     name = "${repoName}";
     fromImage = baseImage;
     tag = "${gitrev}";
     created = "now";   # Set creation date to build time. Breaks reproducibility
+
     copyToRoot = pkgs.buildEnv {
       name = "image-root";
       pathsToLink = ["/"];
       paths = [entry-point];
     };
+
     config = {
       EntryPoint = [ "${entry-point}/bin/entry-point" ];
       ExposedPorts = {

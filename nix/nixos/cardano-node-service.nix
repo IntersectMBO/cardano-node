@@ -89,6 +89,9 @@ let
                  options = {};
                }
           else baseConfig //
+               {
+                 UseTraceDispatcher = false;
+               } //
                (optionalAttrs (baseConfig ? hasEKG) {
                   hasEKG = baseConfig.hasEKG + i;
                }) //
