@@ -1309,7 +1309,7 @@ def all_profile_variants:
     { name: "plutus-voting-utxo-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { outs_per_split_transaction: 97
+      { outs_per_split_transaction: 193
       , submit_vote: false
       }
     ]
@@ -1319,7 +1319,7 @@ def all_profile_variants:
     { name: "plutus-voting-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { outs_per_split_transaction: 97
+      { outs_per_split_transaction: 193
       , submit_vote: true
       , votes_per_tx: 1
       }
@@ -1330,7 +1330,7 @@ def all_profile_variants:
     { name: "plutus-voting-double-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { outs_per_split_transaction: 97
+      { outs_per_split_transaction: 193
       , submit_vote: true
       , votes_per_tx: 2
       }

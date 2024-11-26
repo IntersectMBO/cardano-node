@@ -1350,6 +1350,10 @@ function workflow_generator {
   ${coreutils}/bin/echo "No governance_create_constitution today!"
   ''
   }
+  #- Waiting ------------------------------------------------------------------#
+  ${coreutils}/bin/echo "wait_proposals_count:            Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
+  wait_proposals_count "''${node_str}" ${toString proposals_count}
+  ${coreutils}/bin/echo "wait_proposals_count:            End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
   #- Log ----------------------------------------------------------------------#
   # Keep a job that periodically stores the proposals from the gov-state.
   workflow_generator_log_proposals "''${node_str}" &
