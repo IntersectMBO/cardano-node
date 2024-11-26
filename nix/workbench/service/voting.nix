@@ -99,8 +99,8 @@ let
   # Use to wait for all proposals to be available before we start voting.
   # As nodes will end their splitting phases at different times, this parameters
   # work as a formation lap before race start =).
-  wait_proposals_count_tries = 150;
-  wait_proposals_count_sleep = 10; # 25 minutes in 10s steps.
+  # No tries, waits forever!
+  wait_proposals_count_sleep = 10;
 
   # No decimals also needed because of how the Bash script treats this number.
   votes_per_tx = builtins.ceil (workload.votes_per_tx or 1);
@@ -123,6 +123,7 @@ let
   build_vote       = true; use_build_raw = true;
   sign_vote        = true;
   submit_vote      = workload.submit_vote or true;
+  wait_submit      = workload.submit_vote or false;
 
 in ''
 
@@ -614,30 +615,18 @@ function wait_proposals_count {
   socket_path="$(get_socket_path "''${node_str}")"
 
   local contains_proposals="false"
-  local tries=${toString wait_proposals_count_tries}
   while test "''${contains_proposals}" = "false"
   do
-    if test "''${tries}" -le 0
-    then
-      # Time's up!
-      ${coreutils}/bin/echo "wait_proposals_count: Timeout waiting for: ''${count}"
-      exit 1
-    else
-      # No "--output-json" needed.
-      contains_proposals="$(                                      \
-          ${cardano-cli}/bin/cardano-cli conway query gov-state   \
-            --testnet-magic     ${toString testnet_magic}         \
-            --socket-path       "''${socket_path}"                \
-        | ${jq}/bin/jq --raw-output                               \
-            --argjson count "''${count}"                          \
-            '.proposals | length == $count // false'              \
-      )"
-      if ! test "''${tries}" = ${toString wait_proposals_count_tries}
-      then
-        ${coreutils}/bin/sleep ${toString wait_proposals_count_sleep}
-      fi
-      tries="$((tries - 1))"
-    fi
+    # No "--output-json" needed.
+    contains_proposals="$(                                      \
+        ${cardano-cli}/bin/cardano-cli conway query gov-state   \
+          --testnet-magic     ${toString testnet_magic}         \
+          --socket-path       "''${socket_path}"                \
+      | ${jq}/bin/jq --raw-output                               \
+          --argjson count "''${count}"                          \
+          '.proposals | length == $count // false'              \
+    )"
+    ${coreutils}/bin/sleep ${toString wait_proposals_count_sleep}
   done
 }
 
@@ -1293,7 +1282,7 @@ function governance_vote_proposal {
     --testnet-magic ${toString testnet_magic}                    \
     --socket-path "''${socket_path}"                             \
     --tx-file "''${tx_filename}".signed                          \
-  >/dev/null
+  >/dev/null ${if wait_submit then "&" else ""}
   ''
   else ''
   ${coreutils}/bin/echo "transaction submit off!"
@@ -1350,6 +1339,10 @@ function workflow_generator {
   ${coreutils}/bin/echo "No governance_create_constitution today!"
   ''
   }
+  #- Waiting ------------------------------------------------------------------#
+  ${coreutils}/bin/echo "wait_proposals_count:            Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
+  wait_proposals_count "''${node_str}" ${toString proposals_count}
+  ${coreutils}/bin/echo "wait_proposals_count:            End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
   #- Log ----------------------------------------------------------------------#
   # Keep a job that periodically stores the proposals from the gov-state.
   workflow_generator_log_proposals "''${node_str}" &
