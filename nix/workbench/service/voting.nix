@@ -21,6 +21,8 @@ let
   # Where to obtain the genesis funds from.
   genesis_funds_vkey = "../genesis/cache-entry/utxo-keys/utxo2.vkey";
   genesis_funds_skey = "../genesis/cache-entry/utxo-keys/utxo2.skey";
+  # Workload
+  workload = builtins.elemAt profile.workload 0; # Only workload 0 exists now!
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
 
@@ -79,7 +81,7 @@ let
   ;
   dreps_per_producer = builtins.floor (profile.genesis.dreps / producers_count);
   # Max number of '--tx-out' when splitting funds.
-  outs_per_split_transaction = 193; # 193 produced too many timeouts.
+  outs_per_split_transaction = workload.outs_per_split_transaction or 100;
 
   # Sleeps.
   # Used when splitting funds to wait for funds to arrive, as this initial funds
@@ -101,9 +103,7 @@ let
   wait_proposals_count_sleep = 10; # 25 minutes in 10s steps.
 
   # No decimals also needed because of how the Bash script treats this number.
-  votes_per_tx = builtins.ceil (
-    (builtins.elemAt profile.workload 0).votes_per_tx or 1)
-  ;
+  votes_per_tx = builtins.ceil (workload.votes_per_tx or 1);
   # The most important one. To calculate and achieve a predictable TPS.
   # For reference:
   ### A local 2-node cluster with no tx-generator, max TPS was:
@@ -122,7 +122,7 @@ let
   create_proposals = true;
   build_vote       = true; use_build_raw = true;
   sign_vote        = true;
-  submit_vote      = (builtins.elemAt profile.workload 0).submit_vote or true;
+  submit_vote      = workload.submit_vote or true;
 
 in ''
 

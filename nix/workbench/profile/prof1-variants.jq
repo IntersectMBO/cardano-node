@@ -1270,54 +1270,68 @@ def all_profile_variants:
     }
 
 ## As "value" above with an extra voting workload
+  # Split creating 500k UTxO, create the transactions (build-raw) but no submit.
   , $valuevoting_nomadperf_template * $dreps_large *
     { name: "value-voting-utxo-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { submit_vote: false }
+      { outs_per_split_transaction: 193
+      , submit_vote: false
+      }
     ]
     }
+  # One vote per voting tx version.
   , $valuevoting_nomadperf_template * $dreps_large *
     { name: "value-voting-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { submit_vote: true
+      { outs_per_split_transaction: 193
+      , submit_vote: true
       , votes_per_tx: 1
       }
     ]
     }
+  # Two votes per voting tx version.
   , $valuevoting_nomadperf_template * $dreps_large *
     { name: "value-voting-double-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { submit_vote: true
+      { outs_per_split_transaction: 193
+      , submit_vote: true
       , votes_per_tx: 2
       }
     ]
     }
 
 ## As "plutus" above with an extra voting workload
+  # Split creating 500k UTxO, create the transactions (build-raw) but no submit.
   , $plutusvoting_nomadperf_template * $dreps_large *
     { name: "plutus-voting-utxo-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { submit_vote: false }
+      { outs_per_split_transaction: 97
+      , submit_vote: false
+      }
     ]
     }
+  # One vote per voting tx version.
   , $plutusvoting_nomadperf_template * $dreps_large *
     { name: "plutus-voting-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { submit_vote: true
+      { outs_per_split_transaction: 97
+      , submit_vote: true
       , votes_per_tx: 1
       }
     ]
     }
+  # Two votes per voting tx version.
   , $plutusvoting_nomadperf_template * $dreps_large *
     { name: "plutus-voting-double-volt-nomadperf"
     , generator: {drep_voting: true}
     , workload: [
-      { submit_vote: true
+      { outs_per_split_transaction: 97
+      , submit_vote: true
       , votes_per_tx: 2
       }
     ]
