@@ -99,8 +99,8 @@ let
   # Use to wait for all proposals to be available before we start voting.
   # As nodes will end their splitting phases at different times, this parameters
   # work as a formation lap before race start =).
-  wait_proposals_count_tries = 150;
-  wait_proposals_count_sleep = 10; # 25 minutes in 10s steps.
+  # No tries, waits forever!
+  wait_proposals_count_sleep = 10;
 
   # No decimals also needed because of how the Bash script treats this number.
   votes_per_tx = builtins.ceil (workload.votes_per_tx or 1);
@@ -614,30 +614,18 @@ function wait_proposals_count {
   socket_path="$(get_socket_path "''${node_str}")"
 
   local contains_proposals="false"
-  local tries=${toString wait_proposals_count_tries}
   while test "''${contains_proposals}" = "false"
   do
-    if test "''${tries}" -le 0
-    then
-      # Time's up!
-      ${coreutils}/bin/echo "wait_proposals_count: Timeout waiting for: ''${count}"
-      exit 1
-    else
-      # No "--output-json" needed.
-      contains_proposals="$(                                      \
-          ${cardano-cli}/bin/cardano-cli conway query gov-state   \
-            --testnet-magic     ${toString testnet_magic}         \
-            --socket-path       "''${socket_path}"                \
-        | ${jq}/bin/jq --raw-output                               \
-            --argjson count "''${count}"                          \
-            '.proposals | length == $count // false'              \
-      )"
-      if ! test "''${tries}" = ${toString wait_proposals_count_tries}
-      then
-        ${coreutils}/bin/sleep ${toString wait_proposals_count_sleep}
-      fi
-      tries="$((tries - 1))"
-    fi
+    # No "--output-json" needed.
+    contains_proposals="$(                                      \
+        ${cardano-cli}/bin/cardano-cli conway query gov-state   \
+          --testnet-magic     ${toString testnet_magic}         \
+          --socket-path       "''${socket_path}"                \
+      | ${jq}/bin/jq --raw-output                               \
+          --argjson count "''${count}"                          \
+          '.proposals | length == $count // false'              \
+    )"
+    ${coreutils}/bin/sleep ${toString wait_proposals_count_sleep}
   done
 }
 
