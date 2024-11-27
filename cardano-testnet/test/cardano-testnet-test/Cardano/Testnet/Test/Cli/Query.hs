@@ -435,8 +435,8 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
 
     TestQueryProposalsCmd -> do
-      -- TODO @cardano-cli team
-      pure ()
+      -- query proposals
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals" ]
 
   where
   -- | Wait for the part of the epoch when futurePParams are known
