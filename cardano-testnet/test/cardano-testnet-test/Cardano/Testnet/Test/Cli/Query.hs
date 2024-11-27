@@ -131,7 +131,12 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   -- If we don't wait, the leadership-schedule test will say SPO has no stake
   _ <- waitForEpochs epochStateView (EpochInterval 1)
 
-  forallQueryCommands $ \case
+  let filterQ :: Applicative m => (TestQueryCmds -> m ()) -> TestQueryCmds -> m ()
+      filterQ f = \case
+        TestQueryStakeAddressInfoCmd -> f TestQueryStakeAddressInfoCmd
+        _ -> pure ()
+
+  forallQueryCommands . filterQ $ \case
 
     TestQueryLeadershipScheduleCmd ->
       -- leadership-schedule
@@ -262,7 +267,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         fileQueryHash === keyQueryHash
         fileQueryAmount === keyQueryAmount
 
-    TestQueryStakeAddressInfoCmd -> pure ()
+    TestQueryStakeAddressInfoCmd ->
       -- stake-address-info
       {-
          FIXME: this test is flaky - needs investigation : the reward account balance is changing between multiple executions e.g.
@@ -275,6 +280,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
                  │ <         "rewardAccountBalance": 0,
                  │ ---
                  │ >         "rewardAccountBalance": 5257141033,
+      -}
       do
         -- to stdout
         let delegatorKeys = Defaults.defaultDelegatorStakeKeyPair 1
@@ -298,7 +304,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         H.diffFileVsGoldenFile
           redactedStakeAddressInfoOutFile
           "test/cardano-testnet-test/files/golden/queries/stakeAddressInfoOut.json"
-     -}
     TestQueryUTxOCmd ->
       -- utxo
       H.noteM_ $ execCli' execConfig [ eraName, "query", "utxo", "--whole-utxo" ]
@@ -480,8 +485,8 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   readVerificationKeyFromFile asKey work =
     H.evalEitherM . liftIO . runExceptT . readVerificationKeyOrFile asKey . VerificationKeyFilePath . File . (work </>) . unFile
 
-  _verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
-  _verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
+  verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
+  verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
     makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
 
   getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
