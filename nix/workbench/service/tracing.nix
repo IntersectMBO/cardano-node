@@ -102,7 +102,7 @@ let
 
       ## enable this to investigate tx validation errors, e.g. fee to small for Plutus script txns
       ## comes with too much overhead to be the default for benchmarks
-      # "Mempool.RejectedTx".detail = "DDetailed";
+      "Mempool.RejectedTx".detail = "DDetailed";
       };
   };
 
