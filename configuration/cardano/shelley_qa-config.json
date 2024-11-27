@@ -17,6 +17,7 @@
   "RequiresNetworkMagic": "RequiresMagic",
   "ShelleyGenesisFile": "shelley_qa-shelley-genesis.json",
   "ShelleyGenesisHash": "73a9f6bdb0aa97f5e63190a6f14a702bd64a21f2bec831cbfc28f6037128b952",
+  "ConsensusMode": "PraosMode"
   "TargetNumberOfActivePeers": 20,
   "TargetNumberOfEstablishedPeers": 50,
   "TargetNumberOfKnownPeers": 150,

@@ -37,8 +37,7 @@ import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.Diffusion.Configuration as Configuration
 
 import           Control.Monad (when)
 import           Data.Aeson
@@ -150,13 +149,26 @@ data NodeConfiguration
        , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
 
          -- P2P governor targets
-       , ncTargetNumberOfRootPeers        :: Int
-       , ncTargetNumberOfKnownPeers       :: Int
-       , ncTargetNumberOfEstablishedPeers :: Int
-       , ncTargetNumberOfActivePeers      :: Int
-       , ncTargetNumberOfKnownBigLedgerPeers       :: Int
-       , ncTargetNumberOfEstablishedBigLedgerPeers :: Int
-       , ncTargetNumberOfActiveBigLedgerPeers      :: Int
+       , ncDeadlineTargetOfRootPeers        :: !Int
+       , ncDeadlineTargetOfKnownPeers       :: !Int
+       , ncDeadlineTargetOfEstablishedPeers :: !Int
+       , ncDeadlineTargetOfActivePeers      :: !Int
+       , ncDeadlineTargetOfKnownBigLedgerPeers       :: !Int
+       , ncDeadlineTargetOfEstablishedBigLedgerPeers :: !Int
+       , ncDeadlineTargetOfActiveBigLedgerPeers      :: !Int
+       , ncSyncTargetOfActivePeers        :: !Int
+       , ncSyncTargetOfKnownBigLedgerPeers       :: !Int
+       , ncSyncTargetOfEstablishedBigLedgerPeers :: !Int
+       , ncSyncTargetOfActiveBigLedgerPeers      :: !Int
+       , ncSyncMinTrusted :: !MinBigLedgerPeersForTrustedState
+
+         -- Used to determine which set of peer targets to use
+         -- by the diffusion layer when syncing
+       , ncConsensusMode :: !ConsensusMode
+
+         -- Minimum number of active big ledger peers we must be connected to
+         -- in Genesis mode
+       , ncMinBigLedgerPeersForTrustedState :: MinBigLedgerPeersForTrustedState
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
@@ -185,7 +197,7 @@ data PartialNodeConfiguration
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
 
          -- Node parameters, not protocol-specific:
-       , pncDiffusionMode      :: !(Last DiffusionMode  )
+       , pncDiffusionMode      :: !(Last DiffusionMode)
        , pncNumOfDiskSnapshots :: !(Last NumOfDiskSnapshots)
        , pncSnapshotInterval   :: !(Last SnapshotInterval)
        , pncExperimentalProtocolsEnabled :: !(Last Bool)
@@ -213,13 +225,23 @@ data PartialNodeConfiguration
        , pncAcceptedConnectionsLimit :: !(Last AcceptedConnectionsLimit)
 
          -- P2P governor targets
-       , pncTargetNumberOfRootPeers        :: !(Last Int)
-       , pncTargetNumberOfKnownPeers       :: !(Last Int)
-       , pncTargetNumberOfEstablishedPeers :: !(Last Int)
-       , pncTargetNumberOfActivePeers      :: !(Last Int)
-       , pncTargetNumberOfKnownBigLedgerPeers       :: !(Last Int)
-       , pncTargetNumberOfEstablishedBigLedgerPeers :: !(Last Int)
-       , pncTargetNumberOfActiveBigLedgerPeers      :: !(Last Int)
+       , pncDeadlineTargetOfRootPeers        :: !(Last Int)
+       , pncDeadlineTargetOfKnownPeers       :: !(Last Int)
+       , pncDeadlineTargetOfEstablishedPeers :: !(Last Int)
+       , pncDeadlineTargetOfActivePeers      :: !(Last Int)
+       , pncDeadlineTargetOfKnownBigLedgerPeers              :: !(Last Int)
+       , pncDeadlineTargetOfEstablishedBigLedgerPeers        :: !(Last Int)
+       , pncDeadlineTargetOfActiveBigLedgerPeers             :: !(Last Int)
+       , pncSyncTargetOfActivePeers               :: !(Last Int)
+       , pncSyncTargetOfKnownBigLedgerPeers       :: !(Last Int)
+       , pncSyncTargetOfEstablishedBigLedgerPeers :: !(Last Int)
+       , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
+         -- Minimum number of active big ledger peers we must be connected to
+         -- in Genesis mode
+       , pncMinBigLedgerPeersForTrustedState :: !(Last MinBigLedgerPeersForTrustedState)
+
+         -- Consensus mode for diffusion layer
+       , pncConsensusMode :: !(Last ConsensusMode)
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
@@ -301,13 +323,22 @@ instance FromJSON PartialNodeConfiguration where
         <- Last <$> v .:? "AcceptedConnectionsLimit"
 
       -- P2P Governor parameters, with conservative defaults.
-      pncTargetNumberOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
-      pncTargetNumberOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
-      pncTargetNumberOfEstablishedPeers <- Last <$> v .:? "TargetNumberOfEstablishedPeers"
-      pncTargetNumberOfActivePeers      <- Last <$> v .:? "TargetNumberOfActivePeers"
-      pncTargetNumberOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
-      pncTargetNumberOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
-      pncTargetNumberOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
+      pncDeadlineTargetOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
+      pncDeadlineTargetOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
+      pncDeadlineTargetOfEstablishedPeers <- Last <$> v .:? "TargetNumberOfEstablishedPeers"
+      pncDeadlineTargetOfActivePeers      <- Last <$> v .:? "TargetNumberOfActivePeers"
+      pncDeadlineTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
+      pncDeadlineTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
+      pncDeadlineTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
+      pncSyncTargetOfActivePeers        <- Last <$> v .:? "SyncTargetNumberOfActivePeers"
+      pncSyncTargetOfKnownBigLedgerPeers       <- Last <$> v .:? "SyncTargetNumberOfKnownBigLedgerPeers"
+      pncSyncTargetOfEstablishedBigLedgerPeers <- Last <$> v .:? "SyncTargetNumberOfEstablishedBigLedgerPeers"
+      pncSyncTargetOfActiveBigLedgerPeers      <- Last <$> v .:? "SyncTargetNumberOfActiveBigLedgerPeers"
+      -- Minimum number of active big ledger peers we must be connected to
+      -- in Genesis mode
+      pncMinBigLedgerPeersForTrustedState <- Last <$> v .:? "MinBigLedgerPeersForTrustedState"
+
+      pncConsensusMode <- Last <$> v .:? "ConsensusMode"
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
@@ -321,7 +352,7 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Peer Sharing
       -- DISABLED BY DEFAULT
-      pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just PeerSharingDisabled
+      pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -348,13 +379,19 @@ instance FromJSON PartialNodeConfiguration where
            , pncTimeWaitTimeout
            , pncChainSyncIdleTimeout
            , pncAcceptedConnectionsLimit
-           , pncTargetNumberOfRootPeers
-           , pncTargetNumberOfKnownPeers
-           , pncTargetNumberOfEstablishedPeers
-           , pncTargetNumberOfActivePeers
-           , pncTargetNumberOfKnownBigLedgerPeers
-           , pncTargetNumberOfEstablishedBigLedgerPeers
-           , pncTargetNumberOfActiveBigLedgerPeers
+           , pncDeadlineTargetOfRootPeers
+           , pncDeadlineTargetOfKnownPeers
+           , pncDeadlineTargetOfEstablishedPeers
+           , pncDeadlineTargetOfActivePeers
+           , pncDeadlineTargetOfKnownBigLedgerPeers
+           , pncDeadlineTargetOfEstablishedBigLedgerPeers
+           , pncDeadlineTargetOfActiveBigLedgerPeers
+           , pncSyncTargetOfActivePeers
+           , pncSyncTargetOfKnownBigLedgerPeers
+           , pncSyncTargetOfEstablishedBigLedgerPeers
+           , pncSyncTargetOfActiveBigLedgerPeers
+           , pncMinBigLedgerPeersForTrustedState
+           , pncConsensusMode
            , pncEnableP2P
            , pncPeerSharing
            }
@@ -523,17 +560,37 @@ defaultPartialNodeConfiguration =
         , acceptedConnectionsSoftLimit = 384
         , acceptedConnectionsDelay     = 5
         }
-    , pncTargetNumberOfRootPeers        = Last (Just 85)
-    , pncTargetNumberOfKnownPeers       = Last (Just 85)
-    , pncTargetNumberOfEstablishedPeers = Last (Just 40)
-    , pncTargetNumberOfActivePeers      = Last (Just 15)
+    , pncDeadlineTargetOfRootPeers        = Last (Just deadlineRoots)
+    , pncDeadlineTargetOfKnownPeers       = Last (Just deadlineKnown)
+    , pncDeadlineTargetOfEstablishedPeers = Last (Just deadlineEstablished)
+    , pncDeadlineTargetOfActivePeers      = Last (Just deadlineActive)
     , pncChainSyncIdleTimeout           = mempty
-    , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just 15)
-    , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
-    , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
-    , pncEnableP2P                      = Last (Just EnabledP2PMode)
-    , pncPeerSharing                    = Last (Just PeerSharingDisabled)
+    , pncDeadlineTargetOfKnownBigLedgerPeers       = Last (Just deadlineBigKnown)
+    , pncDeadlineTargetOfEstablishedBigLedgerPeers = Last (Just deadlineBigEst)
+    , pncDeadlineTargetOfActiveBigLedgerPeers      = Last (Just deadlineBigAct)
+    , pncSyncTargetOfActivePeers        = Last (Just syncActive)
+    , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
+    , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
+    , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncConsensusMode = Last (Just defaultConsensusMode)
+    , pncEnableP2P     = Last (Just EnabledP2PMode)
+    , pncPeerSharing   = Last (Just defaultPeerSharing)
     }
+  where
+    Configuration.PeerSelectionTargets {
+      targetNumberOfRootPeers = deadlineRoots,
+      targetNumberOfKnownPeers = deadlineKnown,
+      targetNumberOfEstablishedPeers = deadlineEstablished,
+      targetNumberOfActivePeers = deadlineActive,
+      targetNumberOfKnownBigLedgerPeers = deadlineBigKnown,
+      targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
+      targetNumberOfActiveBigLedgerPeers = deadlineBigAct } = defaultDeadlineTargets
+    Configuration.PeerSelectionTargets {
+      targetNumberOfActivePeers = syncActive,
+      targetNumberOfKnownBigLedgerPeers = syncBigKnown,
+      targetNumberOfEstablishedBigLedgerPeers = syncBigEst,
+      targetNumberOfActiveBigLedgerPeers = syncBigAct } = defaultSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional
@@ -555,27 +612,45 @@ makeNodeConfiguration pnc = do
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
 
-  ncTargetNumberOfRootPeers <-
+  ncDeadlineTargetOfRootPeers <-
     lastToEither "Missing TargetNumberOfRootPeers"
-    $ pncTargetNumberOfRootPeers pnc
-  ncTargetNumberOfKnownPeers <-
+    $ pncDeadlineTargetOfRootPeers pnc
+  ncDeadlineTargetOfKnownPeers <-
     lastToEither "Missing TargetNumberOfKnownPeers"
-    $ pncTargetNumberOfKnownPeers pnc
-  ncTargetNumberOfEstablishedPeers <-
+    $ pncDeadlineTargetOfKnownPeers pnc
+  ncDeadlineTargetOfEstablishedPeers <-
     lastToEither "Missing TargetNumberOfEstablishedPeers"
-    $ pncTargetNumberOfEstablishedPeers pnc
-  ncTargetNumberOfActivePeers <-
+    $ pncDeadlineTargetOfEstablishedPeers pnc
+  ncDeadlineTargetOfActivePeers <-
     lastToEither "Missing TargetNumberOfActivePeers"
-    $ pncTargetNumberOfActivePeers pnc
-  ncTargetNumberOfKnownBigLedgerPeers <-
+    $ pncDeadlineTargetOfActivePeers pnc
+  ncDeadlineTargetOfKnownBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfKnownBigLedgerPeers"
-    $ pncTargetNumberOfKnownBigLedgerPeers pnc
-  ncTargetNumberOfEstablishedBigLedgerPeers <-
+    $ pncDeadlineTargetOfKnownBigLedgerPeers pnc
+  ncDeadlineTargetOfEstablishedBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfEstablishedBigLedgerPeers"
-    $ pncTargetNumberOfEstablishedBigLedgerPeers pnc
-  ncTargetNumberOfActiveBigLedgerPeers <-
+    $ pncDeadlineTargetOfEstablishedBigLedgerPeers pnc
+  ncDeadlineTargetOfActiveBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
-    $ pncTargetNumberOfActiveBigLedgerPeers pnc
+    $ pncDeadlineTargetOfActiveBigLedgerPeers pnc
+  ncSyncTargetOfActivePeers <-
+    lastToEither "Missing SyncTargetNumberOfActivePeers"
+    $ pncSyncTargetOfActivePeers pnc
+  ncSyncTargetOfKnownBigLedgerPeers <-
+    lastToEither "Missing SyncTargetNumberOfKnownBigLedgerPeers"
+    $ pncSyncTargetOfKnownBigLedgerPeers pnc
+  ncSyncTargetOfEstablishedBigLedgerPeers <-
+    lastToEither "Missing SyncTargetNumberOfEstablishedBigLedgerPeers"
+    $ pncSyncTargetOfEstablishedBigLedgerPeers pnc
+  ncSyncTargetOfActiveBigLedgerPeers <-
+    lastToEither "Missing SyncTargetNumberOfActiveBigLedgerPeers"
+    $ pncSyncTargetOfActiveBigLedgerPeers pnc
+  ncMinBigLedgerPeersForTrustedState <-
+    lastToEither "Missing MinBigLedgerPeersForTrustedState"
+    $ pncMinBigLedgerPeersForTrustedState pnc
+  ncConsensusMode <-
+    lastToEither "Missing ConsensusMode"
+    $ pncConsensusMode pnc
   ncProtocolIdleTimeout <-
     lastToEither "Missing ProtocolIdleTimeout"
     $ pncProtocolIdleTimeout pnc
@@ -634,17 +709,23 @@ makeNodeConfiguration pnc = do
              , ncTimeWaitTimeout
              , ncChainSyncIdleTimeout
              , ncAcceptedConnectionsLimit
-             , ncTargetNumberOfRootPeers
-             , ncTargetNumberOfKnownPeers
-             , ncTargetNumberOfEstablishedPeers
-             , ncTargetNumberOfActivePeers
-             , ncTargetNumberOfKnownBigLedgerPeers
-             , ncTargetNumberOfEstablishedBigLedgerPeers
-             , ncTargetNumberOfActiveBigLedgerPeers
+             , ncDeadlineTargetOfRootPeers
+             , ncDeadlineTargetOfKnownPeers
+             , ncDeadlineTargetOfEstablishedPeers
+             , ncDeadlineTargetOfActivePeers
+             , ncDeadlineTargetOfKnownBigLedgerPeers
+             , ncDeadlineTargetOfEstablishedBigLedgerPeers
+             , ncDeadlineTargetOfActiveBigLedgerPeers
+             , ncSyncTargetOfActivePeers
+             , ncSyncTargetOfKnownBigLedgerPeers
+             , ncSyncTargetOfEstablishedBigLedgerPeers
+             , ncSyncTargetOfActiveBigLedgerPeers
+             , ncMinBigLedgerPeersForTrustedState
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
+             , ncConsensusMode
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

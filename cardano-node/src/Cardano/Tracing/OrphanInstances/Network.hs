@@ -243,6 +243,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       TraceLedgerPeersDomains {}     -> Debug
       TraceLedgerPeersResult {}      -> Debug
       TraceLedgerPeersFailure {}     -> Debug
+      UsingBigLedgerPeerSnapshot {}  -> Debug
 
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
@@ -483,6 +484,9 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceChurnTimeout {} -> Notice
 
       TraceDebugState {} -> Info
+
+      TraceVerifyPeerSnapshot True  -> Info
+      TraceVerifyPeerSnapshot False -> Error
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1440,7 +1444,10 @@ instance ToObject TraceLedgerPeers where
       , "domainAccessPoint" .= show dap
       , "error" .= show reason
       ]
-
+  toObject _verb UsingBigLedgerPeerSnapshot =
+    mconcat
+      [ "kind" .= String "UsingBigLedgerPeerSnapshot"
+      ]
 
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
@@ -1959,6 +1966,9 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
             , "associationMode" .= dpssAssociationMode ds
             ]
+  toObject _verb (TraceVerifyPeerSnapshot result) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "result" .= result ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
@@ -2191,6 +2201,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_16 = Number 16
   toJSON NodeToClientV_17 = Number 17
   toJSON NodeToClientV_18 = Number 18
+  toJSON NodeToClientV_19 = Number 19
   -- NB: When adding a new version here, update FromJSON below as well!
 
 instance FromJSON NodeToClientVersion where
@@ -2204,6 +2215,7 @@ instance FromJSON NodeToClientVersion where
   parseJSON (Number 16) = return NodeToClientV_16
   parseJSON (Number 17) = return NodeToClientV_17
   parseJSON (Number 18) = return NodeToClientV_18
+  parseJSON (Number 19) = return NodeToClientV_19
   parseJSON (Number x) = fail ("FromJSON.NodeToClientVersion: unsupported node-to-client protocol version " ++ show x)
   parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
 
