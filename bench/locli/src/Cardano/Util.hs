@@ -133,6 +133,9 @@ mapSMaybeFB cons f x next = case f x of
   SNothing -> next
   SJust r -> cons r next
 
+-- | `mapConcurrentlyPure` mostly fully forces the list elements
+--   produced in parallel. `evaluate` seems to have mostly to do with
+--   exceptions.
 mapConcurrentlyPure :: NFData b => (a -> b) -> [a] -> IO [b]
 mapConcurrentlyPure f =
   mapConcurrently
@@ -178,6 +181,8 @@ replaceExtension :: FilePath -> String -> FilePath
 replaceExtension f new = F.dropExtension f <> "." <> new
 
 
+-- | `spans` creates a list of `Vector` where each list element is all
+--   of the list elements comprising a span put into a `Vector`.
 spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
 spans f = go []
  where
