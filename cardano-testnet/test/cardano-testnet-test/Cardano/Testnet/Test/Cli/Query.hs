@@ -439,6 +439,10 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- treasury
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
 
+    TestQueryProposalsCmd -> do
+      -- query proposals
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals" ]
+
   where
   -- | Wait for the part of the epoch when futurePParams are known
   waitForFuturePParamsToStabilise
