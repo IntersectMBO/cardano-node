@@ -22,11 +22,13 @@ defaultCardanoConfig = emptyTraceConfig {
 
 -- more important tracers going here
     ,(["BlockFetch", "Decision"],
-         [ ConfSeverity (SeverityF (Just Info))])
+         [ ConfSeverity (SeverityF Nothing)])
     ,(["ChainDB"],
          [ ConfSeverity (SeverityF (Just Info))])
+    ,(["ChainDB", "AddBlockEvent", "AddBlockValidation"],
+         [ ConfSeverity (SeverityF Nothing)])
     ,(["ChainSync", "Client"],
-         [ ConfSeverity (SeverityF (Just Info))])
+         [ ConfSeverity (SeverityF (Just Warning))])
     ,(["Net", "ConnectionManager", "Remote"],
          [ ConfSeverity (SeverityF (Just Info))])
     ,(["Net", "Subscription", "DNS"],
@@ -41,7 +43,6 @@ defaultCardanoConfig = emptyTraceConfig {
          [ ConfSeverity (SeverityF (Just Info))])
     ,(["Net", "InboundGovernor", "Remote"],
          [ ConfSeverity (SeverityF (Just Info))])
-        -- includes ["Net", "InboundGovernor", "Remote", "Transition"]
     ,(["Net", "Subscription", "IP"],
          [ ConfSeverity (SeverityF (Just Info))])
     ,(["Net", "ErrorPolicy", "Local"],
@@ -50,11 +51,12 @@ defaultCardanoConfig = emptyTraceConfig {
          [ ConfSeverity (SeverityF (Just Info))])
     ,(["Net", "Mux", "Remote"],
          [ ConfSeverity (SeverityF (Just Info))])
+    ,(["Net", "InboundGovernor"],
+         [ ConfSeverity (SeverityF (Just Warning))])
     ,(["Net", "PeerSelection"],
-         [ ConfSeverity (SeverityF (Just Info))])
+         [ ConfSeverity (SeverityF Nothing)])
     ,(["Resources"],
-         [ ConfSeverity (SeverityF (Just Info))])
-
+         [ ConfSeverity (SeverityF Nothing)])
 --     Limiters
      ,(["ChainDB","AddBlockEvent","AddedBlockToQueue"],
           [ ConfLimiter 2.0])
@@ -63,8 +65,6 @@ defaultCardanoConfig = emptyTraceConfig {
      ,(["ChainDB","AddBlockEvent","AddBlockValidation", "ValidCandidate"],
           [ ConfLimiter 2.0])
      ,(["ChainDB", "CopyToImmutableDBEvent", "CopiedBlockToImmutableDB"],
-          [ ConfLimiter 2.0])
-     ,(["ChainSync","Client","DownloadedHeader"],
           [ ConfLimiter 2.0])
      ,(["BlockFetch", "Client", "CompletedBlockFetch"],
           [ ConfLimiter 2.0])
