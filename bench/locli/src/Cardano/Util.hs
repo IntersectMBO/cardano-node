@@ -53,6 +53,7 @@ import           Data.Time.Clock.POSIX
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vec
 import           GHC.Base (build)
+import qualified GHC.Stats as RTS
 import qualified System.FilePath as F
 import           System.IO.Unsafe (unsafePerformIO)
 import           Text.Printf (printf)
@@ -171,6 +172,7 @@ data F
   | L     [String]
   | forall a. ToJSON a => J a
 
+-- makes console output with `progress` thread-safe
 progressLock :: Lock
 progressLock = unsafePerformIO newLock
 {-# NOINLINE progressLock #-}
@@ -183,17 +185,34 @@ progress key format = liftIO $
       RNoCR x  -> printf "{ \"%s\":  %s } "     key x
       Q x      -> printf "{ \"%s\": \"%s\" }\n" key x
       L xs     -> printf "{ \"%s\": \"%s\" }\n" key (Cardano.Prelude.intercalate "\", \"" xs)
-      J x      -> printf "{ \"%s\": %s }\n" key (LBS.unpack $ AE.encode x)
+      J x      -> printf "{ \"%s\": %s }\n"     key (LBS.unpack $ AE.encode x)
+
+withTimingInfo :: MonadIO m => String -> m a -> m a
+withTimingInfo name action = do
+  before <- liftIO getPOSIXTime
+  result <- action
+  after  <- liftIO getPOSIXTime
+  heap   <- liftIO $ RTS.gcdetails_mem_in_use_bytes . RTS.gc <$> RTS.getRTSStats
+  let
+    seconds   :: Int
+    seconds   = floor $ after - before
+    mibibytes = heap `div` 1024 `div` 1024
+  progress "timing" (R $ "time: " ++ show seconds ++ "s; heap: " ++ show mibibytes ++ "MiB; <" ++ name ++ ">")
+  pure result
 
 -- Dumping to files
 --
 replaceExtension :: FilePath -> String -> FilePath
 replaceExtension f new = F.dropExtension f <> "." <> new
 
+-- Run asyncs concurrently, but at most `n` at the same time.
+-- Two words of warning though - if careless, you can create deadlocks that way:
+-- 1. don't use looping actions (like `forever`) - they might block another async from getting kicked off
+-- 2. avoid using blocking synchronization between actions - you may be blocking the kick-off of an async you're actually waiting on
 sequenceConcurrentlyChunksOf :: Int -> [IO a] -> IO [a]
-sequenceConcurrentlyChunksOf n action = do
+sequenceConcurrentlyChunksOf n actions = do
   locks <- cycle <$> replicateM n newLock
-  let withLockActions = zipWith ($) (map withLock locks) action
+  let withLockActions = zipWith ($) (map withLock locks) actions
   runConcurrently $ traverse Concurrently withLockActions
 
 spans :: forall a. (a -> Bool) -> [a] -> [Vector a]

@@ -17,6 +17,7 @@ module Cardano.Unlog.LogObjectDB
        , summaryToSql
        , traceFreqsToSql
 
+       , createSchema
        , runSqlRunnable
 
        , allLOBodyConstructors
@@ -50,22 +51,34 @@ data SummaryDB = SummaryDB
   , sdbLines    :: Int
   , sdbFirstAt  :: UTCTime
   , sdbLastAt   :: UTCTime
+  , sdbCreated  :: UTCTime
   }
 
 type TraceFreqs = ML.Map ShortText.ShortText Int
 
--- an SQL statement, and its arguments; directly applicable to `uncurry runWith`
+-- an SQL statement with its arguments
 type SQLRunnable = (SQL, [SQLData])
+
 
 runSqlRunnable :: SQLRunnable -> SQLite [[SQLData]]
 runSqlRunnable = uncurry runWith
 
+createSchema :: [SQL]
+createSchema =
+  [ createError
+  , createSummary
+  , createTraceFreq
+  , createResource
+  , createSlot
+  , createEvent
+  , createTxns
+  ]
 
 -- table error
 
-insertError :: SQL
-insertError =
-  "INSERT INTO error VALUES (?,?)"
+createError, insertError :: SQL
+createError = "CREATE TABLE error (msg TEXT NOT NULL, input TEXT)"
+insertError = "INSERT INTO error VALUES (?,?)"
 
 errorToSql :: String -> String -> SQLRunnable
 errorToSql errorMsg origInput =
@@ -73,21 +86,21 @@ errorToSql errorMsg origInput =
 
 -- table summary
 
-insertSummary :: SQL
-insertSummary =
-  "INSERT INTO summary VALUES (?,?,?,?)"
+createSummary, insertSummary :: SQL
+createSummary = "CREATE TABLE summary (name TEXT NOT NULL, lines INTEGER NOT NULL, first_at REAL NOT NULL, last_at REAL NOT NULL, created REAL NOT NULL)"
+insertSummary = "INSERT INTO summary VALUES (?,?,?,?,?)"
 
 summaryToSql :: SummaryDB -> SQLRunnable
 summaryToSql SummaryDB{sdbName = Host name, ..} =
   ( insertSummary
-  , [ toSqlData name, toSqlData sdbLines, toSqlData sdbFirstAt, toSqlData sdbLastAt ]
+  , [ toSqlData name, toSqlData sdbLines, toSqlData sdbFirstAt, toSqlData sdbLastAt, toSqlData sdbCreated ]
   )
 
 -- table tracefreq
 
-insertTraceFreq :: SQL
-insertTraceFreq =
-  "INSERT INTO tracefreq VALUES (?,?)"
+createTraceFreq, insertTraceFreq :: SQL
+createTraceFreq = "CREATE TABLE tracefreq (msg TEXT NOT NULL, count INTEGER NOT NULL)"
+insertTraceFreq = "INSERT INTO tracefreq VALUES (?,?)"
 
 traceFreqsToSql :: TraceFreqs -> [SQLRunnable]
 traceFreqsToSql ts =
@@ -96,9 +109,12 @@ traceFreqsToSql ts =
 
 -- table resource
 
-insertResource :: SQL
-insertResource =
-  "INSERT INTO resource VALUES (?,?,?,?,?,?)"
+createResource, insertResource :: SQL
+-- While not strictly necessary for storage (which happens in the BLOB), we expose some key metrics as individual DB columns
+-- to use in custom user queries.
+-- When exposing additional fields, make sure the BLOB always remains the last column.
+createResource = "CREATE TABLE resource (at REAL NOT NULL, centi_cpu INTEGER, rss INTEGER, heap INTEGER, alloc INTEGER, as_blob BLOB)"
+insertResource = "INSERT INTO resource VALUES (?,?,?,?,?,?)"
 
 resourceArgs :: UTCTime -> ResourceStats -> [SQLData]
 resourceArgs at rs@Resources{rCentiCpu, rRSS, rHeap, rAlloc} =
@@ -112,9 +128,9 @@ resourceArgs at rs@Resources{rCentiCpu, rRSS, rHeap, rAlloc} =
 
 -- table slot
 
-insertSlot :: SQL
-insertSlot =
-  "INSERT INTO slot VALUES (?,?,?,?)"
+createSlot, insertSlot :: SQL
+createSlot = "CREATE TABLE slot (at REAL NOT NULL, slot INTEGER, utxo_size INTEGER, chain_dens REAL)"
+insertSlot = "INSERT INTO slot VALUES (?,?,?,?)"
 
 slotArgs :: UTCTime -> ArgNTuple -> [SQLData]
 slotArgs at args@Triple{}   = toSqlData at : toArgs args
@@ -122,63 +138,63 @@ slotArgs _  _               = error "slotArgs: three arguments expected"
 
 -- tables event and txns
 
+createEvent, createTxns :: SQL
+createEvent = "CREATE TABLE event (at REAL NOT NULL, cons TEXT NOT NULL, slot INTEGER, block INTEGER, hash TEXT)"
+createTxns  = "CREATE TABLE txns (at REAL NOT NULL, cons TEXT NOT NULL, count INTEGER, rejected INTEGER, tid TEXT)"
+
+
 logObjectToSql :: LogObject -> Maybe SQLRunnable
-logObjectToSql lo@LogObject{loAt, loBody, loTid} =
-    -- case Aeson.eitherDecode inp of
+logObjectToSql lo@LogObject{loAt, loBody, loTid} = 
+  case loBody of
 
-    -- Left err -> Just (insertError, toArgs $ Tuple ("", err) ("", BSL.unpack inp))
+    -- no suitable interpreter found when parsing log object stream
+    LOAny{}                       -> Nothing
+    -- trace not emitted by the node
+    LOGeneratorSummary{}          -> Nothing
+    -- not required for analysis
+    LOTxsAcked{}                  -> Nothing
 
-    -- Right  ->
-    case loBody of
+    LOResources stats             -> Just (insertResource, resourceArgs loAt stats)
 
-      -- no suitable interpreter found when parsing log object stream
-      LOAny{}                       -> Nothing
-      -- trace not emitted by the node
-      LOGeneratorSummary{}          -> Nothing
-      -- not required for analysis
-      LOTxsAcked{}                  -> Nothing
+    LOTraceStartLeadershipCheck slot utxoSize chainDensity
+                                  -> Just (insertSlot, slotArgs loAt (Triple ("", slot) ("", utxoSize) ("", chainDensity)))
+    -- forging
+    LOBlockContext slot block     -> newLOEvent $ Tuple     ("slot", slot) ("block", block)
+    LOLedgerState s               -> newLOEvent $ Singleton ("slot", s)
+    LOLedgerView s                -> newLOEvent $ Singleton ("slot", s)
+    LOTraceLeadershipDecided s b  -> newLOEvent $ Tuple     ("slot", s) ("block", b)
+    LOTickedLedgerState s         -> newLOEvent $ Singleton ("slot", s)
+    LOMempoolSnapshot s           -> newLOEvent $ Singleton ("slot", s)
+    LOBlockForged s b h1 h2       -> newLOEvent $ Triple    ("slot", s) ("block", b) ("hash", (h1, h2))
 
-      LOResources stats             -> Just (insertResource, resourceArgs loAt stats)
+    -- diffusion
+    LOChainSyncClientSeenHeader s b h
+                                  -> newLOEvent $ Triple    ("slot", s) ("block", b) ("hash", h)
+    LOBlockFetchClientRequested h len
+                                  -> newLOEvent $ Tuple     ("block", len) ("hash", h)
+    LOBlockFetchClientCompletedFetch h
+                                  -> newLOEvent $ Singleton ("hash", h)
+    LOChainSyncServerSendHeader h
+                                  -> newLOEvent $ Singleton ("hash", h)
+    LOBlockFetchServerSending h
+                                  -> newLOEvent $ Singleton ("hash", h)
+    LOBlockAddedToCurrentChain h mSz len
+                                  -> newLOEvent $ Triple    ("slot", mSz) ("block", len) ("hash", h)
 
-      LOTraceStartLeadershipCheck slot utxoSize chainDensity
-                                    -> Just (insertSlot, slotArgs loAt (Triple ("", slot) ("", utxoSize) ("", chainDensity)))
-      -- forging
-      LOBlockContext slot block     -> newLOEvent $ Tuple     ("slot", slot) ("block", block)
-      LOLedgerState s               -> newLOEvent $ Singleton ("slot", s)
-      LOLedgerView s                -> newLOEvent $ Singleton ("slot", s)
-      LOTraceLeadershipDecided s b  -> newLOEvent $ Tuple     ("slot", s) ("block", b)
-      LOTickedLedgerState s         -> newLOEvent $ Singleton ("slot", s)
-      LOMempoolSnapshot s           -> newLOEvent $ Singleton ("slot", s)
-      LOBlockForged s b h1 h2       -> newLOEvent $ Triple    ("slot", s) ("block", b) ("hash", (h1, h2))
+    LOLedgerTookSnapshot          -> newLOEvent Empty
 
-      -- diffusion
-      LOChainSyncClientSeenHeader s b h
-                                    -> newLOEvent $ Triple    ("slot", s) ("block", b) ("hash", h)
-      LOBlockFetchClientRequested h len
-                                    -> newLOEvent $ Tuple     ("block", len) ("hash", h)
-      LOBlockFetchClientCompletedFetch h
-                                    -> newLOEvent $ Singleton ("hash", h)
-      LOChainSyncServerSendHeader h
-                                    -> newLOEvent $ Singleton ("hash", h)
-      LOBlockFetchServerSending h
-                                    -> newLOEvent $ Singleton ("hash", h)
-      LOBlockAddedToCurrentChain h mSz len
-                                    -> newLOEvent $ Triple    ("slot", mSz) ("block", len) ("hash", h)
+    -- txn receive path
+    LOTxsCollected c              -> newLOTxns $ Tuple      ("count", c) ("tid", loTid)
+    LOTxsProcessed c r            -> newLOTxns $ Triple     ("count", c) ("rejected", r) ("tid", loTid)
+    LOMempoolTxs c                -> newLOTxns $ Singleton  ("count", c)
+    LOMempoolRejectedTx           -> newLOTxns Empty
 
-      LOLedgerTookSnapshot          -> newLOEvent Empty
+    -- that goes to the error table
+    LODecodeError rawText err     -> Just (insertError, toArgs $ Tuple ("", err) ("", rawText))
 
-      -- txn receive path
-      LOTxsCollected c              -> newLOTxns $ Tuple      ("count", c) ("tid", loTid)
-      LOTxsProcessed c r            -> newLOTxns $ Triple     ("count", c) ("rejected", r) ("tid", loTid)
-      LOMempoolTxs c                -> newLOTxns $ Singleton  ("count", c)
-      LOMempoolRejectedTx           -> newLOTxns Empty
-
-      -- that goes to the error table
-      LODecodeError rawText err     -> Just (insertError, toArgs $ Tuple ("", err) ("", rawText))
-
-      where
-        newLOEvent = Just . insertVariadic "event" lo
-        newLOTxns  = Just . insertVariadic "txns"  lo
+    where
+      newLOEvent = Just . insertVariadic "event" lo
+      newLOTxns  = Just . insertVariadic "txns"  lo
 
 
 insertVariadic :: SQL -> LogObject -> ArgNTuple -> SQLRunnable
@@ -399,18 +415,19 @@ instance AsSQLData ResourceStats where
   toSqlData   = SQLBlob . BSL.toStrict . Aeson.encode
   fromSqlData = withSqlBlob (fromJust . Aeson.decodeStrict)
 
--- this must conform to the columns in table `summary` / serialisation in `summaryToSql`
+-- this must conform to the columns in table `summary` / serialization in `summaryToSql`
 instance AsSQLData SummaryDB where
   toSqlData   = const $ error "toSqlData(SummaryDB): can't be represented as a single SQLData; use `summaryToSql`"
   fromSqlData = const $ error "fromSqlData(SummaryDB): argument list needed"
-  fromSqlDataWithArgs [c1, c2, c3, c4] =
+  fromSqlDataWithArgs [c1, c2, c3, c4, c5] =
     SummaryDB
     { sdbName     = Host (fromSqlData c1)
     , sdbLines    = fromSqlData c2
     , sdbFirstAt  = fromSqlData c3
     , sdbLastAt   = fromSqlData c4
+    , sdbCreated  = fromSqlData c5
     }
-  fromSqlDataWithArgs x = error $ "fromSqlDataWithArgs(SummaryDB): expected 4 columns, got:" ++ show x
+  fromSqlDataWithArgs x = error $ "fromSqlDataWithArgs(SummaryDB): expected 5 columns, got:" ++ show x
 
 instance AsSQLData a => AsSQLData (SMaybe a) where
   toSqlData   = smaybe SQLNull toSqlData

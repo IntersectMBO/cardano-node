@@ -89,6 +89,7 @@ library
                         Cardano.Org
                         Cardano.Render
 
+                        Cardano.Unlog.BackendDB
                         Cardano.Unlog.BackendFile
                         Cardano.Unlog.LogObject
                         Cardano.Unlog.LogObjectDB
@@ -165,7 +166,6 @@ executable locli-db
                       , bytestring
                       , containers
                       , cardano-api
-                      , directory
                       , extra
                       , split
                       , text

@@ -29,8 +29,7 @@ import qualified Data.Text as T
 import           Data.Text.Short (ShortText, fromText, toText)
 import qualified Data.Text.Short as SText
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
-import           Options.Applicative
-import qualified Options.Applicative as Opt
+import           Options.Applicative as Opt
 import qualified System.FilePath as F
 
 import qualified Unsafe.Coerce as Unsafe
@@ -114,10 +113,6 @@ data HostDeduction
   = HostFromLogfilename
   deriving stock (Eq, Ord, Show)
 
-deriving instance Data SlotNo
-
-deriving instance Data BlockNo
-
 ---
 --- Files
 ---
@@ -160,6 +155,10 @@ newtype CsvOutputFile
   = CsvOutputFile { unCsvOutputFile :: FilePath }
   deriving (Show, Eq)
 
+newtype SqliteOutputFile
+  = SqliteOutputFile { unSqliteOutputFile :: FilePath }
+  deriving (Show, Eq)
+
 newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
@@ -169,8 +168,11 @@ newtype OutputFile
 ---
 deriving newtype instance Real      BlockNo
 deriving newtype instance Divisible BlockNo
+deriving         instance Data      BlockNo
+
 deriving newtype instance Real      SlotNo
 deriving newtype instance Divisible SlotNo
+deriving         instance Data      SlotNo
 
 ---
 --- Readers
@@ -261,6 +263,14 @@ optCsvOutputFile optname desc =
       <> metavar "CSV-OUTFILE"
       <> help desc
 
+optSqliteOutputFile :: String -> String -> Parser SqliteOutputFile
+optSqliteOutputFile optname desc =
+  fmap SqliteOutputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "SQLITE-OUTFILE"
+      <> help desc
+
 optOutputFile :: String -> String -> Parser OutputFile
 optOutputFile optname desc =
   fmap OutputFile $
@@ -285,6 +295,12 @@ optWord optname desc def =
     <> metavar "INT"
     <> help desc
     <> value def
+
+optString :: String -> String -> Parser String
+optString optname desc =
+  Opt.option Opt.str $
+    long optname <> metavar "STRING" <> Opt.help desc
+
 -- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
 hostFromLogfilename :: JsonLogfile -> Host
 hostFromLogfilename (JsonLogfile f) =
