@@ -7,7 +7,7 @@ with lib; with builtins;
 let
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
-  runtimeDir = i : if cfg.runtimeDir i == null then cfg.stateDir i else "/run/${cfg.runtimeDir i}";
+  runtimeDir = i : if cfg.runtimeDir i == null then cfg.stateDir i else "${cfg.runDirBase}${lib.removePrefix cfg.runDirBase (cfg.runtimeDir i)}";
   suffixDir = base: i: "${base}${optionalString (i != 0) "-${toString i}"}";
   nullOrStr = types.nullOr types.str;
   funcToOr = t: types.either t (types.functionTo t);
@@ -333,21 +333,37 @@ in {
         '';
       };
 
+      stateDirBase = mkOption {
+        type = types.str;
+        default = "/var/lib/";
+        description = ''
+          Base directory to store blockchain data, for each instance.
+        '';
+      };
+
       stateDir = mkOption {
         type = funcToOr types.str;
-        default = "/var/lib/cardano-node";
+        default = "${cfg.stateDirBase}cardano-node";
         apply = x : if (builtins.isFunction x) then x else i: x;
         description = ''
           Directory to store blockchain data, for each instance.
         '';
       };
 
+      runDirBase = mkOption {
+        type = types.str;
+        default = "/run/";
+        description = ''
+          Base runtime directory, for each instance.
+        '';
+      };
+
       runtimeDir = mkOption {
         type = funcToOr nullOrStr;
-        default = suffixDir "cardano-node";
-        apply = x : if builtins.isFunction x then x else if x == null then _: null else suffixDir x;
+        default = i: ''${cfg.runDirBase}${suffixDir "cardano-node" i}'';
+        apply = x : if builtins.isFunction x then x else if x == null then _: null else "${cfg.runDirBase}${suffixDir "cardano-node" x}";
         description = ''
-          Runtime directory relative to /run, for each instance
+          Runtime directory relative to ${cfg.runDirBase}, for each instance
         '';
       };
 
@@ -705,8 +721,6 @@ in {
   };
 
   config = mkIf cfg.enable ( let
-    stateDirBase = "/var/lib/";
-    runDirBase = "/run/";
     lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (builtins.genList lib.trivial.id cfg.instances));
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
@@ -745,11 +759,11 @@ in {
           ExecReload = mkIf (cfg.useSystemdReload && cfg.useNewTopology) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           Restart = "always";
           RuntimeDirectory = lib.mkIf (!cfg.systemdSocketActivation)
-            (lib.removePrefix runDirBase (runtimeDir i));
+            (lib.removePrefix cfg.runDirBase (runtimeDir i));
           WorkingDirectory = cfg.stateDir i;
-          # This assumes /var/lib/ is a prefix of cfg.stateDir.
+          # This assumes cfg.stateDirBase is a prefix of cfg.stateDir.
           # This is checked as an assertion below.
-          StateDirectory =  lib.removePrefix stateDirBase (cfg.stateDir i);
+          StateDirectory =  lib.removePrefix cfg.stateDirBase (cfg.stateDir i);
           NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
           # time to sleep before restarting a service
           RestartSec = 1;
@@ -765,8 +779,7 @@ in {
             ++ optional (cfg.ipv6HostAddr i != null) "[${cfg.ipv6HostAddr i}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
             ++ (cfg.additionalListenStream i)
             ++ [(cfg.socketPath i)];
-          RuntimeDirectory = lib.removePrefix runDirBase
-            (cfg.runtimeDir i);
+          RuntimeDirectory = lib.removePrefix cfg.runDirBase (cfg.runtimeDir i);
           NoDelay = "yes";
           ReusePort = "yes";
           SocketMode = "0660";
@@ -788,17 +801,17 @@ in {
           User = "cardano-node";
           Group = "cardano-node";
           ExecStart = "${pkgs.coreutils}/bin/echo Starting ${toString cfg.instances} cardano-node instances";
-          WorkingDirectory = "/var/lib/cardano-node";
-          StateDirectory = "cardano-node";
+          WorkingDirectory = cfg.stateDir i;
+          StateDirectory =  lib.removePrefix cfg.stateDirBase (cfg.stateDir i);
         };
       };
     }
     {
       assertions = [
         {
-          assertion = builtins.all (i : lib.hasPrefix stateDirBase (cfg.stateDir i))
+          assertion = builtins.all (i : lib.hasPrefix cfg.stateDirBase (cfg.stateDir i))
                                    (builtins.genList lib.trivial.id cfg.instances);
-          message = "The option services.cardano-node.stateDir should have ${stateDirBase}
+          message = "The option services.cardano-node.stateDir should have ${cfg.stateDirBase}
                      as a prefix, for each instance!";
         }
         {
