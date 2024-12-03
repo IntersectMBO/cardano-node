@@ -247,13 +247,12 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
       Just aName -> return aName
       Nothing -> do
         -- The user didn't specify node's name in the configuration.
-        -- In this case we should form node's name as "host:port", where 'host' and 'port'
-        -- are taken from '--host-addr' and '--port' CLI-parameters correspondingly.
-        let SocketConfig hostIPv4 hostIPv6 port _ = ncSocketConfig nc
-        hostName <- case (show <$> hostIPv6) <> (show <$> hostIPv4) of
-          Last (Just addr) -> return addr
-          Last  Nothing    -> getHostName
-        return . pack $ hostName <> maybe "" ((":" ++) . show) (getLast port)
+        -- In this case we should form node's name as "host_port",
+        -- where 'host' is the machine's host name and 'port' is taken
+        -- from the '--port' CLI-parameter.
+        let SocketConfig{ncNodePortNumber = port} = ncSocketConfig nc
+        hostName <- getHostName
+        return . pack $ hostName <> "_" <> show (getLast port)
 
 -- | This information is taken from 'BasicInfoShelleyBased'. It is required for
 --   'cardano-tracer' service (particularly, for RTView).
