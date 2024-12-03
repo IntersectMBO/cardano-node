@@ -1,0 +1,869 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DefaultSignatures      #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts       #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE QuantifiedConstraints  #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilyDependencies #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Class.MonadMVar</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadMVar"><span class="hs-identifier">MonadMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadInspectMVar"><span class="hs-identifier">MonadInspectMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadThrow.html"><span class="hs-identifier">Control.Monad.Class.MonadThrow</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.html"><span class="hs-identifier">Control.Monad.Reader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier">ReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/mtl-2.3.1/src/Control.Monad.Trans.html"><span class="hs-identifier">Control.Monad.Trans</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier">lift</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Kind.html"><span class="hs-identifier">Data.Kind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadMVar"><span class="hs-identifier hs-var">MonadMVar</span></a></span></span><span> </span><span id="local-6989586621679094775"><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-pragma">{-# MINIMAL</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#newEmptyMVar"><span class="hs-pragma hs-type">newEmptyMVar</span></a></span><span class="hs-pragma">,</span><span>
+</span><span id="line-22"></span><span>              </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-pragma hs-type">takeMVar</span></a></span><span class="hs-pragma">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#tryTakeMVar"><span class="hs-pragma hs-type">tryTakeMVar</span></a></span><span class="hs-pragma">,</span><span>
+</span><span id="line-23"></span><span>              </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-pragma hs-type">putMVar</span></a></span><span class="hs-pragma">,</span><span>  </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#tryPutMVar"><span class="hs-pragma hs-type">tryPutMVar</span></a></span><span class="hs-pragma">,</span><span>
+</span><span id="line-24"></span><span>              </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#readMVar"><span class="hs-pragma hs-type">readMVar</span></a></span><span class="hs-pragma">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#tryReadMVar"><span class="hs-pragma hs-type">tryReadMVar</span></a></span><span class="hs-pragma">,</span><span>
+</span><span id="line-25"></span><span>              </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#isEmptyMVar"><span class="hs-pragma hs-type">isEmptyMVar</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-var">MVar</span></a></span></span><span> </span><span id="local-6989586621679094775"><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-comment">-- | See 'IO.newEmptyMVar'.</span><span>
+</span><span id="line-30"></span><span>  </span><span id="newEmptyMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#newEmptyMVar"><span class="hs-identifier hs-type">newEmptyMVar</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094780"><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094780"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-comment">-- | See 'IO.takeMVar'.</span><span>
+</span><span id="line-32"></span><span>  </span><span id="takeMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-type">takeMVar</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094792"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094792"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094792"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-comment">-- | See 'IO.putMVar'.</span><span>
+</span><span id="line-34"></span><span>  </span><span id="putMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-type">putMVar</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094781"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094781"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094781"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- | See 'IO.tryTakeMVar'.</span><span>
+</span><span id="line-36"></span><span>  </span><span id="tryTakeMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#tryTakeMVar"><span class="hs-identifier hs-type">tryTakeMVar</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094818"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094818"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094818"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-comment">-- | See 'IO.tryPutMVar'.</span><span>
+</span><span id="line-38"></span><span>  </span><span id="tryPutMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#tryPutMVar"><span class="hs-identifier hs-type">tryPutMVar</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094819"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094819"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094819"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-comment">-- | See 'IO.isEmptyMVar'.</span><span>
+</span><span id="line-40"></span><span>  </span><span id="isEmptyMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#isEmptyMVar"><span class="hs-identifier hs-type">isEmptyMVar</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094820"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094820"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-comment">-- methods with a default implementation</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-comment">-- | See 'IO.newMVar'.</span><span>
+</span><span id="line-44"></span><span>  </span><span id="newMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#newMVar"><span class="hs-identifier hs-type">newMVar</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094821"><span class="annot"><a href="#local-6989586621679094821"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094821"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-comment">-- | See 'IO.readMVar'.</span><span>
+</span><span id="line-46"></span><span>  </span><span id="readMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#readMVar"><span class="hs-identifier hs-type">readMVar</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094946"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094946"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094946"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-comment">-- | See 'IO.tryReadMVar'.</span><span>
+</span><span id="line-48"></span><span>  </span><span id="tryReadMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#tryReadMVar"><span class="hs-identifier hs-type">tryReadMVar</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094903"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094903"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094903"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-comment">-- | See 'IO.swapMVar'.</span><span>
+</span><span id="line-50"></span><span>  </span><span id="swapMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#swapMVar"><span class="hs-identifier hs-type">swapMVar</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094822"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094822"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094822"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094822"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-comment">-- | See 'IO.withMVar'.</span><span>
+</span><span id="line-52"></span><span>  </span><span id="withMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVar"><span class="hs-identifier hs-type">withMVar</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094823"><span id="local-6989586621679094824"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094823"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094823"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094824"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094824"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-comment">-- | See 'IO.withMVarMasked'.</span><span>
+</span><span id="line-54"></span><span>  </span><span id="withMVarMasked"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVarMasked"><span class="hs-identifier hs-type">withMVarMasked</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094950"><span id="local-6989586621679094951"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094950"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094950"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094951"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094951"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-comment">-- | See 'IO.modifyMVar_'.</span><span>
+</span><span id="line-56"></span><span>  </span><span id="modifyMVar_"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar_"><span class="hs-identifier hs-type">modifyMVar_</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094825"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094825"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094825"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094825"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-comment">-- | See 'IO.modifyMVar'.</span><span>
+</span><span id="line-58"></span><span>  </span><span id="modifyMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar"><span class="hs-identifier hs-type">modifyMVar</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094826"><span id="local-6989586621679094827"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094826"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094826"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094826"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679094827"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094827"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-comment">-- | See 'IO.modifyMVarMasked_'.</span><span>
+</span><span id="line-60"></span><span>  </span><span id="modifyMVarMasked_"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked_"><span class="hs-identifier hs-type">modifyMVarMasked_</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094955"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094955"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094955"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094955"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-comment">-- | See 'IO.modifyMVarMasked'.</span><span>
+</span><span id="line-62"></span><span>  </span><span id="modifyMVarMasked"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked"><span class="hs-identifier hs-type">modifyMVarMasked</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094957"><span id="local-6989586621679094958"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094957"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094957"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094957"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679094958"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094958"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="newMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#newMVar"><span class="hs-identifier hs-type">newMVar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094777"><span class="annot"><a href="#local-6989586621679094777"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094777"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679094960"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#newMVar"><span class="hs-identifier hs-var hs-var">newMVar</span></a></span><span> </span><span id="local-6989586621679094967"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679094967"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679094968"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094968"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (MVar m a)
+forall a. m (MVar m a)
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; m (MVar m a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#newEmptyMVar"><span class="hs-identifier hs-var">newEmptyMVar</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094968"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679094967"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">MVar m a -&gt; m (MVar m a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094968"><span class="hs-identifier hs-var">v</span></a></span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#newMVar"><span class="hs-pragma hs-type">newMVar</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="swapMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#swapMVar"><span class="hs-identifier hs-type">swapMVar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094785"><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094785"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094785"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094785"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679094969"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#swapMVar"><span class="hs-identifier hs-var hs-var">swapMVar</span></a></span><span> </span><span id="local-6989586621679094978"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094978"><span class="hs-identifier hs-var">mvar</span></a></span></span><span> </span><span id="local-6989586621679094979"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679094979"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">m a -&gt; m a
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMask m =&gt; m a -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#mask_"><span class="hs-identifier hs-var">mask_</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; m a) -&gt; m a -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>      </span><span id="local-6989586621679094981"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679094981"><span class="hs-identifier hs-var">old</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094978"><span class="hs-identifier hs-var">mvar</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094978"><span class="hs-identifier hs-var">mvar</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679094979"><span class="hs-identifier hs-var">new</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679094981"><span class="hs-identifier hs-var">old</span></a></span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#swapMVar"><span class="hs-pragma hs-type">swapMVar</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="withMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVar"><span class="hs-identifier hs-type">withMVar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094793"><span id="local-6989586621679094794"><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094793"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094793"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094794"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094794"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679094982"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVar"><span class="hs-identifier hs-var hs-var">withMVar</span></a></span><span> </span><span id="local-6989586621679094996"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094996"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679094997"><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679094997"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall b. ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadMask m =&gt;
+((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+</span><a href="Control.Monad.Class.MonadThrow.html#mask"><span class="hs-identifier hs-var">mask</span></a></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679094999"><span class="annot"><span class="annottext">forall a. m a -&gt; m a
+</span><a href="#local-6989586621679094999"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>      </span><span id="local-6989586621679095000"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095000"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094996"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span id="local-6989586621679095001"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095001"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m b -&gt; m b
+forall a. m a -&gt; m a
+</span><a href="#local-6989586621679094999"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679094997"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095000"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m b -&gt; m () -&gt; m b
+forall a b. m a -&gt; m b -&gt; m a
+forall (m :: * -&gt; *) a b. MonadCatch m =&gt; m a -&gt; m b -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#onException"><span class="hs-operator hs-var">`onException`</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094996"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095000"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679094996"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095000"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">b -&gt; m b
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095001"><span class="hs-identifier hs-var">b</span></a></span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVar"><span class="hs-pragma hs-type">withMVar</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="withMVarMasked"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVarMasked"><span class="hs-identifier hs-type">withMVarMasked</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679095003"><span id="local-6989586621679095004"><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095003"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095003"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095004"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095004"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679095005"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVarMasked"><span class="hs-identifier hs-var hs-var">withMVarMasked</span></a></span><span> </span><span id="local-6989586621679095018"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095018"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679095019"><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679095019"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">m b -&gt; m b
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMask m =&gt; m a -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#mask_"><span class="hs-identifier hs-var">mask_</span></a></span><span> </span><span class="annot"><span class="annottext">(m b -&gt; m b) -&gt; m b -&gt; m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-91"></span><span>      </span><span id="local-6989586621679095020"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095020"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095018"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-92"></span><span>      </span><span id="local-6989586621679095021"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095021"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679095019"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095020"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">m b -&gt; m () -&gt; m b
+forall a b. m a -&gt; m b -&gt; m a
+forall (m :: * -&gt; *) a b. MonadCatch m =&gt; m a -&gt; m b -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#onException"><span class="hs-operator hs-var">`onException`</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095018"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095020"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-93"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095018"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095020"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">b -&gt; m b
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095021"><span class="hs-identifier hs-var">b</span></a></span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#withMVarMasked"><span class="hs-pragma hs-type">withMVarMasked</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="modifyMVar_"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar_"><span class="hs-identifier hs-type">modifyMVar_</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094804"><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094804"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094804"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094804"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679095022"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar_"><span class="hs-identifier hs-var hs-var">modifyMVar_</span></a></span><span> </span><span id="local-6989586621679095033"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095033"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679095034"><span class="annot"><span class="annottext">a -&gt; m a
+</span><a href="#local-6989586621679095034"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ()
+forall b. ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadMask m =&gt;
+((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+</span><a href="Control.Monad.Class.MonadThrow.html#mask"><span class="hs-identifier hs-var">mask</span></a></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ())
+-&gt; ((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095035"><span class="annot"><span class="annottext">forall a. m a -&gt; m a
+</span><a href="#local-6989586621679095035"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-100"></span><span>      </span><span id="local-6989586621679095036"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095036"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095033"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-101"></span><span>      </span><span id="local-6989586621679095037"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095037"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a
+forall a. m a -&gt; m a
+</span><a href="#local-6989586621679095035"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; m a
+</span><a href="#local-6989586621679095034"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095036"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m a -&gt; m () -&gt; m a
+forall a b. m a -&gt; m b -&gt; m a
+forall (m :: * -&gt; *) a b. MonadCatch m =&gt; m a -&gt; m b -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#onException"><span class="hs-operator hs-var">`onException`</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095033"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095036"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095033"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095037"><span class="hs-identifier hs-var">a'</span></a></span></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar_"><span class="hs-pragma hs-type">modifyMVar_</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="modifyMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar"><span class="hs-identifier hs-type">modifyMVar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094807"><span id="local-6989586621679094808"><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadEvaluate"><span class="hs-identifier hs-type">MonadEvaluate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>                     </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094807"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094807"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094807"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679094808"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094808"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621679095038"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar"><span class="hs-identifier hs-var hs-var">modifyMVar</span></a></span><span> </span><span id="local-6989586621679095054"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095054"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679095055"><span class="annot"><span class="annottext">a -&gt; m (a, b)
+</span><a href="#local-6989586621679095055"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall b. ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadMask m =&gt;
+((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+</span><a href="Control.Monad.Class.MonadThrow.html#mask"><span class="hs-identifier hs-var">mask</span></a></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095056"><span class="annot"><span class="annottext">forall a. m a -&gt; m a
+</span><a href="#local-6989586621679095056"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-109"></span><span>      </span><span id="local-6989586621679095057"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095057"><span class="hs-identifier hs-var">a</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095054"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679095058"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095058"><span class="hs-identifier hs-var">a'</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679095059"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095059"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (a, b) -&gt; m (a, b)
+forall a. m a -&gt; m a
+</span><a href="#local-6989586621679095056"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; m (a, b)
+</span><a href="#local-6989586621679095055"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095057"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">m (a, b) -&gt; ((a, b) -&gt; m (a, b)) -&gt; m (a, b)
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(a, b) -&gt; m (a, b)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. MonadEvaluate m =&gt; a -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#evaluate"><span class="hs-identifier hs-var">evaluate</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m (a, b) -&gt; m () -&gt; m (a, b)
+forall a b. m a -&gt; m b -&gt; m a
+forall (m :: * -&gt; *) a b. MonadCatch m =&gt; m a -&gt; m b -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#onException"><span class="hs-operator hs-var">`onException`</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095054"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095057"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095054"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095058"><span class="hs-identifier hs-var">a'</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><span class="annottext">b -&gt; m b
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095059"><span class="hs-identifier hs-var">b</span></a></span></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar"><span class="hs-pragma hs-type">modifyMVar</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="modifyMVarMasked_"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked_"><span class="hs-identifier hs-type">modifyMVarMasked_</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679095061"><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095061"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095061"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095061"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679095062"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked_"><span class="hs-identifier hs-var hs-var">modifyMVarMasked_</span></a></span><span> </span><span id="local-6989586621679095073"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095073"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679095074"><span class="annot"><span class="annottext">a -&gt; m a
+</span><a href="#local-6989586621679095074"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">m () -&gt; m ()
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMask m =&gt; m a -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#mask_"><span class="hs-identifier hs-var">mask_</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-118"></span><span>      </span><span id="local-6989586621679095075"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095075"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095073"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span id="local-6989586621679095076"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095076"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; m a
+</span><a href="#local-6989586621679095074"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095075"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; m () -&gt; m a
+forall a b. m a -&gt; m b -&gt; m a
+forall (m :: * -&gt; *) a b. MonadCatch m =&gt; m a -&gt; m b -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#onException"><span class="hs-operator hs-var">`onException`</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095073"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095075"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095073"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095076"><span class="hs-identifier hs-var">a'</span></a></span></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked_"><span class="hs-pragma hs-type">modifyMVarMasked_</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="modifyMVarMasked"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked"><span class="hs-identifier hs-type">modifyMVarMasked</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679095077"><span id="local-6989586621679095078"><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadEvaluate"><span class="hs-identifier hs-type">MonadEvaluate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>                           </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095077"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095077"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095077"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679095078"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094775"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095078"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-125"></span><span>  </span><span id="local-6989586621679095079"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked"><span class="hs-identifier hs-var hs-var">modifyMVarMasked</span></a></span><span> </span><span id="local-6989586621679095095"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095095"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679095096"><span class="annot"><span class="annottext">a -&gt; m (a, b)
+</span><a href="#local-6989586621679095096"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">m b -&gt; m b
+forall a. m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMask m =&gt; m a -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#mask_"><span class="hs-identifier hs-var">mask_</span></a></span><span> </span><span class="annot"><span class="annottext">(m b -&gt; m b) -&gt; m b -&gt; m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-127"></span><span>      </span><span id="local-6989586621679095097"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095097"><span class="hs-identifier hs-var">a</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095095"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-128"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679095098"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095098"><span class="hs-identifier hs-var">a'</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679095099"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095099"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; m (a, b)
+</span><a href="#local-6989586621679095096"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095097"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">m (a, b) -&gt; ((a, b) -&gt; m (a, b)) -&gt; m (a, b)
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(a, b) -&gt; m (a, b)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. MonadEvaluate m =&gt; a -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#evaluate"><span class="hs-identifier hs-var">evaluate</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m (a, b) -&gt; m () -&gt; m (a, b)
+forall a b. m a -&gt; m b -&gt; m a
+forall (m :: * -&gt; *) a b. MonadCatch m =&gt; m a -&gt; m b -&gt; m a
+</span><a href="Control.Monad.Class.MonadThrow.html#onException"><span class="hs-operator hs-var">`onException`</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095095"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095097"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095095"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095098"><span class="hs-identifier hs-var">a'</span></a></span><span>
+</span><span id="line-130"></span><span>      </span><span class="annot"><span class="annottext">b -&gt; m b
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095099"><span class="hs-identifier hs-var">b</span></a></span></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked"><span class="hs-pragma hs-type">modifyMVarMasked</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-comment">--</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- IO instance</span><span>
+</span><span id="line-135"></span><span class="hs-comment">--</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadMVar"><span class="hs-identifier hs-type">MonadMVar</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span id="MVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-var">MVar</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">IO.MVar</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span id="local-6989586621679095121"><span class="annot"><span class="annottext">newEmptyMVar :: forall a. IO (MVar IO a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#newEmptyMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">newEmptyMVar</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (MVar a)
+IO (MVar IO a)
+forall a. IO (MVar a)
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#newEmptyMVar"><span class="hs-identifier hs-var">IO.newEmptyMVar</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span id="local-6989586621679095123"><span class="annot"><span class="annottext">newMVar :: forall a. a -&gt; IO (MVar IO a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#newMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">newMVar</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO (MVar a)
+a -&gt; IO (MVar IO a)
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">IO.newMVar</span></a></span><span>
+</span><span id="line-141"></span><span>    </span><span id="local-6989586621679095125"><span class="annot"><span class="annottext">takeMVar :: forall a. MVar IO a -&gt; IO a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">takeMVar</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO a
+MVar IO a -&gt; IO a
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#takeMVar"><span class="hs-identifier hs-var">IO.takeMVar</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span id="local-6989586621679095127"><span class="annot"><span class="annottext">putMVar :: forall a. MVar IO a -&gt; a -&gt; IO ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">putMVar</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; a -&gt; IO ()
+MVar IO a -&gt; a -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#putMVar"><span class="hs-identifier hs-var">IO.putMVar</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621679095129"><span class="annot"><span class="annottext">readMVar :: forall a. MVar IO a -&gt; IO a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#readMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">readMVar</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO a
+MVar IO a -&gt; IO a
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#readMVar"><span class="hs-identifier hs-var">IO.readMVar</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span id="local-6989586621679095131"><span class="annot"><span class="annottext">swapMVar :: forall a. MVar IO a -&gt; a -&gt; IO a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#swapMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">swapMVar</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; a -&gt; IO a
+MVar IO a -&gt; a -&gt; IO a
+forall a. MVar a -&gt; a -&gt; IO a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html#swapMVar"><span class="hs-identifier hs-var">IO.swapMVar</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span id="local-6989586621679095133"><span class="annot"><span class="annottext">tryTakeMVar :: forall a. MVar IO a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryTakeMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryTakeMVar</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO (Maybe a)
+MVar IO a -&gt; IO (Maybe a)
+forall a. MVar a -&gt; IO (Maybe a)
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#tryTakeMVar"><span class="hs-identifier hs-var">IO.tryTakeMVar</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679095135"><span class="annot"><span class="annottext">tryPutMVar :: forall a. MVar IO a -&gt; a -&gt; IO Bool
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryPutMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryPutMVar</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; a -&gt; IO Bool
+MVar IO a -&gt; a -&gt; IO Bool
+forall a. MVar a -&gt; a -&gt; IO Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#tryPutMVar"><span class="hs-identifier hs-var">IO.tryPutMVar</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621679095137"><span class="annot"><span class="annottext">tryReadMVar :: forall a. MVar IO a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryReadMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryReadMVar</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO (Maybe a)
+MVar IO a -&gt; IO (Maybe a)
+forall a. MVar a -&gt; IO (Maybe a)
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#tryReadMVar"><span class="hs-identifier hs-var">IO.tryReadMVar</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621679095139"><span class="annot"><span class="annottext">isEmptyMVar :: forall a. MVar IO a -&gt; IO Bool
+</span><a href="Control.Concurrent.Class.MonadMVar.html#isEmptyMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">isEmptyMVar</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO Bool
+MVar IO a -&gt; IO Bool
+forall a. MVar a -&gt; IO Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.MVar.html#isEmptyMVar"><span class="hs-identifier hs-var">IO.isEmptyMVar</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span id="local-6989586621679095141"><span class="annot"><span class="annottext">withMVar :: forall a b. MVar IO a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#withMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">withMVar</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+MVar IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">IO.withMVar</span></a></span><span>
+</span><span id="line-150"></span><span>    </span><span id="local-6989586621679095143"><span class="annot"><span class="annottext">withMVarMasked :: forall a b. MVar IO a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#withMVarMasked"><span class="hs-identifier hs-var hs-var hs-var hs-var">withMVarMasked</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+MVar IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html#withMVarMasked"><span class="hs-identifier hs-var">IO.withMVarMasked</span></a></span><span>
+</span><span id="line-151"></span><span>    </span><span id="local-6989586621679095145"><span class="annot"><span class="annottext">modifyMVar_ :: forall a. MVar IO a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar_"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVar_</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+MVar IO a -&gt; (a -&gt; IO a) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">IO.modifyMVar_</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span id="local-6989586621679095147"><span class="annot"><span class="annottext">modifyMVar :: forall a b. MVar IO a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVar</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+MVar IO a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">IO.modifyMVar</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span id="local-6989586621679095149"><span class="annot"><span class="annottext">modifyMVarMasked_ :: forall a. MVar IO a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked_"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVarMasked_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+MVar IO a -&gt; (a -&gt; IO a) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html#modifyMVarMasked_"><span class="hs-identifier hs-var">IO.modifyMVarMasked_</span></a></span><span>
+</span><span id="line-154"></span><span>    </span><span id="local-6989586621679095151"><span class="annot"><span class="annottext">modifyMVarMasked :: forall a b. MVar IO a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVarMasked</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+MVar IO a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Concurrent.MVar.html#modifyMVarMasked"><span class="hs-identifier hs-var">IO.modifyMVarMasked</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-comment">--</span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- ReaderT instance</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-keyword">newtype</span><span> </span><span id="WrappedMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-var">WrappedMVar</span></a></span></span><span> </span><span id="local-6989586621679094862"><span class="annot"><a href="#local-6989586621679094862"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679094863"><span class="annot"><a href="#local-6989586621679094863"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679094864"><span class="annot"><a href="#local-6989586621679094864"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="WrappedMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-var">WrappedMVar</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unwrapMVar"><span class="annot"><span class="annottext">forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var hs-var">unwrapMVar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094863"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094864"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679094875"><span id="local-6989586621679094876"><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadThrow.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094875"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-164"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadMVar"><span class="hs-identifier hs-type">MonadMVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094875"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-165"></span><span>         </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadMVar"><span class="hs-identifier hs-type">MonadMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094876"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094875"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span id="MVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-var">MVar</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094876"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094875"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-type">WrappedMVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094876"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094875"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span id="local-6989586621679095188"><span class="annot"><span class="annottext">newEmptyMVar :: forall a. ReaderT r m (MVar (ReaderT r m) a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#newEmptyMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">newEmptyMVar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; WrappedMVar r m a
+forall r (m :: * -&gt; *) a. MVar m a -&gt; WrappedMVar r m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-var">WrappedMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar m a -&gt; WrappedMVar r m a)
+-&gt; ReaderT r m (MVar m a) -&gt; ReaderT r m (WrappedMVar r m a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (MVar m a) -&gt; ReaderT r m (MVar m a)
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">m (MVar m a)
+forall a. m (MVar m a)
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; m (MVar m a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#newEmptyMVar"><span class="hs-identifier hs-var">newEmptyMVar</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span id="local-6989586621679095194"><span class="annot"><span class="annottext">newMVar :: forall a. a -&gt; ReaderT r m (MVar (ReaderT r m) a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#newMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">newMVar</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MVar m a -&gt; WrappedMVar r m a)
+-&gt; ReaderT r m (MVar m a) -&gt; ReaderT r m (WrappedMVar r m a)
+forall a b. (a -&gt; b) -&gt; ReaderT r m a -&gt; ReaderT r m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a -&gt; WrappedMVar r m a
+forall r (m :: * -&gt; *) a. MVar m a -&gt; WrappedMVar r m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-var">WrappedMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT r m (MVar m a) -&gt; ReaderT r m (WrappedMVar r m a))
+-&gt; (a -&gt; ReaderT r m (MVar m a))
+-&gt; a
+-&gt; ReaderT r m (WrappedMVar r m a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">m (MVar m a) -&gt; ReaderT r m (MVar m a)
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m (MVar m a) -&gt; ReaderT r m (MVar m a))
+-&gt; (a -&gt; m (MVar m a)) -&gt; a -&gt; ReaderT r m (MVar m a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m (MVar m a)
+forall a. a -&gt; m (MVar m a)
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; a -&gt; m (MVar m a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span>
+</span><span id="line-169"></span><span>    </span><span id="local-6989586621679095199"><span class="annot"><span class="annottext">takeMVar :: forall a. MVar (ReaderT r m) a -&gt; ReaderT r m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">takeMVar</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT r m a)
+-&gt; (WrappedMVar r m a -&gt; m a) -&gt; WrappedMVar r m a -&gt; ReaderT r m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>   </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span>    </span><span class="annot"><span class="annottext">(MVar m a -&gt; m a)
+-&gt; (WrappedMVar r m a -&gt; MVar m a) -&gt; WrappedMVar r m a -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span>
+</span><span id="line-170"></span><span>    </span><span id="local-6989586621679095203"><span class="annot"><span class="annottext">putMVar :: forall a. MVar (ReaderT r m) a -&gt; a -&gt; ReaderT r m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">putMVar</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m () -&gt; ReaderT r m ()
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; ReaderT r m ())
+-&gt; (WrappedMVar r m a -&gt; a -&gt; m ())
+-&gt; WrappedMVar r m a
+-&gt; a
+-&gt; ReaderT r m ()
+forall c d a b. (c -&gt; d) -&gt; (a -&gt; b -&gt; c) -&gt; a -&gt; b -&gt; d
+</span><a href="Control.Concurrent.Class.MonadMVar.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m ()
+forall a. MVar m a -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span>     </span><span class="annot"><span class="annottext">(MVar m a -&gt; a -&gt; m ())
+-&gt; (WrappedMVar r m a -&gt; MVar m a)
+-&gt; WrappedMVar r m a
+-&gt; a
+-&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>    </span><span id="local-6989586621679095208"><span class="annot"><span class="annottext">readMVar :: forall a. MVar (ReaderT r m) a -&gt; ReaderT r m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#readMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">readMVar</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT r m a)
+-&gt; (WrappedMVar r m a -&gt; m a) -&gt; WrappedMVar r m a -&gt; ReaderT r m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>   </span><span class="annot"><span class="annottext">MVar m a -&gt; m a
+forall a. MVar m a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span>    </span><span class="annot"><span class="annottext">(MVar m a -&gt; m a)
+-&gt; (WrappedMVar r m a -&gt; MVar m a) -&gt; WrappedMVar r m a -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span id="local-6989586621679095212"><span class="annot"><span class="annottext">tryReadMVar :: forall a. MVar (ReaderT r m) a -&gt; ReaderT r m (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryReadMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryReadMVar</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (Maybe a) -&gt; ReaderT r m (Maybe a)
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Maybe a) -&gt; ReaderT r m (Maybe a))
+-&gt; (WrappedMVar r m a -&gt; m (Maybe a))
+-&gt; WrappedMVar r m a
+-&gt; ReaderT r m (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>   </span><span class="annot"><span class="annottext">MVar m a -&gt; m (Maybe a)
+forall a. MVar m a -&gt; m (Maybe a)
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryReadMVar"><span class="hs-identifier hs-var">tryReadMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar m a -&gt; m (Maybe a))
+-&gt; (WrappedMVar r m a -&gt; MVar m a)
+-&gt; WrappedMVar r m a
+-&gt; m (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span id="local-6989586621679095216"><span class="annot"><span class="annottext">swapMVar :: forall a. MVar (ReaderT r m) a -&gt; a -&gt; ReaderT r m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#swapMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">swapMVar</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT r m a
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT r m a)
+-&gt; (WrappedMVar r m a -&gt; a -&gt; m a)
+-&gt; WrappedMVar r m a
+-&gt; a
+-&gt; ReaderT r m a
+forall c d a b. (c -&gt; d) -&gt; (a -&gt; b -&gt; c) -&gt; a -&gt; b -&gt; d
+</span><a href="Control.Concurrent.Class.MonadMVar.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m a
+forall a. MVar m a -&gt; a -&gt; m a
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#swapMVar"><span class="hs-identifier hs-var">swapMVar</span></a></span><span>    </span><span class="annot"><span class="annottext">(MVar m a -&gt; a -&gt; m a)
+-&gt; (WrappedMVar r m a -&gt; MVar m a) -&gt; WrappedMVar r m a -&gt; a -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span>    </span><span id="local-6989586621679095220"><span class="annot"><span class="annottext">tryTakeMVar :: forall a. MVar (ReaderT r m) a -&gt; ReaderT r m (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryTakeMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryTakeMVar</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (Maybe a) -&gt; ReaderT r m (Maybe a)
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Maybe a) -&gt; ReaderT r m (Maybe a))
+-&gt; (WrappedMVar r m a -&gt; m (Maybe a))
+-&gt; WrappedMVar r m a
+-&gt; ReaderT r m (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>   </span><span class="annot"><span class="annottext">MVar m a -&gt; m (Maybe a)
+forall a. MVar m a -&gt; m (Maybe a)
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryTakeMVar"><span class="hs-identifier hs-var">tryTakeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar m a -&gt; m (Maybe a))
+-&gt; (WrappedMVar r m a -&gt; MVar m a)
+-&gt; WrappedMVar r m a
+-&gt; m (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span id="local-6989586621679095224"><span class="annot"><span class="annottext">tryPutMVar :: forall a. MVar (ReaderT r m) a -&gt; a -&gt; ReaderT r m Bool
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryPutMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryPutMVar</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m Bool -&gt; ReaderT r m Bool
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m Bool -&gt; ReaderT r m Bool)
+-&gt; (WrappedMVar r m a -&gt; a -&gt; m Bool)
+-&gt; WrappedMVar r m a
+-&gt; a
+-&gt; ReaderT r m Bool
+forall c d a b. (c -&gt; d) -&gt; (a -&gt; b -&gt; c) -&gt; a -&gt; b -&gt; d
+</span><a href="Control.Concurrent.Class.MonadMVar.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVar m a -&gt; a -&gt; m Bool
+forall a. MVar m a -&gt; a -&gt; m Bool
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; a -&gt; m Bool
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryPutMVar"><span class="hs-identifier hs-var">tryPutMVar</span></a></span><span>  </span><span class="annot"><span class="annottext">(MVar m a -&gt; a -&gt; m Bool)
+-&gt; (WrappedMVar r m a -&gt; MVar m a)
+-&gt; WrappedMVar r m a
+-&gt; a
+-&gt; m Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>    </span><span id="local-6989586621679095228"><span class="annot"><span class="annottext">isEmptyMVar :: forall a. MVar (ReaderT r m) a -&gt; ReaderT r m Bool
+</span><a href="Control.Concurrent.Class.MonadMVar.html#isEmptyMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">isEmptyMVar</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m Bool -&gt; ReaderT r m Bool
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m Bool -&gt; ReaderT r m Bool)
+-&gt; (WrappedMVar r m a -&gt; m Bool)
+-&gt; WrappedMVar r m a
+-&gt; ReaderT r m Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>   </span><span class="annot"><span class="annottext">MVar m a -&gt; m Bool
+forall a. MVar m a -&gt; m Bool
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m Bool
+</span><a href="Control.Concurrent.Class.MonadMVar.html#isEmptyMVar"><span class="hs-identifier hs-var">isEmptyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar m a -&gt; m Bool)
+-&gt; (WrappedMVar r m a -&gt; MVar m a) -&gt; WrappedMVar r m a -&gt; m Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">WrappedMVar r m a -&gt; MVar m a
+forall r (m :: * -&gt; *) a. WrappedMVar r m a -&gt; MVar m a
+</span><a href="Control.Concurrent.Class.MonadMVar.html#unwrapMVar"><span class="hs-identifier hs-var">unwrapMVar</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span id="local-6989586621679095230"><span class="annot"><span class="annottext">withMVar :: forall a b.
+MVar (ReaderT r m) a -&gt; (a -&gt; ReaderT r m b) -&gt; ReaderT r m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#withMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">withMVar</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-type">WrappedMVar</span></a></span><span> </span><span id="local-6989586621679095231"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095231"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679095232"><span class="annot"><span class="annottext">a -&gt; ReaderT r m b
+</span><a href="#local-6989586621679095232"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b) -&gt; (r -&gt; m b) -&gt; ReaderT r m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095234"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095234"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-178"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; (a -&gt; m b) -&gt; m b
+forall a b. MVar m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b.
+MonadMVar m =&gt;
+MVar m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095231"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679095235"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095235"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m b -&gt; r -&gt; m b
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ReaderT r m b
+</span><a href="#local-6989586621679095232"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095235"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095234"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>    </span><span id="local-6989586621679095238"><span class="annot"><span class="annottext">withMVarMasked :: forall a b.
+MVar (ReaderT r m) a -&gt; (a -&gt; ReaderT r m b) -&gt; ReaderT r m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#withMVarMasked"><span class="hs-identifier hs-var hs-var hs-var hs-var">withMVarMasked</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-type">WrappedMVar</span></a></span><span> </span><span id="local-6989586621679095239"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095239"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679095240"><span class="annot"><span class="annottext">a -&gt; ReaderT r m b
+</span><a href="#local-6989586621679095240"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b) -&gt; (r -&gt; m b) -&gt; ReaderT r m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095241"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095241"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-180"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; (a -&gt; m b) -&gt; m b
+forall a b. MVar m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b.
+MonadMVar m =&gt;
+MVar m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#withMVarMasked"><span class="hs-identifier hs-var">withMVarMasked</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095239"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679095242"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095242"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m b -&gt; r -&gt; m b
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ReaderT r m b
+</span><a href="#local-6989586621679095240"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095242"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095241"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>    </span><span id="local-6989586621679095244"><span class="annot"><span class="annottext">modifyMVar_ :: forall a.
+MVar (ReaderT r m) a -&gt; (a -&gt; ReaderT r m a) -&gt; ReaderT r m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar_"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVar_</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-type">WrappedMVar</span></a></span><span> </span><span id="local-6989586621679095245"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095245"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679095246"><span class="annot"><span class="annottext">a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679095246"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m ()) -&gt; ReaderT r m ()
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m ()) -&gt; ReaderT r m ()) -&gt; (r -&gt; m ()) -&gt; ReaderT r m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095247"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095247"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-182"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; (a -&gt; m a) -&gt; m ()
+forall a. MVar m a -&gt; (a -&gt; m a) -&gt; m ()
+forall (m :: * -&gt; *) a.
+MonadMVar m =&gt;
+MVar m a -&gt; (a -&gt; m a) -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095245"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679095248"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095248"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679095246"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095248"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095247"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>    </span><span id="local-6989586621679095250"><span class="annot"><span class="annottext">modifyMVar :: forall a b.
+MVar (ReaderT r m) a -&gt; (a -&gt; ReaderT r m (a, b)) -&gt; ReaderT r m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVar</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-type">WrappedMVar</span></a></span><span> </span><span id="local-6989586621679095251"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095251"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679095252"><span class="annot"><span class="annottext">a -&gt; ReaderT r m (a, b)
+</span><a href="#local-6989586621679095252"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b) -&gt; (r -&gt; m b) -&gt; ReaderT r m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095253"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095253"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-184"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; (a -&gt; m (a, b)) -&gt; m b
+forall a b. MVar m a -&gt; (a -&gt; m (a, b)) -&gt; m b
+forall (m :: * -&gt; *) a b.
+MonadMVar m =&gt;
+MVar m a -&gt; (a -&gt; m (a, b)) -&gt; m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVar"><span class="hs-identifier hs-var">modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095251"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679095254"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095254"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m (a, b) -&gt; r -&gt; m (a, b)
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ReaderT r m (a, b)
+</span><a href="#local-6989586621679095252"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095254"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095253"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>    </span><span id="local-6989586621679095256"><span class="annot"><span class="annottext">modifyMVarMasked_ :: forall a.
+MVar (ReaderT r m) a -&gt; (a -&gt; ReaderT r m a) -&gt; ReaderT r m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked_"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVarMasked_</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-type">WrappedMVar</span></a></span><span> </span><span id="local-6989586621679095257"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095257"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679095258"><span class="annot"><span class="annottext">a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679095258"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m ()) -&gt; ReaderT r m ()
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m ()) -&gt; ReaderT r m ()) -&gt; (r -&gt; m ()) -&gt; ReaderT r m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095259"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095259"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-186"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; (a -&gt; m a) -&gt; m ()
+forall a. MVar m a -&gt; (a -&gt; m a) -&gt; m ()
+forall (m :: * -&gt; *) a.
+MonadMVar m =&gt;
+MVar m a -&gt; (a -&gt; m a) -&gt; m ()
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked_"><span class="hs-identifier hs-var">modifyMVarMasked_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095257"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679095260"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095260"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m a -&gt; r -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ReaderT r m a
+</span><a href="#local-6989586621679095258"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095260"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095259"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>    </span><span id="local-6989586621679095262"><span class="annot"><span class="annottext">modifyMVarMasked :: forall a b.
+MVar (ReaderT r m) a -&gt; (a -&gt; ReaderT r m (a, b)) -&gt; ReaderT r m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyMVarMasked</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#WrappedMVar"><span class="hs-identifier hs-type">WrappedMVar</span></a></span><span> </span><span id="local-6989586621679095263"><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095263"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679095264"><span class="annot"><span class="annottext">a -&gt; ReaderT r m (a, b)
+</span><a href="#local-6989586621679095264"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(r -&gt; m b) -&gt; ReaderT r m b
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((r -&gt; m b) -&gt; ReaderT r m b) -&gt; (r -&gt; m b) -&gt; ReaderT r m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095265"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095265"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-188"></span><span>      </span><span class="annot"><span class="annottext">MVar m a -&gt; (a -&gt; m (a, b)) -&gt; m b
+forall a b. MVar m a -&gt; (a -&gt; m (a, b)) -&gt; m b
+forall (m :: * -&gt; *) a b.
+MonadMVar m =&gt;
+MVar m a -&gt; (a -&gt; m (a, b)) -&gt; m b
+</span><a href="Control.Concurrent.Class.MonadMVar.html#modifyMVarMasked"><span class="hs-identifier hs-var">modifyMVarMasked</span></a></span><span> </span><span class="annot"><span class="annottext">MVar m a
+</span><a href="#local-6989586621679095263"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679095266"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095266"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReaderT r m (a, b) -&gt; r -&gt; m (a, b)
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ReaderT r m (a, b)
+</span><a href="#local-6989586621679095264"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095266"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679095265"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span class="hs-comment">--</span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- MonadInspectMVar</span><span>
+</span><span id="line-192"></span><span class="hs-comment">--</span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- | This type class is intended for</span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- ['io-sim'](https://hackage.haskell.org/package/io-sim), where one might want</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- to access an 'MVar' in the underlying 'ST' monad.</span><span>
+</span><span id="line-197"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadMVar"><span class="hs-identifier hs-type">MonadMVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094924"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#InspectMVarMonad"><span class="hs-identifier hs-type">InspectMVarMonad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094924"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadInspectMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadInspectMVar"><span class="hs-identifier hs-var">MonadInspectMVar</span></a></span></span><span> </span><span id="local-6989586621679094924"><span class="annot"><a href="#local-6989586621679094924"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="InspectMVarMonad"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#InspectMVarMonad"><span class="hs-identifier hs-var">InspectMVarMonad</span></a></span></span><span> </span><span id="local-6989586621679094924"><span class="annot"><a href="#local-6989586621679094924"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-comment">-- | Return the value of an 'MVar' as an 'InspectMVarMonad' computation. Can</span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-comment">-- be 'Nothing' if the 'MVar' is empty.</span><span>
+</span><span id="line-201"></span><span>  </span><span id="inspectMVar"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#inspectMVar"><span class="hs-identifier hs-type">inspectMVar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679094927"><span id="local-6989586621679094928"><span class="annot"><a href="#local-6989586621679094927"><span class="hs-identifier hs-type">proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094924"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094924"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094928"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#InspectMVarMonad"><span class="hs-identifier hs-type">InspectMVarMonad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094924"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679094928"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#MonadInspectMVar"><span class="hs-identifier hs-type">MonadInspectMVar</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="InspectMVarMonad"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#InspectMVarMonad"><span class="hs-identifier hs-var">InspectMVarMonad</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-205"></span><span>  </span><span id="local-6989586621679095279"><span class="annot"><span class="annottext">inspectMVar :: forall (proxy :: (* -&gt; *) -&gt; *) a.
+proxy IO -&gt; MVar IO a -&gt; InspectMVarMonad IO (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#inspectMVar"><span class="hs-identifier hs-var hs-var hs-var hs-var">inspectMVar</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy IO
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar IO a -&gt; IO (Maybe a)
+MVar IO a -&gt; InspectMVarMonad IO (Maybe a)
+forall a. MVar IO a -&gt; IO (Maybe a)
+forall (m :: * -&gt; *) a. MonadMVar m =&gt; MVar m a -&gt; m (Maybe a)
+</span><a href="Control.Concurrent.Class.MonadMVar.html#tryReadMVar"><span class="hs-identifier hs-var">tryReadMVar</span></a></span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span class="hs-comment">--</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- Utilities</span><span>
+</span><span id="line-209"></span><span class="hs-comment">--</span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span id="local-6989586621679094897"><span id="local-6989586621679094898"><span id="local-6989586621679094899"><span id="local-6989586621679094900"><span class="annot"><a href="Control.Concurrent.Class.MonadMVar.html#.%3A"><span class="hs-operator hs-type">(.:)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094897"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094898"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094899"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094900"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094897"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679094899"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094900"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679094898"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-212"></span><span class="hs-special">(</span><span id="local-6989586621679095280"><span class="annot"><span class="annottext">c -&gt; d
+</span><a href="#local-6989586621679095280"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id=".%3A"><span class="annot"><span class="annottext">.: :: forall c d a b. (c -&gt; d) -&gt; (a -&gt; b -&gt; c) -&gt; a -&gt; b -&gt; d
+</span><a href="Control.Concurrent.Class.MonadMVar.html#.%3A"><span class="hs-operator hs-var hs-var">.:</span></a></span></span><span> </span><span id="local-6989586621679095281"><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679095281"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679095282"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095282"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679095283"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095283"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">c -&gt; d
+</span><a href="#local-6989586621679095280"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b -&gt; c
+</span><a href="#local-6989586621679095281"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095282"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679095283"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span></pre></body></html>
