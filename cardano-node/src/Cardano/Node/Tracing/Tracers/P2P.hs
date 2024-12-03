@@ -28,6 +28,7 @@ import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
+import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
@@ -1205,10 +1206,10 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           , "remoteAddress" .= forMachine dtal peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
-    forMachine dtal (TrReleaseConnection prov peerAddr) =
+    forMachine dtal (TrReleaseConnection prov connId) =
         mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
-          , "remoteAddress" .= forMachine dtal peerAddr
+          , "remoteAddress" .= toJSON connId
           , "provenance" .= String (pack . show $ prov)
           ]
     forMachine _dtal (TrConnect (Just localAddress) remoteAddress) =
@@ -1284,12 +1285,12 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           , "remoteAddress" .= forMachine dtal remoteAddress
           , "connectionState" .= toJSON connState
           ]
-    forMachine dtal (TrPruneConnections pruningSet numberPruned chosenPeers) =
+    forMachine _dtal (TrPruneConnections pruningSet numberPruned chosenPeers) =
         mconcat
           [ "kind" .= String "PruneConnections"
           , "prunedPeers" .= toJSON pruningSet
           , "numberPrunedPeers" .= toJSON numberPruned
-          , "choiceSet" .= toJSON (forMachine dtal `Set.map` chosenPeers)
+          , "choiceSet" .= toJSON (toJSON `Set.map` chosenPeers)
           ]
     forMachine _dtal (TrConnectionCleanup connId) =
         mconcat
@@ -1314,12 +1315,20 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
     forMachine _dtal (TrState cmState) =
         mconcat
           [ "kind"  .= String "ConnectionManagerState"
-          , "state" .= listValue (\(addr, connState) ->
+          , "state" .= listValue (\(remoteAddr, inner) ->
                                          object
-                                           [ "remoteAddress"   .= toJSON addr
-                                           , "connectionState" .= toJSON connState
-                                           ])
-                                       (Map.toList cmState)
+                                           [ "connections" .=
+                                             listValue (\(localAddr, connState) ->
+                                                object
+                                                  [ "localAddress" .= localAddr
+                                                  , "state" .= toJSON connState  
+                                                  ]
+                                             )
+                                             (Map.toList inner)
+                                           , "remoteAddress" .= toJSON remoteAddr
+                                           ]
+                                 )
+                                 (Map.toList (getConnMap cmState))
           ]
     forMachine _dtal (ConnectionManager.TrUnexpectedlyFalseAssertion info) =
         mconcat
@@ -1526,9 +1535,9 @@ instance MetaTrace (ConnectionManager.AbstractTransitionTrace peerAddr) where
 
 instance (Show addr, LogFormatting addr, ToJSON addr)
       => LogFormatting (Server.Trace addr) where
-  forMachine dtal (TrAcceptConnection peerAddr)     =
+  forMachine dtal (TrAcceptConnection connId)     =
     mconcat [ "kind" .= String "AcceptConnection"
-             , "address" .= forMachine dtal peerAddr
+             , "address" .= toJSON connId
              ]
   forMachine _dtal (TrAcceptError exception)         =
     mconcat [ "kind" .= String "AcceptErroor"
