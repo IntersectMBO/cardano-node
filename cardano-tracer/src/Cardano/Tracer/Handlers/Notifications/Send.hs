@@ -4,7 +4,8 @@ module Cardano.Tracer.Handlers.Notifications.Send
   ( makeAndSendNotification
   ) where
 
-import           Cardano.Logging (showT)
+import           Cardano.Logging (Trace, showT)
+import           Cardano.Tracer.MetaTrace (TracerTrace(..))
 import           Cardano.Tracer.Handlers.Notifications.Email
 import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Types
@@ -23,20 +24,21 @@ import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 
 makeAndSendNotification
-  :: EmailSettings
+  :: Trace IO TracerTrace
+  -> EmailSettings
   -> ConnectedNodesNames
   -> DataPointRequestors
   -> Lock
   -> TVar UTCTime
   -> EventsQueue
   -> IO ()
-makeAndSendNotification emailSettings connectedNodesNames dpRequestors
+makeAndSendNotification tracer emailSettings connectedNodesNames dpRequestors
                         currentDPLock lastTime eventsQueue = do
   events <- atomically $ nub <$> flushTBQueue eventsQueue
   let (nodeIds, tss) = unzip $ nub [(nodeId, ts) | Event nodeId ts _ _ <- events]
   unless (null nodeIds) $ do
     nodeNames <-
-      forM nodeIds $ askNodeNameRaw connectedNodesNames dpRequestors currentDPLock
+      forM nodeIds $ askNodeNameRaw tracer connectedNodesNames dpRequestors currentDPLock
     lastEventTime <- readTVarIO lastTime
     let onlyNewEvents = filter (\(Event _ ts _ _) -> ts > lastEventTime) events
     sendNotification emailSettings onlyNewEvents $ zip nodeIds nodeNames

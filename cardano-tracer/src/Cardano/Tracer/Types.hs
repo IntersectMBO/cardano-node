@@ -16,8 +16,10 @@ module Cardano.Tracer.Types
 
 import           Cardano.Tracer.Configuration
 
+
 import           Control.Concurrent.MVar (MVar)
 import           Control.Concurrent.STM.TVar (TVar)
+import           Data.Aeson (ToJSON)
 import           Data.Bimap (Bimap)
 import           Data.Kind
 import           Data.Map.Strict (Map)
@@ -32,7 +34,8 @@ import           Trace.Forward.Utils.DataPoint (DataPointRequestor)
 -- | Unique identifier of connected node, based on 'remoteAddress' from
 --   'ConnectionId', please see 'ouroboros-network'.
 newtype NodeId = NodeId Text
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (ToJSON)
 
 type NodeName = Text
 
