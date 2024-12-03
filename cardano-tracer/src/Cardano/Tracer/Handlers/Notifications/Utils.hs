@@ -7,11 +7,13 @@ module Cardano.Tracer.Handlers.Notifications.Utils
   , updateNotificationsPeriods
   ) where
 
+import           Cardano.Logging (Trace)
 import           Cardano.Tracer.Handlers.Notifications.Send
 import           Cardano.Tracer.Handlers.Notifications.Settings
 import           Cardano.Tracer.Handlers.Notifications.Timer
 import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Handlers.Utils
+import           Cardano.Tracer.MetaTrace (TracerTrace(..))
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.Extra (Lock)
@@ -23,12 +25,13 @@ import           Control.Monad.Extra (unlessM, whenJust)
 import qualified Data.Map.Strict as M
 
 initEventsQueues
-  :: Maybe FilePath
+  :: Trace IO TracerTrace
+  -> Maybe FilePath
   -> ConnectedNodesNames
   -> DataPointRequestors
   -> Lock
   -> IO EventsQueues
-initEventsQueues rtvSD nodesNames dpReqs curDPLock = do
+initEventsQueues tracer rtvSD nodesNames dpReqs curDPLock = do
   emailSettings <- readSavedEmailSettings rtvSD
 
   newTVarIO . M.fromList =<<
@@ -39,7 +42,7 @@ initEventsQueues rtvSD nodesNames dpReqs curDPLock = do
       let mkEventQueue ident (evsS, evsP) = do
             evsQ <- newTBQueueIO 2000
             evsT <- mkTimer
-              (makeAndSendNotification emailSettings nodesNames dpReqs curDPLock lastTime evsQ) evsS evsP
+              (makeAndSendNotification tracer emailSettings nodesNames dpReqs curDPLock lastTime evsQ) evsS evsP
             pure (ident, (evsQ, evsT))
 
       settings <- readSavedEventsSettings rtvSD
