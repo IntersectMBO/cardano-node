@@ -232,11 +232,11 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
           startupInfo <- getStartupInfo nc p fp
           mapM_ (traceWith $ startupTracer tracers) startupInfo
           traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
-
           -- sends initial BlockForgingUpdate
           blockForging <- snd (Api.protocolInfo runP)
+          let isNonProducing = ncStartAsNonProducingNode nc
           traceWith (startupTracer tracers)
-                    (BlockForgingUpdate (if null blockForging
+                    (BlockForgingUpdate (if isNonProducing || null blockForging
                                           then DisabledBlockForging
                                           else EnabledBlockForging))
 
@@ -278,10 +278,10 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
             >>= mapM_ (traceWith $ startupTracer tracers)
 
           traceWith (nodeVersionTracer tracers) getNodeVersion
-
+          let isNonProducing = ncStartAsNonProducingNode nc
           blockForging <- snd (Api.protocolInfo runP)
           traceWith (startupTracer tracers)
-                    (BlockForgingUpdate (if null blockForging
+                    (BlockForgingUpdate (if isNonProducing || null blockForging
                                           then DisabledBlockForging
                                           else EnabledBlockForging))
 
@@ -724,12 +724,13 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
         Just Refl -> do
           -- TODO: check if runP' has changed
           blockForging <- snd (Api.protocolInfo runP')
+          let isNonProducing = ncStartAsNonProducingNode nc
           traceWith startupTracer
-                    (BlockForgingUpdate (bool EnabledBlockForging
-                                              DisabledBlockForging
-                                              (null blockForging)))
-
-          setBlockForging nodeKernel blockForging
+                    (BlockForgingUpdate (if isNonProducing || null blockForging
+                                          then DisabledBlockForging
+                                          else EnabledBlockForging))
+          unless (ncStartAsNonProducingNode nc) $
+            setBlockForging nodeKernel blockForging
         Nothing ->
           traceWith startupTracer
             $ BlockForgingBlockTypeMismatch
