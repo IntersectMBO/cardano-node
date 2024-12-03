@@ -23,6 +23,7 @@ module Cardano.Tracer.MetaTrace
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Types (NodeId(..), NodeName)
 
 import           Data.Aeson hiding (Error)
 import qualified Data.Aeson as AE
@@ -49,6 +50,9 @@ data TracerTrace
   | TracerInitStarted
   | TracerInitEventQueues
   | TracerInitDone
+  | TracerAddNewNodeIdMapping
+    { ttBimapping :: !(NodeId, NodeName)
+    }
   | TracerStartedLogRotator
   | TracerStartedPrometheus
     { ttPrometheusEndpoint   :: !Endpoint
@@ -106,6 +110,11 @@ instance ToJSON TracerTrace where
       ]
     TracerInitDone -> concatPairs
       [ "kind" .= txt "TracerInitDone"
+      ]
+    TracerAddNewNodeIdMapping (NodeId nodeId, nodeName) -> concatPairs
+      [ "kind"     .= txt "TracerAddNewNodeIdMapping"
+      , "nodeId"   .= txt nodeId
+      , "nodeName" .= txt nodeName
       ]
     TracerStartedLogRotator -> concatPairs
       [ "kind" .= txt "TracerStartedLogRotator"
@@ -204,6 +213,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerInitStarted = Namespace [] ["InitStart"]
     namespaceFor TracerInitEventQueues = Namespace [] ["EventQueues"]
     namespaceFor TracerInitDone = Namespace [] ["InitDone"]
+    namespaceFor TracerAddNewNodeIdMapping {} = Namespace [] ["AddNewNodeIdMapping"]
     namespaceFor TracerStartedLogRotator = Namespace [] ["StartedLogRotator"]
     namespaceFor TracerStartedPrometheus{} = Namespace [] ["StartedPrometheus"]
     namespaceFor TracerStartedMonitoring{} = Namespace [] ["StartedMonitoring"]
@@ -225,6 +235,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["InitStart"]) _ = Just Info
     severityFor (Namespace _ ["EventQueues"]) _ = Just Info
     severityFor (Namespace _ ["InitDone"]) _ = Just Info
+    severityFor (Namespace _ ["AddNewNodeIdMapping"]) _ = Just Info
     severityFor (Namespace _ ["StartedLogRotator"]) _ = Just Info
     severityFor (Namespace _ ["StartedPrometheus"]) _ = Just Info
     severityFor (Namespace _ ["StartedMonitoring"]) _ = Just Info
@@ -250,6 +261,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["InitStart"]
       , Namespace [] ["EventQueues"]
       , Namespace [] ["InitDone"]
+      , Namespace [] ["AddNewNodeIdMapping"]
       , Namespace [] ["StartedLogRotator"]
       , Namespace [] ["StartedPrometheus"]
       , Namespace [] ["StartedMonitoring"]
