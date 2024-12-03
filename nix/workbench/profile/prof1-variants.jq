@@ -924,7 +924,7 @@ def all_profile_variants:
   # P&T Nomad cluster: 52 nodes, P2P by default - value+voting workload
   # Extra splits, benchmarking from 5th epoch (skip 0,1,2,3 / 533 min / 8.88 hs)
     ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voting *
-      {analysis: { filters: ["epoch5+", "size-full"] } }
+      {analysis: { filters: ["epoch4+", "size-full"] } }
     ) as $valuevoting_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
