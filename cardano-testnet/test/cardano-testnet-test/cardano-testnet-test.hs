@@ -22,6 +22,7 @@ import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
+import qualified Cardano.Testnet.Test.HardFork
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Transaction
@@ -94,6 +95,7 @@ tests = do
           , ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
           , ignoreOnWindows "foldEpochState receives ledger state" Cardano.Testnet.Test.FoldEpochState.prop_foldEpochState
           , ignoreOnMacAndWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
+          , ignoreOnMacAndWindows "HardFork" Cardano.Testnet.Test.HardFork.hprop_hardfork
           ]
         ]
     , T.testGroup "SubmitApi"
