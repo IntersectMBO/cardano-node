@@ -41,6 +41,7 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
+import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..), LocalAddr (..))
 import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
                    ConnectionManagerCounters (..), ConnectionManagerTrace (..),
                    OperationResult (..))
@@ -496,6 +497,7 @@ instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr lAddr) where
      PeerStatusChangeFailure {} -> Error
      PeerMonitoringError {}     -> Error
      PeerMonitoringResult {}    -> Debug
+     AcquireConnectionError {}  -> Info
 
 instance HasPrivacyAnnotation PeerSelectionCounters
 instance HasSeverityAnnotation PeerSelectionCounters where
@@ -2059,6 +2061,10 @@ instance Show lAddr => ToObject (PeerSelectionActionsTrace SockAddr lAddr) where
              , "connectionId" .= toJSON connId
              , "withProtocolTemp" .= show wf
              ]
+  toObject _verb (AcquireConnectionError err) =
+    mconcat [ "kind" .= String "AcquireConnectionError"
+            , "error" .= show err
+            ]
 
 instance ToObject PeerSelectionCounters where
   toObject _verb PeerSelectionCounters {..} =
@@ -2255,6 +2261,10 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       , "command" .= show cerr
       ]
 
+instance ToJSON addr => ToJSON (LocalAddr addr) where
+  toJSON (LocalAddr addr) = toJSON addr
+  toJSON UnknownLocalAddr = Null
+
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
       => ToObject (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
@@ -2266,10 +2276,10 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toObject verb peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
-      TrUnregisterConnection prov peerAddr ->
+      TrUnregisterConnection prov connId ->
         mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
-          , "remoteAddress" .= toObject verb peerAddr
+          , "remoteAddress" .= toJSON connId
           , "provenance" .= String (pack . show $ prov)
           ]
       TrConnect (Just localAddress) remoteAddress ->
@@ -2350,7 +2360,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           [ "kind" .= String "PruneConnections"
           , "prunedPeers" .= toJSON pruningSet
           , "numberPrunedPeers" .= toJSON numberPruned
-          , "choiceSet" .= toJSON (toObject verb `Set.map` chosenPeers)
+          , "choiceSet" .= toJSON (toJSON `Set.map` chosenPeers)
           ]
       TrConnectionCleanup connId ->
         mconcat
@@ -2375,12 +2385,20 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrState cmState ->
         mconcat
           [ "kind"  .= String "ConnectionManagerState"
-          , "state" .= listValue (\(addr, connState) ->
+          , "state" .= listValue (\(remoteAddr, inner) ->
                                          Aeson.object
-                                           [ "remoteAddress"   .= toJSON addr
-                                           , "connectionState" .= toJSON connState
-                                           ])
-                                       (Map.toList cmState)
+                                           [ "connections" .=
+                                             listValue (\(localAddr, connState) ->
+                                                Aeson.object
+                                                  [ "localAddress" .= localAddr
+                                                  , "state" .= toJSON connState  
+                                                  ]
+                                             )
+                                             (Map.toList inner)
+                                           , "remoteAddress" .= toJSON remoteAddr
+                                           ]
+                                 )
+                                 (Map.toList (getConnMap cmState))
           ]
       ConnMgr.TrUnexpectedlyFalseAssertion info ->
         mconcat
@@ -2415,9 +2433,9 @@ instance (Show addr, ToObject addr, ToJSON addr)
 
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (ServerTrace addr) where
-  toObject verb (TrAcceptConnection peerAddr)     =
+  toObject _verb (TrAcceptConnection connId)     =
     mconcat [ "kind" .= String "AcceptConnection"
-             , "address" .= toObject verb peerAddr
+             , "connectionId" .= toJSON connId
              ]
   toObject _verb (TrAcceptError exception)         =
     mconcat [ "kind" .= String "AcceptErroor"
