@@ -68,3 +68,89 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: c3e1728aeff05655123f431372e69a18c6b4f949
+  --sha256: sha256-73sHx7H2yA6sQOEMmIDC5qTyASP2ScPwTgs/nMfjE8w=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/crypto/test
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
+    eras/conway/impl
+    eras/conway/test-suite
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley-ma/test-suite
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/plutus-preprocessor
+    libs/set-algebra
+    libs/small-steps
+    libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 7e8909f97d6ecc9fff320b3ac2b785aec74751c6
+  --sha256: sha256-Evv2EwaXbr2tXlxnHVr/AAV+QB7B8EWJbQR6t4IvOQ4=
+  subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    quickcheck-monoids
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: e6ab67b88705f0f5725846ba8e066f594608eeef
+  --sha256: sha256-cud8g9h1rH538hk+KBgZe+jXcjhHXlLeqrMJfmL5LH0=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 6fea845c61cfd3069b5bcca438e60bc09fe4f3c0
+  --sha256: sha256-hJaGXCaRB2CFPdY3yoGg2NKfZHfcDW2EnYXiA/kGmaQ=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: 3f2fc4c1119f360d00ce1dd6d00a822d3618fce2
+  --sha256: sha256-xoJNwL64TsUHiDeaULQMwcC8PYTXTJ/HU0OZDkbMTIs=
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/neilmayhew/ekg-forward.git
+  tag: 4ba8bb693093f6cf54d43d6e9bbce1e08b0457dd
+  --sha256: sha256-g0gYqzRGjmZwxEzihJ4JifJe+GRfdLIMzaot7rUcjlI=
