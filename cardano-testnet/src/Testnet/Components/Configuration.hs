@@ -72,7 +72,7 @@ createConfigJson :: ()
   -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
   -> m LBS.ByteString
 createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
+  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron-genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
@@ -179,13 +179,8 @@ createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply sbe shelleyGenesis
   -- Remove the input files. We don't need them anymore, since create-testnet-data wrote new versions.
   forM_ [inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp] (liftIO . System.removeFile)
 
-  -- Move all genesis related files
-  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath </> "byron"
-
   files <- H.listDirectory tempAbsPath
   forM_ files H.note
-
-  H.renameFile (tempAbsPath </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
 
   return genesisShelleyDir
   where
