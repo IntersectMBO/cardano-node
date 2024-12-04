@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Node.POM
@@ -15,7 +16,7 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
+                   SnapshotInterval (..), pattern DoDiskSnapshotChecksum)
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.Diffusion.Configuration (MinBigLedgerPeersForTrustedState (..), defaultConsensusMode)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
@@ -121,6 +122,7 @@ testPartialYamlConfig =
     , pncDiffusionMode = Last Nothing
     , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = mempty
+    , pncDoDiskSnapshotChecksum = Last . Just $ DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
@@ -165,6 +167,7 @@ testPartialCliConfig =
     , pncDiffusionMode = mempty
     , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
+    , pncDoDiskSnapshotChecksum = Last . Just $ DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
@@ -211,6 +214,7 @@ eExpectedConfig = do
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncNumOfDiskSnapshots = DefaultNumOfDiskSnapshots
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
+    , ncDoDiskSnapshotChecksum = DoDiskSnapshotChecksum
     , ncExperimentalProtocolsEnabled = True
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
