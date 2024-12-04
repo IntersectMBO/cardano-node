@@ -16,27 +16,32 @@ tests = H.checkSequential
       $ H.Group "Configuration Consistency tests"
       $ test
      <$> [ (  []
-           , "goodConfig.yaml")
+           , "mainnet-config-new-tracing.json"
+           , configPrefix)
+         , (  []
+           , "goodConfig.yaml"
+           , testPrefix)
          , (  [ "Config namespace error: Illegal namespace ChainDB.CopyToImmutableDBEvent2.CopiedBlockToImmutableDB"
               , "Config namespace error: Illegal namespace SubscriptionDNS"
               ]
-           , "badConfig.yaml")
-           -- TODO: add mainnet config as good
+           , "badConfig.yaml"
+           , testPrefix)
          ]
   where
-    test (actualValue, goldenBaseName) =
-        (PropertyName goldenBaseName, goldenTestJSON actualValue goldenBaseName)
+    test (actualValue, goldenBaseName, prefix) =
+        (PropertyName goldenBaseName, goldenTestJSON actualValue goldenBaseName prefix)
 
 
-goldenTestJSON :: [Text] -> FilePath -> Property
-goldenTestJSON expectedOutcome goldenFileBaseName =
+goldenTestJSON :: [Text] -> FilePath -> FilePath -> Property
+goldenTestJSON expectedOutcome goldenFileBaseName prefix =
     H.withTests 1 $ H.withShrinks 0 $ H.property $ do
-      goldenFp    <- H.Base.note $ addPrefix goldenFileBaseName
+      goldenFp    <- H.Base.note $ prefix <> goldenFileBaseName
       actualValue <- liftIO $ checkNodeTraceConfiguration goldenFp
       actualValue H.=== expectedOutcome
 
 
--- | NB: this function is only used in 'goldenTestJSON' but it is defined at the
--- top level so that we can refer to it in the documentation of this module.
-addPrefix :: FilePath -> FilePath
-addPrefix fname = "test/Test/Cardano/Tracing/NewTracing/data/" <> fname
+configPrefix :: FilePath
+configPrefix = "../configuration/cardano/"
+
+testPrefix :: FilePath
+testPrefix = "test/Test/Cardano/Tracing/NewTracing/data/"

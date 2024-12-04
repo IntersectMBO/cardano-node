@@ -729,7 +729,7 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
                     (BlockForgingUpdate (if isNonProducing || null blockForging
                                           then DisabledBlockForging
                                           else EnabledBlockForging))
-          unless (ncStartAsNonProducingNode nc) $
+          unless isNonProducing $
             setBlockForging nodeKernel blockForging
         Nothing ->
           traceWith startupTracer
