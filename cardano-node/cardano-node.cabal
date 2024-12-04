@@ -191,10 +191,10 @@ library
                       , ouroboros-consensus-cardano ^>= 0.20
                       , ouroboros-consensus-diffusion ^>= 0.18
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.10
-                      , ouroboros-network ^>= 0.17
+                      , ouroboros-network-api ^>= 0.11
+                      , ouroboros-network ^>= 0.18
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.11
+                      , ouroboros-network-protocols ^>= 0.12
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
