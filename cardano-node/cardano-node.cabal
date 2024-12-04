@@ -209,7 +209,7 @@ library
                       , time
                       , trace-dispatcher ^>= 2.7.0
                       , trace-forward ^>= 2.2.8
-                      , trace-resources ^>= 0.2.2
+                      , trace-resources ^>= 0.2.3
                       , tracer-transformers
                       , transformers
                       , transformers-except
