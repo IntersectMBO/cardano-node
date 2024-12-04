@@ -24,33 +24,24 @@ transactions as interchangeable, and focuses more on the variety of
 things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
-          Action(..)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
-                Sequence, Split, SplitN, Take)
-        , PayMode(PayToAddr, PayToScript)
-        , ProtocolParameterMode(..)
-        , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
-        , ScriptBudget(AutoScript, StaticScriptBudget)
-        , ScriptSpec(..)
-        , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
-                NodeToNode)
-        , TargetNodes
-        , TxList(..)
+       module Cardano.Benchmarking.Script.Types
+
 ) where
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
-import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
+import           Cardano.Ledger.Conway.Governance (GovActionId)
+import           Cardano.Ledger.Core (EraCrypto)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
+import           Cardano.TxGenerator.Setup.SigningKey (SigningKeyFile)
 import           Cardano.TxGenerator.Types
-
-import           Prelude
 
 import           Data.Function (on)
 import           Data.List.NonEmpty
+import           Data.Ratio (Ratio)
 import           Data.Text (Text)
 import           GHC.Generics
 
@@ -90,8 +81,22 @@ data Action where
   -- drops it into a state variable via
   -- 'Cardano.Benchmarking.Script.Env.setEnvKeys'.
   ReadSigningKey     :: !String -> !(SigningKeyFile In) -> Action
+  -- | 'ReadDRepKeys' expects the path to a node config file. This
+  -- configuration is supposed to refer to a genesis which has
+  -- been created with cardano-cli create-testnet-data, and from
+  -- where DRep signing keys can be loaded.
+  ReadDRepKeys       :: !FilePath -> Action
+  -- | 'ReadDRepKeys' expects the path to a node config file. This
+  -- configuration is supposed to refer to a genesis which has
+  -- been created with cardano-cli create-testnet-data, and from
+  -- where stake verification keys can be loaded.
+  ReadStakeKeys       :: !FilePath -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
+  -- | inject a singleton DRepCredential into the environment
+  DefineDRepKey      :: !(SigningKey DRepKey) -> Action
+  -- | inject a singleton StakeCredential into the environment
+  DefineStakeKey      :: !(VerificationKey StakeKey) -> Action
   -- | 'AddFund' is mostly a wrapper around
   -- 'Cardano.Benchmarking.Wallet.walletRefInsertFund' which in turn
   -- is just 'Control.Concurrent.modifyMVar' around
@@ -127,6 +132,8 @@ data Action where
   LogMsg             :: !Text -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
+
+deriving instance Eq (SigningKey DRepKey)
 
 -- | 'Generator' is interpreted by
 -- 'Cardano.Bencmarking.Script.Core.evalGenerator' as a series of
@@ -169,6 +176,8 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
+  -- | 'EmptyStream' will yield an empty stream. For testing only.
+  EmptyStream :: Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
 
@@ -215,3 +224,15 @@ newtype TxList era = TxList [Tx era]
 data ProtocolParameterMode where
   ProtocolParameterQuery :: ProtocolParameterMode
   ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode
+
+data GovernanceActionIds where
+  GovernanceActionIds ::
+    forall era. () => ShelleyBasedEra era
+                   -> [GovActionId (EraCrypto (ShelleyLedgerEra era))]
+                   -> GovernanceActionIds
+
+data GovStateSummary = GovStateSummary
+  { govGovActionDeposit                 :: !L.Coin
+  , govDRepThresholdTreasuryWithdrawal  :: !(Ratio Int)
+  , govProposals                        :: !GovernanceActionIds
+  }

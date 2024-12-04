@@ -18,7 +18,7 @@ main = defaultMain [
     bench "tx-gen" $ whnfIO do
         envConsts <- atomically do
           newEnvConsts (error "No IOManager!") Nothing
-        runSelftest emptyEnv envConsts Nothing >>= \case
+        runSelftest emptyEnv envConsts False Nothing >>= \case
           Right _  -> pure ()
           Left err -> error $ show err
     ]

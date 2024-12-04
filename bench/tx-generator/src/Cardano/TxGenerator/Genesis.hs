@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,6 +12,8 @@
 module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
+  , genesisLoadDRepKeys
+  , genesisLoadStakeKeys
   , genesisTxInput
   , genesisExpenditure
   , genesisSecureInitialFund
@@ -25,14 +28,18 @@ import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyPaymentCr
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
 import           Cardano.TxGenerator.Fund
+import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
 
 import           Data.Bifunctor (bimap, second)
+import           Data.Char (isDigit)
 import           Data.Function ((&))
-import           Data.List (find)
+import           Data.List (find, isPrefixOf, isSuffixOf)
 import qualified Data.ListMap as ListMap (toList)
+import           System.Directory (listDirectory)
+import           System.FilePath ((</>))
 
 
 genesisValidate ::  ShelleyGenesis -> Either String ()
@@ -136,3 +143,37 @@ mkGenesisTransaction key ttl fee txins txouts
 
 castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
 castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey
+
+-- | This function assumes a directory structure as created by
+--   cardano-cli's create-testnet-data command.
+genesisLoadDRepKeys :: FilePath -> IO (Either TxGenError [SigningKey DRepKey])
+genesisLoadDRepKeys genesisDir = runExceptT $ do
+    dirContents <- handleIOExceptT IOError (listDirectory drepDir)
+    let subDirs = filter dirWellFormed dirContents
+    mapM loadFromDir ((drepDir </>) <$> subDirs)
+  where
+    asSigningKeyFile :: FilePath -> SigningKeyFile In
+    asSigningKeyFile = File
+
+    loadFromDir d = hoistEither =<< handleIOExceptT IOError
+        (readDRepKeyFile $ asSigningKeyFile (d </> "drep.skey"))
+
+    dirWellFormed = \case
+      'd':'r':'e':'p' : nr@(_:_)  -> all isDigit nr
+      _                           -> False
+
+    drepDir = genesisDir </> "drep-keys"
+
+genesisLoadStakeKeys :: FilePath -> IO (Either TxGenError [VerificationKey StakeKey])
+genesisLoadStakeKeys genesisDir = runExceptT $ do
+    dirContents <- handleIOExceptT IOError (listDirectory poolsDir)
+    let fs = filter (\f -> "staking-reward" `isPrefixOf` f && ".vkey" `isSuffixOf` f) dirContents
+    mapM loadFile fs
+  where
+    asVerificationKeyFile :: FilePath -> VerificationKeyFile In
+    asVerificationKeyFile = File
+
+    loadFile f = hoistEither =<< handleIOExceptT IOError
+      (readStakeKeyFile $ asVerificationKeyFile $ poolsDir </> f)
+
+    poolsDir = genesisDir </> "pools"
