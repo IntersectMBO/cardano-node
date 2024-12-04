@@ -175,6 +175,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.TookSnapshot {} -> Info
     LedgerDB.DeletedSnapshot {} -> Debug
     LedgerDB.InvalidSnapshot {} -> Error
+    LedgerDB.SnapshotMissingChecksum {} -> Warning
 
   getSeverityAnnotation (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB {} -> Debug
@@ -615,6 +616,8 @@ instance ( ConvertRawHash blk
                    " This is most likely an expected change in the serialization format,"
                 <> " which currently requires a chain replay"
               _ -> ""
+        LedgerDB.SnapshotMissingChecksum snap ->
+          "Checksum file is missing for snapshot " <> showT snap
 
         LedgerDB.TookSnapshot snap pt RisingEdge ->
           "Taking ledger snapshot " <> showT snap <>
@@ -1101,6 +1104,10 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceSnapshotEvent.InvalidSnapshot"
                , "snapshot" .= toObject verb snap
                , "failure" .= show failure ]
+    LedgerDB.SnapshotMissingChecksum snap ->
+      mconcat [ "kind" .= String "TraceSnapshotEvent.SnapshotMissingChecksum"
+               , "snapshot" .= toObject verb snap
+               ]
 
   toObject verb (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB pt ->

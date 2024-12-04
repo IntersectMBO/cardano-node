@@ -1,4 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -8,6 +10,7 @@ module Cardano.Node.Orphans () where
 
 import           Cardano.Api ()
 
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag(..))
 import           Ouroboros.Consensus.Node
 import qualified Data.Text as Text
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
@@ -46,11 +49,14 @@ instance FromJSON AcceptedConnectionsLimit where
       <*> v .: "delay"
 
 instance FromJSON NodeDatabasePaths where
-  parseJSON o@(Object{})= 
-    withObject "NodeDatabasePaths" 
+  parseJSON o@(Object{})=
+    withObject "NodeDatabasePaths"
      (\v -> MultipleDbPaths
               <$> v .: "ImmutableDbPath"
               <*> v .: "VolatileDbPath"
      ) o
   parseJSON (String s) = return . OnePathForAllDbs $ Text.unpack s
   parseJSON _ = fail "NodeDatabasePaths must be an object or a string"
+
+deriving newtype instance FromJSON (Flag symbol)
+deriving newtype instance ToJSON (Flag symbol)

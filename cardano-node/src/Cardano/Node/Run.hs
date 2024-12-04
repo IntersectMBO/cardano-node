@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitNamespaces #-}
@@ -63,7 +64,7 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
+import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), pattern DoDiskSnapshotChecksum, pattern NoDoDiskSnapshotChecksum, NetworkP2PMode (..),
                    NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (NodeDatabasePaths (..), getChainDB, run)
 import           Ouroboros.Consensus.Node.Genesis
@@ -650,6 +651,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
     DiskPolicyArgs
       (ncSnapshotInterval nc)
       (ncNumOfDiskSnapshots nc)
+      (ncDoDiskSnapshotChecksum nc)
 
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers
