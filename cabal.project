@@ -68,3 +68,55 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 4920b7a8e1a639e6b6a85611bef6d541e21d012a
+  --sha256: sha256-mrGXtC/mStln5KqoXlruKYl2vHYZhgw3biRlZm82h7A=
+  subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    quickcheck-monoids
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: 038f9d6c5e4d6de7d2cfb2ac9e23d3b66c495418
+  --sha256: sha256-jzfJNLl8GfCTEP5ABpHZl6qps7U6NZi36UxYxooKH+A=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 04ac6b36284ea823da0a7b88210c03b586f7f808
+  --sha256: sha256-LcZe9GcH2qRvNCk4leJHMLEX0KMiqbkYP4xACBE/znE=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: e9b3dde10d70b859a66a55e4f4b083f30e070eaa
+  --sha256: sha256-yrHlJj4qaAc37gZYgqx+HXVD3sWLOm35Gr1f5o099uE=
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/neilmayhew/ekg-forward.git
+  tag: 4ba8bb693093f6cf54d43d6e9bbce1e08b0457dd
+  --sha256: sha256-g0gYqzRGjmZwxEzihJ4JifJe+GRfdLIMzaot7rUcjlI=
