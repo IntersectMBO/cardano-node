@@ -98,6 +98,13 @@ testNodeHardForkProtocolConfiguration =
     , npcTestConwayHardForkAtVersion  = Nothing
     }
 
+testNodeCheckpointsConfiguration :: NodeCheckpointsConfiguration
+testNodeCheckpointsConfiguration =
+  NodeCheckpointsConfiguration
+    { npcCheckpointsFile     = Nothing
+    , npcCheckpointsFileHash = Nothing
+    }
+
 testNodeProtocolConfiguration :: NodeProtocolConfiguration
 testNodeProtocolConfiguration =
   NodeProtocolConfigurationCardano
@@ -106,6 +113,7 @@ testNodeProtocolConfiguration =
     testNodeAlonzoProtocolConfiguration
     testNodeConwayProtocolConfiguration
     testNodeHardForkProtocolConfiguration
+    testNodeCheckpointsConfiguration
 
 -- | Example partial configuration theoretically created from a
 -- config yaml file.
