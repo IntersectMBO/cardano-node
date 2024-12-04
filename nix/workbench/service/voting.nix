@@ -123,6 +123,7 @@ let
   build_vote       = true; use_build_raw = true;
   sign_vote        = true;
   submit_vote      = workload.submit_vote or true;
+  wait_submit      = workload.submit_vote or false;
 
 in ''
 
@@ -1281,7 +1282,7 @@ function governance_vote_proposal {
     --testnet-magic ${toString testnet_magic}                    \
     --socket-path "''${socket_path}"                             \
     --tx-file "''${tx_filename}".signed                          \
-  >/dev/null
+  >/dev/null ${if wait_submit then "&" else ""}
   ''
   else ''
   ${coreutils}/bin/echo "transaction submit off!"
