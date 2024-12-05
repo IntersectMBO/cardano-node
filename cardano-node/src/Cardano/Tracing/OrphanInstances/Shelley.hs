@@ -723,11 +723,6 @@ instance Ledger.Era era => ToObject (ShelleyDelegPredFailure era) where
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
              ]
-  toObject _verb (StakeKeyInRewardsDELEG alreadyRegistered) =
-    mconcat [ "kind" .= String "StakeKeyInRewardsDELEG"
-             , "credential" .= String (textShow alreadyRegistered)
-             , "error" .= String "Staking credential registered in rewards map"
-             ]
   toObject _verb (StakeKeyNotRegisteredDELEG notRegistered) =
     mconcat [ "kind" .= String "StakeKeyNotRegisteredDELEG"
              , "credential" .= String (textShow notRegistered)
