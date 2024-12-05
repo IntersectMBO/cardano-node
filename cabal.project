@@ -72,8 +72,8 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
   -- use branch geo2a/issue-892-checksum-snaphot-file-release-ouroboros-consensus-0.21.0.0-backport
-  tag: 0ff4c0445
-  --sha256: xWBEq9kq2eUTlOnMBkSftH8NUUGbpwpamu1G1TgGETU=
+  tag: bc9f10c0a
+  --sha256: JGuQlFgW46mck545klipsiajhkr9A51JYXVRvmr0KYI=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
