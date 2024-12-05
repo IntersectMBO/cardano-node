@@ -36,8 +36,9 @@ import           Data.Word (Word32)
 import           Network.Mux.Bearer (MakeBearer (..), makeSocketBearer)
 import           Network.Mux.Timeout (TimeoutFn, withTimeoutSerial)
 import           Network.Mux.Types (MiniProtocolDir (InitiatorDir), MiniProtocolNum (..),
-                   MuxBearer (read, write), MuxSDU (..), MuxSDUHeader (..),
-                   RemoteClockModel (RemoteClockModel))
+                   RemoteClockModel (RemoteClockModel), SDU (..), SDUHeader (..))
+import qualified Network.Mux as Mux
+import qualified Network.Mux.Types as Mux
 import           Network.Socket (AddrInfo (..), PortNumber, StructLinger (..))
 import qualified Network.Socket as Socket
 import           Prettyprinter
@@ -82,7 +83,7 @@ pingNode networkMagic sprocket = liftIO $ bracket
     bearer <- getBearer makeSocketBearer sduTimeout nullTracer sd
 
     let versions = supportedNodeToClientVersions networkMagic
-    !_ <- write bearer timeoutfn $ wrap handshakeNum InitiatorDir (handshakeReq versions doHandshakeQuery)
+    !_ <- Mux.write bearer timeoutfn $ wrap handshakeNum InitiatorDir (handshakeReq versions doHandshakeQuery)
     (msg, !_) <- nextMsg bearer timeoutfn handshakeNum
 
     pure $ case CBOR.deserialiseFromBytes handshakeDec msg of
@@ -96,9 +97,9 @@ pingNode networkMagic sprocket = liftIO $ bracket
     peer = sprocketToAddrInfo sprocket :: AddrInfo
 
     -- | Wrap a message in a mux service data unit.
-    wrap :: MiniProtocolNum -> MiniProtocolDir -> LBS.ByteString -> MuxSDU
-    wrap mhNum mhDir msBlob = MuxSDU
-      { msHeader = MuxSDUHeader
+    wrap :: MiniProtocolNum -> MiniProtocolDir -> LBS.ByteString -> SDU
+    wrap mhNum mhDir msBlob = SDU
+      { msHeader = SDUHeader
         { mhTimestamp = RemoteClockModel 0
         , mhNum
         , mhDir
@@ -124,12 +125,12 @@ pingNode networkMagic sprocket = liftIO $ bracket
           pure $ host <> ":" <> port
 
     -- | Fetch next message from mux bearer. Ignores messages not matching handshake protocol number.
-    nextMsg :: MuxBearer IO -- ^ a mux bearer
+    nextMsg :: Mux.Bearer IO -- ^ a mux bearer
             -> TimeoutFn IO -- ^ timeout function, for reading messages
             -> MiniProtocolNum -- ^ handshake protocol number
             -> IO (LBS.ByteString, Time) -- ^ raw message and timestamp
     nextMsg bearer timeoutfn ptclNum = do
-      (sdu, t_e) <- Network.Mux.Types.read bearer timeoutfn
+      (sdu, t_e) <- Mux.read bearer timeoutfn
       if mhNum (msHeader sdu) == ptclNum
         then pure (msBlob sdu, t_e)
         else nextMsg bearer timeoutfn ptclNum

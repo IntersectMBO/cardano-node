@@ -20,11 +20,12 @@ import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   MiniProtocolNum (..), OuroborosApplication (..),
                    RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
@@ -179,8 +180,8 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       address
  where
   forwarderApp
-    :: [(RunMiniProtocol 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
-    -> OuroborosApplication 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void
+    :: [(RunMiniProtocol 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol
@@ -240,8 +241,8 @@ doListenToAcceptor TestSetup{..}
               $ \_ serverAsync -> wait serverAsync -- Block until async exception.
  where
   forwarderApp
-    :: [(RunMiniProtocol 'ResponderMode initCtx respCtx LBS.ByteString IO Void (), Word16)]
-    -> OuroborosApplication 'ResponderMode initCtx respCtx LBS.ByteString IO Void ()
+    :: [(RunMiniProtocol 'Mux.ResponderMode initCtx respCtx LBS.ByteString IO Void (), Word16)]
+    -> OuroborosApplication 'Mux.ResponderMode initCtx respCtx LBS.ByteString IO Void ()
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol
