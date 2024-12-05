@@ -176,6 +176,7 @@ library
                       , filepath
                       , http-types
                       , mime-mail
+                      , network-mux
                       , optparse-applicative
                       , ouroboros-network ^>= 0.18
                       , ouroboros-network-api
@@ -246,6 +247,7 @@ library demo-forwarder-lib
                       , extra
                       , filepath
                       , generic-data
+                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -347,6 +349,7 @@ test-suite cardano-tracer-test
                       , extra
                       , filepath
                       , generic-data
+                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -405,6 +408,7 @@ test-suite cardano-tracer-test-ext
                       , filepath
                       , generic-data
                       , Glob
+                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-network
                       , ouroboros-network-api

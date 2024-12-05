@@ -59,6 +59,7 @@ library
                       , ekg-forward >= 0.5
                       , hostname
                       , network
+                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.18
                       , ouroboros-network-api

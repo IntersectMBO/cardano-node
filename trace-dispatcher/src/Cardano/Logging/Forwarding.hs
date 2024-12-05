@@ -17,12 +17,13 @@ module Cardano.Logging.Forwarding
 import           Cardano.Logging.Types
 import           Cardano.Logging.Utils (runInLoop)
 import           Cardano.Logging.Version
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   MiniProtocolNum (..), OuroborosApplication (..),
                    RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
@@ -218,8 +219,8 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     address
  where
   forwarderApp
-    :: [(RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
-    -> OuroborosApplication 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
+    :: [(RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol
@@ -281,8 +282,8 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
               wait serverAsync -- Block until async exception.
  where
   forwarderApp
-    :: [(RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
-    -> OuroborosApplication 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
+    :: [(RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
+    -> OuroborosApplication 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol

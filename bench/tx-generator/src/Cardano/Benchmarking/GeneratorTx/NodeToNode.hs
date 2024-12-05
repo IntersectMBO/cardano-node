@@ -26,6 +26,7 @@ import           Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
 import           Data.Void (Void)
+import qualified Network.Mux as Mux
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
@@ -114,7 +115,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   peerMultiplex :: NtN.Versions NodeToNodeVersion
                                 NtN.NodeToNodeVersionData
                                 (OuroborosApplication
-                                  'InitiatorMode
+                                  'Mux.InitiatorMode
                                   (MinimalInitiatorContext NtN.RemoteAddress)
                                   (ResponderContext NtN.RemoteAddress)
                                   ByteString IO () Void)
