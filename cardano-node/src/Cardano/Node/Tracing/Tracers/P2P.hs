@@ -50,6 +50,7 @@ import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 
+import           Control.Exception (displayException)
 import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList,
                    (.=))
 import           Data.Aeson.Types (listValue)
@@ -515,6 +516,9 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
     mconcat [ "kind" .= String "BootstrapPeersFlagChangedWhilstInSensitiveState"
             ]
+  forMachine _dtal (TraceVerifyPeerSnapshot result) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "result" .= toJSON result ]
   forMachine _dtal (TraceOutboundGovernorCriticalFailure err) =
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
             , "reason" .= show err
@@ -668,6 +672,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["OnlyBootstrapPeers"]
     namespaceFor TraceUseBootstrapPeersChanged {} =
       Namespace [] ["UseBootstrapPeersChanged"]
+    namespaceFor TraceVerifyPeerSnapshot {} =
+      Namespace [] ["VerifyPeerSnapshot"]
     namespaceFor TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
       Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
     namespaceFor TraceOutboundGovernorCriticalFailure {} =
@@ -1137,6 +1143,10 @@ instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) 
              , "connectionId" .= toJSON connId
              , "withProtocolTemp" .= show wf
              ]
+  forMachine _dtal (AcquireConnectionError exception) =
+    mconcat [ "kind" .= String "AcquireConnectionError"
+            , "exception" .= displayException exception
+            ]
   forHuman = pack . show
 
 instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
@@ -1144,11 +1154,13 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
     namespaceFor PeerStatusChangeFailure {} = Namespace [] ["StatusChangeFailure"]
     namespaceFor PeerMonitoringError {} = Namespace [] ["MonitoringError"]
     namespaceFor PeerMonitoringResult {} = Namespace [] ["MonitoringResult"]
+    namespaceFor AcquireConnectionError {} = Namespace [] ["ConnectionError"]
 
     severityFor (Namespace _ ["StatusChanged"]) _ = Just Info
     severityFor (Namespace _ ["StatusChangeFailure"]) _ = Just Error
     severityFor (Namespace _ ["MonitoringError"]) _ = Just Error
     severityFor (Namespace _ ["MonitoringResult"]) _ = Just Debug
+    severityFor (Namespace _ ["ConnectionError"]) _ = Just Error
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["StatusChanged"]) = Just
@@ -1159,6 +1171,8 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
       ""
     documentFor (Namespace _ ["MonitoringResult"]) = Just
       ""
+    documentFor (Namespace _ ["ConnectionError"]) = Just
+      ""
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -1166,6 +1180,7 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
       , Namespace [] ["StatusChangeFailure"]
       , Namespace [] ["MonitoringError"]
       , Namespace [] ["MonitoringResult"]
+      , Namespace [] ["ConnectionError"]
       ]
 
 --------------------------------------------------------------------------------
@@ -1181,7 +1196,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           , "remoteAddress" .= forMachine dtal peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
-    forMachine dtal (TrUnregisterConnection prov peerAddr) =
+    forMachine dtal (TrReleaseConnection prov peerAddr) =
         mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
           , "remoteAddress" .= forMachine dtal peerAddr
@@ -1359,7 +1374,7 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
 instance MetaTrace (ConnectionManager.Trace addr
                       (ConnectionHandlerTrace versionNumber agreedOptions)) where
     namespaceFor TrIncludeConnection {}  = Namespace [] ["IncludeConnection"]
-    namespaceFor TrUnregisterConnection {}  = Namespace [] ["UnregisterConnection"]
+    namespaceFor TrReleaseConnection {}  = Namespace [] ["UnregisterConnection"]
     namespaceFor TrConnect {}  = Namespace [] ["Connect"]
     namespaceFor TrConnectError {}  = Namespace [] ["ConnectError"]
     namespaceFor TrTerminatingConnection {}  = Namespace [] ["TerminatingConnection"]
