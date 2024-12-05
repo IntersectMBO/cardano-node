@@ -19,12 +19,13 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (deregisterNodeId, traceObjectsHandler)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (connIdToNodeId)
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Context (MinimalInitiatorContext (..), ResponderContext (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   MiniProtocolNum (..), OuroborosApplication (..),
                    RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
@@ -93,7 +94,7 @@ doConnectToForwarder
   -> LocalAddress
   -> Word32
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
-  -> OuroborosApplication 'InitiatorMode
+  -> OuroborosApplication 'Mux.InitiatorMode
                           (MinimalInitiatorContext LocalAddress)
                           (ResponderContext LocalAddress)
                           LBS.ByteString IO () Void
@@ -120,7 +121,7 @@ runEKGAcceptorInit
   :: TracerEnv
   -> EKGF.AcceptorConfiguration
   -> (ConnectionId LocalAddress -> IO ())
-  -> RunMiniProtocol 'InitiatorMode
+  -> RunMiniProtocol 'Mux.InitiatorMode
                      (MinimalInitiatorContext LocalAddress)
                      respoinderCtx
                      LBS.ByteString IO () Void
@@ -135,7 +136,7 @@ runTraceObjectsAcceptorInit
   -> TracerEnvRTView
   -> TF.AcceptorConfiguration TraceObject
   -> (ConnectionId LocalAddress -> IO ())
-  -> RunMiniProtocol 'InitiatorMode
+  -> RunMiniProtocol 'Mux.InitiatorMode
                      (MinimalInitiatorContext LocalAddress)
                      responderCtx
                      LBS.ByteString IO () Void
@@ -149,7 +150,7 @@ runDataPointsAcceptorInit
   :: TracerEnv
   -> DPF.AcceptorConfiguration
   -> (ConnectionId LocalAddress -> IO ())
-  -> RunMiniProtocol 'InitiatorMode
+  -> RunMiniProtocol 'Mux.InitiatorMode
                      (MinimalInitiatorContext LocalAddress)
                      responderCtx
                      LBS.ByteString IO () Void

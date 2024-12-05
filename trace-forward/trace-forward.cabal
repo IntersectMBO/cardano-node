@@ -64,6 +64,7 @@ library
                       , deepseq
                       , extra
                       , io-classes
+                      , network-mux
                       , ouroboros-network-api
                       , singletons ^>= 3.0
                       , ouroboros-network-framework ^>= 0.14
