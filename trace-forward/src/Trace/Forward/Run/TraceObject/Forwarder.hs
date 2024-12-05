@@ -5,8 +5,9 @@ module Trace.Forward.Run.TraceObject.Forwarder
   , forwardTraceObjectsResp
   ) where
 
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), RunMiniProtocol (..))
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified Codec.Serialise as CBOR
@@ -23,7 +24,7 @@ forwardTraceObjectsInit
       ShowProxy lo)
   => ForwarderConfiguration lo
   -> ForwardSink lo
-  -> RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
+  -> RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
 forwardTraceObjectsInit config sink =
   InitiatorProtocolOnly $ runPeerWithSink config sink
 
@@ -32,7 +33,7 @@ forwardTraceObjectsResp
       ShowProxy lo)
   => ForwarderConfiguration lo
   -> ForwardSink lo
-  -> RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
+  -> RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
 forwardTraceObjectsResp config sink =
   ResponderProtocolOnly $ runPeerWithSink config sink
 
