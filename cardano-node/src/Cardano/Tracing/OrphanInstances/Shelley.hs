@@ -1289,11 +1289,12 @@ instance Core.Crypto crypto => ToObject (Praos.PraosValidationErr crypto) where
                 , "opCertStartingKesPeriod" .= oCertStartKesPeriod
                 , "error" .= err
                 ]
-      Praos.InvalidKesSignatureOCERT currentKesPeriod opCertStartKesPeriod expectedKesEvos err ->
+      Praos.InvalidKesSignatureOCERT currentKesPeriod opCertStartKesPeriod expectedKesEvos maxKesEvos err ->
         mconcat [ "kind" .= String "InvalidKesSignatureOCERT"
                 , "currentKesPeriod" .= currentKesPeriod
                 , "opCertStartingKesPeriod" .= opCertStartKesPeriod
                 , "expectedKesEvolutions" .= expectedKesEvos
+                , "maximumKesEvolutions" .= maxKesEvos
                 , "error" .= err
                 ]
       Praos.NoCounterForKeyHashOCERT stakePoolKeyHash->

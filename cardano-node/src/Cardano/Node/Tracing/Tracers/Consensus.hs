@@ -40,6 +40,7 @@ import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockch
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
                    TraceGDDEvent (..))
+import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
                    HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
@@ -1374,8 +1375,8 @@ instance ( tx ~ GenTx blk
          , HasTxId (GenTx blk)
          , Show (ForgeStateUpdateError blk)
          , Show (CannotForge blk)
-         , LogFormatting (InvalidBlockReason blk)
          , LogFormatting (CannotForge blk)
+         , LogFormatting (ExtValidationError blk)
          , LogFormatting (ForgeStateUpdateError blk))
          => LogFormatting (ForgeTracerType blk) where
   forMachine dtal (Left i)  = forMachine dtal i
@@ -1471,8 +1472,8 @@ instance ( tx ~ GenTx blk
          , Show (ForgeStateUpdateError blk)
          , Show (CannotForge blk)
          , Show (TxId (GenTx blk))
-         , LogFormatting (InvalidBlockReason blk)
          , LogFormatting (CannotForge blk)
+         , LogFormatting (ExtValidationError blk)
          , LogFormatting (ForgeStateUpdateError blk))
       => LogFormatting (TraceForgeEvent blk) where
   forMachine _dtal (TraceStartLeadershipCheck slotNo) =
