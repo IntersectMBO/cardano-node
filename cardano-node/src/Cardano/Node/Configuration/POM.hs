@@ -103,9 +103,10 @@ data NodeConfiguration
        , ncProtocolConfig :: !NodeProtocolConfiguration
 
          -- Node parameters, not protocol-specific:
-       , ncDiffusionMode      :: !DiffusionMode
-       , ncNumOfDiskSnapshots :: !NumOfDiskSnapshots
-       , ncSnapshotInterval   :: !SnapshotInterval
+       , ncDiffusionMode          :: !DiffusionMode
+       , ncNumOfDiskSnapshots     :: !NumOfDiskSnapshots
+       , ncSnapshotInterval       :: !SnapshotInterval
+       , ncDoDiskSnapshotChecksum :: !Bool
 
          -- | During the development and integration of new network protocols
          -- (node-to-node and node-to-client) we wish to be able to test them
@@ -188,6 +189,7 @@ data PartialNodeConfiguration
        , pncDiffusionMode      :: !(Last DiffusionMode  )
        , pncNumOfDiskSnapshots :: !(Last NumOfDiskSnapshots)
        , pncSnapshotInterval   :: !(Last SnapshotInterval)
+       , pncDoDiskSnapshotChecksum :: !(Last Bool)
        , pncExperimentalProtocolsEnabled :: !(Last Bool)
 
          -- BlockFetch configuration
@@ -250,6 +252,8 @@ instance FromJSON PartialNodeConfiguration where
         <- Last . fmap RequestedNumOfDiskSnapshots <$> v .:? "NumOfDiskSnapshots"
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
+      pncDoDiskSnapshotChecksum
+        <- Last <$> v .:? "DoDiskSnapshotChecksum"
       pncExperimentalProtocolsEnabled <- fmap Last $ do
         mValue <- v .:? "ExperimentalProtocolsEnabled"
 
@@ -329,6 +333,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncDiffusionMode
            , pncNumOfDiskSnapshots
            , pncSnapshotInterval
+           , pncDoDiskSnapshotChecksum
            , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
@@ -500,6 +505,7 @@ defaultPartialNodeConfiguration =
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncNumOfDiskSnapshots = Last $ Just DefaultNumOfDiskSnapshots
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
+    , pncDoDiskSnapshotChecksum = Last $ Just True
     , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncProtocolFiles = mempty
@@ -552,6 +558,7 @@ makeNodeConfiguration pnc = do
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   numOfDiskSnapshots <- lastToEither "Missing NumOfDiskSnapshots" $ pncNumOfDiskSnapshots pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
+  doDiskSnapshotChecksum <- lastToEither "Missing DiskSnapshotChecksum" $ pncDoDiskSnapshotChecksum pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
 
@@ -621,6 +628,7 @@ makeNodeConfiguration pnc = do
              , ncDiffusionMode = diffusionMode
              , ncNumOfDiskSnapshots = numOfDiskSnapshots
              , ncSnapshotInterval = snapshotInterval
+             , ncDoDiskSnapshotChecksum = doDiskSnapshotChecksum
              , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
