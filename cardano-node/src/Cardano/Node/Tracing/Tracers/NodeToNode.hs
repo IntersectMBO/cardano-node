@@ -27,7 +27,7 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -40,7 +40,7 @@ instance ( ConvertTxId blk
          , HasTxs blk
          , LedgerSupportsMempool blk
          )
-      => LogFormatting (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
+      => LogFormatting (AnyMessage (BlockFetch blk (Point blk))) where
   forMachine DMinimal (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [  "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
@@ -84,7 +84,7 @@ instance ( ConvertTxId blk
 instance ToJSON SizeInBytes where
     toJSON (SizeInBytes s) = toJSON s
 
-instance MetaTrace (AnyMessageAndAgency (BlockFetch blk1 (Point blk2))) where
+instance MetaTrace (AnyMessage (BlockFetch blk1 (Point blk2))) where
     namespaceFor (AnyMessageAndAgency _stok MsgRequestRange{}) =
       Namespace [] ["RequestRange"]
     namespaceFor (AnyMessageAndAgency _stok MsgStartBatch{}) =
@@ -140,7 +140,7 @@ instance ( ConvertTxId blk
          , HasTxs blk
          , HasTxId (GenTx blk)
          )
-      => LogFormatting (AnyMessageAndAgency (BlockFetch (Serialised blk) (Point blk))) where
+      => LogFormatting (AnyMessage (BlockFetch (Serialised blk) (Point blk))) where
   forMachine _dtal (AnyMessageAndAgency stok (MsgBlock blk')) =
     mconcat  [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
@@ -175,7 +175,7 @@ instance ( ConvertTxId blk
 --------------------------------------------------------------------------------
 
 instance (Show txid, Show tx)
-      => LogFormatting (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
+      => LogFormatting (AnyMessage (STX.TxSubmission2 txid tx)) where
   forMachine _dtal (AnyMessageAndAgency stok STX.MsgInit) =
     mconcat
       [ "kind" .= String "MsgInit"
@@ -209,7 +209,7 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       ]
 
-instance MetaTrace (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
+instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
     namespaceFor (AnyMessageAndAgency _stok STX.MsgInit {}) =
       Namespace [] ["MsgInit"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =

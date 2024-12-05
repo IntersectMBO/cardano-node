@@ -21,7 +21,7 @@ import           Data.Text (pack)
 import           Formatting
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import           Network.Mux.Types
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 import qualified Data.List as List
 import qualified Ouroboros.Network.Diffusion as ND
@@ -527,7 +527,7 @@ instance (Show adr, Show ver) => LogFormatting (NtN.HandshakeTr adr ver) where
     forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
                                         <> ". " <> showT ev
 
-instance MetaTrace (AnyMessageAndAgency (HS.Handshake nt term)) where
+instance MetaTrace (AnyMessage (HS.Handshake nt term)) where
     namespaceFor (AnyMessageAndAgency _stok HS.MsgProposeVersions {}) =
       Namespace [] ["ProposeVersions"]
     namespaceFor (AnyMessageAndAgency _stok HS.MsgReplyVersions {})   =
