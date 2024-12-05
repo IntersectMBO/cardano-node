@@ -31,39 +31,39 @@ codecDataPointForward
            DeserialiseFailure m LBS.ByteString
 codecDataPointForward encodeRequest   decodeRequest
                       encodeReplyList decodeReplyList =
-  mkCodecCborLazyBS encode decode
+  mkCodecCborLazyBS encode' decode'
  where
   -- Encode messages.
-  encode
+  encode'
     :: forall (st  :: DataPointForward)
               (st' :: DataPointForward).
        Message DataPointForward st st'
     -> CBOR.Encoding
 
-  encode (MsgDataPointsRequest request) =
+  encode' (MsgDataPointsRequest request) =
        CBOR.encodeListLen 2
     <> CBOR.encodeWord 1
     <> encodeRequest request
 
-  encode MsgDone =
+  encode' MsgDone =
        CBOR.encodeListLen 1
     <> CBOR.encodeWord 2
 
-  encode (MsgDataPointsReply reply) =
+  encode' (MsgDataPointsReply reply) =
        CBOR.encodeListLen 2
     <> CBOR.encodeWord 3
     <> encodeReplyList reply
 
   -- Decode messages
-  decode
+  decode'
     :: forall (st :: DataPointForward) s.
        ActiveState st
     => StateToken st
     -> CBOR.Decoder s (SomeMessage st)
-  decode stateToken = do
+  decode' stok = do
     len <- CBOR.decodeListLen
     key <- CBOR.decodeWord
-    case (key, len, stateToken) of
+    case (key, len, stok) of
       (1, 2, SingIdle) ->
         SomeMessage . MsgDataPointsRequest <$> decodeRequest
 
@@ -75,6 +75,8 @@ codecDataPointForward encodeRequest   decodeRequest
 
       -- Failures per protocol state
       (_, _, SingIdle) ->
-        fail (printf "codecDataPointForward (%s) unexpected key (%d, %d)" (show stateToken) key len)
+        fail (printf "codecDataPointForward (%s) unexpected key (%d, %d)" (show stok) key len)
       (_, _, SingBusy) ->
-        fail (printf "codecDataPointForward (%s) unexpected key (%d, %d)" (show stateToken) key len)
+        fail (printf "codecDataPointForward (%s) unexpected key (%d, %d)" (show stok) key len)
+
+      (_, _, SingDone) -> notActiveState stok
