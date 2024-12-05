@@ -124,7 +124,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
 import           Network.Socket (SockAddr (..))
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 import           Network.TypedProtocol.Core (PeerHasAgency (..))
 
 {- HLINT ignore "Use record patterns" -}
@@ -628,7 +628,7 @@ instance (Show peer, StandardHash blk, Show (Header blk))
      => HasTextFormatter (TraceLabelPeer peer (NtN.TraceSendRecv (ChainSync (Header blk) (Point blk) (Tip blk)))) where
   formatText a _ = pack (show a)
 
-instance (ToObject peer, ToObject (AnyMessageAndAgency (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
+instance (ToObject peer, ToObject (AnyMessage (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk)))) where
   trTransformer = trStructured
 
@@ -808,7 +808,7 @@ instance ( ConvertTxId blk
          , RunNode blk
          , HasTxs blk
          )
-      => ToObject (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
+      => ToObject (AnyMessage (BlockFetch blk (Point blk))) where
   toObject MinimalVerbosity (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
@@ -849,7 +849,7 @@ instance ( ConvertTxId blk
              ]
 
 instance (forall result. Show (query result))
-      => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
+      => ToObject (AnyMessage (LocalStateQuery blk pt query)) where
   toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquire{}) =
     mconcat [ "kind" .= String "MsgAcquire"
              , "agency" .= String (pack $ show stok)
@@ -883,7 +883,7 @@ instance (forall result. Show (query result))
              , "agency" .= String (pack $ show stok)
              ]
 
-instance ToObject (AnyMessageAndAgency (LocalTxMonitor txid tx slotno)) where
+instance ToObject (AnyMessage (LocalTxMonitor txid tx slotno)) where
   toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgAcquire {}) =
     mconcat [ "kind" .= String "MsgAcuire"
              , "agency" .= String (pack $ show stok)
@@ -929,7 +929,7 @@ instance ToObject (AnyMessageAndAgency (LocalTxMonitor txid tx slotno)) where
              , "agency" .= String (pack $ show stok)
              ]
 
-instance ToObject (AnyMessageAndAgency (LocalTxSubmission tx err)) where
+instance ToObject (AnyMessage (LocalTxSubmission tx err)) where
   toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgSubmitTx{}) =
     mconcat [ "kind" .= String "MsgSubmitTx"
              , "agency" .= String (pack $ show stok)
@@ -947,7 +947,7 @@ instance ToObject (AnyMessageAndAgency (LocalTxSubmission tx err)) where
              , "agency" .= String (pack $ show stok)
              ]
 
-instance ToObject (AnyMessageAndAgency (ChainSync blk pt tip)) where
+instance ToObject (AnyMessage (ChainSync blk pt tip)) where
    toObject _verb (AnyMessageAndAgency stok ChainSync.MsgRequestNext{}) =
      mconcat [ "kind" .= String "MsgRequestNext"
               , "agency" .= String (pack $ show stok)
@@ -982,7 +982,7 @@ instance ToObject (AnyMessageAndAgency (ChainSync blk pt tip)) where
               ]
 
 instance (Show txid, Show tx)
-      => ToObject (AnyMessageAndAgency (TxSubmission2 txid tx)) where
+      => ToObject (AnyMessage (TxSubmission2 txid tx)) where
   toObject _verb (AnyMessageAndAgency stok MsgInit) =
     mconcat
       [ "kind" .= String "MsgInit"
@@ -1252,7 +1252,7 @@ instance (ToObject peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
     mconcat [ "peer" .= toObject verb peerid ] <> toObject verb a
 
 
-instance ToObject (AnyMessageAndAgency ps)
+instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
   toObject verb (TraceSendMsg m) = mconcat
     [ "kind" .= String "Send" , "msg" .= toObject verb m ]
