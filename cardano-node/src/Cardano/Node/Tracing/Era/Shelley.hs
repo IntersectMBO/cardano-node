@@ -625,11 +625,6 @@ instance
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
              ]
-  forMachine _dtal (StakeKeyInRewardsDELEG alreadyRegistered) =
-    mconcat [ "kind" .= String "StakeKeyInRewardsDELEG"
-             , "credential" .= String (textShow alreadyRegistered)
-             , "error" .= String "Staking credential registered in rewards map"
-             ]
   forMachine _dtal (StakeKeyNotRegisteredDELEG notRegistered) =
     mconcat [ "kind" .= String "StakeKeyNotRegisteredDELEG"
              , "credential" .= String (textShow notRegistered)
