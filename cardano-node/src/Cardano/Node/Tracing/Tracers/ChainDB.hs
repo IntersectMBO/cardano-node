@@ -1522,6 +1522,8 @@ instance ( StandardHash blk
              " This is most likely an expected change in the serialization format,"
           <> " which currently requires a chain replay"
         _ -> ""
+  forHuman (LedgerDB.SnapshotMissingChecksum snap) =
+      "Checksum file is missing for snapshot " <> showT snap
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
@@ -1535,15 +1537,21 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "InvalidSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
+  forMachine dtals (LedgerDB.SnapshotMissingChecksum snap) =
+      mconcat [ "kind" .= String "SnapshotMissingChecksum"
+               , "snapshot" .= forMachine dtals snap
+               ]
 
 instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
+    namespaceFor LedgerDB.SnapshotMissingChecksum {} = Namespace [] ["SnapshotMissingChecksum"]
 
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
+    severityFor  (Namespace _ ["SnapshotMissingChecksum"]) _ = Just Warning
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["TookSnapshot"]) = Just $ mconcat
@@ -1555,12 +1563,15 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
           "A snapshot was deleted from the disk."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just
           "An on disk snapshot was invalid. Unless it was suffixed, it will be deleted"
+    documentFor (Namespace _ ["SnapshotMissingChecksum"]) = Just
+          "Checksum file was missing for snapshot."
     documentFor _ = Nothing
 
     allNamespaces =
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
       , Namespace [] ["InvalidSnapshot"]
+      , Namespace [] ["SnapshotMissingChecksum"]
       ]
 
 

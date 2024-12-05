@@ -92,6 +92,7 @@ nodeRunParser = do
            , pncDiffusionMode = mempty
            , pncNumOfDiskSnapshots = numOfDiskSnapshots
            , pncSnapshotInterval = snapshotInterval
+           , pncDoDiskSnapshotChecksum = mempty
            , pncExperimentalProtocolsEnabled = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
