@@ -34,12 +34,13 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
                    localAddressFromPath, localSnocket, makeLocalBearer)
-import           Ouroboros.Network.Socket (ConnectionId (..), HandshakeCallbacks (..),
-                   connectToNode, nullNetworkConnectTracers)
+import           Ouroboros.Network.Socket (ConnectionId (..), ConnectToArgs (..),
+                   HandshakeCallbacks (..), connectToNode, nullNetworkConnectTracers)
 
 import           Codec.CBOR.Term (Term)
+import           Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Void (Void)
+import           Data.Void (Void, absurd)
 import           Data.Word (Word32)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsInit)
@@ -99,16 +100,12 @@ doConnectToForwarder
                           (ResponderContext LocalAddress)
                           LBS.ByteString IO () Void
   -> IO ()
-doConnectToForwarder snocket address netMagic timeLimits app =
-  connectToNode
+doConnectToForwarder snocket address netMagic timeLimits app = do
+  done <- connectToNode
     snocket
     makeLocalBearer
+    args
     mempty -- LocalSocket does not require to be configured
-    (codecHandshake forwardingVersionCodec)
-    timeLimits
-    (cborTermVersionDataCodec forwardingCodecCBORTerm)
-    nullNetworkConnectTracers
-    (HandshakeCallbacks acceptableVersion queryVersion)
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData $ NetworkMagic netMagic)
@@ -116,6 +113,18 @@ doConnectToForwarder snocket address netMagic timeLimits app =
     )
     Nothing
     address
+  case done of
+    Left err -> throwIO err
+    Right choice -> case choice of
+      Left () -> return ()
+      Right void -> absurd void
+  where
+    args = ConnectToArgs {
+      ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
+      ctaHandshakeTimeLimits = timeLimits,
+      ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+      ctaConnectTracers = nullNetworkConnectTracers,
+      ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
 
 runEKGAcceptorInit
   :: TracerEnv
