@@ -41,17 +41,17 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
+import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
 import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
-                   ConnectionManagerCounters (..), ConnectionManagerTrace (..),
+                   ConnectionManagerCounters (..),
                    OperationResult (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
-import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..), RemoteSt (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
-import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
+import qualified Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..),
@@ -96,8 +96,7 @@ import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount 
                    PeerSharingResult (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
-import           Ouroboros.Network.Server2 (ServerTrace (..))
-import qualified Ouroboros.Network.Server2 as Server
+import           Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
@@ -122,10 +121,10 @@ import qualified Data.Set as Set
 import           Data.Text (Text, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
+import           Network.Mux (MiniProtocolNum (..))
+import qualified Network.Mux as Mux
 import           Network.Socket (SockAddr (..))
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
-import           Network.TypedProtocol.Core (PeerHasAgency (..))
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -369,38 +368,38 @@ instance ToObject (Identity (SubscriptionTrace LocalAddress)) where
              ]
 
 
-instance HasPrivacyAnnotation (WithMuxBearer peer MuxTrace)
-instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
-  getSeverityAnnotation (WithMuxBearer _ ev) = case ev of
-    MuxTraceRecvHeaderStart -> Debug
-    MuxTraceRecvHeaderEnd {} -> Debug
-    MuxTraceRecvStart {} -> Debug
-    MuxTraceRecvEnd {} -> Debug
-    MuxTraceSendStart {} -> Debug
-    MuxTraceSendEnd -> Debug
-    MuxTraceState {} -> Info
-    MuxTraceCleanExit {} -> Notice
-    MuxTraceExceptionExit {} -> Notice
-    MuxTraceChannelRecvStart {} -> Debug
-    MuxTraceChannelRecvEnd {} -> Debug
-    MuxTraceChannelSendStart {} -> Debug
-    MuxTraceChannelSendEnd {} -> Debug
-    MuxTraceHandshakeStart -> Debug
-    MuxTraceHandshakeClientEnd {} -> Info
-    MuxTraceHandshakeServerEnd -> Debug
-    MuxTraceHandshakeClientError {} -> Error
-    MuxTraceHandshakeServerError {} -> Error
-    MuxTraceRecvDeltaQObservation {} -> Debug
-    MuxTraceRecvDeltaQSample {} -> Debug
-    MuxTraceSDUReadTimeoutException -> Notice
-    MuxTraceSDUWriteTimeoutException -> Notice
-    MuxTraceStartEagerly _ _ -> Info
-    MuxTraceStartOnDemand _ _ -> Info
-    MuxTraceStartedOnDemand _ _ -> Info
-    MuxTraceTerminating {} -> Debug
-    MuxTraceStopping -> Debug
-    MuxTraceStopped -> Debug
-    MuxTraceTCPInfo {} -> Debug
+instance HasPrivacyAnnotation (Mux.WithBearer peer Mux.Trace)
+instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
+  getSeverityAnnotation (Mux.WithBearer _ ev) = case ev of
+    Mux.TraceRecvHeaderStart -> Debug
+    Mux.TraceRecvHeaderEnd {} -> Debug
+    Mux.TraceRecvStart {} -> Debug
+    Mux.TraceRecvEnd {} -> Debug
+    Mux.TraceSendStart {} -> Debug
+    Mux.TraceSendEnd -> Debug
+    Mux.TraceState {} -> Info
+    Mux.TraceCleanExit {} -> Notice
+    Mux.TraceExceptionExit {} -> Notice
+    Mux.TraceChannelRecvStart {} -> Debug
+    Mux.TraceChannelRecvEnd {} -> Debug
+    Mux.TraceChannelSendStart {} -> Debug
+    Mux.TraceChannelSendEnd {} -> Debug
+    Mux.TraceHandshakeStart -> Debug
+    Mux.TraceHandshakeClientEnd {} -> Info
+    Mux.TraceHandshakeServerEnd -> Debug
+    Mux.TraceHandshakeClientError {} -> Error
+    Mux.TraceHandshakeServerError {} -> Error
+    Mux.TraceRecvDeltaQObservation {} -> Debug
+    Mux.TraceRecvDeltaQSample {} -> Debug
+    Mux.TraceSDUReadTimeoutException -> Notice
+    Mux.TraceSDUWriteTimeoutException -> Notice
+    Mux.TraceStartEagerly _ _ -> Info
+    Mux.TraceStartOnDemand _ _ -> Info
+    Mux.TraceStartedOnDemand _ _ -> Info
+    Mux.TraceTerminating {} -> Debug
+    Mux.TraceStopping -> Debug
+    Mux.TraceStopped -> Debug
+    Mux.TraceTCPInfo {} -> Debug
 
 instance HasPrivacyAnnotation (TraceLocalRootPeers RemoteAddress exception)
 instance HasSeverityAnnotation (TraceLocalRootPeers RemoteAddress exception) where
@@ -501,8 +500,8 @@ instance HasPrivacyAnnotation PeerSelectionCounters
 instance HasSeverityAnnotation PeerSelectionCounters where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (ConnectionManagerTrace addr connTrace)
-instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
+instance HasPrivacyAnnotation (ConnMgr.Trace addr connTrace)
+instance HasSeverityAnnotation (ConnMgr.Trace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
   getSeverityAnnotation ev =
     case ev of
       TrIncludeConnection {}                  -> Debug
@@ -539,8 +538,8 @@ instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
 instance HasSeverityAnnotation (ConnMgr.AbstractTransitionTrace addr) where
   getSeverityAnnotation _ = Debug
 
-instance HasPrivacyAnnotation (ServerTrace addr)
-instance HasSeverityAnnotation (ServerTrace addr) where
+instance HasPrivacyAnnotation (Server.Trace addr)
+instance HasSeverityAnnotation (Server.Trace addr) where
   getSeverityAnnotation ev =
     case ev of
       Server.TrAcceptConnection {}                      -> Debug
@@ -550,8 +549,8 @@ instance HasSeverityAnnotation (ServerTrace addr) where
       Server.TrServerStopped {}                         -> Notice
       Server.TrServerError {}                           -> Critical
 
-instance HasPrivacyAnnotation (InboundGovernorTrace addr)
-instance HasSeverityAnnotation (InboundGovernorTrace addr) where
+instance HasPrivacyAnnotation (InboundGovernor.Trace addr)
+instance HasSeverityAnnotation (InboundGovernor.Trace addr) where
   getSeverityAnnotation ev =
     case ev of
       InboundGovernor.TrNewConnection {}           -> Debug
@@ -717,11 +716,11 @@ instance HasTextFormatter (WithIPList (SubscriptionTrace SockAddr)) where
 
 
 instance (Show peer, ToObject peer)
-      => Transformable Text IO (WithMuxBearer peer MuxTrace) where
+      => Transformable Text IO (Mux.WithBearer peer Mux.Trace) where
   trTransformer = trStructuredText
 instance (Show peer)
-      => HasTextFormatter (WithMuxBearer peer MuxTrace) where
-  formatText (WithMuxBearer peer ev) _o =
+      => HasTextFormatter (Mux.WithBearer peer Mux.Trace) where
+  formatText (Mux.WithBearer peer ev) _o =
         "Bearer on " <> pack (show peer)
      <> " event: " <> pack (show ev)
 
@@ -761,12 +760,12 @@ instance HasTextFormatter PeerSelectionCounters where
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions
          )
-      => Transformable Text IO (ConnectionManagerTrace
+      => Transformable Text IO (ConnMgr.Trace
                                  addr
                                  (ConnectionHandlerTrace versionNumber agreedOptions)) where
   trTransformer = trStructuredText
 instance (Show addr, Show versionNumber, Show agreedOptions)
-      => HasTextFormatter (ConnectionManagerTrace
+      => HasTextFormatter (ConnMgr.Trace
                             addr
                             (ConnectionHandlerTrace versionNumber agreedOptions)) where
   formatText a _ = pack (show a)
@@ -779,17 +778,17 @@ instance Show addr
   formatText a _ = pack (show a)
 
 instance (Show addr, ToObject addr, ToJSON addr)
-      => Transformable Text IO (ServerTrace addr) where
+      => Transformable Text IO (Server.Trace addr) where
   trTransformer = trStructuredText
 instance Show addr
-      => HasTextFormatter (ServerTrace addr) where
+      => HasTextFormatter (Server.Trace addr) where
   formatText a _ = pack (show a)
 
 instance (ToJSON addr, Show addr)
-      => Transformable Text IO (InboundGovernorTrace addr) where
+      => Transformable Text IO (InboundGovernor.Trace addr) where
   trTransformer = trStructuredText
 instance Show addr
-      => HasTextFormatter (InboundGovernorTrace addr) where
+      => HasTextFormatter (InboundGovernor.Trace addr) where
   formatText a _ = pack (show a)
 
 instance (Show addr, ToJSON addr)
@@ -1118,14 +1117,14 @@ instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.DiffusionTracer ntnAddr nt
     ]
 
 instance ToObject (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
-  toObject _verb (WithMuxBearer b ev) =
+  toObject _verb (Mux.WithBearer b ev) =
     mconcat [ "kind" .= String "LocalHandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
 
 
 instance ToObject (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
-  toObject _verb (WithMuxBearer b ev) =
+  toObject _verb (Mux.WithBearer b ev) =
     mconcat [ "kind" .= String "HandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
@@ -1472,9 +1471,9 @@ instance ToObject (WithDomainName (SubscriptionTrace SockAddr)) where
              , "event" .= show ev ]
 
 
-instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
-  toObject verb (WithMuxBearer b ev) =
-    mconcat [ "kind" .= String "MuxTrace"
+instance ToObject peer => ToObject (Mux.WithBearer peer Mux.Trace) where
+  toObject verb (Mux.WithBearer b ev) =
+    mconcat [ "kind" .= String "Mux.Trace"
              , "bearer" .= toObject verb b
              , "event" .= show ev ]
 
@@ -2245,7 +2244,7 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
 
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
-      => ToObject (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
+      => ToObject (ConnMgr.Trace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
   toObject verb ev =
     case ev of
       TrIncludeConnection prov peerAddr ->
@@ -2402,27 +2401,27 @@ instance (Show addr, ToObject addr, ToJSON addr)
                ]
 
 instance (Show addr, ToObject addr, ToJSON addr)
-      => ToObject (ServerTrace addr) where
-  toObject verb (TrAcceptConnection peerAddr)     =
+      => ToObject (Server.Trace addr) where
+  toObject verb (Server.TrAcceptConnection peerAddr)     =
     mconcat [ "kind" .= String "AcceptConnection"
              , "address" .= toObject verb peerAddr
              ]
-  toObject _verb (TrAcceptError exception)         =
+  toObject _verb (Server.TrAcceptError exception)         =
     mconcat [ "kind" .= String "AcceptErroor"
              , "reason" .= show exception
              ]
-  toObject verb (TrAcceptPolicyTrace policyTrace) =
-    mconcat [ "kind" .= String "AcceptPolicyTrace"
+  toObject verb (Server.TrAcceptPolicyTrace policyTrace) =
+    mconcat [ "kind" .= String "AcceptPolicyServer.Trace"
              , "policy" .= toObject verb policyTrace
              ]
-  toObject verb (TrServerStarted peerAddrs)       =
-    mconcat [ "kind" .= String "AcceptPolicyTrace"
+  toObject verb (Server.TrServerStarted peerAddrs)       =
+    mconcat [ "kind" .= String "AcceptPolicyServer.Trace"
              , "addresses" .= toJSON (toObject verb `map` peerAddrs)
              ]
-  toObject _verb TrServerStopped                   =
+  toObject _verb Server.TrServerStopped                   =
     mconcat [ "kind" .= String "ServerStopped"
              ]
-  toObject _verb (TrServerError exception)         =
+  toObject _verb (Server.TrServerError exception)         =
     mconcat [ "kind" .= String "ServerError"
              , "reason" .= show exception
              ]
@@ -2485,79 +2484,79 @@ instance ToObject NtC.LocalConnectionId where
                  , "remote" .= toObject verb r
                  ]
 instance (ToJSON addr, Show addr)
-      => ToObject (InboundGovernorTrace addr) where
-  toObject _verb (TrNewConnection p connId)            =
+      => ToObject (InboundGovernor.Trace addr) where
+  toObject _verb (InboundGovernor.TrNewConnection p connId)            =
     mconcat [ "kind" .= String "NewConnection"
              , "provenance" .= show p
              , "connectionId" .= toJSON connId
              ]
-  toObject _verb (TrResponderRestarted connId m)       =
+  toObject _verb (InboundGovernor.TrResponderRestarted connId m)       =
     mconcat [ "kind" .= String "ResponderStarted"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              ]
-  toObject _verb (TrResponderStartFailure connId m s)  =
+  toObject _verb (InboundGovernor.TrResponderStartFailure connId m s)  =
     mconcat [ "kind" .= String "ResponderStartFailure"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              , "reason" .= show s
              ]
-  toObject _verb (TrResponderErrored connId m s)       =
+  toObject _verb (InboundGovernor.TrResponderErrored connId m s)       =
     mconcat [ "kind" .= String "ResponderErrored"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              , "reason" .= show s
              ]
-  toObject _verb (TrResponderStarted connId m)         =
+  toObject _verb (InboundGovernor.TrResponderStarted connId m)         =
     mconcat [ "kind" .= String "ResponderStarted"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              ]
-  toObject _verb (TrResponderTerminated connId m)      =
+  toObject _verb (InboundGovernor.TrResponderTerminated connId m)      =
     mconcat [ "kind" .= String "ResponderTerminated"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              ]
-  toObject _verb (TrPromotedToWarmRemote connId opRes) =
+  toObject _verb (InboundGovernor.TrPromotedToWarmRemote connId opRes) =
     mconcat [ "kind" .= String "PromotedToWarmRemote"
              , "connectionId" .= toJSON connId
              , "result" .= toJSON opRes
              ]
-  toObject _verb (TrPromotedToHotRemote connId)        =
+  toObject _verb (InboundGovernor.TrPromotedToHotRemote connId)        =
     mconcat [ "kind" .= String "PromotedToHotRemote"
              , "connectionId" .= toJSON connId
              ]
-  toObject _verb (TrDemotedToColdRemote connId od)     =
+  toObject _verb (InboundGovernor.TrDemotedToColdRemote connId od)     =
     mconcat [ "kind" .= String "DemotedToColdRemote"
              , "connectionId" .= toJSON connId
              , "result" .= show od
              ]
-  toObject _verb (TrDemotedToWarmRemote connId)     =
+  toObject _verb (InboundGovernor.TrDemotedToWarmRemote connId)     =
     mconcat [ "kind" .= String "DemotedToWarmRemote"
              , "connectionId" .= toJSON connId
              ]
-  toObject _verb (TrWaitIdleRemote connId opRes) =
+  toObject _verb (InboundGovernor.TrWaitIdleRemote connId opRes) =
     mconcat [ "kind" .= String "WaitIdleRemote"
              , "connectionId" .= toJSON connId
              , "result" .= toJSON opRes
              ]
-  toObject _verb (TrMuxCleanExit connId)               =
+  toObject _verb (InboundGovernor.TrMuxCleanExit connId)               =
     mconcat [ "kind" .= String "MuxCleanExit"
              , "connectionId" .= toJSON connId
              ]
-  toObject _verb (TrMuxErrored connId s)               =
+  toObject _verb (InboundGovernor.TrMuxErrored connId s)               =
     mconcat [ "kind" .= String "MuxErrored"
              , "connectionId" .= toJSON connId
              , "reason" .= show s
              ]
-  toObject _verb (TrInboundGovernorCounters counters) =
+  toObject _verb (InboundGovernor.TrInboundGovernorCounters counters) =
     mconcat [ "kind" .= String "InboundGovernorCounters"
-             , "idlePeers" .= idlePeersRemote counters
-             , "coldPeers" .= coldPeersRemote counters
-             , "warmPeers" .= warmPeersRemote counters
-             , "hotPeers" .= hotPeersRemote counters
+             , "idlePeers" .= InboundGovernor.idlePeersRemote counters
+             , "coldPeers" .= InboundGovernor.coldPeersRemote counters
+             , "warmPeers" .= InboundGovernor.warmPeersRemote counters
+             , "hotPeers" .= InboundGovernor.hotPeersRemote counters
              ]
-  toObject _verb (TrRemoteState st) =
+  toObject _verb (InboundGovernor.TrRemoteState st) =
     mconcat [ "kind" .= String "RemoteState"
              , "remoteSt" .= toJSON st
              ]
