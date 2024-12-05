@@ -33,10 +33,10 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
                    makeLocalBearer)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), HandshakeCallbacks (..),
-                   SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
-                   newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
-                   withServerNode)
+import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
+                   HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
+                   connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
+                   nullNetworkServerTracers, withServerNode)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
@@ -47,7 +47,7 @@ import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTr
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (getCurrentTime)
-import           Data.Void (Void)
+import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
 import           GHC.Generics
 import           System.Directory
@@ -157,15 +157,11 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
   dpStore <- initDataPointStore
   writeToStore dpStore "test.data.point" $ DataPoint mkTestDataPoint
   withAsync (traceObjectsWriter sink) $ \_ -> do
-    connectToNode
+    done <- connectToNode
       snocket
       muxBearer
+      args
       mempty
-      (codecHandshake forwardingVersionCodec)
-      timeLimits
-      (cborTermVersionDataCodec forwardingCodecCBORTerm)
-      nullNetworkConnectTracers
-      (HandshakeCallbacks acceptableVersion queryVersion)
       (simpleSingletonVersions
          ForwardingV_1
          (ForwardingVersionData $ unI tsNetworkMagic)
@@ -177,7 +173,18 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       )
       Nothing
       address
+    case done of
+      Left err -> throwIO err
+      Right choice -> case choice of
+        Left () -> return ()
+        Right void -> absurd void
  where
+  args = ConnectToArgs {
+    ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
+    ctaHandshakeTimeLimits = timeLimits,
+    ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+    ctaConnectTracers = nullNetworkConnectTracers,
+    ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
   forwarderApp
     :: [(RunMiniProtocol 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
     -> OuroborosApplication 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void
