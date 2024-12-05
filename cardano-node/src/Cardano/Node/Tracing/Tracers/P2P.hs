@@ -1011,7 +1011,7 @@ instance LogFormatting PeerSelectionCounters where
 instance MetaTrace PeerSelectionCounters where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
 
-    severityFor (Namespace _ ["Counters"]) _ = Just Info
+    severityFor (Namespace _ ["Counters"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Counters"]) = Just
@@ -1437,7 +1437,7 @@ instance MetaTrace (ConnectionManager.Trace addr
     severityFor (Namespace _  ["ConnectionCleanup"]) _ = Just Debug
     severityFor (Namespace _  ["ConnectionTimeWait"]) _ = Just Debug
     severityFor (Namespace _  ["ConnectionTimeWaitDone"]) _ = Just Info
-    severityFor (Namespace _  ["ConnectionManagerCounters"]) _ = Just Info
+    severityFor (Namespace _  ["ConnectionManagerCounters"]) _ = Just Debug
     severityFor (Namespace _  ["State"]) _ = Just Info
     severityFor (Namespace _  ["UnexpectedlyFalseAssertion"]) _ = Just Error
     severityFor _ _ = Nothing
