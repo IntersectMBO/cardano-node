@@ -32,18 +32,19 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
                    makeLocalBearer)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), HandshakeCallbacks (..),
-                   SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
-                   newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
-                   withServerNode)
+import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
+                   HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
+                   connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
+                   nullNetworkServerTracers, withServerNode)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async, race_, wait)
 import           Control.Monad (void)
+import           Control.Exception (throwIO)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Void (Void)
+import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
 import           System.IO (hPutStrLn, stderr)
 import qualified System.Metrics as EKG
@@ -197,15 +198,11 @@ doConnectToAcceptor
   -> IO ()
 doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
                     ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
-  connectToNode
+  done <- connectToNode
     snocket
     makeBearer
+    args
     configureSocket
-    (codecHandshake forwardingVersionCodec)
-    timeLimits
-    (cborTermVersionDataCodec forwardingCodecCBORTerm)
-    nullNetworkConnectTracers
-    (HandshakeCallbacks acceptableVersion queryVersion)
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
@@ -217,7 +214,18 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     )
     Nothing
     address
+  case done of
+    Left err -> throwIO err
+    Right choice -> case choice of
+      Left () -> return ()
+      Right v -> absurd v
  where
+  args = ConnectToArgs {
+    ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
+    ctaHandshakeTimeLimits = timeLimits,
+    ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+    ctaConnectTracers = nullNetworkConnectTracers,
+    ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
   forwarderApp
     :: [(RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
     -> OuroborosApplication 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
