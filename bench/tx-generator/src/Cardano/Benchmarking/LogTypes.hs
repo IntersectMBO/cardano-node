@@ -51,7 +51,7 @@ import qualified Control.Concurrent.STM as STM (TVar)
 import           Data.Text
 import           Data.Time.Clock (DiffTime, NominalDiffTime)
 import           GHC.Generics
-import           Network.Mux (WithMuxBearer (..))
+import qualified Network.Mux as Mux
 
 data AsyncBenchmarkControl =
   AsyncBenchmarkControl
@@ -149,7 +149,7 @@ data NodeToNodeSubmissionTrace
 
 type SendRecvTxSubmission2 = TraceSendRecv (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))
 
-type SendRecvConnect = WithMuxBearer
+type SendRecvConnect = Mux.WithBearer
                          RemoteConnectionId
                          (TraceSendRecv (Handshake
                                            NodeToNodeVersion
