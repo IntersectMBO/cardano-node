@@ -1341,6 +1341,7 @@ instance ToJSON ShelleyNodeToClientVersion where
   toJSON ShelleyNodeToClientVersion8 = String "ShelleyNodeToClientVersion8"
   toJSON ShelleyNodeToClientVersion9 = String "ShelleyNodeToClientVersion9"
   toJSON ShelleyNodeToClientVersion10 = String "ShelleyNodeToClientVersion10"
+  toJSON ShelleyNodeToClientVersion11 = String "ShelleyNodeToClientVersion11"
 
 instance Ledger.Crypto c => ToObject (PraosChainSelectView c) where
   toObject _ PraosChainSelectView {
