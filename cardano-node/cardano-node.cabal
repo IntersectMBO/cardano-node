@@ -197,6 +197,7 @@ library
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
+                      , resource-registry
                       , safe-exceptions
                       , scientific
                       , si-timers
