@@ -242,6 +242,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       TraceLedgerPeersDomains {}     -> Debug
       TraceLedgerPeersResult {}      -> Debug
       TraceLedgerPeersFailure {}     -> Debug
+      UsingBigLedgerPeerSnapshot {}  -> Info
 
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
@@ -444,6 +445,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
+      TraceVerifyPeerSnapshot    {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -495,6 +497,7 @@ instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr lAddr) where
      PeerStatusChangeFailure {} -> Error
      PeerMonitoringError {}     -> Error
      PeerMonitoringResult {}    -> Debug
+     AcquireConnectionError {}  -> Error
 
 instance HasPrivacyAnnotation PeerSelectionCounters
 instance HasSeverityAnnotation PeerSelectionCounters where
@@ -505,7 +508,7 @@ instance HasSeverityAnnotation (ConnMgr.Trace addr (ConnectionHandlerTrace versi
   getSeverityAnnotation ev =
     case ev of
       TrIncludeConnection {}                  -> Debug
-      TrUnregisterConnection {}               -> Debug
+      TrReleaseConnection {}                  -> Debug
       TrConnect {}                            -> Debug
       TrConnectError {}                       -> Info
       TrTerminatingConnection {}              -> Debug
@@ -1439,7 +1442,10 @@ instance ToObject TraceLedgerPeers where
       , "domainAccessPoint" .= show dap
       , "error" .= show reason
       ]
-
+  toObject _verb UsingBigLedgerPeerSnapshot =
+    mconcat
+      [ "kind" .= String "UsingBigLedgerPeerSnapshot"
+      ]
 
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
@@ -1917,6 +1923,9 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
     mconcat [ "kind" .= String "BootstrapPeersFlagChangedWhilstInSensitiveState"
             ]
+  toObject _verb (TraceVerifyPeerSnapshot result) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "result" .= toJSON result ]
   toObject _verb (TraceOutboundGovernorCriticalFailure err) =
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
              , "reason" .= show err
@@ -2058,6 +2067,10 @@ instance Show lAddr => ToObject (PeerSelectionActionsTrace SockAddr lAddr) where
              , "connectionId" .= toJSON connId
              , "withProtocolTemp" .= show wf
              ]
+  toObject _verb (AcquireConnectionError exception) =
+    mconcat [ "kind" .= String "AcquireConnectionError"
+            , "exception" .= displayException exception
+            ]
 
 instance ToObject PeerSelectionCounters where
   toObject _verb PeerSelectionCounters {..} =
@@ -2103,25 +2116,14 @@ instance ToObject PeerSelectionCounters where
             , "activeBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
             ]
 
-instance (Show (ClientHasAgency st), Show (ServerHasAgency st))
-  => ToJSON (PeerHasAgency pr st) where
-  toJSON (ClientAgency cha) =
-    Aeson.object [ "kind" .= String "ClientAgency"
-                 , "agency" .= show cha
-                 ]
-  toJSON (ServerAgency sha) =
-    Aeson.object [ "kind" .= String "ServerAgency"
-                 , "agency" .= show sha
-                 ]
-
 instance ToJSON ProtocolLimitFailure where
   toJSON (ExceededSizeLimit tok) =
     Aeson.object [ "kind" .= String "ProtocolLimitFailure"
-                 , "agency" .= toJSON tok
+                 , "agency" .= show tok
                  ]
   toJSON (ExceededTimeLimit tok) =
     Aeson.object [ "kind" .= String "ProtocolLimitFailure"
-                 , "agency" .= toJSON tok
+                 , "agency" .= show tok
                  ]
 
 instance Show vNumber => ToJSON (RefuseReason vNumber) where
@@ -2253,7 +2255,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toObject verb peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
-      TrUnregisterConnection prov peerAddr ->
+      TrReleaseConnection prov peerAddr ->
         mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
           , "remoteAddress" .= toObject verb peerAddr
