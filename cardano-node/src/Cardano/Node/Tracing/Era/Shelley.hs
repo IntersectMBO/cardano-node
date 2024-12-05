@@ -1268,11 +1268,12 @@ instance
                 , "opCertStartingKesPeriod" .= oCertStartKesPeriod
                 , "error" .= err
                 ]
-      Praos.InvalidKesSignatureOCERT currentKesPeriod opCertStartKesPeriod expectedKesEvos err ->
+      Praos.InvalidKesSignatureOCERT currentKesPeriod opCertStartKesPeriod expectedKesEvos maxKesEvos err ->
         mconcat [ "kind" .= String "InvalidKesSignatureOCERT"
                 , "currentKesPeriod" .= currentKesPeriod
                 , "opCertStartingKesPeriod" .= opCertStartKesPeriod
                 , "expectedKesEvolutions" .= expectedKesEvos
+                , "maximumKesEvos" .= maxKesEvos
                 , "error" .= err
                 ]
       Praos.NoCounterForKeyHashOCERT stakePoolKeyHash->
