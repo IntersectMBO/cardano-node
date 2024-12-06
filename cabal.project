@@ -72,8 +72,15 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: e8896feaf2ffb9758d27c00d842237e2dbd56592
-  --sha256: sha256-78ulTpgwJuccs3ntjHebkIyrdT7Id572fk0xwianOe0=
+  tag: 7b8df1adf6180b01ba70c1093e29be2f8b8d63d2
+  --sha256: sha256-D7eiO99jblOpBajM5NPA+NAtlrWo+UvNLSxufxjjs68=
   subdir: network-mux
           ouroboros-network-framework
           ouroboros-network
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim
+  tag: 586ddf6b52be1bbc78f9c659907f8e3fa13ccffe
+  --sha256: sha256-HaCWLHhseTQsTgShuh6tM52NpS558jcPgpQZ0YTBgj4=
+  subdir: io-sim

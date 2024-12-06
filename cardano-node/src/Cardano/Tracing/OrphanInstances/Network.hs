@@ -42,6 +42,7 @@ import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecl
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..), LocalAddr (..))
+import           Ouroboros.Network.ConnectionManager.State (ConnStateId (..))
 import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
                    ConnectionManagerCounters (..), ConnectionManagerTrace (..),
                    OperationResult (..))
@@ -80,6 +81,7 @@ import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    LocalRootPeers, WarmValency (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (LocalRootConfig (..))
 import qualified Ouroboros.Network.PeerSelection.State.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
@@ -1493,6 +1495,16 @@ instance FromJSON HotValency where
 instance FromJSON WarmValency where
   parseJSON v = WarmValency <$> parseJSON v
 
+instance ToJSON LocalRootConfig where
+  toJSON LocalRootConfig { peerAdvertise,
+                           peerTrustable,
+                           diffusionMode } =
+    Aeson.object
+      [ "peerAdvertise" .= peerAdvertise
+      , "peerTrustable" .= peerTrustable
+      , "diffusionMode" .= show diffusionMode
+      ]
+
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
@@ -2265,6 +2277,15 @@ instance ToJSON addr => ToJSON (LocalAddr addr) where
   toJSON (LocalAddr addr) = toJSON addr
   toJSON UnknownLocalAddr = Null
 
+instance ToJSON NtN.DiffusionMode where
+  toJSON = String . pack . show
+
+instance ToJSON ConnStateId where
+  toJSON (ConnStateId connStateId) = toJSON connStateId
+
+instance ToObject ConnStateId where
+  toObject _ connStateId = mconcat [ "connStateId" .= toJSON connStateId ]
+
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
       => ToObject (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
@@ -2282,15 +2303,17 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toJSON connId
           , "provenance" .= String (pack . show $ prov)
           ]
-      TrConnect (Just localAddress) remoteAddress ->
+      TrConnect (Just localAddress) remoteAddress diffusionMode ->
         mconcat
           [ "kind" .= String "ConnectTo"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
+          , "diffusionMode" .= toJSON diffusionMode
           ]
-      TrConnect Nothing remoteAddress ->
+      TrConnect Nothing remoteAddress diffusionMode ->
         mconcat
           [ "kind" .= String "ConnectTo"
           , "remoteAddress" .= toObject verb remoteAddress
+          , "diffusionMode" .= toJSON diffusionMode
           ]
       TrConnectError (Just localAddress) remoteAddress err ->
         mconcat

@@ -82,7 +82,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeer
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig (..), WarmValency)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
@@ -661,7 +661,7 @@ installP2PSigHUPHandler :: Tracer IO (StartupTrace blk)
                         -> Api.BlockType blk
                         -> NodeConfiguration
                         -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
-                        -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
+                        -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint LocalRootConfig)]
                         -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                         -> StrictTVar IO UseLedgerPeers
                         -> StrictTVar IO UseBootstrapPeers
@@ -756,7 +756,7 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
 
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
                             -> NodeConfiguration
-                            -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
+                            -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint LocalRootConfig)]
                             -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                             -> StrictTVar IO UseLedgerPeers
                             -> StrictTVar IO UseBootstrapPeers
@@ -843,7 +843,7 @@ checkVRFFilePermissions (File vrfPrivKey) = do
 
 mkP2PArguments
   :: NodeConfiguration
-  -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
+  -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint LocalRootConfig)]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
@@ -921,18 +921,32 @@ producerAddressesNonP2P nt =
 
 producerAddresses
   :: NetworkTopology
-  -> ( [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
-     , Map RelayAccessPoint PeerAdvertise)
+  -> ( [(HotValency, WarmValency, Map RelayAccessPoint LocalRootConfig)]
+     , Map RelayAccessPoint PeerAdvertise
+     )
+  -- ^ local roots & public roots
 producerAddresses RealNodeTopology { ntLocalRootPeersGroups
                                    , ntPublicRootPeers
                                    } =
   ( map (\lrp -> ( hotValency lrp
                  , warmValency lrp
-                 , Map.fromList $ map (fmap (, trustable lrp))
-                                $ rootConfigToRelayAccessPoint
-                                $ localRoots lrp
+                 , Map.fromList
+                 . map (\(addr, peerAdvertise) ->
+                         ( addr
+                         , LocalRootConfig {
+                             diffusionMode = rootDiffusionMode lrp,
+                             peerAdvertise,
+                             peerTrustable = trustable lrp
+                           }
+                         )
+                       )
+                 . rootConfigToRelayAccessPoint
+                 $ localRoots lrp
                  )
         )
         (groups ntLocalRootPeersGroups)
-  , foldMap (Map.fromList . rootConfigToRelayAccessPoint . publicRoots) ntPublicRootPeers
+  , foldMap ( Map.fromList
+            . rootConfigToRelayAccessPoint
+            . publicRoots
+            ) ntPublicRootPeers
   )
