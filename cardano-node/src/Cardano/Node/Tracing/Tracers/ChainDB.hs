@@ -19,6 +19,7 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Prelude (maximumDef)
+import           Cardano.Tracing.HasIssuer
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HeaderValidation (HeaderEnvelopeError (..), HeaderError (..),
                    OtherHeaderEnvelopeError)
@@ -41,6 +42,7 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Data.Aeson (Value (String), object, toJSON, (.=))
+import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -50,7 +52,7 @@ import           Numeric (showFFloat)
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
--- TODO implement differently so that it uses configuration
+-- A limiter that is not coming from configuration, because it carries a special filter
 withAddedToCurrentChainEmptyLimited
   :: Trace IO (ChainDB.TraceEvent blk)
   -> IO (Trace IO (ChainDB.TraceEvent blk))
@@ -79,6 +81,7 @@ instance (  LogFormatting (Header blk)
           , ConvertRawHash (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
+          , HasIssuer blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
   forHuman ChainDB.TraceLastShutdownUnclean        =
     "ChainDB is not clean. Validating all immutable chunks"
@@ -394,6 +397,7 @@ instance ( LogFormatting (Header blk)
          , ConvertRawHash (Header blk)
          , LedgerSupportsProtocol blk
          , InspectLedger blk
+         , HasIssuer blk
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
   forHuman (ChainDB.IgnoreBlockOlderThanK pt) =
     "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -481,7 +485,14 @@ instance ( LogFormatting (Header blk)
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChangingSelection"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.AddedToCurrentChain events selChangedInfo base extended) =
-      mconcat $
+      let ChainInformation { .. } = chainInformation selChangedInfo base extended 0
+          tipBlockIssuerVkHashText :: Text
+          tipBlockIssuerVkHashText =
+            case tipBlockIssuerVerificationKeyHash of
+              NoBlockIssuer -> "NoBlockIssuer"
+              BlockIssuerVerificationKeyHash bs ->
+                Text.decodeLatin1 (B16.encode bs)
+      in mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint extended)
                , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
@@ -493,8 +504,18 @@ instance ( LogFormatting (Header blk)
                | dtal == DDetailed ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
+            ++ [ "tipBlockHash" .= tipBlockHash]
+            ++ [ "tipBlockParentHash" .= tipBlockParentHash]
+            ++ [ "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
   forMachine dtal (ChainDB.SwitchedToAFork events selChangedInfo old new) =
-      mconcat $
+      let ChainInformation { .. } = chainInformation selChangedInfo old new 0
+          tipBlockIssuerVkHashText :: Text
+          tipBlockIssuerVkHashText =
+            case tipBlockIssuerVerificationKeyHash of
+              NoBlockIssuer -> "NoBlockIssuer"
+              BlockIssuerVerificationKeyHash bs ->
+                Text.decodeLatin1 (B16.encode bs)
+      in mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint new)
                , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
@@ -506,6 +527,10 @@ instance ( LogFormatting (Header blk)
                | dtal == DDetailed ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
+            ++ [ "tipBlockHash" .= tipBlockHash]
+            ++ [ "tipBlockParentHash" .= tipBlockParentHash]
+            ++ [ "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
+
   forMachine dtal (ChainDB.AddBlockValidation ev') =
     forMachine dtal ev'
   forMachine dtal (ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _ enclosing) =
@@ -544,7 +569,7 @@ instance ( LogFormatting (Header blk)
   asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo oldChain newChain) =
     let forkIt = not $ AF.withinFragmentBounds (AF.headPoint oldChain)
                               newChain
-        ChainInformation { .. } = chainInformation selChangedInfo newChain 0
+        ChainInformation { .. } = chainInformation selChangedInfo oldChain newChain 0
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
@@ -552,9 +577,9 @@ instance ( LogFormatting (Header blk)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         , CounterM "forks" (Just (if forkIt then 1 else 0))
         ]
-  asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo _oldChain newChain) =
+  asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo oldChain newChain) =
     let ChainInformation { .. } =
-          chainInformation selChangedInfo newChain 0
+          chainInformation selChangedInfo oldChain newChain 0
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
@@ -1488,7 +1513,6 @@ instance MetaTrace (ChainDB.UnknownRange blk) where
     namespaceFor ChainDB.MissingBlock {} = Namespace [] ["MissingBlock"]
     namespaceFor ChainDB.ForkTooOld {} = Namespace []  ["ForkTooOld"]
 
-    -- TODO Tracers Is this really as intended?
     severityFor _ _ = Just Debug
 
     documentFor (Namespace _ ["MissingBlock"]) = Just
@@ -2097,22 +2121,44 @@ data ChainInformation = ChainInformation
     -- ^ Relative slot number of the tip of the current chain within the
     -- epoch.
   , blocksUncoupledDelta :: Int64
+  , tipBlockHash :: Text
+    -- ^ Hash of the last adopted block.
+  , tipBlockParentHash :: Text
+    -- ^ Hash of the parent block of the last adopted block.
+  , tipBlockIssuerVerificationKeyHash :: BlockIssuerVerificationKeyHash
+    -- ^ Hash of the last adopted block issuer's verification key.
   }
+
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
+  => HasIssuer blk
+  => ConvertRawHash blk
   => ChainDB.SelectionChangedInfo blk
   -> AF.AnchoredFragment (Header blk)
+  -> AF.AnchoredFragment (Header blk) -- ^ New fragment.
   -> Int64
   -> ChainInformation
-chainInformation selChangedInfo frag blocksUncoupledDelta = ChainInformation
+chainInformation selChangedInfo oldFrag frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
     , epoch = ChainDB.newTipEpoch selChangedInfo
     , slotInEpoch = ChainDB.newTipSlotInEpoch selChangedInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
+    , tipBlockHash = renderHeaderHash (Proxy @blk) $ realPointHash (ChainDB.newTipPoint selChangedInfo)
+    , tipBlockParentHash = renderChainHash (Text.decodeLatin1 . B16.encode . toRawHash (Proxy @blk)) $ AF.headHash oldFrag
+    , tipBlockIssuerVerificationKeyHash = tipIssuerVkHash
     }
+  where
+    tipIssuerVkHash :: BlockIssuerVerificationKeyHash
+    tipIssuerVkHash =
+      case AF.head frag of
+        Left AF.AnchorGenesis ->
+          NoBlockIssuer
+        Left (AF.Anchor _s _h _b) ->
+          NoBlockIssuer
+        Right blk -> getIssuerVerificationKeyHash blk
 
 fragmentChainDensity ::
   HasHeader (Header blk)
