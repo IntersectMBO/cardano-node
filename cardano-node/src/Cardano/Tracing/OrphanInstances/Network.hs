@@ -80,6 +80,7 @@ import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    LocalRootPeers, WarmValency (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (LocalRootConfig (..))
 import qualified Ouroboros.Network.PeerSelection.State.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
@@ -1492,6 +1493,16 @@ instance FromJSON HotValency where
 
 instance FromJSON WarmValency where
   parseJSON v = WarmValency <$> parseJSON v
+
+instance ToJSON LocalRootConfig where
+  toJSON LocalRootConfig { peerAdvertise,
+                           peerTrustable,
+                           diffusionMode } =
+    Aeson.object
+      [ "peerAdvertise" .= peerAdvertise
+      , "peerTrustable" .= peerTrustable
+      , "diffusionMode" .= show diffusionMode
+      ]
 
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
