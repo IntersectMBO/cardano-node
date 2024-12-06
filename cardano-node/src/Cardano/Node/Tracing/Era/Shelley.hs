@@ -18,6 +18,7 @@
 module Cardano.Node.Tracing.Era.Shelley () where
 
 import           Cardano.Api (textShow)
+import           Cardano.Api.Ledger (fromVRFVerKeyHash)
 import qualified Cardano.Api.Shelley as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -666,7 +667,7 @@ instance
              ]
   forMachine _dtal (DuplicateGenesisVRFDELEG vrfKeyHash) =
     mconcat [ "kind" .= String "DuplicateGenesisVRFDELEG"
-             , "keyHash" .= vrfKeyHash
+             , "keyHash" .= fromVRFVerKeyHash vrfKeyHash
              ]
   forMachine _dtal MIRTransferNotCurrentlyAllowed =
     mconcat [ "kind" .= String "MIRTransferNotCurrentlyAllowed"
