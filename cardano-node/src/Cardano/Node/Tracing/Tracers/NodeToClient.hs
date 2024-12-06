@@ -20,12 +20,12 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (Text, pack)
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
 
-instance LogFormatting (AnyMessageAndAgency ps)
+instance LogFormatting (AnyMessage ps)
       => LogFormatting (TraceSendRecv ps) where
   forMachine dtal (TraceSendMsg m) = mconcat
     [ "kind" .= String "Send" , "msg" .= forMachine dtal m ]
@@ -38,7 +38,7 @@ instance LogFormatting (AnyMessageAndAgency ps)
   asMetrics (TraceSendMsg m) = asMetrics m
   asMetrics (TraceRecvMsg m) = asMetrics m
 
-instance MetaTrace (AnyMessageAndAgency ps) =>
+instance MetaTrace (AnyMessage ps) =>
             MetaTrace (TraceSendRecv ps) where
   namespaceFor (TraceSendMsg msg) =
     nsPrependInner "Send" (namespaceFor msg)
@@ -48,47 +48,47 @@ instance MetaTrace (AnyMessageAndAgency ps) =>
   severityFor (Namespace out ("Send" : tl)) (Just (TraceSendMsg msg)) =
     severityFor (Namespace out tl) (Just msg)
   severityFor (Namespace out ("Send" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+    severityFor (Namespace out tl :: Namespace (AnyMessage ps)) Nothing
   severityFor (Namespace out ("Receive" : tl)) (Just (TraceSendMsg msg)) =
     severityFor (Namespace out tl) (Just msg)
   severityFor (Namespace out ("Receive" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+    severityFor (Namespace out tl :: Namespace (AnyMessage ps)) Nothing
   severityFor _ _ = Nothing
 
   privacyFor (Namespace out ("Send" : tl)) (Just (TraceSendMsg msg)) =
     privacyFor (Namespace out tl) (Just msg)
   privacyFor (Namespace out ("Send" : tl)) Nothing =
-    privacyFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+    privacyFor (Namespace out tl :: Namespace (AnyMessage ps)) Nothing
   privacyFor (Namespace out ("Receive" : tl)) (Just (TraceSendMsg msg)) =
     privacyFor (Namespace out tl) (Just msg)
   privacyFor (Namespace out ("Receive" : tl)) Nothing =
-    privacyFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+    privacyFor (Namespace out tl :: Namespace (AnyMessage ps)) Nothing
   privacyFor _ _ = Nothing
 
   detailsFor (Namespace out ("Send" : tl)) (Just (TraceSendMsg msg)) =
     detailsFor (Namespace out tl) (Just msg)
   detailsFor (Namespace out ("Send" : tl)) Nothing =
-    detailsFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+    detailsFor (Namespace out tl :: Namespace (AnyMessage ps)) Nothing
   detailsFor (Namespace out ("Receive" : tl)) (Just (TraceSendMsg msg)) =
     detailsFor (Namespace out tl) (Just msg)
   detailsFor (Namespace out ("Receive" : tl)) Nothing =
-    detailsFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+    detailsFor (Namespace out tl :: Namespace (AnyMessage ps)) Nothing
   detailsFor _ _ = Nothing
 
   metricsDocFor (Namespace out ("Send" : tl)) =
-    metricsDocFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+    metricsDocFor (nsCast (Namespace out tl) :: Namespace (AnyMessage ps))
   metricsDocFor (Namespace out ("Receive" : tl)) =
-    metricsDocFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+    metricsDocFor (nsCast (Namespace out tl) :: Namespace (AnyMessage ps))
   metricsDocFor _ = []
 
   documentFor (Namespace out ("Send" : tl)) =
-    documentFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+    documentFor (nsCast (Namespace out tl) :: Namespace (AnyMessage ps))
   documentFor (Namespace out ("Receive" : tl)) =
-    documentFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+    documentFor (nsCast (Namespace out tl) :: Namespace (AnyMessage ps))
   documentFor _ = Nothing
 
   allNamespaces =
-    let cn = allNamespaces :: [Namespace (AnyMessageAndAgency ps)]
+    let cn = allNamespaces :: [Namespace (AnyMessage ps)]
     in fmap (nsPrependInner "Send") cn ++ fmap (nsPrependInner "Receive") cn
 
 
@@ -96,7 +96,7 @@ instance MetaTrace (AnyMessageAndAgency ps) =>
 -- -- TChainSync Tracer
 -- --------------------------------------------------------------------------------
 
-instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
+instance LogFormatting (AnyMessage (ChainSync blk pt tip)) where
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRequestNext{}) =
      mconcat [ "kind" .= String "MsgRequestNext"
               , "agency" .= String (pack $ show stok)
@@ -130,7 +130,7 @@ instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
               , "agency" .= String (pack $ show stok)
               ]
 
-instance MetaTrace (AnyMessageAndAgency (ChainSync blk pt tip)) where
+instance MetaTrace (AnyMessage (ChainSync blk pt tip)) where
     namespaceFor (AnyMessageAndAgency _agency (MsgRequestNext {})) =
       Namespace [] ["RequestNext"]
     namespaceFor (AnyMessageAndAgency _agency (MsgAwaitReply {})) =
@@ -220,7 +220,7 @@ instance MetaTrace (AnyMessageAndAgency (ChainSync blk pt tip)) where
 -- LocalTxMonitor Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) where
+instance LogFormatting (AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquire {}) =
     mconcat [ "kind" .= String "MsgAcquire"
              , "agency" .= String (pack $ show stok)
@@ -266,7 +266,7 @@ instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo))
              , "agency" .= String (pack $ show stok)
              ]
 
-instance MetaTrace (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) where
+instance MetaTrace (AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
     namespaceFor (AnyMessageAndAgency _agency LTM.MsgAcquire {}) =
       Namespace [] ["Acquire"]
     namespaceFor (AnyMessageAndAgency _agency LTM.MsgAcquired {}) =
@@ -344,7 +344,7 @@ instance MetaTrace (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) whe
 -- LocalTxSubmission Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
+instance LogFormatting (AnyMessage (LTS.LocalTxSubmission tx err)) where
   forMachine _dtal (AnyMessageAndAgency stok LTS.MsgSubmitTx{}) =
     mconcat [ "kind" .= String "MsgSubmitTx"
              , "agency" .= String (pack $ show stok)
@@ -362,7 +362,7 @@ instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) wher
              , "agency" .= String (pack $ show stok)
              ]
 
-instance MetaTrace (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
+instance MetaTrace (AnyMessage (LTS.LocalTxSubmission tx err)) where
     namespaceFor (AnyMessageAndAgency _agency LTS.MsgSubmitTx{}) =
       Namespace [] ["SubmitTx"]
     namespaceFor (AnyMessageAndAgency _agency LTS.MsgAcceptTx{}) =
@@ -401,7 +401,7 @@ instance MetaTrace (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
 --------------------------------------------------------------------------------
 
 instance (forall result. Show (Query blk result))
-      => LogFormatting (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
+      => LogFormatting (AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))) where
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquire{}) =
     mconcat [ "kind" .= String "MsgAcquire"
              , "agency" .= String (pack $ show stok)
@@ -435,7 +435,7 @@ instance (forall result. Show (Query blk result))
              , "agency" .= String (pack $ show stok)
              ]
 
-instance MetaTrace (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
+instance MetaTrace (AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))) where
     namespaceFor (AnyMessageAndAgency _agency LSQ.MsgAcquire{}) =
       Namespace [] ["Acquire"]
     namespaceFor (AnyMessageAndAgency _agency LSQ.MsgAcquired{}) =

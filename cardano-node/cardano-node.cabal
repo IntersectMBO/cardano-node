@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                10.1.2
+version:                10.1.3
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -145,7 +145,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.1
+                      , cardano-api ^>= 10.3
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -156,7 +156,7 @@ library
                       , cardano-ledger-binary
                       , cardano-ledger-byron
                       -- TODO: remove constraint at next ledger bump
-                      , cardano-ledger-conway ^>= 1.17.2
+                      , cardano-ledger-conway ^>= 1.18
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
@@ -169,17 +169,17 @@ library
                       , deepseq
                       , directory
                       , dns
-                      , ekg
+                      , ekg-wai
                       , ekg-core
                       , filepath
                       , formatting
                       , generic-data
                       , hostname
                       , io-classes >= 1.4
-                      , iohk-monitoring < 0.2
+                      , iohk-monitoring ^>= 0.2
                       , iproute
                       , lobemo-backend-aggregation
-                      , lobemo-backend-ekg < 0.2
+                      , lobemo-backend-ekg ^>= 0.2
                       , lobemo-backend-monitoring
                       , lobemo-backend-trace-forwarder
                       , mtl
@@ -191,13 +191,14 @@ library
                       , ouroboros-consensus-cardano ^>= 0.20
                       , ouroboros-consensus-diffusion ^>= 0.18
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.10
-                      , ouroboros-network ^>= 0.17
+                      , ouroboros-network-api ^>= 0.11
+                      , ouroboros-network ^>= 0.18
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.11
+                      , ouroboros-network-protocols ^>= 0.12
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
+                      , resource-registry
                       , safe-exceptions
                       , scientific
                       , si-timers
@@ -209,11 +210,11 @@ library
                       , time
                       , trace-dispatcher ^>= 2.7.0
                       , trace-forward ^>= 2.2.8
-                      , trace-resources ^>= 0.2.2
+                      , trace-resources ^>= 0.2.3
                       , tracer-transformers
                       , transformers
                       , transformers-except
-                      , typed-protocols >= 0.1
+                      , typed-protocols >= 0.3
                       , yaml
 
 executable cardano-node
