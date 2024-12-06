@@ -27,6 +27,7 @@ import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerTrustable
@@ -225,6 +226,7 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
                                   (HotValency (numNodes - 1))
                                   (WarmValency (numNodes - 1))
                                   IsNotTrustable
+                                  InitiatorAndResponderDiffusionMode
         ]
 
     topologyP2P :: P2P.NetworkTopology
