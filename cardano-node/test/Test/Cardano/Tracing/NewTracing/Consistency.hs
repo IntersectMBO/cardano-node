@@ -16,6 +16,7 @@ tests = H.checkSequential
       $ H.Group "Configuration Consistency tests"
       $ test
      <$> [ (  []
+              -- This file name shoud reference the current standard config with new tracing
            , "mainnet-config-new-tracing.json"
            , configPrefix)
          , (  []
