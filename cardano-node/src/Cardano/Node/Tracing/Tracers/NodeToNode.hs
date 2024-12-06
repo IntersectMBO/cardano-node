@@ -22,6 +22,7 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, e
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
+import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
@@ -326,5 +327,55 @@ instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
       , Namespace [] ["ReplyTxIds"]
       , Namespace [] ["RequestTxs"]
       , Namespace [] ["ReplyTxs"]
+      , Namespace [] ["Done"]
+      ]
+
+--------------------------------------------------------------------------------
+-- KeepAlive Tracer
+--------------------------------------------------------------------------------
+
+instance LogFormatting (AnyMessage KA.KeepAlive) where
+  forMachine _dtal (AnyMessageAndAgency stok KA.MsgKeepAlive {}) =
+    mconcat
+      [ "kind" .= String "KeepAlive"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok KA.MsgKeepAliveResponse {}) =
+    mconcat
+      [ "kind" .= String "KeepAliveResponse"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok KA.MsgDone) =
+    mconcat
+      [ "kind" .= String "Done"
+      , "agency" .= String (pack $ show stok)
+      ]
+
+instance MetaTrace (AnyMessage KA.KeepAlive) where
+    namespaceFor (AnyMessageAndAgency _stok KA.MsgKeepAlive {}) =
+      Namespace [] ["KeepAlive"]
+    namespaceFor (AnyMessageAndAgency _stok KA.MsgKeepAliveResponse {}) =
+      Namespace [] ["KeepAliveResponse"]
+    namespaceFor (AnyMessageAndAgency _stok KA.MsgDone) =
+      Namespace [] ["Done"]
+
+    severityFor (Namespace _ ["KeepAlive"]) _ = Just Info
+    severityFor (Namespace _ ["KeepAliveResponse"]) _ = Just Info
+    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["KeepAlive"]) = Just
+        "Client side message to keep the connection alive."
+    documentFor (Namespace _ ["KeepAliveResponse"]) = Just $ mconcat
+      [ "Server side response to a previous client KeepAlive message."
+      ]
+    documentFor (Namespace _ ["Done"]) = Just $ mconcat
+      [ "Termination message, initiated by the client."
+      ]
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["KeepAlive"]
+      , Namespace [] ["KeepAliveResponse"]
       , Namespace [] ["Done"]
       ]

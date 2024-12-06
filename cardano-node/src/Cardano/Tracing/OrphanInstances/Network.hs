@@ -49,6 +49,7 @@ import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
+import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import qualified Ouroboros.Network.InboundGovernor.State as InboundGovernor
@@ -86,6 +87,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import           Ouroboros.Network.Protocol.Handshake (HandshakeException (..),
                    HandshakeProtocolError (..), RefuseReason (..))
+import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.Protocol.LocalTxMonitor.Type (LocalTxMonitor)
@@ -125,6 +127,7 @@ import           Network.Mux (MiniProtocolNum (..))
 import qualified Network.Mux as Mux
 import           Network.Socket (SockAddr (..))
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
+import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -171,6 +174,11 @@ instance HasSeverityAnnotation (TraceFetchClientState header) where
 
 instance HasPrivacyAnnotation (TraceSendRecv a)
 instance HasSeverityAnnotation (TraceSendRecv a) where
+  getSeverityAnnotation _ = Debug
+
+
+instance HasPrivacyAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
+instance HasSeverityAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f) where
   getSeverityAnnotation _ = Debug
 
 
@@ -658,6 +666,17 @@ instance (LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)))) where
   trTransformer = trStructured
 
+instance (ToObject localPeer)
+     => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv KA.KeepAlive)) where
+  trTransformer = trStructured
+
+instance
+  ( HasPrivacyAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
+  , HasSeverityAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
+  , LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
+     => Transformable Text IO (TraceLabelPeer localPeer (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)) where
+  trTransformer = trStructured
+
 instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TxSubmission2 (GenTxId blk) (GenTx blk)))) where
   trTransformer = trStructured
@@ -885,6 +904,41 @@ instance (forall result. Show (query result))
              , "agency" .= String (pack $ show stok)
              ]
 
+instance (forall result. Show (query result))
+      => ToObject (Stateful.AnyMessage (LocalStateQuery blk pt query) f) where
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgAcquire{}) =
+    mconcat [ "kind" .= String "MsgAcquire"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgAcquired{}) =
+    mconcat [ "kind" .= String "MsgAcquired"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgFailure{}) =
+    mconcat [ "kind" .= String "MsgFailure"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgQuery{}) =
+    mconcat [ "kind" .= String "MsgQuery"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgResult{}) =
+    mconcat [ "kind" .= String "MsgResult"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgRelease{}) =
+    mconcat [ "kind" .= String "MsgRelease"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgReAcquire{}) =
+    mconcat [ "kind" .= String "MsgReAcquire"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (Stateful.AnyMessageAndAgency stok _ LocalStateQuery.MsgDone{}) =
+    mconcat [ "kind" .= String "MsgDone"
+            , "agency" .= String (pack $ show stok)
+            ]
+
 instance ToObject (AnyMessage (LocalTxMonitor txid tx slotno)) where
   toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgAcquire {}) =
     mconcat [ "kind" .= String "MsgAcuire"
@@ -1013,6 +1067,23 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       ]
   toObject _verb (AnyMessageAndAgency stok MsgDone) =
+    mconcat
+      [ "kind" .= String "MsgDone"
+      , "agency" .= String (pack $ show stok)
+      ]
+
+instance ToObject (AnyMessage KA.KeepAlive) where
+  toObject _verb (AnyMessageAndAgency stok KA.MsgKeepAlive {}) =
+    mconcat
+      [ "kind" .= String "MsgKeepAlive"
+      , "agency" .= String (pack $ show stok)
+      ]
+  toObject _verb (AnyMessageAndAgency stok KA.MsgKeepAliveResponse {}) =
+    mconcat
+      [ "kind" .= String "MsgKeepAliveResponse"
+      , "agency" .= String (pack $ show stok)
+      ]
+  toObject _verb (AnyMessageAndAgency stok KA.MsgDone) =
     mconcat
       [ "kind" .= String "MsgDone"
       , "agency" .= String (pack $ show stok)
@@ -1259,6 +1330,14 @@ instance ToObject (AnyMessage ps)
   toObject verb (TraceSendMsg m) = mconcat
     [ "kind" .= String "Send" , "msg" .= toObject verb m ]
   toObject verb (TraceRecvMsg m) = mconcat
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+
+
+instance ToObject (Stateful.AnyMessage ps f)
+      => ToObject (Stateful.TraceSendRecv ps f) where
+  toObject verb (Stateful.TraceSendMsg m) = mconcat
+    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
+  toObject verb (Stateful.TraceRecvMsg m) = mconcat
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
 
