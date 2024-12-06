@@ -29,7 +29,7 @@ import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.ConsensusMode
-import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
                    UseLedgerPeers (..))
@@ -109,7 +109,7 @@ instance ToJSON RootConfig where
 rootConfigToRelayAccessPoint
   :: RootConfig
   -> [(RelayAccessPoint, PeerAdvertise)]
-rootConfigToRelayAccessPoint RootConfig { rootAccessPoints, rootAdvertise } =
+rootConfigToRelayAccessPoint RootConfig { rootAccessPoints, rootAdvertise  } =
     [ (ap, rootAdvertise) | ap <- rootAccessPoints ]
 
 
@@ -126,6 +126,8 @@ data LocalRootPeersGroup = LocalRootPeersGroup
   , trustable   :: PeerTrustable
     -- ^ 'trustable' configures whether the root should be trusted in fallback
     -- state.
+  , rootDiffusionMode :: DiffusionMode
+    -- ^ diffusion mode; used for local root peers.
   } deriving (Eq, Show)
 
 -- | Does not use the 'FromJSON' instance of 'RootConfig', so that
@@ -140,6 +142,9 @@ instance FromJSON LocalRootPeersGroup where
                   <*> pure hv
                   <*> o .:? "warmValency" .!= WarmValency v
                   <*> o .:? "trustable" .!= IsNotTrustable
+                      -- deserialise via NodeDiffusionMode
+                  <*> (maybe InitiatorAndResponderDiffusionMode getDiffusionMode
+                        <$> o .:? "diffusionMode")
 
 instance ToJSON LocalRootPeersGroup where
   toJSON lrpg =
@@ -149,6 +154,8 @@ instance ToJSON LocalRootPeersGroup where
       , "hotValency" .= hotValency lrpg
       , "warmValency" .= warmValency lrpg
       , "trustable" .= trustable lrpg
+        -- serialise via NodeDiffusionMode
+      , "diffusionMode" .= NodeDiffusionMode (rootDiffusionMode lrpg)
       ]
 
 newtype LocalRootPeersGroups = LocalRootPeersGroups
@@ -277,10 +284,11 @@ isValidTrustedPeerConfiguration (RealNodeTopology (LocalRootPeersGroups lprgs) _
       UseBootstrapPeers (_:_) -> True
   where
     anyTrustable =
-      any (\(LocalRootPeersGroup lr _ _ pt) -> case pt of
+      any (\LocalRootPeersGroup {localRoots, trustable} ->
+            case trustable of
               IsNotTrustable -> False
               IsTrustable    -> not
                               . null
                               . rootAccessPoints
-                              $ lr
+                              $ localRoots
           ) lprgs

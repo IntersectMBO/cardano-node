@@ -57,6 +57,7 @@ import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (.
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
 import           Cardano.Tracing.Metrics
+import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderChainHash, renderHeaderHash)
 import           Cardano.Tracing.Shutdown ()
 import           Cardano.Tracing.Startup ()

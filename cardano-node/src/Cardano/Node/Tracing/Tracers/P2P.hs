@@ -1212,15 +1212,17 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           , "remoteAddress" .= toJSON connId
           , "provenance" .= String (pack . show $ prov)
           ]
-    forMachine _dtal (TrConnect (Just localAddress) remoteAddress) =
+    forMachine _dtal (TrConnect (Just localAddress) remoteAddress diffusionMode) =
         mconcat
           [ "kind" .= String "ConnectTo"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
+          , "diffusionMode" .= toJSON diffusionMode
           ]
-    forMachine dtal (TrConnect Nothing remoteAddress) =
+    forMachine dtal (TrConnect Nothing remoteAddress diffusionMode) =
         mconcat
           [ "kind" .= String "ConnectTo"
           , "remoteAddress" .= forMachine dtal remoteAddress
+          , "diffusionMode" .= toJSON diffusionMode
           ]
     forMachine _dtal (TrConnectError (Just localAddress) remoteAddress err) =
         mconcat

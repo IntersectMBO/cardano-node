@@ -122,3 +122,10 @@ source-repository-package
   location: https://github.com/neilmayhew/ekg-forward.git
   tag: 4ba8bb693093f6cf54d43d6e9bbce1e08b0457dd
   --sha256: sha256-g0gYqzRGjmZwxEzihJ4JifJe+GRfdLIMzaot7rUcjlI=
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim
+  tag: 586ddf6b52be1bbc78f9c659907f8e3fa13ccffe
+  --sha256: sha256-HaCWLHhseTQsTgShuh6tM52NpS558jcPgpQZ0YTBgj4=
+  subdir: io-sim
