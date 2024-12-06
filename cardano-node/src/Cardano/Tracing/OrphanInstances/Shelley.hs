@@ -170,10 +170,10 @@ instance ToObject (Conway.ConwayGovCertPredFailure era) where
       , "credential" .= String (textShow credential)
       , "error" .= String "DRep is not registered"
       ]
-    Conway.ConwayDRepIncorrectDeposit givenCoin expectedCoin  ->
+    Conway.ConwayDRepIncorrectDeposit Mismatch {mismatchSupplied, mismatchExpected}  ->
       [ "kind" .= String "ConwayDRepIncorrectDeposit"
-      , "givenCoin" .= givenCoin
-      , "expectedCoin" .= expectedCoin
+      , "givenCoin" .= mismatchSupplied
+      , "expectedCoin" .= mismatchExpected
       , "error" .= String "DRep delegation has incorrect deposit"
       ]
     Conway.ConwayCommitteeHasPreviouslyResigned kHash ->
@@ -186,10 +186,10 @@ instance ToObject (Conway.ConwayGovCertPredFailure era) where
       , "credential" .= String (textShow kHash)
       , "error" .= String "Committee is Unknown"
       ]
-    Conway.ConwayDRepIncorrectRefund givenRefund expectedRefund ->
+    Conway.ConwayDRepIncorrectRefund Mismatch {mismatchSupplied, mismatchExpected} ->
       [ "kind" .= String "ConwayDRepIncorrectRefund"
-      , "givenRefund" .= String (textShow givenRefund)
-      , "expectedRefund" .= String (textShow expectedRefund)
+      , "givenRefund" .= String (textShow mismatchSupplied)
+      , "expectedRefund" .= String (textShow mismatchExpected)
       , "error" .= String "Refund given does not match the expected one"
       ]
 
@@ -325,18 +325,18 @@ instance
   , ToObject (NonEmpty.NonEmpty (KeyHash 'Staking (Consensus.EraCrypto ledgerera)))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
-  toObject _    (Conway.ConwayTxRefScriptsSizeTooBig actual limit) =
+  toObject _    (Conway.ConwayTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
-            , "actual" .= actual
-            , "limit" .= limit
+            , "actual" .= mismatchSupplied
+            , "limit" .= mismatchExpected
             ]
   toObject verb (Conway.ConwayCertsFailure f) = toObject verb f
   toObject verb (Conway.ConwayGovFailure f) = toObject verb f
   toObject verb (Conway.ConwayWdrlNotDelegatedToDRep f) = toObject verb f
-  toObject _    (Conway.ConwayTreasuryValueMismatch actual inTx) =
+  toObject _    (Conway.ConwayTreasuryValueMismatch Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTreasuryValueMismatch"
-            , "actual" .= actual
-            , "submittedInTx" .= inTx
+            , "actual" .= mismatchExpected
+            , "submittedInTx" .= mismatchSupplied
             ]
   toObject _ (Conway.ConwayMempoolFailure msg) =
     mconcat [ "kind" .= String "ConwayMempoolFailure"
@@ -363,10 +363,10 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
             , "rewardAccounts" .= toJSON rewardAcnts
             , "expectedNetworkId" .= toJSON network
             ]
-  toObject _ (Conway.ProposalDepositIncorrect deposit expectedDeposit) =
+  toObject _ (Conway.ProposalDepositIncorrect Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ProposalDepositIncorrect"
-            , "deposit" .= deposit
-            , "expectedDeposit" .= expectedDeposit
+            , "deposit" .= mismatchSupplied
+            , "expectedDeposit" .= mismatchExpected
             ]
   toObject _ (Conway.DisallowedVoters govActionIdToVoter) =
     mconcat [ "kind" .= String "DisallowedVoters"
@@ -392,11 +392,11 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
     mconcat [ "kind" .= String "VotingOnExpiredGovAction"
             , "action" .= actions
             ]
-  toObject _ (Conway.ProposalCantFollow prevGovActionId protVer prevProtVer) =
+  toObject _ (Conway.ProposalCantFollow prevGovActionId Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ProposalCantFollow"
             , "prevGovActionId" .= prevGovActionId
-            , "protVer" .= protVer
-            , "prevProtVer" .= prevProtVer
+            , "protVer" .= mismatchSupplied
+            , "prevProtVer" .= mismatchExpected
             ]
   toObject _ (Conway.InvalidPolicyHash actualPolicyHash expectedPolicyHash) =
     mconcat [ "kind" .= String "InvalidPolicyHash"
@@ -461,10 +461,10 @@ instance
              , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
                                  (Set.toList received)
              ]
-  toObject _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
+  toObject _ (PPViewHashesDontMatch Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "PPViewHashesDontMatch"
-             , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
-             , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
+             , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+             , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
              ]
   toObject _ (MissingRequiredSigners missingKeyWitnesses) =
     mconcat [ "kind" .= String "MissingRequiredSigners"
@@ -551,10 +551,10 @@ instance
              , "badInputs" .= badInputs
              , "error" .= renderBadInputsUTxOErr badInputs
              ]
-  toObject _verb (ExpiredUTxO ttl slot) =
+  toObject _verb (ExpiredUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ExpiredUTxO"
-             , "ttl"  .= ttl
-             , "slot" .= slot ]
+             , "ttl"  .= mismatchSupplied
+             , "slot" .= mismatchExpected ]
   toObject _verb (MaxTxSizeUTxO (Mismatch { mismatchSupplied = txsize
                                           , mismatchExpected = maxtxsize })) =
     mconcat [ "kind" .= String "MaxTxSizeUTxO"
@@ -583,11 +583,11 @@ instance
     mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= txfee ]
-  toObject _verb (ValueNotConservedUTxO consumed produced) =
+  toObject _verb (ValueNotConservedUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ValueNotConservedUTxO"
-             , "consumed" .= consumed
-             , "produced" .= produced
-             , "error" .= renderValueNotConservedErr consumed produced
+             , "consumed" .= mismatchSupplied
+             , "produced" .= mismatchExpected
+             , "error" .= renderValueNotConservedErr mismatchSupplied mismatchExpected
              ]
   toObject verb (UpdateFailure f) = toObject verb f
 
@@ -618,21 +618,21 @@ instance
     mconcat [ "kind" .= String "ExpiredUTxO"
              , "validityInterval" .= validityInterval
              , "slot" .= slot ]
-  toObject _verb (Allegra.MaxTxSizeUTxO txsize maxtxsize) =
+  toObject _verb (Allegra.MaxTxSizeUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "MaxTxSizeUTxO"
-             , "size" .= txsize
-             , "maxSize" .= maxtxsize ]
+             , "size" .= mismatchSupplied
+             , "maxSize" .= mismatchExpected ]
   toObject _verb Allegra.InputSetEmptyUTxO =
     mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
-  toObject _verb (Allegra.FeeTooSmallUTxO minfee txfee) =
+  toObject _verb (Allegra.FeeTooSmallUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "FeeTooSmallUTxO"
-             , "minimum" .= minfee
-             , "fee" .= txfee ]
-  toObject _verb (Allegra.ValueNotConservedUTxO consumed produced) =
+             , "minimum" .= mismatchExpected
+             , "fee" .= mismatchSupplied ]
+  toObject _verb (Allegra.ValueNotConservedUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ValueNotConservedUTxO"
-             , "consumed" .= consumed
-             , "produced" .= produced
-             , "error" .= renderValueNotConservedErr consumed produced
+             , "consumed" .= mismatchSupplied
+             , "produced" .= mismatchExpected
+             , "error" .= renderValueNotConservedErr mismatchSupplied mismatchExpected
              ]
   toObject _verb (Allegra.WrongNetwork network addrs) =
     mconcat [ "kind" .= String "WrongNetwork"
@@ -749,18 +749,18 @@ instance Ledger.Era era => ToObject (ShelleyDelegPredFailure era) where
              , "duplicateKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key has already been delegated to"
              ]
-  toObject _verb (InsufficientForInstantaneousRewardsDELEG mirpot neededMirAmount reserves) =
+  toObject _verb (InsufficientForInstantaneousRewardsDELEG mirpot Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "InsufficientForInstantaneousRewardsDELEG"
              , "pot" .= String (case mirpot of
                                   ReservesMIR -> "Reserves"
                                   TreasuryMIR -> "Treasury")
-             , "neededAmount" .= neededMirAmount
-             , "reserves" .= reserves
+             , "neededAmount" .= mismatchSupplied
+             , "reserves" .= mismatchExpected
              ]
-  toObject _verb (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) =
+  toObject _verb (MIRCertificateTooLateinEpochDELEG Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "MIRCertificateTooLateinEpochDELEG"
-             , "currentSlotNo" .= currSlot
-             , "mustBeSubmittedBeforeSlotNo" .= boundSlotNo
+             , "currentSlotNo" .= mismatchSupplied
+             , "mustBeSubmittedBeforeSlotNo" .= mismatchExpected
              ]
   toObject _verb (DuplicateGenesisVRFDELEG vrfKeyHash) =
     mconcat [ "kind" .= String "DuplicateGenesisVRFDELEG"
@@ -772,13 +772,13 @@ instance Ledger.Era era => ToObject (ShelleyDelegPredFailure era) where
   toObject _verb MIRNegativesNotCurrentlyAllowed =
     mconcat [ "kind" .= String "MIRNegativesNotCurrentlyAllowed"
              ]
-  toObject _verb (InsufficientForTransferDELEG mirpot attempted available) =
+  toObject _verb (InsufficientForTransferDELEG mirpot Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "DuplicateGenesisVRFDELEG"
              , "pot" .= String (case mirpot of
                                   ReservesMIR -> "Reserves"
                                   TreasuryMIR -> "Treasury")
-             , "attempted" .= attempted
-             , "available" .= available
+             , "attempted" .= mismatchSupplied
+             , "available" .= mismatchExpected
              ]
   toObject _verb MIRProducesNegativeUpdate =
     mconcat [ "kind" .= String "MIRProducesNegativeUpdate"
@@ -1066,23 +1066,23 @@ instance
              , "validityInterval" .= validtyInterval
              , "slot" .= slot
              ]
-  toObject _verb (Alonzo.MaxTxSizeUTxO txsize maxtxsize) =
+  toObject _verb (Alonzo.MaxTxSizeUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "MaxTxSizeUTxO"
-             , "size" .= txsize
-             , "maxSize" .= maxtxsize
+             , "size" .= mismatchSupplied
+             , "maxSize" .= mismatchExpected
              ]
   toObject _verb Alonzo.InputSetEmptyUTxO =
     mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
-  toObject _verb (Alonzo.FeeTooSmallUTxO minfee currentFee) =
+  toObject _verb (Alonzo.FeeTooSmallUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "FeeTooSmallUTxO"
-             , "minimum" .= minfee
-             , "fee" .= currentFee
+             , "minimum" .= mismatchExpected
+             , "fee" .= mismatchSupplied
              ]
-  toObject _verb (Alonzo.ValueNotConservedUTxO consumed produced) =
+  toObject _verb (Alonzo.ValueNotConservedUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ValueNotConservedUTxO"
-             , "consumed" .= consumed
-             , "produced" .= produced
-             , "error" .= renderValueNotConservedErr consumed produced
+             , "consumed" .= mismatchSupplied
+             , "produced" .= mismatchExpected
+             , "error" .= renderValueNotConservedErr mismatchSupplied mismatchExpected
              ]
   toObject _verb (Alonzo.WrongNetwork network addrs) =
     mconcat [ "kind" .= String "WrongNetwork"
@@ -1127,28 +1127,28 @@ instance
     mconcat [ "kind" .= String "ScriptsNotPaidUTxO"
              , "utxos" .= utxos
              ]
-  toObject _verb (Alonzo.ExUnitsTooBigUTxO pParamsMaxExUnits suppliedExUnits) =
+  toObject _verb (Alonzo.ExUnitsTooBigUTxO Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ExUnitsTooBigUTxO"
-             , "maxexunits" .= pParamsMaxExUnits
-             , "exunits" .= suppliedExUnits
+             , "maxexunits" .= mismatchExpected
+             , "exunits" .= mismatchSupplied
              ]
   toObject _verb (Alonzo.CollateralContainsNonADA inputs) =
     mconcat [ "kind" .= String "CollateralContainsNonADA"
              , "inputs" .= inputs
              ]
-  toObject _verb (Alonzo.WrongNetworkInTxBody actualNetworkId netIdInTxBody) =
+  toObject _verb (Alonzo.WrongNetworkInTxBody Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "WrongNetworkInTxBody"
-             , "networkid" .= actualNetworkId
-             , "txbodyNetworkId" .= netIdInTxBody
+             , "networkid" .= mismatchExpected
+             , "txbodyNetworkId" .= mismatchSupplied
              ]
   toObject _verb (Alonzo.OutsideForecast slotNum) =
     mconcat [ "kind" .= String "OutsideForecast"
              , "slot" .= slotNum
              ]
-  toObject _verb (Alonzo.TooManyCollateralInputs maxCollateralInputs numberCollateralInputs) =
+  toObject _verb (Alonzo.TooManyCollateralInputs Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "TooManyCollateralInputs"
-             , "max" .= maxCollateralInputs
-             , "inputs" .= numberCollateralInputs
+             , "max" .= mismatchExpected
+             , "inputs" .= mismatchSupplied
              ]
   toObject _verb Alonzo.NoCollateralInputs =
     mconcat [ "kind" .= String "NoCollateralInputs" ]
@@ -1411,23 +1411,23 @@ instance
               , "validityInterval" .= validityInterval
               , "slot" .= slot
               ]
-    Conway.MaxTxSizeUTxO txsize maxtxsize ->
+    Conway.MaxTxSizeUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "MaxTxSizeUTxO"
-              , "size" .= txsize
-              , "maxSize" .= maxtxsize
+              , "size" .= mismatchSupplied
+              , "maxSize" .= mismatchExpected
               ]
     Conway.InputSetEmptyUTxO ->
       mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
-    Conway.FeeTooSmallUTxO minfee txfee ->
+    Conway.FeeTooSmallUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "FeeTooSmallUTxO"
-              , "minimum" .= minfee
-              , "fee" .= txfee
+              , "minimum" .= mismatchExpected
+              , "fee" .= mismatchSupplied
               ]
-    Conway.ValueNotConservedUTxO consumed produced ->
+    Conway.ValueNotConservedUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "ValueNotConservedUTxO"
-              , "consumed" .= consumed
-              , "produced" .= produced
-              , "error" .= renderValueNotConservedErr consumed produced
+              , "consumed" .= mismatchSupplied
+              , "produced" .= mismatchExpected
+              , "error" .= renderValueNotConservedErr mismatchSupplied mismatchExpected
               ]
     Conway.WrongNetwork network addrs ->
       mconcat [ "kind" .= String "WrongNetwork"
@@ -1468,28 +1468,28 @@ instance
       mconcat [ "kind" .= String "ScriptsNotPaidUTxO"
               , "utxos" .= utxos
               ]
-    Conway.ExUnitsTooBigUTxO pParamsMaxExUnits suppliedExUnits ->
+    Conway.ExUnitsTooBigUTxO Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "ExUnitsTooBigUTxO"
-              , "maxexunits" .= pParamsMaxExUnits
-              , "exunits" .= suppliedExUnits
+              , "maxexunits" .= mismatchExpected
+              , "exunits" .= mismatchSupplied
               ]
     Conway.CollateralContainsNonADA inputs ->
       mconcat [ "kind" .= String "CollateralContainsNonADA"
               , "inputs" .= inputs
               ]
-    Conway.WrongNetworkInTxBody actualNetworkId netIdInTxBody ->
+    Conway.WrongNetworkInTxBody Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "WrongNetworkInTxBody"
-              , "networkid" .= actualNetworkId
-              , "txbodyNetworkId" .= netIdInTxBody
+              , "networkid" .= mismatchExpected
+              , "txbodyNetworkId" .= mismatchSupplied
               ]
     Conway.OutsideForecast slotNum ->
       mconcat [ "kind" .= String "OutsideForecast"
               , "slot" .= slotNum
               ]
-    Conway.TooManyCollateralInputs maxCollateralInputs numberCollateralInputs ->
+    Conway.TooManyCollateralInputs Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "TooManyCollateralInputs"
-              , "max" .= maxCollateralInputs
-              , "inputs" .= numberCollateralInputs
+              , "max" .= mismatchExpected
+              , "inputs" .= mismatchSupplied
               ]
     Conway.NoCollateralInputs ->
       mconcat [ "kind" .= String "NoCollateralInputs" ]
@@ -1543,10 +1543,10 @@ instance
       mconcat [ "kind" .= String "MissingTxMetadata"
               , "txBodyMetadataHash" .= hash
               ]
-    Conway.ConflictingMetadataHash txBodyMetadataHash fullMetadataHash ->
+    Conway.ConflictingMetadataHash Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "ConflictingMetadataHash"
-              , "txBodyMetadataHash" .= txBodyMetadataHash
-              , "fullMetadataHash" .= fullMetadataHash
+              , "txBodyMetadataHash" .= mismatchSupplied
+              , "fullMetadataHash" .= mismatchExpected
               ]
     Conway.InvalidMetadata ->
       mconcat [ "kind" .= String "InvalidMetadata"
@@ -1571,10 +1571,10 @@ instance
               , "disallowed" .= Set.toList disallowed
               , "acceptable" .= Set.toList acceptable
               ]
-    Conway.PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams ->
+    Conway.PPViewHashesDontMatch Mismatch {mismatchSupplied, mismatchExpected} ->
       mconcat [ "kind" .= String "PPViewHashesDontMatch"
-              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
-              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
+              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchSupplied)
+              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe mismatchExpected)
               ]
     Conway.UnspendableUTxONoDatumHash ins ->
       mconcat [ "kind" .= String "MissingRequiredSigners"
