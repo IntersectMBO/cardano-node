@@ -93,13 +93,13 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
-import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
-                   ConnectionManagerTrace (..))
+import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))
+import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
-import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
-import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
+import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
+import           Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..),
@@ -245,12 +245,10 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreInvalidBlock _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.BlockInTheFuture _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.StoreButDontChange _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation _))) = True
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _ _))) = null events
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.PipeliningEvent{}))) = True
@@ -524,6 +522,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tBlockFetchTracer = nullTracer
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer
+      , NodeToNode.tKeepAliveTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -1406,8 +1405,10 @@ nodeToClientTracers' trSel verb tr =
       tracerOnOff (traceLocalTxSubmissionProtocol trSel)
                   verb "LocalTxSubmissionProtocol" tr
   , NodeToClient.tStateQueryTracer =
-      tracerOnOff (traceLocalStateQueryProtocol trSel)
-                  verb "LocalStateQueryProtocol" tr
+      -- TODO
+      -- tracerOnOff (traceLocalStateQueryProtocol trSel)
+      --             verb "LocalStateQueryProtocol" tr
+      nullTracer
   }
 
 --------------------------------------------------------------------------------
@@ -1442,6 +1443,7 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tTxSubmission2Tracer =
       tracerOnOff (traceTxSubmissionProtocol trSel)
                   verb "TxSubmissionProtocol" tr
+  , NodeToNode.tKeepAliveTracer = Tracer $ \_ -> pure () -- TODO
   }
 
 teeTraceBlockFetchDecision
@@ -1490,14 +1492,14 @@ teeTraceBlockFetchDecisionElide = elideToLogObject
 traceConnectionManagerTraceMetrics
     :: OnOff TraceConnectionManagerCounters
     -> Maybe EKGDirect
-    -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
+    -> Tracer IO (ConnectionManager.Trace peerAddr handlerTrace)
 traceConnectionManagerTraceMetrics _             Nothing         = nullTracer
 traceConnectionManagerTraceMetrics (OnOff False) _               = nullTracer
 traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
   where
-    cmtTracer :: Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
+    cmtTracer :: Tracer IO (ConnectionManager.Trace peerAddr handlerTrace)
     cmtTracer = Tracer $ \case
-      (TrConnectionManagerCounters
+      (ConnectionManager.TrConnectionManagerCounters
                 (ConnectionManagerCounters
                   prunableConns
                   duplexConns
@@ -1621,14 +1623,14 @@ traceInboundGovernorCountersMetrics
     :: forall addr.
        OnOff TraceInboundGovernorCounters
     -> Maybe EKGDirect
-    -> Tracer IO (InboundGovernorTrace addr)
+    -> Tracer IO (InboundGovernor.Trace addr)
 traceInboundGovernorCountersMetrics _             Nothing         = nullTracer
 traceInboundGovernorCountersMetrics (OnOff False) _               = nullTracer
 traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
   where
-    ipgcTracer :: Tracer IO (InboundGovernorTrace addr)
+    ipgcTracer :: Tracer IO (InboundGovernor.Trace addr)
     ipgcTracer = Tracer $ \case
-      (TrInboundGovernorCounters InboundGovernorCounters {
+      (InboundGovernor.TrInboundGovernorCounters InboundGovernor.Counters {
           idlePeersRemote,
           coldPeersRemote,
           warmPeersRemote,

@@ -867,7 +867,7 @@ mkP2PArguments NodeConfiguration {
                daReadUseLedgerPeers
                daReadUseBootstrapPeers =
     Diffusion.P2PArguments P2P.ArgumentsExtra
-      { P2P.daPeerSelectionTargets
+      { P2P.daPeerTargets
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerPeers
@@ -877,8 +877,15 @@ mkP2PArguments NodeConfiguration {
       , P2P.daDeadlineChurnInterval = 3300
       , P2P.daBulkChurnInterval     = 900
       , P2P.daOwnPeerSharing        = ncPeerSharing
+
+      , P2P.daConsensusMode = Configuration.PraosMode
+      , P2P.daReadLedgerPeerSnapshot = pure Nothing
+      , P2P.daMinBigLedgerPeersForTrustedState = Configuration.defaultMinBigLedgerPeersForTrustedState
       }
   where
+    -- TODO properly integrate (Marcin W has a branch somewhere)
+    daPeerTargets = Configuration.ConsensusModePeerTargets daPeerSelectionTargets daPeerSelectionTargets
+
     daPeerSelectionTargets = PeerSelectionTargets {
         targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
         targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,

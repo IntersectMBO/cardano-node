@@ -407,11 +407,12 @@ mkNodeToClientTracers configReflection trBase trForward mbTrEKG _trDataPoint trC
         ["TxSubmission", "Local"]
     configureTracers configReflection trConfig [txSubmissionTr]
 
-    !stateQueryTr <-
-      mkCardanoTracer
-        trBase trForward mbTrEKG
-        ["StateQueryServer"]
-    configureTracers configReflection trConfig [stateQueryTr]
+    -- TODO
+    -- !stateQueryTr <-
+    --   mkCardanoTracer
+    --     trBase trForward mbTrEKG
+    --     ["StateQueryServer"]
+    -- configureTracers configReflection trConfig [stateQueryTr]
 
     pure $ NtC.Tracers
       { NtC.tChainSyncTracer = Tracer $
@@ -421,7 +422,7 @@ mkNodeToClientTracers configReflection trBase trForward mbTrEKG _trDataPoint trC
       , NtC.tTxSubmissionTracer = Tracer $
           traceWith txSubmissionTr
       , NtC.tStateQueryTracer = Tracer $
-          traceWith stateQueryTr
+          \_ -> pure ()
       }
 
 mkNodeToNodeTracers :: forall blk.
@@ -472,6 +473,7 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith blockFetchSerialisedTr
       , NtN.tTxSubmission2Tracer = Tracer $
           traceWith txSubmission2Tracer
+      , NtN.tKeepAliveTracer = Tracer $ \_ -> pure () -- TODO
       }
 
 mkDiffusionTracers
