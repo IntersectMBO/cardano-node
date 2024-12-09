@@ -504,9 +504,9 @@ instance ( LogFormatting (Header blk)
                | dtal == DDetailed ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
-            ++ [ "tipBlockHash" .= tipBlockHash]
-            ++ [ "tipBlockParentHash" .= tipBlockParentHash]
-            ++ [ "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
+            ++ [ "tipBlockHash" .= tipBlockHash
+               , "tipBlockParentHash" .= tipBlockParentHash
+               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
   forMachine dtal (ChainDB.SwitchedToAFork events selChangedInfo old new) =
       let ChainInformation { .. } = chainInformation selChangedInfo old new 0
           tipBlockIssuerVkHashText :: Text
@@ -527,9 +527,9 @@ instance ( LogFormatting (Header blk)
                | dtal == DDetailed ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
-            ++ [ "tipBlockHash" .= tipBlockHash]
-            ++ [ "tipBlockParentHash" .= tipBlockParentHash]
-            ++ [ "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
+            ++ [ "tipBlockHash" .= tipBlockHash
+               , "tipBlockParentHash" .= tipBlockParentHash
+               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
 
   forMachine dtal (ChainDB.AddBlockValidation ev') =
     forMachine dtal ev'
@@ -2152,13 +2152,7 @@ chainInformation selChangedInfo oldFrag frag blocksUncoupledDelta = ChainInforma
     }
   where
     tipIssuerVkHash :: BlockIssuerVerificationKeyHash
-    tipIssuerVkHash =
-      case AF.head frag of
-        Left AF.AnchorGenesis ->
-          NoBlockIssuer
-        Left (AF.Anchor _s _h _b) ->
-          NoBlockIssuer
-        Right blk -> getIssuerVerificationKeyHash blk
+    tipIssuerVkHash = either (const NoBlockIssuer) getIssuerVerificationKeyHash (AF.head frag)
 
 fragmentChainDensity ::
   HasHeader (Header blk)
