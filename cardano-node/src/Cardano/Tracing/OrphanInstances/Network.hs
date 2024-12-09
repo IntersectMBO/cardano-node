@@ -49,6 +49,7 @@ import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
+import qualified Ouroboros.Network.Driver.Stateful as NDS
 import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import qualified Ouroboros.Network.InboundGovernor.State as InboundGovernor
@@ -656,6 +657,14 @@ instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer)
 
 instance (LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)))) where
+  trTransformer = trStructured
+
+instance
+  ( HasPrivacyAnnotation (NDS.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
+  , HasSeverityAnnotation (NDS.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
+  , ToObject (NDS.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
+  , ToObject localPeer)
+     => Transformable Text IO (TraceLabelPeer localPeer (NDS.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)) where
   trTransformer = trStructured
 
 instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
