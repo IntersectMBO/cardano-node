@@ -20,6 +20,8 @@ module Cardano.Unlog.LogObjectDB
        , createSchema
        , runSqlRunnable
 
+       , fromSqlDataPair
+       , toSqlDataPair
        , allLOBodyConstructors
        , knownLOBodyConstructors
        ) where
@@ -53,8 +55,6 @@ data SummaryDB = SummaryDB
   , sdbLastAt   :: UTCTime
   , sdbCreated  :: UTCTime
   }
-
-type TraceFreqs = ML.Map ShortText.ShortText Int
 
 -- an SQL statement with its arguments
 type SQLRunnable = (SQL, [SQLData])
@@ -103,9 +103,8 @@ createTraceFreq = "CREATE TABLE tracefreq (msg TEXT NOT NULL, count INTEGER NOT 
 insertTraceFreq = "INSERT INTO tracefreq VALUES (?,?)"
 
 traceFreqsToSql :: TraceFreqs -> [SQLRunnable]
-traceFreqsToSql ts =
-  (,) insertTraceFreq <$>
-    [ toArgs (Tuple ("", k) ("", v)) | (k, v) <- ML.toAscList ts ]
+traceFreqsToSql =
+  zip (repeat insertTraceFreq) . map toSqlDataPair . ML.toAscList
 
 -- table resource
 
@@ -455,3 +454,12 @@ withSqlBlob :: (ByteString -> a) -> SQLData -> a
 withSqlBlob f = \case
   SQLBlob b   -> f b
   a           -> error $ "withSqlBlob: no match on " ++ show a
+
+toSqlDataPair :: (AsSQLData a, AsSQLData b) => (a, b) -> [SQLData]
+toSqlDataPair (a, b) = [toSqlData a, toSqlData b]
+
+-- is lenient on remainder of row
+fromSqlDataPair :: (AsSQLData a, AsSQLData b) => [SQLData] -> (a, b)
+fromSqlDataPair = \case
+  a : b : _ -> (fromSqlData a, fromSqlData b)
+  _         -> error "fromSqlDataPair: row has less than 2 columns"

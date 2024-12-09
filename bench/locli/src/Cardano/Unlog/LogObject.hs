@@ -13,6 +13,7 @@
 
 module Cardano.Unlog.LogObject
   ( HostLogs (..)
+  , TraceFreqs
   , hlRawLogObjects
   , RunLogs (..)
   , rlLogs
@@ -41,6 +42,7 @@ import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Parser)
 import           Data.Data (Data)
 import           Data.Hashable (hash)
+import qualified Data.Map.Lazy as ML (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Profile
 import           Data.String (IsString (..))
@@ -52,7 +54,10 @@ import           Data.Vector (Vector)
 import qualified Data.Vector as V
 
 
-type Text = ShortText
+type Text       = ShortText
+
+type TraceFreqs = ML.Map Text Int
+
 
 -- | Us of the a TextRef replaces commonly expected string parses with references
 --   into a Map, reducing memory footprint - given that large runs can contain
@@ -89,7 +94,7 @@ data HostLogs a
   = HostLogs
     { hlRawLogfiles    :: [FilePath]
     , hlRawLines       :: Int
-    , hlRawTraceFreqs  :: Map Text Int
+    , hlRawTraceFreqs  :: TraceFreqs
     , hlLogs           :: (JsonLogfile, a)
     , hlProfile        :: [ProfileEntry I]
     , hlRawFirstAt     :: Maybe UTCTime

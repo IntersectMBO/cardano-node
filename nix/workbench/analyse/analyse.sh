@@ -99,6 +99,15 @@ then backend=$WB_BACKEND
 else backend=
 fi
 
+if test -v "WB_LOCLI_DB"
+then storage=$WB_LOCLI_DB
+else storage=0
+fi
+if [[ $storage -eq 1 ]]
+then info analyse "$(red locli storage backend: database)"
+else info analyse "$(red locli storage backend: file)"
+fi
+
 progress "analyse" "args:  $(yellow $*)"
 while test $# -gt 0
 do case "$1" in
@@ -411,7 +420,10 @@ EOF
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=( $* )
-        v1=("${v0[@]/#logs/                 'unlog' --run-logs \"$adir\"/log-manifest.json ${analysis_allowed_loanys[*]/#/--ok-loany } }")
+        if [[ $storage -eq 1 ]]
+        then v1=("${v0[@]/#logs/            'unlog-db' --run-logs \"$adir\"/log-manifest-db.json }")
+        else v1=("${v0[@]/#logs/            'unlog' --run-logs \"$adir\"/log-manifest.json ${analysis_allowed_loanys[*]/#/--ok-loany } }")
+        fi
         v2=("${v1[@]/#read-context/         'read-meta-genesis'  --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
         v3=("${v2[@]/#write-context/        'write-meta-genesis' --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
         v4=("${v3[@]/#read-chain/           'read-chain'         --chain \"$adir\"/chain.json}")
@@ -452,6 +464,7 @@ EOF
                                              -e 'chain.json'            \
                                              -e 'hash-timeline.json'    \
                                              -e 'log-manifest.json'     \
+                                             -e 'log-manifest-db.json'  \
                                              -e 'mach-views.json'       \
                                              -e 'prof.json'             \
                                              -e 'tracefreq.json'
@@ -540,6 +553,12 @@ EOF
         ;;
 
     prepare | prep )
+        if [[ $storage -eq 1 ]]
+        then analyse prepare-db   "$@"
+        else analyse prepare-file "$@"
+        fi;;
+
+    prepare-file | prep-file )
         local usage="USAGE: wb analyse $op [[IDENT:]RUN-NAME=current].."
 
         local runspec=${1:-current}; if test $# != 0; then shift; fi

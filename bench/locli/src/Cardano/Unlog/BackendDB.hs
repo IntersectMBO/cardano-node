@@ -4,11 +4,11 @@ module Cardano.Unlog.BackendDB
        , runLiftLogObjectsDB
        ) where
 
-import           Cardano.Analysis.API.Ground (JsonLogfile (..))
+import           Cardano.Analysis.API.Ground (Host (..), JsonLogfile (..))
 import           Cardano.Prelude (ExceptT, Text)
 import           Cardano.Unlog.LogObject (HostLogs (..), LogObject (..), RunLogs (..), fromTextRef)
 import           Cardano.Unlog.LogObjectDB
-import           Cardano.Util (withTimingInfo)
+import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
 
 import           Prelude hiding (log)
 
@@ -20,7 +20,9 @@ import           Data.List (sort)
 import qualified Data.Map.Lazy as ML
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import qualified Data.Text.Short as ShortText (unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
+import           GHC.Conc (numCapabilities)
 import           System.Directory (removeFile)
 
 import           Database.Sqlite.Easy hiding (Text)
@@ -28,18 +30,16 @@ import           Database.Sqlite.Easy hiding (Text)
 
 
 runLiftLogObjectsDB :: RunLogs () -> ExceptT Text IO (RunLogs [LogObject])
-runLiftLogObjectsDB _rl@RunLogs{..} = liftIO $ do
-  print dbNames
-  pure $
-    let hostLogs' = (`setLogs` []) `fmap` rlHostLogs
-    in RunLogs{rlHostLogs = hostLogs', ..}
+runLiftLogObjectsDB RunLogs{rlHostLogs, ..} = liftIO $ do
+  hostLogs' <- Map.fromList
+    <$> sequenceConcurrentlyChunksOf numCapabilities loadActions
+  pure $ RunLogs{ rlHostLogs = hostLogs', ..}
   where
-    dbNames :: [ConnectionString]
-    dbNames = map (fromString . unJsonLogfile . fst . hlLogs) (Map.elems rlHostLogs)
+    loadActions = map (load $) (Map.toList rlHostLogs)
 
-    setLogs :: HostLogs a -> b -> HostLogs b
-    setLogs hl x = hl { hlLogs = (fst $ hlLogs hl, x) }
-
+    load (host@(Host h), hl) =
+      withTimingInfo ("loadHostLogsFromDB/" ++ ShortText.unpack h) $
+        (,) host <$> loadHostLogsFromDB hl
 
 prepareDB :: String -> [FilePath] -> FilePath -> ExceptT Text IO ()
 prepareDB machName (sort -> logFiles) outFile = liftIO $ do
@@ -98,3 +98,43 @@ tMinMax logs = do
   (tMin, _   ) <- tMinMax [head logs]
   (_   , tMax) <- tMinMax [last logs]
   pure (tMin, tMax)
+
+
+-- select all log objects relevant for analysis
+selectAll :: SQL
+selectAll =
+  "SELECT at, cons,                                  slot as arg1, block as arg2, null as arg3, hash as arg4  FROM event \
+  \UNION \
+  \SELECT at, cons,                                  count,        rejected,      null,         tid           FROM txns \
+  \UNION \
+  \SELECT at, 'LOResources' as cons,                 null,         null,          null,         as_blob       FROM resource \
+  \UNION \
+  \SELECT at, 'LOTraceStartLeadershipCheck' as cons, slot,         utxo_size,     chain_dens,   null          FROM slot \
+  \ORDER BY at"
+
+getSummary :: SQLite SummaryDB
+getSummary =
+  fromSqlDataWithArgs . head
+    <$> run "SELECT * FROM summary"
+
+getTraceFreqs :: SQLite TraceFreqs
+getTraceFreqs =
+  ML.fromList . map fromSqlDataPair
+    <$> run "SELECT * FROM tracefreq"
+
+loadHostLogsFromDB :: HostLogs a -> IO (HostLogs [LogObject])
+loadHostLogsFromDB hl = withDb conn $ do
+  summary@SummaryDB{..} <- getSummary
+  traceFreqs            <- getTraceFreqs
+  rows                  <- run selectAll
+
+  pure $ hl
+    { hlRawTraceFreqs = traceFreqs
+    , hlRawFirstAt    = Just sdbFirstAt
+    , hlRawLastAt     = Just sdbLastAt
+    , hlRawLines      = sdbLines
+    , hlLogs          = (logFile, map (sqlToLogObject summary) rows)
+    }
+  where
+    logFile = fst $ hlLogs hl
+    conn    = fromString . unJsonLogfile $ logFile

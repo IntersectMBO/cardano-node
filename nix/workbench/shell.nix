@@ -40,6 +40,7 @@ in project.shellFor {
     export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
+    export WB_LOCLI_DB=''${WB_LOCLI_DB:-0}
     export WB_SHELL_PROFILE=${profileName}
     export WB_SHELL_PROFILE_DATA=${profileData}
 
@@ -48,6 +49,7 @@ in project.shellFor {
     progress "deployment name"         $WB_DEPLOYMENT_NAME
     progress "params"                  'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
+    progress "WB_LOCLI_DB="            $WB_LOCLI_DB
     progress "WB_CREATE_TESTNET_DATA=" $WB_CREATE_TESTNET_DATA
     progress "WB_MODULAR_GENESIS="     $WB_MODULAR_GENESIS
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA

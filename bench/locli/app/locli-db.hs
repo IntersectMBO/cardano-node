@@ -69,13 +69,13 @@ tryRead dbName = do
 
 selectAll :: SQL
 selectAll =
-  "SELECT at, cons, slot as arg1, block as arg2, null as arg3, hash as arg4 FROM event \
+  "SELECT at, cons,                                  slot as arg1, block as arg2, null as arg3, hash as arg4  FROM event \
   \UNION \
-  \SELECT at, cons, count as arg1, rejected as arg2, null as arg3, tid as arg4 FROM txns \
+  \SELECT at, cons,                                  count,        rejected,      null,         tid           FROM txns \
   \UNION \
-  \SELECT at, 'LOResources' as cons, null, null, null, as_blob FROM resource \
+  \SELECT at, 'LOResources' as cons,                 null,         null,          null,         as_blob       FROM resource \
   \UNION \
-  \SELECT at, 'LOTraceStartLeadershipCheck' as cons, slot, utxo_size, chain_dens, null FROM slot \
+  \SELECT at, 'LOTraceStartLeadershipCheck' as cons, slot,         utxo_size,     chain_dens,   null          FROM slot \
   \ORDER BY at"
 
 getSummary :: SQLite SummaryDB
