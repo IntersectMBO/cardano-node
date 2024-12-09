@@ -1507,15 +1507,27 @@ instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
   forHuman (LedgerDB.TookSnapshot snap pt RisingEdge) =
-      "Taking ledger snapshot " <> showT snap <>
-        " at " <> renderRealPointAsPhrase pt
+    Text.intercalate " " [ "Taking ledger snapshot"
+                         , showT snap
+                         , "at"
+                         , renderRealPointAsPhrase pt
+                         ]
   forHuman (LedgerDB.TookSnapshot snap pt (FallingEdgeWith t)) =
-      "Took ledger snapshot " <> showT snap <>
-        " at " <> renderRealPointAsPhrase pt <> ", duration: " <> showT t
+    Text.intercalate " " [ "Took ledger snapshot"
+                         , showT snap
+                         , "at"
+                         , renderRealPointAsPhrase pt
+                         , ", duration:"
+                         , showT t
+                         ]
   forHuman (LedgerDB.DeletedSnapshot snap) =
-      "Deleted old snapshot " <> showT snap
+    Text.intercalate " " ["Deleted old snapshot", showT snap]
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
-      "Invalid snapshot " <> showT snap <> showT failure <> context
+    Text.intercalate " " [ "Invalid snapshot"
+                         , showT snap
+                         , showT failure
+                         , context
+                         ]
     where
       context = case failure of
         LedgerDB.InitFailureRead{} ->
