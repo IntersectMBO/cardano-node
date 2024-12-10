@@ -49,7 +49,7 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
       shelleyOptions = def { genesisEpochLength = 200 }
