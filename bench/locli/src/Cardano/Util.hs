@@ -209,6 +209,7 @@ replaceExtension f new = F.dropExtension f <> "." <> new
 -- Two words of warning though - if careless, you can create deadlocks that way:
 -- 1. don't use looping actions (like `forever`) - they might block another async from getting kicked off
 -- 2. avoid using blocking synchronization between actions - you may be blocking the kick-off of an async you're actually waiting on
+-- 3. it's not guaranteed that _at least_ `n` asyncs run concurrently - a long running one may delay the kick-off of others
 sequenceConcurrentlyChunksOf :: Int -> [IO a] -> IO [a]
 sequenceConcurrentlyChunksOf n actions = do
   locks <- cycle <$> replicateM n newLock

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# OPTIONS_GHC -fmax-pmcheck-models=25000 #-}
 module Cardano.Command (module Cardano.Command) where
 
@@ -872,9 +871,7 @@ fromAnalysisError c o = CommandError c (show o)
 
 
 performGC :: ExceptT CommandError IO ()
-performGC = liftIO $ do
-  Mem.performGC
-  threadDelay $ 2 * 1_000_000
+performGC = liftIO Mem.performGC
 
 runCommand :: Command -> ExceptT CommandError IO ()
 

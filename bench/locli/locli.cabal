@@ -151,11 +151,11 @@ executable locli
                       , transformers
                       , transformers-except
 
-executable locli-db
+executable locli-quick
   import:               project-config
 
   hs-source-dirs:       app
-  main-is:              locli-db.hs
+  main-is:              locli-quick.hs
   ghc-options:          -threaded
                         -rtsopts
                         "-with-rtsopts=-T -N7 -A2m -c -H64m"

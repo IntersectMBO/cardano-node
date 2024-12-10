@@ -2,6 +2,15 @@
 module Cardano.Unlog.BackendDB
        ( prepareDB
        , runLiftLogObjectsDB
+
+       -- specific SQLite queries or statements
+       , getSummary
+       , getTraceFreqs
+       , sqlGetEvent
+       , sqlGetTxns
+       , sqlGetResource
+       , sqlGetSlot
+       , sqlOrdered
        ) where
 
 import           Cardano.Analysis.API.Ground (Host (..), JsonLogfile (..))
@@ -28,14 +37,13 @@ import           System.Directory (removeFile)
 import           Database.Sqlite.Easy hiding (Text)
 
 
-
 runLiftLogObjectsDB :: RunLogs () -> ExceptT Text IO (RunLogs [LogObject])
 runLiftLogObjectsDB RunLogs{rlHostLogs, ..} = liftIO $ do
   hostLogs' <- Map.fromList
     <$> sequenceConcurrentlyChunksOf numCapabilities loadActions
   pure $ RunLogs{ rlHostLogs = hostLogs', ..}
   where
-    loadActions = map (load $) (Map.toList rlHostLogs)
+    loadActions = map load (Map.toList rlHostLogs)
 
     load (host@(Host h), hl) =
       withTimingInfo ("loadHostLogsFromDB/" ++ ShortText.unpack h) $
@@ -54,7 +62,7 @@ prepareDB machName (sort -> logFiles) outFile = liftIO $ do
     transaction $ mapM_ runSqlRunnable (traceFreqsToSql tracefreqs)
 
     (tMin, tMax) <- liftIO $ tMinMax logFiles
-    now          <- liftIO $ getCurrentTime
+    now          <- liftIO getCurrentTime
     let
       dbSummary = SummaryDB
         { sdbName     = fromString machName
@@ -91,7 +99,7 @@ tMinMax [log] = do
   ls2 <- BSL.lines <$> BSL.readFile log
   let
     loMin, loMax :: LogObject
-    loMin = head [ lo | Just lo <- map Aeson.decode ls2 ]
+    loMin = head $ mapMaybe Aeson.decode ls2
     loMax = fromJust (Aeson.decode $ last ls2)
   pure (loAt loMin, loAt loMax)
 tMinMax logs = do
@@ -102,15 +110,18 @@ tMinMax logs = do
 
 -- select all log objects relevant for analysis
 selectAll :: SQL
-selectAll =
-  "SELECT at, cons,                                  slot as arg1, block as arg2, null as arg3, hash as arg4  FROM event \
-  \UNION \
-  \SELECT at, cons,                                  count,        rejected,      null,         tid           FROM txns \
-  \UNION \
-  \SELECT at, 'LOResources' as cons,                 null,         null,          null,         as_blob       FROM resource \
-  \UNION \
-  \SELECT at, 'LOTraceStartLeadershipCheck' as cons, slot,         utxo_size,     chain_dens,   null          FROM slot \
-  \ORDER BY at"
+selectAll = sqlOrdered
+  [ sqlGetEvent
+  , sqlGetTxns
+  , sqlGetResource
+  , sqlGetSlot
+  ]
+
+sqlGetEvent, sqlGetTxns, sqlGetResource, sqlGetSlot :: SQLSelect6Cols
+sqlGetEvent    = mkSQLSelectFrom "event"    Nothing                              (Just "slot")  (Just "block")     Nothing             (Just "hash")
+sqlGetTxns     = mkSQLSelectFrom "txns"     Nothing                              (Just "count") (Just "rejected")  Nothing             (Just "tid")
+sqlGetResource = mkSQLSelectFrom "resource" (Just "LOResources")                 Nothing        Nothing            Nothing             (Just "as_blob")
+sqlGetSlot     = mkSQLSelectFrom "slot"     (Just "LOTraceStartLeadershipCheck") (Just "slot")  (Just "utxo_size") (Just "chain_dens") Nothing
 
 getSummary :: SQLite SummaryDB
 getSummary =

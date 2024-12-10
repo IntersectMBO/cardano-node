@@ -2,13 +2,14 @@
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-imports  #-}
-
-
 module Cardano.Unlog.LogObjectDB
        ( AsSQLData (..)
        , SummaryDB (..)
        , SQLRunnable
+       , SQLSelect6Cols
+       , mkSQLSelectFrom
+       , sqlAppend
+       , sqlOrdered
        , TraceFreqs
 
        , sqlToLogObject
@@ -40,7 +41,8 @@ import           Data.Data (dataTypeConstrs, dataTypeOf, showConstr, toConstr)
 import qualified Data.Map.Lazy as ML
 import           Data.Maybe
 import qualified Data.Set as Set
-import qualified Data.Text as TS (Text, empty, intercalate, pack, splitOn, unpack)
+import           Data.Text (Text)
+import qualified Data.Text as TS (empty, intercalate, pack, splitOn, unpack)
 import qualified Data.Text.Lazy as TL (Text, fromStrict, pack)
 import qualified Data.Text.Short as ShortText (ShortText, empty, fromText, pack, toText)
 
@@ -59,6 +61,39 @@ data SummaryDB = SummaryDB
 -- an SQL statement with its arguments
 type SQLRunnable = (SQL, [SQLData])
 
+-- | A select statement to retrieve log objects from the DB where the result set has exactly 6 columns,
+--   with all 4 argument columns being nullable:
+--   at (timestamp) | LogObject constructor (text) | int arg 1 | int arg 2 | float arg | text or blob arg
+newtype SQLSelect6Cols = SQLSelect6Cols { unSQLSelect :: Text }
+  deriving (Eq, Ord, Show)
+
+-- | Smart constructor to ensure 6 columns in the result set. The 'at' column is assumed to exist in @table@.
+mkSQLSelectFrom ::
+     Text
+  -> Maybe Text
+  -> Maybe Text
+  -> Maybe Text
+  -> Maybe Text
+  -> Maybe Text
+  -> SQLSelect6Cols
+mkSQLSelectFrom table cons arg1 arg2 arg3 arg4 =
+  SQLSelect6Cols $
+    "SELECT " <> argList <> " FROM " <> table <> " "
+  where
+    argList = TS.intercalate "," $
+      ["at", cons'] ++ map arg [arg1, arg2, arg3, arg4]
+    cons' = maybe "cons" (\c -> "'" <> c <> "'") cons
+    arg   = fromMaybe "null"
+
+-- | Append (possibly WHERE clause filters) to an existing select statement
+sqlAppend :: SQLSelect6Cols -> Text -> SQLSelect6Cols
+sqlAppend (SQLSelect6Cols t) t' = SQLSelect6Cols $ t <> t'
+
+-- | Union of SELECTs, with the result rows ordered by timestamp
+sqlOrdered :: [SQLSelect6Cols] -> SQL
+sqlOrdered selects = SQL $
+  TS.intercalate " UNION " (map unSQLSelect selects)
+  `mappend` " ORDER BY at ASC"
 
 runSqlRunnable :: SQLRunnable -> SQLite [[SQLData]]
 runSqlRunnable = uncurry runWith
@@ -103,8 +138,8 @@ createTraceFreq = "CREATE TABLE tracefreq (msg TEXT NOT NULL, count INTEGER NOT 
 insertTraceFreq = "INSERT INTO tracefreq VALUES (?,?)"
 
 traceFreqsToSql :: TraceFreqs -> [SQLRunnable]
-traceFreqsToSql =
-  zip (repeat insertTraceFreq) . map toSqlDataPair . ML.toAscList
+traceFreqsToSql ts =
+  [ (insertTraceFreq, toSqlDataPair kv) | kv <- ML.toAscList ts ]
 
 -- table resource
 
@@ -143,7 +178,7 @@ createTxns  = "CREATE TABLE txns (at REAL NOT NULL, cons TEXT NOT NULL, count IN
 
 
 logObjectToSql :: LogObject -> Maybe SQLRunnable
-logObjectToSql lo@LogObject{loAt, loBody, loTid} = 
+logObjectToSql lo@LogObject{loAt, loBody, loTid} =
   case loBody of
 
     -- no suitable interpreter found when parsing log object stream
@@ -206,7 +241,7 @@ insertVariadic table LogObject{loAt, loBody} argNTuple = (sql, args)
 
 -- some minimal guarantees for the variadic INSERTs on tables event and txns
 
-type Column = TS.Text
+type Column = Text
 
 -- values to store, paired with their column name
 data ArgNTuple where
@@ -435,7 +470,7 @@ instance AsSQLData a => AsSQLData (SMaybe a) where
     a       -> SJust (fromSqlData a)
 
 
-withSqlText :: (TS.Text -> a) -> SQLData -> a
+withSqlText :: (Text -> a) -> SQLData -> a
 withSqlText f = \case
   SQLText t -> f t
   a         -> error $ "withSqlText: no match on " ++ show a
