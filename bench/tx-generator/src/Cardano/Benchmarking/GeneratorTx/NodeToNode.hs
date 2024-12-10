@@ -13,7 +13,7 @@ module Cardano.Benchmarking.GeneratorTx.NodeToNode
   , benchmarkConnectTxSubmit
   ) where
 
-import           Cardano.Prelude (forever, liftIO)
+import           Cardano.Prelude (forever, liftIO, throwIO)
 import           Prelude
 
 import           "contra-tracer" Control.Tracer (Tracer (..))
@@ -25,7 +25,8 @@ import           Data.ByteString.Lazy (ByteString)
 import           Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
-import           Data.Void (Void)
+import           Data.Void (Void, absurd)
+import qualified Network.Mux as Mux
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
@@ -45,7 +46,7 @@ import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeer, runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..),
+import           Ouroboros.Network.Mux (MiniProtocolCb (..),
                    OuroborosApplication (..), OuroborosBundle, RunMiniProtocol (..))
 import           Ouroboros.Network.NodeToClient (chainSyncPeerNull)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
@@ -84,8 +85,8 @@ benchmarkConnectTxSubmit
   -- ^ the particular txSubmission peer
   -> IO ()
 
-benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codecConfig networkMagic remoteAddr myTxSubClient =
-  NtN.connectTo
+benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codecConfig networkMagic remoteAddr myTxSubClient = do
+  done <- NtN.connectTo
     (socketSnocket envIOManager)
     NetworkConnectTracers {
         nctMuxTracer       = mempty,
@@ -94,6 +95,11 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
     peerMultiplex
     (addrAddress <$> Nothing)
     (addrAddress remoteAddr)
+  case done of
+    Left err -> throwIO err
+    Right choice -> case choice of
+      Left () -> return ()
+      Right void -> absurd void
  where
   ownPeerSharing = PeerSharingDisabled
   mkApp :: OuroborosBundle      mode initiatorCtx responderCtx bs m a b
@@ -114,7 +120,7 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
   peerMultiplex :: NtN.Versions NodeToNodeVersion
                                 NtN.NodeToNodeVersionData
                                 (OuroborosApplication
-                                  'InitiatorMode
+                                  'Mux.InitiatorMode
                                   (MinimalInitiatorContext NtN.RemoteAddress)
                                   (ResponderContext NtN.RemoteAddress)
                                   ByteString IO () Void)

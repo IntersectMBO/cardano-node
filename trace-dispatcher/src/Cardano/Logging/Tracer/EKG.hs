@@ -19,7 +19,7 @@ import qualified System.Metrics as Metrics
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
-import           System.Remote.Monitoring (Server, getCounter, getGauge, getLabel)
+import           System.Remote.Monitoring.Wai (Server, getCounter, getGauge, getLabel)
 
 
 -- | It is mandatory to construct only one standard tracer in any application!

@@ -8,8 +8,9 @@ module Trace.Forward.Run.TraceObject.Acceptor
   , acceptTraceObjectsResp
   ) where
 
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), RunMiniProtocol (..))
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified Codec.Serialise as CBOR
@@ -35,7 +36,7 @@ acceptTraceObjectsInit
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> (initiatorCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
   -> (initiatorCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
-  -> RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
+  -> RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
 acceptTraceObjectsInit config loHandler peerErrorHandler =
   InitiatorProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
@@ -46,7 +47,7 @@ acceptTraceObjectsResp
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> (responderCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
   -> (responderCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
-  -> RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
+  -> RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
 acceptTraceObjectsResp config loHandler peerErrorHandler = do
   ResponderProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
