@@ -53,7 +53,7 @@ goldenTestJSON expectedOutcome goldenFileBaseName prefixFunc =
 configPrefix :: FilePath -> IO FilePath
 configPrefix projectBase = do
   base <- canonicalizePath projectBase
-  return $ base </> "configuration/cardano"
+  return $ base </> "configuration/cardano/"
 
 testPrefix :: FilePath ->  IO FilePath
 testPrefix _ = pure "test/Test/Cardano/Tracing/NewTracing/data/"
