@@ -72,8 +72,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: c3e1728aeff05655123f431372e69a18c6b4f949
-  --sha256: sha256-73sHx7H2yA6sQOEMmIDC5qTyASP2ScPwTgs/nMfjE8w=
+  tag: 12f6aa6f094af5dab722edf03d4ab3f4ec99aa48
+  --sha256: sha256-58DnwsalMtrF6wloPuB08BaL+TYan1ECc0WIj0aX8bI=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -136,8 +136,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 6fea845c61cfd3069b5bcca438e60bc09fe4f3c0
-  --sha256: sha256-hJaGXCaRB2CFPdY3yoGg2NKfZHfcDW2EnYXiA/kGmaQ=
+  tag: d9a2321c7e183be84355d26163c9cfc0b3cf9f4d
+  --sha256: sha256-BBtyPqjxrzGPAxPf3KOwmpRVtnIxqtSodely8pfrb9c=
   subdir:
     cardano-api
 
