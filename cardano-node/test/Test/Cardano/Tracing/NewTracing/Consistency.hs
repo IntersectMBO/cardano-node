@@ -6,9 +6,9 @@ module Test.Cardano.Tracing.NewTracing.Consistency (tests) where
 
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration)
 
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (MonadIO)
 import           Data.Text
-import           System.Directory (canonicalizePath)
+import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
 import           Hedgehog (Property)
@@ -22,38 +22,46 @@ tests = do
   H.checkSequential
       $ H.Group "Configuration Consistency tests"
       $ Prelude.map test
-            [ (  []
-                  -- This file name shoud reference the current standard config with new tracing
+            [ ( []
+              -- This file name should reference the current standard config with new tracing
+              , configSubdir
               , "mainnet-config-new-tracing.json"
-              , configPrefix)
-            , (  []
+              )
+              ,
+              (  []
+              , testSubdir
               , "goodConfig.yaml"
-              , testPrefix)
+              )
             , (  [ "Config namespace error: Illegal namespace ChainDB.CopyToImmutableDBEvent2.CopiedBlockToImmutableDB"
                   , "Config namespace error: Illegal namespace SubscriptionDNS"
                   ]
+              , testSubdir
               , "badConfig.yaml"
-              , testPrefix)
+              )
             ]
   where
-    test (actualValue, goldenBaseName, prefix) =
-        (PropertyName goldenBaseName, goldenTestJSON actualValue goldenBaseName prefix)
+    test (actualValue, subDir, goldenBaseName) =
+        (PropertyName goldenBaseName, goldenTestJSON subDir actualValue goldenBaseName)
 
+goldenTestJSON :: SubdirSelection -> [Text] -> FilePath -> Property
+goldenTestJSON subDir expectedOutcome goldenFileBaseName =
+  H.withTests 1 $ H.withShrinks 0 $ H.property $ do
+    base          <- resolveDir
+    goldenFp      <- H.note $ base </> goldenFileBaseName
+    actualValue   <- H.evalIO $ checkNodeTraceConfiguration goldenFp
+    actualValue H.=== expectedOutcome
+  where
+    resolveDir = case subDir of
+      ExternalSubdir d -> do
+        base <- H.evalIO . IO.canonicalizePath =<< H.getProjectBase
+        pure $ base </> d
+      InternalSubdir d ->
+        pure d
 
-goldenTestJSON :: [Text] -> FilePath -> (FilePath -> IO FilePath) -> Property
-goldenTestJSON expectedOutcome goldenFileBaseName prefixFunc =
-    H.withTests 1 $ H.withShrinks 0 $ H.property $ do
-      basePath <- H.getProjectBase
-      prefixPath <- liftIO $ prefixFunc basePath
-      goldenFp    <- H.note $ prefixPath </> goldenFileBaseName
-      actualValue <- liftIO $ checkNodeTraceConfiguration goldenFp
-      actualValue H.=== expectedOutcome
+data SubdirSelection =
+    InternalSubdir  FilePath
+  | ExternalSubdir  FilePath
 
-
-configPrefix :: FilePath -> IO FilePath
-configPrefix projectBase = do
-  base <- canonicalizePath projectBase
-  return $ base </> "configuration/cardano"
-
-testPrefix :: FilePath ->  IO FilePath
-testPrefix _ = pure "test/Test/Cardano/Tracing/NewTracing/data/"
+testSubdir, configSubdir :: SubdirSelection
+testSubdir    = InternalSubdir "test/Test/Cardano/Tracing/NewTracing/data"
+configSubdir  = ExternalSubdir $ "configuration" </> "cardano"
