@@ -89,6 +89,7 @@ nodeRunParser = do
            , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = dbFp
+           , pncConsensusMode = mempty
            , pncDiffusionMode = mempty
            , pncNumOfDiskSnapshots = numOfDiskSnapshots
            , pncSnapshotInterval = snapshotInterval
@@ -124,6 +125,7 @@ nodeRunParser = do
            , pncTargetNumberOfKnownBigLedgerPeers = mempty
            , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
+           , pncMinBigLedgerPeersForTrustedState = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
            }
