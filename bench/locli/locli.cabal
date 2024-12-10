@@ -140,7 +140,7 @@ executable locli
   main-is:              locli.hs
   ghc-options:          -threaded
                         -rtsopts
-                        "-with-rtsopts=-T -N7 -A2m -qb -H64m"
+                        "-with-rtsopts=-T -N7 -A2m -c -H64m"
 
   build-depends:        aeson
                       , cardano-prelude
@@ -158,7 +158,7 @@ executable locli-db
   main-is:              locli-db.hs
   ghc-options:          -threaded
                         -rtsopts
-                        "-with-rtsopts=-T -N7 -A2m -qb -H64m"
+                        "-with-rtsopts=-T -N7 -A2m -c -H64m"
 
   build-depends:        locli
                       , aeson

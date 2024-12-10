@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# OPTIONS_GHC -fmax-pmcheck-models=25000 #-}
 module Cardano.Command (module Cardano.Command) where
 
@@ -21,6 +22,7 @@ import Options.Applicative              qualified as Opt
 
 import System.Directory                 (doesFileExist)
 import System.FilePath
+import System.Mem                       qualified as Mem (performGC)
 import System.Posix.Files               qualified as IO
 
 import Cardano.Analysis.API
@@ -478,6 +480,7 @@ runChainCommand s
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do
   progress "machviews" (Q $ printf "building %d machviews" $ length objs)
+  performGC
   mvs <- buildMachViews run objs & liftIO
   pure s { sMachViews = Just mvs }
 runChainCommand _ c@BuildMachViews = missingCommandData c
@@ -552,7 +555,8 @@ runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
   forM_ ignores $
     progress "perf-ignored-log" . R . unJsonLogfile
-  progress "slots" (Q $ printf "building slot %d timelines" $ length objs)
+  progress "slots" (Q $ printf "building %d slot timelines" $ length objs)
+  performGC
   (scalars, slotsRaw) <-
     fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
@@ -680,6 +684,7 @@ runChainCommand _ c@RenderMultiPropagation{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@ComputeMachPerf = do
   progress "machperf" (Q $ printf "computing %d machine performances" $ length slots)
+  performGC
   perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
           & fmap sequence
           & newExceptT
@@ -864,6 +869,12 @@ _reportBanner fnames inputfp = mconcat
 fromAnalysisError :: ChainCommand -> AnalysisCmdError -> CommandError
 fromAnalysisError c (AnalysisCmdError t) = CommandError c t
 fromAnalysisError c o = CommandError c (show o)
+
+
+performGC :: ExceptT CommandError IO ()
+performGC = liftIO $ do
+  Mem.performGC
+  threadDelay $ 2 * 1_000_000
 
 runCommand :: Command -> ExceptT CommandError IO ()
 
