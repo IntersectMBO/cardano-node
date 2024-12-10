@@ -669,7 +669,7 @@ checkNodeTraceConfiguration ::
   -> IO [Text]
 ```
 
-An example text is "Config namespace error: i.am.an.invalid.namepace" .
+An example text is "Config namespace error: i.am.an.invalid.namespace" .
 
 This check is performed within a `cardano-node` test case (`Test.Cardano.Tracing.NewTracing.Consistency.tests`), ensuring that it is automatically verified with each pull request.
 
