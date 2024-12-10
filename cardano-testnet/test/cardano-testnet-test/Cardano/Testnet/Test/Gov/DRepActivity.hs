@@ -60,7 +60,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 1
@@ -219,7 +219,7 @@ activityChangeProposalTest
   -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView ceo work prefix
                            stakeKeys wallet votes change minWait mExpected maxWait = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
 
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
 

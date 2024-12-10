@@ -227,7 +227,7 @@ registerDRep
                     -- as returned by 'cardanoTestnetDefault'.
   -> m (KeyPair PaymentKey)
 registerDRep execConfig epochStateView ceo work prefix wallet = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
@@ -354,7 +354,7 @@ makeActivityChangeProposal
 makeActivityChangeProposal execConfig epochStateView ceo work
                            prevGovActionInfo drepActivity stakeKeyPair wallet timeout = do
 
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       KeyPair{verificationKey=File stakeVkeyFp} = stakeKeyPair
