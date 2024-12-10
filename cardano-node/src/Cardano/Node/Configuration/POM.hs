@@ -37,6 +37,8 @@ import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
+import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode,
+                   MinBigLedgerPeersForTrustedState (..), defaultConsensusMode)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
@@ -103,6 +105,7 @@ data NodeConfiguration
        , ncProtocolConfig :: !NodeProtocolConfiguration
 
          -- Node parameters, not protocol-specific:
+       , ncConsensusMode      :: !ConsensusMode
        , ncDiffusionMode      :: !DiffusionMode
        , ncNumOfDiskSnapshots :: !NumOfDiskSnapshots
        , ncSnapshotInterval   :: !SnapshotInterval
@@ -157,6 +160,7 @@ data NodeConfiguration
        , ncTargetNumberOfKnownBigLedgerPeers       :: Int
        , ncTargetNumberOfEstablishedBigLedgerPeers :: Int
        , ncTargetNumberOfActiveBigLedgerPeers      :: Int
+       , ncMinBigLedgerPeersForTrustedState        :: MinBigLedgerPeersForTrustedState
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
@@ -185,6 +189,7 @@ data PartialNodeConfiguration
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
 
          -- Node parameters, not protocol-specific:
+       , pncConsensusMode      :: !(Last ConsensusMode)
        , pncDiffusionMode      :: !(Last DiffusionMode  )
        , pncNumOfDiskSnapshots :: !(Last NumOfDiskSnapshots)
        , pncSnapshotInterval   :: !(Last SnapshotInterval)
@@ -220,6 +225,7 @@ data PartialNodeConfiguration
        , pncTargetNumberOfKnownBigLedgerPeers       :: !(Last Int)
        , pncTargetNumberOfEstablishedBigLedgerPeers :: !(Last Int)
        , pncTargetNumberOfActiveBigLedgerPeers      :: !(Last Int)
+       , pncMinBigLedgerPeersForTrustedState        :: !(Last MinBigLedgerPeersForTrustedState)
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
@@ -244,6 +250,8 @@ instance FromJSON PartialNodeConfiguration where
       -- Node parameters, not protocol-specific
       pncSocketPath <- Last <$> v .:? "SocketPath"
       pncDatabaseFile <- Last <$> v .:? "DatabasePath"
+      pncConsensusMode
+        <- Last . fmap getConsensusMode <$> v .:? "ConsensusMode"
       pncDiffusionMode
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncNumOfDiskSnapshots
@@ -308,6 +316,7 @@ instance FromJSON PartialNodeConfiguration where
       pncTargetNumberOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
       pncTargetNumberOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
       pncTargetNumberOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
+      pncMinBigLedgerPeersForTrustedState        <- Last <$> v .:? "MinBigLedgerPeersForTrustedState"
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
@@ -326,6 +335,7 @@ instance FromJSON PartialNodeConfiguration where
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
+           , pncConsensusMode
            , pncDiffusionMode
            , pncNumOfDiskSnapshots
            , pncSnapshotInterval
@@ -355,6 +365,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfKnownBigLedgerPeers
            , pncTargetNumberOfEstablishedBigLedgerPeers
            , pncTargetNumberOfActiveBigLedgerPeers
+           , pncMinBigLedgerPeersForTrustedState
            , pncEnableP2P
            , pncPeerSharing
            }
@@ -497,6 +508,7 @@ defaultPartialNodeConfiguration =
     , pncDatabaseFile = Last . Just $ OnePathForAllDbs "mainnet/db/"
     , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
+    , pncConsensusMode = Last $ Just defaultConsensusMode
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncNumOfDiskSnapshots = Last $ Just DefaultNumOfDiskSnapshots
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
@@ -531,6 +543,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just 15)
     , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
+    , pncMinBigLedgerPeersForTrustedState        = pure (MinBigLedgerPeersForTrustedState 3) -- TODO: Review
     , pncEnableP2P                      = Last (Just EnabledP2PMode)
     , pncPeerSharing                    = Last (Just PeerSharingDisabled)
     }
@@ -549,6 +562,7 @@ makeNodeConfiguration pnc = do
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
+  consensusMode <- lastToEither "Missing ConsensusMode" $ pncConsensusMode pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   numOfDiskSnapshots <- lastToEither "Missing NumOfDiskSnapshots" $ pncNumOfDiskSnapshots pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
@@ -576,6 +590,9 @@ makeNodeConfiguration pnc = do
   ncTargetNumberOfActiveBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
     $ pncTargetNumberOfActiveBigLedgerPeers pnc
+  ncMinBigLedgerPeersForTrustedState <-
+    lastToEither "Missing MinBigLedgerPeersForTrustedState"
+    $ pncMinBigLedgerPeersForTrustedState pnc
   ncProtocolIdleTimeout <-
     lastToEither "Missing ProtocolIdleTimeout"
     $ pncProtocolIdleTimeout pnc
@@ -618,6 +635,7 @@ makeNodeConfiguration pnc = do
              , ncStartAsNonProducingNode = startAsNonProducingNode
              , ncProtocolConfig = protocolConfig
              , ncSocketConfig = socketConfig
+             , ncConsensusMode = consensusMode
              , ncDiffusionMode = diffusionMode
              , ncNumOfDiskSnapshots = numOfDiskSnapshots
              , ncSnapshotInterval = snapshotInterval
@@ -641,6 +659,7 @@ makeNodeConfiguration pnc = do
              , ncTargetNumberOfKnownBigLedgerPeers
              , ncTargetNumberOfEstablishedBigLedgerPeers
              , ncTargetNumberOfActiveBigLedgerPeers
+             , ncMinBigLedgerPeersForTrustedState
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
