@@ -177,7 +177,7 @@ library
                       , http-types
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.17
+                      , ouroboros-network ^>= 0.18
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal

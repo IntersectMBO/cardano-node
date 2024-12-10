@@ -31,7 +31,6 @@ where
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block (Header)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 import           Ouroboros.Consensus.Util.STM (Watcher (..), forkLinkedWatcher)
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader, SlotNo (..), pointSlot)
 
@@ -40,6 +39,7 @@ import           Control.DeepSeq (NFData)
 import           Control.Exception (try)
 import           Control.Exception.Base (throwIO)
 import           Control.Monad (void, when)
+import           Control.ResourceRegistry (ResourceRegistry)
 import           "contra-tracer" Control.Tracer
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Foldable (asum)
