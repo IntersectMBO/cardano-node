@@ -489,6 +489,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
                   (readTVar useBootstrapVar)
+                  (pure Nothing) -- FIXME: implement a reader
           in
           Node.run
             nodeArgs {
@@ -849,8 +850,10 @@ mkP2PArguments
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerPeers
   -> STM IO UseBootstrapPeers
+  -> STM IO (Maybe LedgerPeerSnapshot)
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
+                 ncConsensusMode,
                  ncTargetNumberOfRootPeers,
                  ncTargetNumberOfKnownPeers,
                  ncTargetNumberOfEstablishedPeers,
@@ -859,7 +862,6 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfEstablishedBigLedgerPeers,
                  ncTargetNumberOfActiveBigLedgerPeers,
                  ncMinBigLedgerPeersForTrustedState,
-                 ncConsensusMode,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
                  ncPeerSharing
@@ -867,13 +869,15 @@ mkP2PArguments NodeConfiguration {
                daReadLocalRootPeers
                daReadPublicRootPeers
                daReadUseLedgerPeers
-               daReadUseBootstrapPeers =
+               daReadUseBootstrapPeers
+               daReadLedgerPeerSnapshot =
     Diffusion.P2PArguments P2P.ArgumentsExtra
       { P2P.daPeerTargets
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerPeers
       , P2P.daReadUseBootstrapPeers
+      , P2P.daReadLedgerPeerSnapshot
       , P2P.daConsensusMode = ncConsensusMode
       , P2P.daMinBigLedgerPeersForTrustedState = ncMinBigLedgerPeersForTrustedState
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
