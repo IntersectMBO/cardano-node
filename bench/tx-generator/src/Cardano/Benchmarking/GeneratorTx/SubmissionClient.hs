@@ -46,7 +46,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (Sh
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
                    ClientStTxIds (..), ClientStTxs (..), TxSubmissionClient (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyList (..),
-                   NumTxIdsToAck (..), NumTxIdsToReq (..), TokBlockingStyle (..))
+                   NumTxIdsToAck (..), NumTxIdsToReq (..), SingBlockingStyle (..))
 import           Ouroboros.Network.SizeInBytes
 
 import           Prelude (error, fail)
@@ -71,14 +71,14 @@ data TxSource era
   = Exhausted
   | Active (ProduceNextTxs era)
 
-type ProduceNextTxs era = (forall m blocking . MonadIO m => TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era]))
+type ProduceNextTxs era = (forall m blocking . MonadIO m => SingBlockingStyle blocking -> Req -> m (TxSource era, [Tx era]))
 
-produceNextTxs :: forall m blocking era . MonadIO m => TokBlockingStyle blocking -> Req -> LocalState era -> m (LocalState era, [Tx era])
+produceNextTxs :: forall m blocking era . MonadIO m => SingBlockingStyle blocking -> Req -> LocalState era -> m (LocalState era, [Tx era])
 produceNextTxs blocking req (txProducer, unack, stats) = do
   (newTxProducer, txList) <- produceNextTxs' blocking req txProducer
   return ((newTxProducer, unack, stats), txList)
 
-produceNextTxs' :: forall m blocking era . MonadIO m => TokBlockingStyle blocking -> Req -> TxSource era -> m (TxSource era, [Tx era])
+produceNextTxs' :: forall m blocking era . MonadIO m => SingBlockingStyle blocking -> Req -> TxSource era -> m (TxSource era, [Tx era])
 produceNextTxs' _ _ Exhausted = return (Exhausted, [])
 produceNextTxs' blocking req (Active callback) = callback blocking req
 
@@ -99,10 +99,10 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   TxSubmissionClient $
     pure $ client (initialTxSource, UnAcked [], SubmissionThreadStats 0 0 0)
  where
-  discardAcknowledged :: TokBlockingStyle a -> Ack -> LocalState era -> m (LocalState era)
+  discardAcknowledged :: SingBlockingStyle a -> Ack -> LocalState era -> m (LocalState era)
   discardAcknowledged blocking (Ack ack) (txSource, UnAcked unAcked, stats) = do
     when (tokIsBlocking blocking && ack /= length unAcked) $ do
-      let err = "decideAnnouncement: TokBlocking, but length unAcked != ack"
+      let err = "decideAnnouncement: SingBlocking, but length unAcked != ack"
       traceWith bmtr (TraceBenchTxSubError err)
       fail (T.unpack err)
     let (stillUnacked, acked) = L.splitAtEnd ack unAcked
@@ -123,7 +123,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
 
   requestTxIds :: forall blocking.
        LocalState era
-    -> TokBlockingStyle blocking
+    -> SingBlockingStyle blocking
     -> NumTxIdsToAck
     -> NumTxIdsToReq
     -> m (ClientStTxIds blocking (GenTxId CardanoBlock) (GenTx CardanoBlock) m ())
@@ -140,7 +140,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     traceWith bmtr $ SubmissionClientUnAcked (getTxId . getTxBody <$> outs)
 
     case blocking of
-      TokBlocking -> case NE.nonEmpty newTxs of
+      SingBlocking -> case NE.nonEmpty newTxs of
         Nothing -> do
           traceWith tr EndOfProtocol
           endOfProtocolCallback stats
@@ -148,7 +148,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
         (Just txs) -> pure $ SendMsgReplyTxIds
                               (BlockingReply $ txToIdSize <$> txs)
                               (client stateC)
-      TokNonBlocking ->  pure $ SendMsgReplyTxIds
+      SingNonBlocking ->  pure $ SendMsgReplyTxIds
                              (NonBlockingReply $ txToIdSize <$> newTxs)
                              (client stateC)
 
@@ -196,17 +196,17 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId _ = error "TODO: fix incomplete match"
 
-  tokIsBlocking :: TokBlockingStyle a -> Bool
+  tokIsBlocking :: SingBlockingStyle a -> Bool
   tokIsBlocking = \case
-    TokBlocking    -> True
-    TokNonBlocking -> False
+    SingBlocking    -> True
+    SingNonBlocking -> False
 
-  reqIdsTrace :: Ack -> Req -> TokBlockingStyle a -> NodeToNodeSubmissionTrace
+  reqIdsTrace :: Ack -> Req -> SingBlockingStyle a -> NodeToNodeSubmissionTrace
   reqIdsTrace ack req = \case
-     TokBlocking    -> ReqIdsBlocking ack req
-     TokNonBlocking -> ReqIdsNonBlocking ack req
+     SingBlocking    -> ReqIdsBlocking ack req
+     SingNonBlocking -> ReqIdsNonBlocking ack req
 
-  idListTrace :: ToAnnce tx -> TokBlockingStyle a -> NodeToNodeSubmissionTrace
+  idListTrace :: ToAnnce tx -> SingBlockingStyle a -> NodeToNodeSubmissionTrace
   idListTrace (ToAnnce toAnn) = \case
-     TokBlocking    -> IdsListBlocking $ length toAnn
-     TokNonBlocking -> IdsListNonBlocking $ length toAnn
+     SingBlocking    -> IdsListBlocking $ length toAnn
+     SingNonBlocking -> IdsListNonBlocking $ length toAnn
