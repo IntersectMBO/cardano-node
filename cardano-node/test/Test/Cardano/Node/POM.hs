@@ -17,6 +17,7 @@ import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
+import           Ouroboros.Network.Diffusion.Configuration (MinBigLedgerPeersForTrustedState (..), defaultConsensusMode)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
@@ -116,6 +117,7 @@ testPartialYamlConfig =
     , pncSocketConfig = Last . Just $ SocketConfig (Last Nothing) mempty mempty mempty
     , pncShutdownConfig = Last Nothing
     , pncStartAsNonProducingNode = Last $ Just False
+    , pncConsensusMode = mempty
     , pncDiffusionMode = Last Nothing
     , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = mempty
@@ -143,6 +145,7 @@ testPartialYamlConfig =
     , pncTargetNumberOfKnownBigLedgerPeers = mempty
     , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncMinBigLedgerPeersForTrustedState = pure (MinBigLedgerPeersForTrustedState 3) -- TODO: Review
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     }
@@ -158,6 +161,7 @@ testPartialCliConfig =
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
+    , pncConsensusMode = mempty
     , pncDiffusionMode = mempty
     , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
@@ -183,6 +187,7 @@ testPartialCliConfig =
     , pncTargetNumberOfKnownBigLedgerPeers = mempty
     , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncMinBigLedgerPeersForTrustedState = pure (MinBigLedgerPeersForTrustedState 3) -- TODO: Review
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     }
@@ -202,6 +207,7 @@ eExpectedConfig = do
     , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration
+    , ncConsensusMode = defaultConsensusMode
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncNumOfDiskSnapshots = DefaultNumOfDiskSnapshots
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
@@ -229,6 +235,7 @@ eExpectedConfig = do
     , ncTargetNumberOfKnownBigLedgerPeers = 15
     , ncTargetNumberOfEstablishedBigLedgerPeers = 10
     , ncTargetNumberOfActiveBigLedgerPeers = 5
+    , ncMinBigLedgerPeersForTrustedState = MinBigLedgerPeersForTrustedState 3 -- TODO: Review
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     }

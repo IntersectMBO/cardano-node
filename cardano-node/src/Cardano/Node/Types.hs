@@ -20,6 +20,7 @@ module Cardano.Node.Types
   , MaxConcurrencyDeadline(..)
     -- * Networking
   , TopologyFile(..)
+  , NodeConsensusMode (..)
   , NodeDiffusionMode (..)
     -- * Consensus protocol configuration
   , NodeByronProtocolConfiguration(..)
@@ -38,6 +39,7 @@ import           Cardano.Api
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
+import           Ouroboros.Network.ConsensusMode (ConsensusMode (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 import           Control.Exception
@@ -95,6 +97,22 @@ newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
   deriving stock (Eq, Ord)
   deriving newtype (FromJSON, Show)
 
+
+-- | Newtype wrapper which provides 'FromJSON' instance for 'ConsensusMode'.
+--
+newtype NodeConsensusMode
+  = NodeConsensusMode { getConsensusMode :: ConsensusMode }
+  deriving newtype Show
+
+instance FromJSON NodeConsensusMode where
+    parseJSON (String str) =
+      case str of
+        "Genesis"
+          -> pure $ NodeConsensusMode GenesisMode
+        "Praos"
+          -> pure $ NodeConsensusMode PraosMode
+        _ -> fail "Parsing NodeConsensusMode failed: can be either 'Genesis' or 'Praos'"
+    parseJSON _ = fail "Parsing NodeConsensusMode failed"
 
 -- | Newtype wrapper which provides 'FromJSON' instance for 'DiffusionMode'.
 --

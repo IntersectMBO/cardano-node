@@ -78,7 +78,7 @@ import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket 
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
                    PeerSelectionTargets (..), RemoteAddress)
 import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers, LedgerPeerSnapshot)
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
@@ -858,6 +858,8 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfKnownBigLedgerPeers,
                  ncTargetNumberOfEstablishedBigLedgerPeers,
                  ncTargetNumberOfActiveBigLedgerPeers,
+                 ncMinBigLedgerPeersForTrustedState,
+                 ncConsensusMode,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
                  ncPeerSharing
@@ -867,11 +869,13 @@ mkP2PArguments NodeConfiguration {
                daReadUseLedgerPeers
                daReadUseBootstrapPeers =
     Diffusion.P2PArguments P2P.ArgumentsExtra
-      { P2P.daPeerSelectionTargets
+      { P2P.daPeerTargets
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerPeers
       , P2P.daReadUseBootstrapPeers
+      , P2P.daConsensusMode = ncConsensusMode
+      , P2P.daMinBigLedgerPeersForTrustedState = ncMinBigLedgerPeersForTrustedState
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300
@@ -879,14 +883,18 @@ mkP2PArguments NodeConfiguration {
       , P2P.daOwnPeerSharing        = ncPeerSharing
       }
   where
-    daPeerSelectionTargets = PeerSelectionTargets {
-        targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
-        targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
-        targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
-        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers,
-        targetNumberOfKnownBigLedgerPeers       = ncTargetNumberOfKnownBigLedgerPeers,
-        targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
-        targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
+    daPeerTargets = Configuration.ConsensusModePeerTargets {
+      Configuration.deadlineTargets = peerSelectionTargets,
+      Configuration.syncTargets = peerSelectionTargets
+    }
+    peerSelectionTargets = PeerSelectionTargets {
+      targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
+      targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
+      targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
+      targetNumberOfActivePeers      = ncTargetNumberOfActivePeers,
+      targetNumberOfKnownBigLedgerPeers       = ncTargetNumberOfKnownBigLedgerPeers,
+      targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
+      targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
     }
 
 mkNonP2PArguments
