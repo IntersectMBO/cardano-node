@@ -465,7 +465,7 @@ getGovState
   -> m (L.ConwayGovState (ShelleyLedgerEra era)) -- ^ The governance state
 getGovState epochStateView ceo = withFrozenCallStack $ do
   AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
   pure $ conwayEraOnwardsConstraints ceo $ newEpochState ^. L.newEpochStateGovStateL
 

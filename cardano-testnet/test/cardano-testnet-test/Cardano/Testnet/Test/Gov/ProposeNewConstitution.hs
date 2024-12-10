@@ -70,7 +70,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   annotateShow numVotes
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       eraName = eraToString sbe
