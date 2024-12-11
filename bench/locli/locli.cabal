@@ -50,6 +50,9 @@ common project-config
                         -Wcompat
                         -Wno-all-missed-specialisations
 
+  if impl(ghc >= 9.8)
+    ghc-options:        -Wno-x-partial
+
   build-depends:        base >= 4.14 && < 5,
 
   if os(windows)
