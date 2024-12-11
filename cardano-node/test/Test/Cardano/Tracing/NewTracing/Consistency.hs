@@ -8,7 +8,6 @@ import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration)
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Data.Text
-import           System.Directory (canonicalizePath)
 import           System.FilePath ((</>))
 
 import           Hedgehog (Property)
@@ -22,11 +21,13 @@ tests = do
   H.checkSequential
       $ H.Group "Configuration Consistency tests"
       $ Prelude.map test
-            [ (  []
-                  -- This file name shoud reference the current standard config with new tracing
-              , "mainnet-config-new-tracing.json"
+            [ {--( []
+              -- This file name shoud reference the current standard config  with new tracing
+              -- Add this testcase when hydra has access to a config file with new tracing config
+              , "mainnet-config.json"
               , configPrefix)
-            , (  []
+              ,--}
+              (  []
               , "goodConfig.yaml"
               , testPrefix)
             , (  [ "Config namespace error: Illegal namespace ChainDB.CopyToImmutableDBEvent2.CopiedBlockToImmutableDB"
@@ -50,10 +51,10 @@ goldenTestJSON expectedOutcome goldenFileBaseName prefixFunc =
       actualValue H.=== expectedOutcome
 
 
-configPrefix :: FilePath -> IO FilePath
-configPrefix projectBase = do
-  base <- canonicalizePath projectBase
-  return $ base </> "configuration/cardano/"
+-- configPrefix :: FilePath -> IO FilePath
+-- configPrefix projectBase = do
+--   base <- canonicalizePath projectBase
+--   return $ base </> "configuration/cardano/"
 
 testPrefix :: FilePath ->  IO FilePath
 testPrefix _ = pure "test/Test/Cardano/Tracing/NewTracing/data/"
