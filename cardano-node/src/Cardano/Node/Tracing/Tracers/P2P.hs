@@ -1190,13 +1190,13 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ]
     forMachine _dtal (TrConnect (Just localAddress) remoteAddress diffusionMode) =
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
           , "diffusionMode" .= toJSON diffusionMode
           ]
     forMachine dtal (TrConnect Nothing remoteAddress diffusionMode) =
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "remoteAddress" .= forMachine dtal remoteAddress
           , "diffusionMode" .= toJSON diffusionMode
           ]

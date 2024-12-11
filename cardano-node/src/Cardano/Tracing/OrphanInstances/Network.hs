@@ -2305,13 +2305,13 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           ]
       TrConnect (Just localAddress) remoteAddress diffusionMode ->
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
           , "diffusionMode" .= toJSON diffusionMode
           ]
       TrConnect Nothing remoteAddress diffusionMode ->
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "remoteAddress" .= toObject verb remoteAddress
           , "diffusionMode" .= toJSON diffusionMode
           ]
