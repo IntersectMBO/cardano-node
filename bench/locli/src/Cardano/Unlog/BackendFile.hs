@@ -38,8 +38,11 @@ runLiftLogObjects rl@RunLogs{..} okDErr loAnyLimit = liftIO $
 
    readHostLogs :: Host -> HostLogs () -> IO (Host, HostLogs [LogObject])
    readHostLogs h hl@HostLogs{..} =
-     readLogObjectStream (unJsonLogfile $ fst hlLogs) okDErr loAnyLimit
-     <&> (h,) . setLogs hl . fmap (setLOhost h)
+     case fst hlLogs of
+       LogObjectSourceJSON j ->
+         readLogObjectStream (unJsonLogfile j) okDErr loAnyLimit
+         <&> (h,) . setLogs hl . fmap (setLOhost h)
+       other -> error $ "readHostLogs: expected JSON log file, got " ++ show other
 
    setLogs :: HostLogs a -> b -> HostLogs b
    setLogs hl x = hl { hlLogs = (fst $ hlLogs hl, x) }

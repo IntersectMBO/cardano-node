@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Analysis.API.Ground
@@ -163,6 +164,32 @@ newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
 
+data LogObjectSource =
+    LogObjectSourceJSON   JsonLogfile
+  | LogObjectSourceSQLite FilePath
+  | LogObjectSourceOther  FilePath
+  deriving (Show, Eq, Generic, NFData)
+
+logObjectSourceFile :: LogObjectSource -> FilePath
+logObjectSourceFile = \case
+  LogObjectSourceJSON j   -> unJsonLogfile j
+  LogObjectSourceSQLite f -> f
+  LogObjectSourceOther f  -> f
+
+toLogObjectSource :: FilePath -> LogObjectSource
+toLogObjectSource fp
+  | ext == ".sqlite" || ext == ".sqlite3" = LogObjectSourceSQLite fp
+  | ext == ".json"                        = LogObjectSourceJSON (JsonLogfile fp)
+  | otherwise                             = LogObjectSourceOther fp
+  where
+    ext = map toLower $ F.takeExtension fp
+
+instance FromJSON LogObjectSource where
+  parseJSON = withText "LogObjectSource" (pure . toLogObjectSource . T.unpack)
+
+instance ToJSON LogObjectSource where
+  toJSON = toJSON . logObjectSourceFile
+
 ---
 --- Orphans
 ---
@@ -208,6 +235,14 @@ optJsonLogfile optname desc =
     Opt.option Opt.str
       $ long optname
       <> metavar "JSONLOGFILE"
+      <> help desc
+
+optLogObjectSource :: String -> String -> Parser LogObjectSource
+optLogObjectSource optname desc =
+  fmap toLogObjectSource $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "JSONLOGFILE|SQLITE3LOGFILE"
       <> help desc
 
 argJsonLogfile :: Parser JsonLogfile
@@ -324,26 +359,26 @@ dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
   withFile f WriteMode $ \hnd -> do
     forM_ xs $ LBS.hPutStrLn hnd . encode
 
-dumpAssociatedObjects :: ToJSON a => String -> [(JsonLogfile, a)] -> ExceptT Text IO ()
+dumpAssociatedObjects :: ToJSON a => String -> [(LogObjectSource, a)] -> ExceptT Text IO ()
 dumpAssociatedObjects ident xs = liftIO $
   flip mapConcurrently_ xs $
-    \(JsonLogfile f, x) ->
+    \(logObjectSourceFile -> f, x) ->
       withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
         LBS.hPutStrLn hnd $ encode x
 
 readAssociatedObjects :: forall a.
-  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]
+  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(LogObjectSource, a)]
 readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap (mapM sequence) $
   flip mapConcurrently fs $
     \jf@(JsonLogfile f) -> do
         x <- eitherDecode @a <$> LBS.readFile (replaceExtension f $ ident <> ".json")
         progress ident (Q f)
-        pure (jf, x)
+        pure (LogObjectSourceJSON jf, x)
 
-dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> ExceptT Text IO ()
+dumpAssociatedObjectStreams :: ToJSON a => String -> [(LogObjectSource, [a])] -> ExceptT Text IO ()
 dumpAssociatedObjectStreams ident xss = liftIO $
   flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
+    \(logObjectSourceFile -> f, xs) -> do
       withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
         forM_ xs $ LBS.hPutStrLn hnd . encode
 
@@ -353,9 +388,9 @@ dumpText ident xs (TextOutputFile f) = liftIO $ do
   withFile f WriteMode $ \hnd -> do
     forM_ xs $ hPutStrLn hnd
 
-dumpAssociatedTextStreams :: String -> [(JsonLogfile, [Text])] -> ExceptT Text IO ()
+dumpAssociatedTextStreams :: String -> [(LogObjectSource, [Text])] -> ExceptT Text IO ()
 dumpAssociatedTextStreams ident xss = liftIO $
   flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
+    \(logObjectSourceFile -> f, xs) -> do
       withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
         forM_ xs $ hPutStrLn hnd

@@ -7,7 +7,7 @@
 #endif
 
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-incomplete-record-updates #-}
 
 {- HLINT ignore "Avoid lambda" -}
 {- HLINT ignore "Eta reduce" -}
@@ -293,13 +293,13 @@ beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
 
-buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
+buildMachViews :: Run -> [(LogObjectSource, [LogObject])] -> IO [(LogObjectSource, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
 
 blockEventsAcceptance :: Genesis -> [ChainFilter] -> BlockEvents -> [(ChainFilter, Bool)]
 blockEventsAcceptance genesis flts be = flts <&> (id &&& testBlockEvents genesis be)
 
-rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, MachView)] -> Chain
+rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(LogObjectSource, MachView)] -> Chain
 rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
   Chain
   { cDomSlots   = DataDomain
@@ -320,8 +320,8 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
                 doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
    (accepta, cRejecta) = partition (all snd . beAcceptance) cMainChain
 
-   blkSets :: (Set Hash, Set Hash)
-   blkSets@(acceptaBlocks, rejectaBlocks) =
+   acceptaBlocks, rejectaBlocks :: Set Hash
+   (acceptaBlocks, rejectaBlocks) =
      both (Set.fromList . fmap beBlock) (accepta, cRejecta)
    mvBlockStats :: MachView -> HostBlockStats
    mvBlockStats (fmap bfeBlock . mvForges -> fs) = HostBlockStats {..}
@@ -346,7 +346,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
    finalBlockNo   = mbeBlockNo finalBlockEv
 
    tipHash        = rewindChain eventMaps finalBlockNo 1 (mbeBlock finalBlockEv)
-   tipBlock       = getBlockForge eventMaps finalBlockNo tipHash
+   _tipBlock      = getBlockForge eventMaps finalBlockNo tipHash
 
    computeChainBlockGaps :: [BlockEvents] -> [BlockEvents]
    computeChainBlockGaps [] = error "computeChainBlockGaps on an empty chain"
@@ -376,11 +376,12 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
          ])
      & mapMbe id (error "Silly invariant failed.") (error "Silly invariant failed.")
 
-   adoptionMap    :: [Map Hash UTCTime]
-   adoptionMap    =  Map.mapMaybe (lazySMaybe . mbeAdopted) <$> eventMaps
+   adoptionMap  :: [Map Hash UTCTime]
+   adoptionMap  =  Map.mapMaybe (lazySMaybe . mbeAdopted) <$> eventMaps
 
-   heightHostMap      :: (Map BlockNo (Set Hash), Map Host (Set Hash))
-   heightHostMap@(heightMap, hostMap)
+   heightMap    :: Map BlockNo (Set Hash)
+   _hostMap     :: Map Host (Set Hash)
+   (heightMap, _hostMap)
      = foldr (\MachView{..} (accHeight, accHost) ->
                  (,)
                  (Map.foldr
@@ -589,11 +590,6 @@ blockProp run@Run{genesis} Chain{..} = do
                                                 & filter (not . isNaN))
     }
  where
-   ne :: String -> [a] -> [a]
-   ne desc = \case
-     [] -> error desc
-     xs -> xs
-
    hostBlockStats = Map.elems cHostBlockStats
 
    boFetchedCum :: BlockObservation -> NominalDiffTime
@@ -629,10 +625,10 @@ blockProp run@Run{genesis} Chain{..} = do
      cdfZ percs $ concatMap f cbes
 
 -- | Given a single machine's log object stream, recover its block map.
-blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView
-blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), []) =
-  error $ mconcat ["0 LogObjects in ", fp]
-blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
+blockEventMapsFromLogObjects :: Run -> (LogObjectSource, [LogObject]) -> MachView
+blockEventMapsFromLogObjects run (f, []) =
+  error $ mconcat ["0 LogObjects in ", logObjectSourceFile f]
+blockEventMapsFromLogObjects run (f, xs@(x:_)) =
   foldl' (blockPropMachEventsStep run f) initial xs
  where
    initial =
@@ -648,8 +644,8 @@ blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
      , mvMemSnap      = SNothing
      }
 
-blockPropMachEventsStep :: Run -> JsonLogfile -> MachView -> LogObject -> MachView
-blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = case lo of
+blockPropMachEventsStep :: Run -> LogObjectSource -> MachView -> LogObject -> MachView
+blockPropMachEventsStep run@Run{genesis} _ mv@MachView{..} lo = case lo of
   -- 0. Notice (observer only)
   LogObject{loAt, loHost, loBody=LOChainSyncClientSeenHeader{loBlock,loBlockNo,loSlotNo}} ->
     let mbe0 = getBlock loBlock

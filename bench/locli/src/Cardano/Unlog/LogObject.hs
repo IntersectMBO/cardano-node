@@ -95,7 +95,7 @@ data HostLogs a
     { hlRawLogfiles    :: [FilePath]
     , hlRawLines       :: Int
     , hlRawTraceFreqs  :: TraceFreqs
-    , hlLogs           :: (JsonLogfile, a)
+    , hlLogs           :: (LogObjectSource, a)
     , hlProfile        :: [ProfileEntry I]
     , hlRawFirstAt     :: Maybe UTCTime
     , hlRawLastAt      :: Maybe UTCTime
@@ -115,7 +115,7 @@ data RunLogs a
     }
   deriving (Generic, FromJSON, ToJSON)
 
-rlLogs :: RunLogs a -> [(JsonLogfile, a)]
+rlLogs :: RunLogs a -> [(LogObjectSource, a)]
 rlLogs = fmap hlLogs . Map.elems . rlHostLogs
 
 
@@ -266,7 +266,6 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <*> (v .:? "chainLengthDelta"
                 -- Compat for node versions 1.27 and older:
                  <&> fromMaybe 1)
-  -- TODO: we should clarify the distinction between the two cases (^ and v).
   , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
@@ -276,7 +275,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   -- Ledger snapshots:
   , (,,,) "TraceSnapshotEvent.TookSnapshot" "TraceLedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
-  -- TODO: track slot and duration (SMaybe)
+  -- If needed, this could track slot and duration (SMaybe):
   -- {"at":"2024-10-19T10:16:27.459112022Z","ns":"ChainDB.LedgerEvent.TookSnapshot","data":{"enclosedTime":{"tag":"RisingEdge"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 5319) adefbb19d6284aa68f902d33018face42d37e1a7970415d2a81bd4c2dea585ba"},"sev":"Info","thread":"81","host":"client-us-04"}
   -- {"at":"2024-10-19T10:16:45.925381225Z","ns":"ChainDB.LedgerEvent.TookSnapshot","data":{"enclosedTime":{"contents":18.466253914,"tag":"FallingEdgeWith"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 5319) adefbb19d6284aa68f902d33018face42d37e1a7970415d2a81bd4c2dea585ba"},"sev":"Info","thread":"81","host":"client-us-04"}
 
@@ -422,7 +421,6 @@ data LOAnyType
   deriving (Eq, Generic, NFData, Read, Show, ToJSON, Data)
 
 deriving instance Eq       ResourceStats
-deriving instance Typeable ResourceStats
 deriving instance Data     ResourceStats
 
 instance ToJSON LOBody

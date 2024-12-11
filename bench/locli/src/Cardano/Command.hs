@@ -68,7 +68,7 @@ data ChainCommand
   |            ReadChain    (JsonInputFile [BlockEvents])
   |        TimelineChain    RenderConfig TextOutputFile [TimelineComments BlockEvents]
 
-  |         CollectSlots    [JsonLogfile]
+  |         CollectSlots    [LogObjectSource]
   |            DumpSlotsRaw
   |          FilterSlots    [JsonFilterFile] [ChainFilter]
   |            DumpSlots
@@ -177,7 +177,7 @@ parseChainCommand =
    , op "collect-slots" "Collect per-slot performance stats"
      (CollectSlots
        <$> many
-           (optJsonLogfile    "ignore-log"   "Omit data from listed log files from perf statistics"))
+           (optLogObjectSource "ignore-log"   "Omit data from listed log sources from perf statistics"))
    , op "dump-slots-raw" "Dump unfiltered slot stats JSON streams, alongside input files"
      (DumpSlotsRaw & pure)
    , op "filter-slots" "Filter per-slot performance stats"
@@ -342,15 +342,15 @@ data State
   , sRunLogs          :: Maybe (RunLogs [LogObject])
   , sDomSlots         :: Maybe (DataDomain I SlotNo)
     -- propagation
-  , sMachViews        :: Maybe [(JsonLogfile, MachView)]
+  , sMachViews        :: Maybe [(LogObjectSource, MachView)]
   , sChain            :: Maybe Chain
   , sBlockProp        :: Maybe [BlockPropOne]
   , sMultiBlockProp   :: Maybe MultiBlockProp
     -- performance
-  , sSlotsRaw         :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
-  , sScalars          :: Maybe [(JsonLogfile, RunScalars)]
-  , sSlots            :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
-  , sMachPerf         :: Maybe [(JsonLogfile, MachPerfOne)]
+  , sSlotsRaw         :: Maybe [(LogObjectSource, [SlotStats NominalDiffTime])]
+  , sScalars          :: Maybe [(LogObjectSource, RunScalars)]
+  , sSlots            :: Maybe [(LogObjectSource, [SlotStats NominalDiffTime])]
+  , sMachPerf         :: Maybe [(LogObjectSource, MachPerfOne)]
   , sClusterPerf      :: Maybe [ClusterPerf]
   , sMultiClusterPerf :: Maybe MultiClusterPerf
     --
@@ -553,7 +553,7 @@ runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   c@(CollectSlots ignores) = do
   let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
   forM_ ignores $
-    progress "perf-ignored-log" . R . unJsonLogfile
+    progress "perf-ignored-log" . R . logObjectSourceFile
   progress "slots" (Q $ printf "building %d slot timelines" $ length objs)
   performGC
   (scalars, slotsRaw) <-

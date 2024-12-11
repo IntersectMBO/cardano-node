@@ -6,7 +6,7 @@
 {-# OPTIONS_GHC -Wno-x-partial #-}
 #endif
 
-{-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Evaluate" -}
 
@@ -33,15 +33,15 @@ import Cardano.Unlog.Resources
 
 -- * 1. Collect SlotStats & RunScalars:
 --
-collectSlotStats :: Run -> [(JsonLogfile, [LogObject])]
-                 -> IO (Either Text [(JsonLogfile, (RunScalars, [SlotStats UTCTime]))])
+collectSlotStats :: Run -> [(LogObjectSource, [LogObject])]
+                 -> IO (Either Text [(LogObjectSource, (RunScalars, [SlotStats UTCTime]))])
 collectSlotStats run = fmap sequence <$> mapConcurrentlyPure (timelineFromLogObjects run)
 
 
-timelineFromLogObjects :: Run -> (JsonLogfile, [LogObject])
-                       -> Either Text (JsonLogfile, (RunScalars, [SlotStats UTCTime]))
-timelineFromLogObjects _ (JsonLogfile f, []) =
-  Left $ "timelineFromLogObjects:  zero logobjects from " <> pack f
+timelineFromLogObjects :: Run -> (LogObjectSource, [LogObject])
+                       -> Either Text (LogObjectSource, (RunScalars, [SlotStats UTCTime]))
+timelineFromLogObjects _ (f, []) =
+  Left $ "timelineFromLogObjects:  zero logobjects from " <> pack (logObjectSourceFile f)
 timelineFromLogObjects run@Run{genesis} (f, xs') =
   Right . (f,)
   $ foldl' (timelineStep run f) zeroTimelineAccum xs
@@ -107,7 +107,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
      , slLogObjects  = []
      }
 
-timelineStep :: Run -> JsonLogfile -> TimelineAccum -> LogObject -> TimelineAccum
+timelineStep :: Run -> LogObjectSource -> TimelineAccum -> LogObject -> TimelineAccum
 timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
   -- 1. skip pre-historic events not subject to performance analysis;
   --    Potentially _collapsingly huge_, depending on what portion of logs you get.
@@ -152,7 +152,7 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
              [ desc, " for a future slot=", show slot
              , " cur=", show (slSlot cur)
              , " host=", unpack . toText $ unHost host
-             , " file=", unJsonLogfile f
+             , " file=", logObjectSourceFile f
              ]
         else forExistingSlot slot acc x
   in
@@ -467,14 +467,14 @@ runSlotFilters ::
      NFData a =>
      Run
   -> [ChainFilter]
-  -> [(JsonLogfile, [SlotStats a])]
-  -> IO (DataDomain I SlotNo, [(JsonLogfile, [SlotStats a])])
+  -> [(LogObjectSource, [SlotStats a])]
+  -> IO (DataDomain I SlotNo, [(LogObjectSource, [SlotStats a])])
 runSlotFilters Run{genesis} flts slots =
   mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
     <&> \filtered ->
           (,) (domain filtered) filtered
  where
-   domain :: [(JsonLogfile, [SlotStats a])] -> DataDomain I SlotNo
+   domain :: [(LogObjectSource, [SlotStats a])] -> DataDomain I SlotNo
    domain filtered = mkDataDomain
      ((CP.head samplePre  <&> slSlot) & fromMaybe 0)
      ((lastMay samplePre  <&> slSlot) & fromMaybe 0)
@@ -567,9 +567,9 @@ slotStatsSummary Run{genesis=Genesis{epochLength}} slots =
 
 -- * 4. Summarise SlotStats & SlotStatsSummary into MachPerf:
 --
-slotStatsMachPerf :: Run -> (JsonLogfile, [SlotStats NominalDiffTime]) -> Either Text (JsonLogfile, MachPerfOne)
-slotStatsMachPerf _ (JsonLogfile f, []) =
-  Left $ "slotStatsMachPerf:  zero filtered slots from " <> pack f
+slotStatsMachPerf :: Run -> (LogObjectSource, [SlotStats NominalDiffTime]) -> Either Text (LogObjectSource, MachPerfOne)
+slotStatsMachPerf _ (f, []) =
+  Left $ "slotStatsMachPerf:  zero filtered slots from " <> pack (logObjectSourceFile f)
 slotStatsMachPerf run (f, slots) =
   Right . (f,) $ MachPerf
   { mpVersion            = getLocliVersion

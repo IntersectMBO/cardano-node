@@ -13,7 +13,7 @@ module Cardano.Unlog.BackendDB
        , sqlOrdered
        ) where
 
-import           Cardano.Analysis.API.Ground (Host (..), JsonLogfile (..))
+import           Cardano.Analysis.API.Ground (Host (..), LogObjectSource (..))
 import           Cardano.Prelude (ExceptT, Text)
 import           Cardano.Unlog.LogObject (HostLogs (..), LogObject (..), RunLogs (..), fromTextRef)
 import           Cardano.Unlog.LogObjectDB
@@ -46,9 +46,12 @@ runLiftLogObjectsDB RunLogs{rlHostLogs, ..} = liftIO $ do
     loadActions = map load (Map.toList rlHostLogs)
 
     load (host@(Host h), hl) =
-      withTimingInfo ("loadHostLogsFromDB/" ++ ShortText.unpack h) $
-        (,) host <$> loadHostLogsFromDB hl
+      withTimingInfo ("loadHostLogsDB/" ++ ShortText.unpack h) $
+        (,) host <$> loadHostLogsDB hl
 
+-- If the logs have been split up into multiple files, e.g. by a log rotator,
+-- this assumes sorting log files by *name* results in chronological order
+-- of all *trace messages* contained in them.
 prepareDB :: String -> [FilePath] -> FilePath -> ExceptT Text IO ()
 prepareDB machName (sort -> logFiles) outFile = liftIO $ do
 
@@ -108,7 +111,7 @@ tMinMax logs = do
   pure (tMin, tMax)
 
 
--- select all log objects relevant for analysis
+-- selects the entire LogObject stream, containing all objects relevant for standard analysis
 selectAll :: SQL
 selectAll = sqlOrdered
   [ sqlGetEvent
@@ -133,19 +136,20 @@ getTraceFreqs =
   ML.fromList . map fromSqlDataPair
     <$> run "SELECT * FROM tracefreq"
 
-loadHostLogsFromDB :: HostLogs a -> IO (HostLogs [LogObject])
-loadHostLogsFromDB hl = withDb conn $ do
-  summary@SummaryDB{..} <- getSummary
-  traceFreqs            <- getTraceFreqs
-  rows                  <- run selectAll
+loadHostLogsDB :: HostLogs a -> IO (HostLogs [LogObject])
+loadHostLogsDB hl =
+  case fst $ hlLogs hl of
+    log@(LogObjectSourceSQLite dbFile) ->
+      withDb (fromString dbFile) $ do
+        summary@SummaryDB{..} <- getSummary
+        traceFreqs            <- getTraceFreqs
+        rows                  <- run selectAll
 
-  pure $ hl
-    { hlRawTraceFreqs = traceFreqs
-    , hlRawFirstAt    = Just sdbFirstAt
-    , hlRawLastAt     = Just sdbLastAt
-    , hlRawLines      = sdbLines
-    , hlLogs          = (logFile, map (sqlToLogObject summary) rows)
-    }
-  where
-    logFile = fst $ hlLogs hl
-    conn    = fromString . unJsonLogfile $ logFile
+        pure $ hl
+          { hlRawTraceFreqs = traceFreqs
+          , hlRawFirstAt    = Just sdbFirstAt
+          , hlRawLastAt     = Just sdbLastAt
+          , hlRawLines      = sdbLines
+          , hlLogs          = (log, map (sqlToLogObject summary) rows)
+          }
+    other -> error $ "loadHostLogsDB: expected SQLite DB file, got " ++ show other

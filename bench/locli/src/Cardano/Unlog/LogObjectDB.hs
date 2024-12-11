@@ -2,6 +2,14 @@
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
+-- | This module contains the schema in which `LogObjects`s are
+--   stored to and retrieved from an SQLite database.
+--
+--   `logObjectToSql` provides the mapping for `LOBody` with its constructors of varying arity to different DB tables and columns.
+--   `toLOBodyConverters` implements the reverse, mapping the columns of a result row to a `LOBody` value.
+--
+--   The `AsSqlData` type class provides lower level data marshalling.
+--
 module Cardano.Unlog.LogObjectDB
        ( AsSQLData (..)
        , SummaryDB (..)

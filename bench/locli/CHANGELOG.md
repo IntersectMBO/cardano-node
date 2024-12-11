@@ -3,9 +3,11 @@
 ## 2.0 -- Dec 2024
 
 * New database (DB) persistence backend for log objects using serverless SQLite DBs
-* New CLI commands `prepare-db` and `unlog-db` to create and read from that persistence layer respectively
-* Tweak GC to mitigate high RAM requirements
-* New executable `locli-quick` which aims to be a development testbed for (upcoming) DB-backed quick queries.
+* Refactor current file persistence backend into its own module
+* New CLI commands `prepare-db` and `unlog-db` to create and read from DB persistence backend respectively
+* New sum type `LogObjectSource` to represent input from different backends (file or DB)
+* Tweak GC to mitigate high RAM requirements (for perf cluster analyses only)
+* New executable `locli-quick` which aims to be a development testbed for (upcoming) DB-backed quick queries
 
 ## 1.36 -- Nov 2024
 
