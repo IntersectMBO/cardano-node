@@ -484,7 +484,8 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.ChangingSelection pt) =
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChangingSelection"
                , "block" .= forMachine dtal pt ]
-  forMachine dtal (ChainDB.AddedToCurrentChain events selChangedInfo base extended) =
+
+  forMachine DDetailed (ChainDB.AddedToCurrentChain events selChangedInfo base extended) =
       let ChainInformation { .. } = chainInformation selChangedInfo base extended 0
           tipBlockIssuerVkHashText :: Text
           tipBlockIssuerVkHashText =
@@ -494,20 +495,32 @@ instance ( LogFormatting (Header blk)
                 Text.decodeLatin1 (B16.encode bs)
       in mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
+               , "newtip" .= renderPointForDetails DDetailed (AF.headPoint extended)
+               , "newTipSelectView" .= forMachine DDetailed (ChainDB.newTipSelectView selChangedInfo)
+               ]
+            ++ [ "oldTipSelectView" .= forMachine DDetailed oldTipSelectView
+               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+               ]
+            ++ [ "headers" .= toJSON (forMachine DDetailed `map` addedHdrsNewChain base extended)
+               ]
+            ++ [ "events" .= toJSON (map (forMachine DDetailed) events)
+               | not (null events) ]
+            ++ [ "tipBlockHash" .= tipBlockHash
+               , "tipBlockParentHash" .= tipBlockParentHash
+               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
+  forMachine dtal (ChainDB.AddedToCurrentChain events selChangedInfo _base extended) =
+      mconcat $
+               [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint extended)
                , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
                ]
             ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
                | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
                ]
-            ++ [ "headers" .= toJSON (forMachine dtal `map` addedHdrsNewChain base extended)
-               | dtal == DDetailed ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
-            ++ [ "tipBlockHash" .= tipBlockHash
-               , "tipBlockParentHash" .= tipBlockParentHash
-               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
-  forMachine dtal (ChainDB.SwitchedToAFork events selChangedInfo old new) =
+
+  forMachine DDetailed (ChainDB.SwitchedToAFork events selChangedInfo old new) =
       let ChainInformation { .. } = chainInformation selChangedInfo old new 0
           tipBlockIssuerVkHashText :: Text
           tipBlockIssuerVkHashText =
@@ -517,19 +530,30 @@ instance ( LogFormatting (Header blk)
                 Text.decodeLatin1 (B16.encode bs)
       in mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
+               , "newtip" .= renderPointForDetails DDetailed (AF.headPoint new)
+               , "newTipSelectView" .= forMachine DDetailed (ChainDB.newTipSelectView selChangedInfo)
+               ]
+            ++ [ "oldTipSelectView" .= forMachine DDetailed oldTipSelectView
+               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
+               ]
+            ++ [ "headers" .= toJSON (forMachine DDetailed `map` addedHdrsNewChain old new)
+               ]
+            ++ [ "events" .= toJSON (map (forMachine DDetailed) events)
+               | not (null events) ]
+            ++ [ "tipBlockHash" .= tipBlockHash
+               , "tipBlockParentHash" .= tipBlockParentHash
+               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
+  forMachine dtal (ChainDB.SwitchedToAFork events selChangedInfo _old new) =
+      mconcat $
+               [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint new)
                , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
                ]
             ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
                | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
                ]
-            ++ [ "headers" .= toJSON (forMachine dtal `map` addedHdrsNewChain old new)
-               | dtal == DDetailed ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
-            ++ [ "tipBlockHash" .= tipBlockHash
-               , "tipBlockParentHash" .= tipBlockParentHash
-               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
 
   forMachine dtal (ChainDB.AddBlockValidation ev') =
     forMachine dtal ev'
@@ -570,21 +594,37 @@ instance ( LogFormatting (Header blk)
     let forkIt = not $ AF.withinFragmentBounds (AF.headPoint oldChain)
                               newChain
         ChainInformation { .. } = chainInformation selChangedInfo oldChain newChain 0
+        tipBlockIssuerVkHashText =
+          case tipBlockIssuerVerificationKeyHash of
+            NoBlockIssuer -> "NoBlockIssuer"
+            BlockIssuerVerificationKeyHash bs ->
+              Text.decodeLatin1 (B16.encode bs)
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         , CounterM "forks" (Just (if forkIt then 1 else 0))
+        , PrometheusM "tipBlock" [("hash",tipBlockHash)
+                                 ,("parent hash",tipBlockParentHash)
+                                 ,("issuer verification key hash", tipBlockIssuerVkHashText)]
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo oldChain newChain) =
     let ChainInformation { .. } =
           chainInformation selChangedInfo oldChain newChain 0
+        tipBlockIssuerVkHashText =
+          case tipBlockIssuerVerificationKeyHash of
+            NoBlockIssuer -> "NoBlockIssuer"
+            BlockIssuerVerificationKeyHash bs ->
+              Text.decodeLatin1 (B16.encode bs)
     in  [ DoubleM "density" (fromRational density)
         , IntM    "slotNum" (fromIntegral slots)
         , IntM    "blockNum" (fromIntegral blocks)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
+        , PrometheusM "tipBlock" [("hash",tipBlockHash)
+                                 ,("parent hash",tipBlockParentHash)
+                                 ,("issuer verification key hash", tipBlockIssuerVkHashText)]
         ]
   asMetrics _ = []
 
