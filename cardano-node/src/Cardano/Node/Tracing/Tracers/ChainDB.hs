@@ -749,7 +749,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
           , "counter for forks"
           )
         , ( "tipBlock"
-          , "Hash vallues for tipBlockHash, tipBlockParentHash and tipBlockIssuerVkHashText"
+          , "Values for hash, parent hash and issuer verification key hash"
           )
         ]
 
@@ -776,7 +776,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
           , "In which epoch is the tip of the current chain."
           )
         , ( "tipBlock"
-          , "Hash vallues for tipBlockHash, tipBlockParentHash and tipBlockIssuerVkHashText"
+          , "Values for hash, parent hash and issuer verification key hash"
           )
         ]
   metricsDocFor _ = []
