@@ -507,7 +507,7 @@ instance ( LogFormatting (Header blk)
                | not (null events) ]
             ++ [ "tipBlockHash" .= tipBlockHash
                , "tipBlockParentHash" .= tipBlockParentHash
-               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
+               , "tipBlockIssuerVKeyHash" .= tipBlockIssuerVkHashText]
   forMachine dtal (ChainDB.AddedToCurrentChain events selChangedInfo _base extended) =
       mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
@@ -542,7 +542,7 @@ instance ( LogFormatting (Header blk)
                | not (null events) ]
             ++ [ "tipBlockHash" .= tipBlockHash
                , "tipBlockParentHash" .= tipBlockParentHash
-               , "tipBlockIssuerVerificationKeyHash" .= tipBlockIssuerVkHashText]
+               , "tipBlockIssuerVKeyHash" .= tipBlockIssuerVkHashText]
   forMachine dtal (ChainDB.SwitchedToAFork events selChangedInfo _old new) =
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
@@ -606,8 +606,8 @@ instance ( LogFormatting (Header blk)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         , CounterM "forks" (Just (if forkIt then 1 else 0))
         , PrometheusM "tipBlock" [("hash",tipBlockHash)
-                                 ,("parent hash",tipBlockParentHash)
-                                 ,("issuer verification key hash", tipBlockIssuerVkHashText)]
+                                 ,("parent_hash",tipBlockParentHash)
+                                 ,("issuer_VKey_hash", tipBlockIssuerVkHashText)]
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo oldChain newChain) =
     let ChainInformation { .. } =
@@ -745,7 +745,14 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
         , ( "epoch"
           , "In which epoch is the tip of the current chain."
           )
+        , ( "forks"
+          , "counter for forks"
+          )
+        , ( "tipBlock"
+          , "Hash vallues for tipBlockHash, tipBlockParentHash and tipBlockIssuerVkHashText"
+          )
         ]
+
   metricsDocFor (Namespace _ ["AddedToCurrentChain"]) =
         [ ( "density"
           , mconcat
@@ -767,6 +774,9 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
           )
         , ( "epoch"
           , "In which epoch is the tip of the current chain."
+          )
+        , ( "tipBlock"
+          , "Hash vallues for tipBlockHash, tipBlockParentHash and tipBlockIssuerVkHashText"
           )
         ]
   metricsDocFor _ = []
