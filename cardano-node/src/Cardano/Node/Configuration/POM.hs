@@ -296,7 +296,7 @@ instance FromJSON PartialNodeConfiguration where
       -- Logging parameters
       pncLoggingSwitch'  <-                 v .:? "TurnOnLogging" .!= True
       pncLogMetrics      <- Last        <$> v .:? "TurnOnLogMetrics"
-      useTraceDispatcher <-                 v .:? "UseTraceDispatcher" .!= False
+      useTraceDispatcher <-                 v .:? "UseTraceDispatcher" .!= True
       pncTraceConfig     <-  if pncLoggingSwitch'
                              then do
                                partialTraceSelection <- parseJSON $ Object v
