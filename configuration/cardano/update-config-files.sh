@@ -20,6 +20,7 @@ copyFile "mainnet-alonzo-genesis.json"
 copyFile "mainnet-byron-genesis.json"
 copyFile "mainnet-conway-genesis.json"
 copyFile "mainnet-config.json"
+copyFile "mainnet-config-new-tracing.json"
 copyFile "mainnet-shelley-genesis.json"
 copyFile "mainnet-topology.json"
 
