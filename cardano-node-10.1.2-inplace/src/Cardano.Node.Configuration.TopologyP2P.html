@@ -1,0 +1,1002 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Configuration.TopologyP2P</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.Topology.html#TopologyError"><span class="hs-identifier">TopologyError</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NetworkTopology"><span class="hs-identifier">NetworkTopology</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#PublicRootPeers"><span class="hs-identifier">PublicRootPeers</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier">LocalRootPeersGroup</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier">LocalRootPeersGroups</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier">RootConfig</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPAddress"><span class="hs-identifier">NodeHostIPAddress</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv4Address"><span class="hs-identifier">NodeHostIPv4Address</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv6Address"><span class="hs-identifier">NodeHostIPv6Address</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NodeSetup"><span class="hs-identifier">NodeSetup</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerAdvertise.html#PeerAdvertise"><span class="hs-identifier">PeerAdvertise</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#nodeAddressToSockAddr"><span class="hs-identifier">nodeAddressToSockAddr</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#readTopologyFile"><span class="hs-identifier">readTopologyFile</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#readTopologyFileOrError"><span class="hs-identifier">readTopologyFileOrError</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#rootConfigToRelayAccessPoint"><span class="hs-identifier">rootConfigToRelayAccessPoint</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html"><span class="hs-identifier">Cardano.Node.Configuration.NodeAddress</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html"><span class="hs-identifier">Cardano.Node.Configuration.POM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#NodeConfiguration"><span class="hs-identifier">NodeConfiguration</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Configuration.Topology.html"><span class="hs-identifier">Cardano.Node.Configuration.Topology</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.Topology.html#TopologyError"><span class="hs-identifier">TopologyError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Types.html"><span class="hs-identifier">Cardano.Node.Types</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.Network.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.Network</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.NodeToNode.html"><span class="hs-identifier">Ouroboros.Network.NodeToNode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerAdvertise.html#PeerAdvertise"><span class="hs-identifier">PeerAdvertise</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.Bootstrap.html"><span class="hs-identifier">Ouroboros.Network.PeerSelection.Bootstrap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.Bootstrap.html#UseBootstrapPeers"><span class="hs-identifier">UseBootstrapPeers</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.LedgerPeers.Type.html"><span class="hs-identifier">Ouroboros.Network.PeerSelection.LedgerPeers.Type</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.LedgerPeers.Type.html#UseLedgerPeers"><span class="hs-identifier">UseLedgerPeers</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerTrustable.html"><span class="hs-identifier">Ouroboros.Network.PeerSelection.PeerTrustable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerTrustable.html#PeerTrustable"><span class="hs-identifier">PeerTrustable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.RelayAccessPoint.html"><span class="hs-identifier">Ouroboros.Network.PeerSelection.RelayAccessPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.RelayAccessPoint.html#RelayAccessPoint"><span class="hs-identifier">RelayAccessPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.PeerSelection.State.LocalRootPeers.html"><span class="hs-identifier">Ouroboros.Network.PeerSelection.State.LocalRootPeers</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.PeerSelection.State.LocalRootPeers.html#HotValency"><span class="hs-identifier">HotValency</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.PeerSelection.State.LocalRootPeers.html#WarmValency"><span class="hs-identifier">WarmValency</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Alternative"><span class="hs-identifier">Alternative</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.IO.Exception.html#IOException"><span class="hs-identifier">IOException</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Exception</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Exception.Base.html"><span class="hs-identifier">Control.Exception.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier">Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Char8.html"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="NodeSetup"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NodeSetup"><span class="hs-identifier hs-var">NodeSetup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NodeSetup"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NodeSetup"><span class="hs-identifier hs-var">NodeSetup</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="nodeId"><span class="annot"><span class="annottext">NodeSetup -&gt; Word64
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#nodeId"><span class="hs-identifier hs-var hs-var">nodeId</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeIPv4Address"><span class="annot"><span class="annottext">NodeSetup -&gt; Maybe NodeIPv4Address
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#nodeIPv4Address"><span class="hs-identifier hs-var hs-var">nodeIPv4Address</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeIPv4Address"><span class="hs-identifier hs-type">NodeIPv4Address</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeIPv6Address"><span class="annot"><span class="annottext">NodeSetup -&gt; Maybe NodeIPv6Address
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#nodeIPv6Address"><span class="hs-identifier hs-var hs-var">nodeIPv6Address</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeIPv6Address"><span class="hs-identifier hs-type">NodeIPv6Address</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="producers"><span class="annot"><span class="annottext">NodeSetup -&gt; [RootConfig]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#producers"><span class="hs-identifier hs-var hs-var">producers</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-type">RootConfig</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="useLedger"><span class="annot"><span class="annottext">NodeSetup -&gt; UseLedgerPeers
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#useLedger"><span class="hs-identifier hs-var hs-var">useLedger</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.LedgerPeers.Type.html#UseLedgerPeers"><span class="hs-identifier hs-type">UseLedgerPeers</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681057310"><span id="local-6989586621681057324"><span class="annot"><span class="annottext">NodeSetup -&gt; NodeSetup -&gt; Bool
+(NodeSetup -&gt; NodeSetup -&gt; Bool)
+-&gt; (NodeSetup -&gt; NodeSetup -&gt; Bool) -&gt; Eq NodeSetup
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NodeSetup -&gt; NodeSetup -&gt; Bool
+== :: NodeSetup -&gt; NodeSetup -&gt; Bool
+$c/= :: NodeSetup -&gt; NodeSetup -&gt; Bool
+/= :: NodeSetup -&gt; NodeSetup -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057335"><span id="local-6989586621681057351"><span id="local-6989586621681057355"><span class="annot"><span class="annottext">Int -&gt; NodeSetup -&gt; ShowS
+[NodeSetup] -&gt; ShowS
+NodeSetup -&gt; [Char]
+(Int -&gt; NodeSetup -&gt; ShowS)
+-&gt; (NodeSetup -&gt; [Char])
+-&gt; ([NodeSetup] -&gt; ShowS)
+-&gt; Show NodeSetup
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NodeSetup -&gt; ShowS
+showsPrec :: Int -&gt; NodeSetup -&gt; ShowS
+$cshow :: NodeSetup -&gt; [Char]
+show :: NodeSetup -&gt; [Char]
+$cshowList :: [NodeSetup] -&gt; ShowS
+showList :: [NodeSetup] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057366"><span id="local-6989586621681057370"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NodeSetup"><span class="hs-identifier hs-type">NodeSetup</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621681057404"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser NodeSetup
+</span><a href="#local-6989586621681057404"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; (Object -&gt; Parser NodeSetup) -&gt; Value -&gt; Parser NodeSetup
+forall a. [Char] -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;NodeSetup&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser NodeSetup) -&gt; Value -&gt; Parser NodeSetup)
+-&gt; (Object -&gt; Parser NodeSetup) -&gt; Value -&gt; Parser NodeSetup
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681057407"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057407"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-59"></span><span>                </span><span class="annot"><span class="annottext">Word64
+-&gt; Maybe NodeIPv4Address
+-&gt; Maybe NodeIPv6Address
+-&gt; [RootConfig]
+-&gt; UseLedgerPeers
+-&gt; NodeSetup
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#NodeSetup"><span class="hs-identifier hs-var">NodeSetup</span></a></span><span>
+</span><span id="line-60"></span><span>                  </span><span class="annot"><span class="annottext">(Word64
+ -&gt; Maybe NodeIPv4Address
+ -&gt; Maybe NodeIPv6Address
+ -&gt; [RootConfig]
+ -&gt; UseLedgerPeers
+ -&gt; NodeSetup)
+-&gt; Parser Word64
+-&gt; Parser
+     (Maybe NodeIPv4Address
+      -&gt; Maybe NodeIPv6Address
+      -&gt; [RootConfig]
+      -&gt; UseLedgerPeers
+      -&gt; NodeSetup)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057407"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Word64
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span>  </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeId&quot;</span></span><span>
+</span><span id="line-61"></span><span>                  </span><span class="annot"><span class="annottext">Parser
+  (Maybe NodeIPv4Address
+   -&gt; Maybe NodeIPv6Address
+   -&gt; [RootConfig]
+   -&gt; UseLedgerPeers
+   -&gt; NodeSetup)
+-&gt; Parser (Maybe NodeIPv4Address)
+-&gt; Parser
+     (Maybe NodeIPv6Address
+      -&gt; [RootConfig] -&gt; UseLedgerPeers -&gt; NodeSetup)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057407"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe NodeIPv4Address)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span>  </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeIPv4Address&quot;</span></span><span>
+</span><span id="line-62"></span><span>                  </span><span class="annot"><span class="annottext">Parser
+  (Maybe NodeIPv6Address
+   -&gt; [RootConfig] -&gt; UseLedgerPeers -&gt; NodeSetup)
+-&gt; Parser (Maybe NodeIPv6Address)
+-&gt; Parser ([RootConfig] -&gt; UseLedgerPeers -&gt; NodeSetup)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057407"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe NodeIPv6Address)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span>  </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeIPv6Address&quot;</span></span><span>
+</span><span id="line-63"></span><span>                  </span><span class="annot"><span class="annottext">Parser ([RootConfig] -&gt; UseLedgerPeers -&gt; NodeSetup)
+-&gt; Parser [RootConfig] -&gt; Parser (UseLedgerPeers -&gt; NodeSetup)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057407"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [RootConfig]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span>  </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;producers&quot;</span></span><span>
+</span><span id="line-64"></span><span>                  </span><span class="annot"><span class="annottext">Parser (UseLedgerPeers -&gt; NodeSetup)
+-&gt; Parser UseLedgerPeers -&gt; Parser NodeSetup
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057407"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe UseLedgerPeers)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;useLedgerAfterSlot&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe UseLedgerPeers)
+-&gt; UseLedgerPeers -&gt; Parser UseLedgerPeers
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">UseLedgerPeers
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.LedgerPeers.Type.html#DontUseLedgerPeers"><span class="hs-identifier hs-var">DontUseLedgerPeers</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057415"><span id="local-6989586621681057419"><span id="local-6989586621681057422"><span id="local-6989586621681057425"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NodeSetup"><span class="hs-identifier hs-type">NodeSetup</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621681057459"><span class="annot"><span class="annottext">toJSON :: NodeSetup -&gt; Value
+</span><a href="#local-6989586621681057459"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span id="local-6989586621681057461"><span class="annot"><span class="annottext">NodeSetup
+</span><a href="#local-6989586621681057461"><span class="hs-identifier hs-var">ns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeId&quot;</span></span><span>             </span><span class="annot"><span class="annottext">Key -&gt; Word64 -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">NodeSetup -&gt; Word64
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#nodeId"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">NodeSetup
+</span><a href="#local-6989586621681057461"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeIPv4Address&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Maybe NodeIPv4Address -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">NodeSetup -&gt; Maybe NodeIPv4Address
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#nodeIPv4Address"><span class="hs-identifier hs-var">nodeIPv4Address</span></a></span><span> </span><span class="annot"><span class="annottext">NodeSetup
+</span><a href="#local-6989586621681057461"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-71"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;nodeIPv6Address&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Maybe NodeIPv6Address -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">NodeSetup -&gt; Maybe NodeIPv6Address
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#nodeIPv6Address"><span class="hs-identifier hs-var">nodeIPv6Address</span></a></span><span> </span><span class="annot"><span class="annottext">NodeSetup
+</span><a href="#local-6989586621681057461"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;producers&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Key -&gt; [RootConfig] -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">NodeSetup -&gt; [RootConfig]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#producers"><span class="hs-identifier hs-var">producers</span></a></span><span> </span><span class="annot"><span class="annottext">NodeSetup
+</span><a href="#local-6989586621681057461"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;useLedgerAfterSlot&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; UseLedgerPeers -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">NodeSetup -&gt; UseLedgerPeers
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#useLedger"><span class="hs-identifier hs-var">useLedger</span></a></span><span> </span><span class="annot"><span class="annottext">NodeSetup
+</span><a href="#local-6989586621681057461"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Each root peer consists of a list of access points and a shared</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- 'PeerAdvertise' field.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-keyword">data</span><span> </span><span id="RootConfig"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-var">RootConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="RootConfig"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-var">RootConfig</span></a></span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="rootAccessPoints"><span class="annot"><span class="annottext">RootConfig -&gt; [RelayAccessPoint]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAccessPoints"><span class="hs-identifier hs-var hs-var">rootAccessPoints</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.RelayAccessPoint.html#RelayAccessPoint"><span class="hs-identifier hs-type">RelayAccessPoint</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- ^ a list of relay access points, each of which is either an ip address</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- or domain name and a port number.</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="rootAdvertise"><span class="annot"><span class="annottext">RootConfig -&gt; PeerAdvertise
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAdvertise"><span class="hs-identifier hs-var hs-var">rootAdvertise</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerAdvertise.html#PeerAdvertise"><span class="hs-identifier hs-type">PeerAdvertise</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">-- ^ 'advertise' configures whether the root should be advertised through</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">-- peer sharing.</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681057468"><span id="local-6989586621681057474"><span class="annot"><span class="annottext">RootConfig -&gt; RootConfig -&gt; Bool
+(RootConfig -&gt; RootConfig -&gt; Bool)
+-&gt; (RootConfig -&gt; RootConfig -&gt; Bool) -&gt; Eq RootConfig
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: RootConfig -&gt; RootConfig -&gt; Bool
+== :: RootConfig -&gt; RootConfig -&gt; Bool
+$c/= :: RootConfig -&gt; RootConfig -&gt; Bool
+/= :: RootConfig -&gt; RootConfig -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057478"><span id="local-6989586621681057485"><span id="local-6989586621681057488"><span class="annot"><span class="annottext">Int -&gt; RootConfig -&gt; ShowS
+[RootConfig] -&gt; ShowS
+RootConfig -&gt; [Char]
+(Int -&gt; RootConfig -&gt; ShowS)
+-&gt; (RootConfig -&gt; [Char])
+-&gt; ([RootConfig] -&gt; ShowS)
+-&gt; Show RootConfig
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RootConfig -&gt; ShowS
+showsPrec :: Int -&gt; RootConfig -&gt; ShowS
+$cshow :: RootConfig -&gt; [Char]
+show :: RootConfig -&gt; [Char]
+$cshowList :: [RootConfig] -&gt; ShowS
+showList :: [RootConfig] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057493"><span id="local-6989586621681057496"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-type">RootConfig</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621681057507"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser RootConfig
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+-&gt; (Object -&gt; Parser RootConfig) -&gt; Value -&gt; Parser RootConfig
+forall a. [Char] -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;RootConfig&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser RootConfig) -&gt; Value -&gt; Parser RootConfig)
+-&gt; (Object -&gt; Parser RootConfig) -&gt; Value -&gt; Parser RootConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681057508"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057508"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>                </span><span class="annot"><span class="annottext">[RelayAccessPoint] -&gt; PeerAdvertise -&gt; RootConfig
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-var">RootConfig</span></a></span><span>
+</span><span id="line-92"></span><span>                  </span><span class="annot"><span class="annottext">([RelayAccessPoint] -&gt; PeerAdvertise -&gt; RootConfig)
+-&gt; Parser [RelayAccessPoint]
+-&gt; Parser (PeerAdvertise -&gt; RootConfig)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057508"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [RelayAccessPoint]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span>  </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;accessPoints&quot;</span></span><span>
+</span><span id="line-93"></span><span>                  </span><span class="annot"><span class="annottext">Parser (PeerAdvertise -&gt; RootConfig)
+-&gt; Parser PeerAdvertise -&gt; Parser RootConfig
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057508"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe PeerAdvertise)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;advertise&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe PeerAdvertise)
+-&gt; PeerAdvertise -&gt; Parser PeerAdvertise
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">PeerAdvertise
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerAdvertise.html#DoNotAdvertisePeer"><span class="hs-identifier hs-var">DoNotAdvertisePeer</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057512"><span id="local-6989586621681057515"><span id="local-6989586621681057518"><span id="local-6989586621681057521"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-type">RootConfig</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621681057534"><span class="annot"><span class="annottext">toJSON :: RootConfig -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span id="local-6989586621681057535"><span class="annot"><span class="annottext">RootConfig
+</span><a href="#local-6989586621681057535"><span class="hs-identifier hs-var">ra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;accessPoints&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; [RelayAccessPoint] -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">RootConfig -&gt; [RelayAccessPoint]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAccessPoints"><span class="hs-identifier hs-var">rootAccessPoints</span></a></span><span> </span><span class="annot"><span class="annottext">RootConfig
+</span><a href="#local-6989586621681057535"><span class="hs-identifier hs-var">ra</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;advertise&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; PeerAdvertise -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">RootConfig -&gt; PeerAdvertise
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAdvertise"><span class="hs-identifier hs-var">rootAdvertise</span></a></span><span> </span><span class="annot"><span class="annottext">RootConfig
+</span><a href="#local-6989586621681057535"><span class="hs-identifier hs-var">ra</span></a></span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- | Transforms a 'RootConfig' into a pair of 'RelayAccessPoint' and its</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- corresponding 'PeerAdvertise' value.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#rootConfigToRelayAccessPoint"><span class="hs-identifier hs-type">rootConfigToRelayAccessPoint</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-type">RootConfig</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.RelayAccessPoint.html#RelayAccessPoint"><span class="hs-identifier hs-type">RelayAccessPoint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerAdvertise.html#PeerAdvertise"><span class="hs-identifier hs-type">PeerAdvertise</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-108"></span><span id="rootConfigToRelayAccessPoint"><span class="annot"><span class="annottext">rootConfigToRelayAccessPoint :: RootConfig -&gt; [(RelayAccessPoint, PeerAdvertise)]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootConfigToRelayAccessPoint"><span class="hs-identifier hs-var hs-var">rootConfigToRelayAccessPoint</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-type">RootConfig</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621681057536"><span class="annot"><span class="annottext">[RelayAccessPoint]
+rootAccessPoints :: RootConfig -&gt; [RelayAccessPoint]
+rootAccessPoints :: [RelayAccessPoint]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAccessPoints"><span class="hs-identifier hs-var hs-var">rootAccessPoints</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057537"><span class="annot"><span class="annottext">PeerAdvertise
+rootAdvertise :: RootConfig -&gt; PeerAdvertise
+rootAdvertise :: PeerAdvertise
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAdvertise"><span class="hs-identifier hs-var hs-var">rootAdvertise</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RelayAccessPoint
+</span><a href="#local-6989586621681057538"><span class="hs-identifier hs-var">ap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PeerAdvertise
+</span><a href="#local-6989586621681057537"><span class="hs-identifier hs-var">rootAdvertise</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621681057538"><span class="annot"><span class="annottext">RelayAccessPoint
+</span><a href="#local-6989586621681057538"><span class="hs-identifier hs-var">ap</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[RelayAccessPoint]
+</span><a href="#local-6989586621681057536"><span class="hs-identifier hs-var">rootAccessPoints</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | A local root peers group.  Local roots are treated by the outbound</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- governor in a special way.  The node will make sure that a node has the</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- requested number ('valency'/'hotValency') of connections to the local root peer group.</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- 'warmValency' value is the value of warm/established connections that the node</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- will attempt to maintain. By default this value will be equal to 'hotValency'.</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span class="hs-keyword">data</span><span> </span><span id="LocalRootPeersGroup"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier hs-var">LocalRootPeersGroup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LocalRootPeersGroup"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier hs-var">LocalRootPeersGroup</span></a></span></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="localRoots"><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; RootConfig
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#localRoots"><span class="hs-identifier hs-var hs-var">localRoots</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-type">RootConfig</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="hotValency"><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; HotValency
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#hotValency"><span class="hs-identifier hs-var hs-var">hotValency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.PeerSelection.State.LocalRootPeers.html#HotValency"><span class="hs-identifier hs-type">HotValency</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="warmValency"><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; WarmValency
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#warmValency"><span class="hs-identifier hs-var hs-var">warmValency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.PeerSelection.State.LocalRootPeers.html#WarmValency"><span class="hs-identifier hs-type">WarmValency</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="trustable"><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; PeerTrustable
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#trustable"><span class="hs-identifier hs-var hs-var">trustable</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerTrustable.html#PeerTrustable"><span class="hs-identifier hs-type">PeerTrustable</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-comment">-- ^ 'trustable' configures whether the root should be trusted in fallback</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">-- state.</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681057545"><span id="local-6989586621681057554"><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; LocalRootPeersGroup -&gt; Bool
+(LocalRootPeersGroup -&gt; LocalRootPeersGroup -&gt; Bool)
+-&gt; (LocalRootPeersGroup -&gt; LocalRootPeersGroup -&gt; Bool)
+-&gt; Eq LocalRootPeersGroup
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LocalRootPeersGroup -&gt; LocalRootPeersGroup -&gt; Bool
+== :: LocalRootPeersGroup -&gt; LocalRootPeersGroup -&gt; Bool
+$c/= :: LocalRootPeersGroup -&gt; LocalRootPeersGroup -&gt; Bool
+/= :: LocalRootPeersGroup -&gt; LocalRootPeersGroup -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057558"><span id="local-6989586621681057568"><span id="local-6989586621681057572"><span class="annot"><span class="annottext">Int -&gt; LocalRootPeersGroup -&gt; ShowS
+[LocalRootPeersGroup] -&gt; ShowS
+LocalRootPeersGroup -&gt; [Char]
+(Int -&gt; LocalRootPeersGroup -&gt; ShowS)
+-&gt; (LocalRootPeersGroup -&gt; [Char])
+-&gt; ([LocalRootPeersGroup] -&gt; ShowS)
+-&gt; Show LocalRootPeersGroup
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LocalRootPeersGroup -&gt; ShowS
+showsPrec :: Int -&gt; LocalRootPeersGroup -&gt; ShowS
+$cshow :: LocalRootPeersGroup -&gt; [Char]
+show :: LocalRootPeersGroup -&gt; [Char]
+$cshowList :: [LocalRootPeersGroup] -&gt; ShowS
+showList :: [LocalRootPeersGroup] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- | Does not use the 'FromJSON' instance of 'RootConfig', so that</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- 'accessPoints', 'advertise', 'valency' and 'warmValency' fields are attached to the</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- same object.</span><span>
+</span><span id="line-130"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057576"><span id="local-6989586621681057580"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier hs-type">LocalRootPeersGroup</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621681057603"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser LocalRootPeersGroup
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+-&gt; (Object -&gt; Parser LocalRootPeersGroup)
+-&gt; Value
+-&gt; Parser LocalRootPeersGroup
+forall a. [Char] -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;LocalRootPeersGroup&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser LocalRootPeersGroup)
+ -&gt; Value -&gt; Parser LocalRootPeersGroup)
+-&gt; (Object -&gt; Parser LocalRootPeersGroup)
+-&gt; Value
+-&gt; Parser LocalRootPeersGroup
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681057604"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057604"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-132"></span><span>                </span><span id="local-6989586621681057605"><span class="annot"><span class="annottext">hv :: HotValency
+</span><a href="#local-6989586621681057605"><span class="hs-identifier hs-var">hv</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.PeerSelection.State.LocalRootPeers.html#HotValency"><span class="hs-identifier hs-type">HotValency</span></a></span><span> </span><span id="local-6989586621681057607"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681057607"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057604"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser HotValency
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;valency&quot;</span></span><span>
+</span><span id="line-133"></span><span>                                 </span><span class="annot"><span class="annottext">Parser HotValency -&gt; Parser HotValency -&gt; Parser HotValency
+forall a. Parser a -&gt; Parser a -&gt; Parser a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057604"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser HotValency
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;hotValency&quot;</span></span><span>
+</span><span id="line-134"></span><span>                </span><span class="annot"><span class="annottext">RootConfig
+-&gt; HotValency
+-&gt; WarmValency
+-&gt; PeerTrustable
+-&gt; LocalRootPeersGroup
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier hs-var">LocalRootPeersGroup</span></a></span><span>
+</span><span id="line-135"></span><span>                  </span><span class="annot"><span class="annottext">(RootConfig
+ -&gt; HotValency
+ -&gt; WarmValency
+ -&gt; PeerTrustable
+ -&gt; LocalRootPeersGroup)
+-&gt; Parser RootConfig
+-&gt; Parser
+     (HotValency -&gt; WarmValency -&gt; PeerTrustable -&gt; LocalRootPeersGroup)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser RootConfig
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; Value
+</span><span class="hs-identifier hs-var">Object</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057604"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>                  </span><span class="annot"><span class="annottext">Parser
+  (HotValency -&gt; WarmValency -&gt; PeerTrustable -&gt; LocalRootPeersGroup)
+-&gt; Parser HotValency
+-&gt; Parser (WarmValency -&gt; PeerTrustable -&gt; LocalRootPeersGroup)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">HotValency -&gt; Parser HotValency
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">HotValency
+</span><a href="#local-6989586621681057605"><span class="hs-identifier hs-var">hv</span></a></span><span>
+</span><span id="line-137"></span><span>                  </span><span class="annot"><span class="annottext">Parser (WarmValency -&gt; PeerTrustable -&gt; LocalRootPeersGroup)
+-&gt; Parser WarmValency
+-&gt; Parser (PeerTrustable -&gt; LocalRootPeersGroup)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057604"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe WarmValency)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;warmValency&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe WarmValency) -&gt; WarmValency -&gt; Parser WarmValency
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; WarmValency
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-0.17.1.2-1e059113a7c1a47c41249467debfd7bca0516876a18cf7ad9d8d9882d9d95430/share/doc/html/src/Ouroboros.Network.PeerSelection.State.LocalRootPeers.html#WarmValency"><span class="hs-identifier hs-var">WarmValency</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681057607"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-138"></span><span>                  </span><span class="annot"><span class="annottext">Parser (PeerTrustable -&gt; LocalRootPeersGroup)
+-&gt; Parser PeerTrustable -&gt; Parser LocalRootPeersGroup
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057604"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe PeerTrustable)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;trustable&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe PeerTrustable)
+-&gt; PeerTrustable -&gt; Parser PeerTrustable
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">PeerTrustable
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerTrustable.html#IsNotTrustable"><span class="hs-identifier hs-var">IsNotTrustable</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057614"><span id="local-6989586621681057618"><span id="local-6989586621681057621"><span id="local-6989586621681057624"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier hs-type">LocalRootPeersGroup</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-141"></span><span>  </span><span id="local-6989586621681057647"><span class="annot"><span class="annottext">toJSON :: LocalRootPeersGroup -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span id="local-6989586621681057648"><span class="annot"><span class="annottext">LocalRootPeersGroup
+</span><a href="#local-6989586621681057648"><span class="hs-identifier hs-var">lrpg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-143"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;accessPoints&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; [RelayAccessPoint] -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">RootConfig -&gt; [RelayAccessPoint]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAccessPoints"><span class="hs-identifier hs-var">rootAccessPoints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; RootConfig
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#localRoots"><span class="hs-identifier hs-var">localRoots</span></a></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup
+</span><a href="#local-6989586621681057648"><span class="hs-identifier hs-var">lrpg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;advertise&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; PeerAdvertise -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">RootConfig -&gt; PeerAdvertise
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAdvertise"><span class="hs-identifier hs-var">rootAdvertise</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; RootConfig
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#localRoots"><span class="hs-identifier hs-var">localRoots</span></a></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup
+</span><a href="#local-6989586621681057648"><span class="hs-identifier hs-var">lrpg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;hotValency&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; HotValency -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; HotValency
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#hotValency"><span class="hs-identifier hs-var">hotValency</span></a></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup
+</span><a href="#local-6989586621681057648"><span class="hs-identifier hs-var">lrpg</span></a></span><span>
+</span><span id="line-146"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;warmValency&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; WarmValency -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; WarmValency
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#warmValency"><span class="hs-identifier hs-var">warmValency</span></a></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup
+</span><a href="#local-6989586621681057648"><span class="hs-identifier hs-var">lrpg</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;trustable&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; PeerTrustable -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup -&gt; PeerTrustable
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#trustable"><span class="hs-identifier hs-var">trustable</span></a></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroup
+</span><a href="#local-6989586621681057648"><span class="hs-identifier hs-var">lrpg</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-keyword">newtype</span><span> </span><span id="LocalRootPeersGroups"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier hs-var">LocalRootPeersGroups</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LocalRootPeersGroups"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier hs-var">LocalRootPeersGroups</span></a></span></span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="groups"><span class="annot"><span class="annottext">LocalRootPeersGroups -&gt; [LocalRootPeersGroup]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#groups"><span class="hs-identifier hs-var hs-var">groups</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier hs-type">LocalRootPeersGroup</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681057652"><span id="local-6989586621681057657"><span class="annot"><span class="annottext">LocalRootPeersGroups -&gt; LocalRootPeersGroups -&gt; Bool
+(LocalRootPeersGroups -&gt; LocalRootPeersGroups -&gt; Bool)
+-&gt; (LocalRootPeersGroups -&gt; LocalRootPeersGroups -&gt; Bool)
+-&gt; Eq LocalRootPeersGroups
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LocalRootPeersGroups -&gt; LocalRootPeersGroups -&gt; Bool
+== :: LocalRootPeersGroups -&gt; LocalRootPeersGroups -&gt; Bool
+$c/= :: LocalRootPeersGroups -&gt; LocalRootPeersGroups -&gt; Bool
+/= :: LocalRootPeersGroups -&gt; LocalRootPeersGroups -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057663"><span id="local-6989586621681057668"><span id="local-6989586621681057672"><span class="annot"><span class="annottext">Int -&gt; LocalRootPeersGroups -&gt; ShowS
+[LocalRootPeersGroups] -&gt; ShowS
+LocalRootPeersGroups -&gt; [Char]
+(Int -&gt; LocalRootPeersGroups -&gt; ShowS)
+-&gt; (LocalRootPeersGroups -&gt; [Char])
+-&gt; ([LocalRootPeersGroups] -&gt; ShowS)
+-&gt; Show LocalRootPeersGroups
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LocalRootPeersGroups -&gt; ShowS
+showsPrec :: Int -&gt; LocalRootPeersGroups -&gt; ShowS
+$cshow :: LocalRootPeersGroups -&gt; [Char]
+show :: LocalRootPeersGroups -&gt; [Char]
+$cshowList :: [LocalRootPeersGroups] -&gt; ShowS
+showList :: [LocalRootPeersGroups] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057676"><span id="local-6989586621681057680"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier hs-type">LocalRootPeersGroups</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621681057684"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser LocalRootPeersGroups
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([LocalRootPeersGroup] -&gt; LocalRootPeersGroups)
+-&gt; Parser [LocalRootPeersGroup] -&gt; Parser LocalRootPeersGroups
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[LocalRootPeersGroup] -&gt; LocalRootPeersGroups
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier hs-var">LocalRootPeersGroups</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser [LocalRootPeersGroup] -&gt; Parser LocalRootPeersGroups)
+-&gt; (Value -&gt; Parser [LocalRootPeersGroup])
+-&gt; Value
+-&gt; Parser LocalRootPeersGroups
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser [LocalRootPeersGroup]
+forall a. FromJSON a =&gt; Value -&gt; Parser [a]
+</span><span class="hs-identifier hs-var">parseJSONList</span></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057689"><span id="local-6989586621681057693"><span id="local-6989586621681057696"><span id="local-6989586621681057699"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier hs-type">LocalRootPeersGroups</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-158"></span><span>  </span><span id="local-6989586621681057702"><span class="annot"><span class="annottext">toJSON :: LocalRootPeersGroups -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[LocalRootPeersGroup] -&gt; Value
+forall a. ToJSON a =&gt; [a] -&gt; Value
+</span><span class="hs-identifier hs-var">toJSONList</span></span><span> </span><span class="annot"><span class="annottext">([LocalRootPeersGroup] -&gt; Value)
+-&gt; (LocalRootPeersGroups -&gt; [LocalRootPeersGroup])
+-&gt; LocalRootPeersGroups
+-&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroups -&gt; [LocalRootPeersGroup]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#groups"><span class="hs-identifier hs-var">groups</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-keyword">newtype</span><span> </span><span id="PublicRootPeers"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#PublicRootPeers"><span class="hs-identifier hs-var">PublicRootPeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PublicRootPeers"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#PublicRootPeers"><span class="hs-identifier hs-var">PublicRootPeers</span></a></span></span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="publicRoots"><span class="annot"><span class="annottext">PublicRootPeers -&gt; RootConfig
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#publicRoots"><span class="hs-identifier hs-var hs-var">publicRoots</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RootConfig"><span class="hs-identifier hs-type">RootConfig</span></a></span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681057707"><span id="local-6989586621681057711"><span class="annot"><span class="annottext">PublicRootPeers -&gt; PublicRootPeers -&gt; Bool
+(PublicRootPeers -&gt; PublicRootPeers -&gt; Bool)
+-&gt; (PublicRootPeers -&gt; PublicRootPeers -&gt; Bool)
+-&gt; Eq PublicRootPeers
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PublicRootPeers -&gt; PublicRootPeers -&gt; Bool
+== :: PublicRootPeers -&gt; PublicRootPeers -&gt; Bool
+$c/= :: PublicRootPeers -&gt; PublicRootPeers -&gt; Bool
+/= :: PublicRootPeers -&gt; PublicRootPeers -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057716"><span id="local-6989586621681057720"><span id="local-6989586621681057724"><span class="annot"><span class="annottext">Int -&gt; PublicRootPeers -&gt; ShowS
+[PublicRootPeers] -&gt; ShowS
+PublicRootPeers -&gt; [Char]
+(Int -&gt; PublicRootPeers -&gt; ShowS)
+-&gt; (PublicRootPeers -&gt; [Char])
+-&gt; ([PublicRootPeers] -&gt; ShowS)
+-&gt; Show PublicRootPeers
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PublicRootPeers -&gt; ShowS
+showsPrec :: Int -&gt; PublicRootPeers -&gt; ShowS
+$cshow :: PublicRootPeers -&gt; [Char]
+show :: PublicRootPeers -&gt; [Char]
+$cshowList :: [PublicRootPeers] -&gt; ShowS
+showList :: [PublicRootPeers] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057728"><span id="local-6989586621681057732"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#PublicRootPeers"><span class="hs-identifier hs-type">PublicRootPeers</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621681057736"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser PublicRootPeers
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(RootConfig -&gt; PublicRootPeers)
+-&gt; Parser RootConfig -&gt; Parser PublicRootPeers
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">RootConfig -&gt; PublicRootPeers
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#PublicRootPeers"><span class="hs-identifier hs-var">PublicRootPeers</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser RootConfig -&gt; Parser PublicRootPeers)
+-&gt; (Value -&gt; Parser RootConfig) -&gt; Value -&gt; Parser PublicRootPeers
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser RootConfig
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">parseJSON</span></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057739"><span id="local-6989586621681057743"><span id="local-6989586621681057746"><span id="local-6989586621681057749"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#PublicRootPeers"><span class="hs-identifier hs-type">PublicRootPeers</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-168"></span><span>  </span><span id="local-6989586621681057752"><span class="annot"><span class="annottext">toJSON :: PublicRootPeers -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RootConfig -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">(RootConfig -&gt; Value)
+-&gt; (PublicRootPeers -&gt; RootConfig) -&gt; PublicRootPeers -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PublicRootPeers -&gt; RootConfig
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#publicRoots"><span class="hs-identifier hs-var">publicRoots</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-keyword">data</span><span> </span><span id="NetworkTopology"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NetworkTopology"><span class="hs-identifier hs-var">NetworkTopology</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="RealNodeTopology"><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RealNodeTopology"><span class="hs-identifier hs-var">RealNodeTopology</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="ntLocalRootPeersGroups"><span class="annot"><span class="annottext">NetworkTopology -&gt; LocalRootPeersGroups
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntLocalRootPeersGroups"><span class="hs-identifier hs-var hs-var">ntLocalRootPeersGroups</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier hs-type">LocalRootPeersGroups</span></a></span><span>
+</span><span id="line-171"></span><span>                                        </span><span class="hs-special">,</span><span> </span><span id="ntPublicRootPeers"><span class="annot"><span class="annottext">NetworkTopology -&gt; [PublicRootPeers]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntPublicRootPeers"><span class="hs-identifier hs-var hs-var">ntPublicRootPeers</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#PublicRootPeers"><span class="hs-identifier hs-type">PublicRootPeers</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-172"></span><span>                                        </span><span class="hs-special">,</span><span> </span><span id="ntUseLedgerPeers"><span class="annot"><span class="annottext">NetworkTopology -&gt; UseLedgerPeers
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntUseLedgerPeers"><span class="hs-identifier hs-var hs-var">ntUseLedgerPeers</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.LedgerPeers.Type.html#UseLedgerPeers"><span class="hs-identifier hs-type">UseLedgerPeers</span></a></span><span>
+</span><span id="line-173"></span><span>                                        </span><span class="hs-special">,</span><span> </span><span id="ntUseBootstrapPeers"><span class="annot"><span class="annottext">NetworkTopology -&gt; UseBootstrapPeers
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntUseBootstrapPeers"><span class="hs-identifier hs-var hs-var">ntUseBootstrapPeers</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.Bootstrap.html#UseBootstrapPeers"><span class="hs-identifier hs-type">UseBootstrapPeers</span></a></span><span>
+</span><span id="line-174"></span><span>                                        </span><span class="hs-special">}</span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681057759"><span id="local-6989586621681057767"><span class="annot"><span class="annottext">NetworkTopology -&gt; NetworkTopology -&gt; Bool
+(NetworkTopology -&gt; NetworkTopology -&gt; Bool)
+-&gt; (NetworkTopology -&gt; NetworkTopology -&gt; Bool)
+-&gt; Eq NetworkTopology
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NetworkTopology -&gt; NetworkTopology -&gt; Bool
+== :: NetworkTopology -&gt; NetworkTopology -&gt; Bool
+$c/= :: NetworkTopology -&gt; NetworkTopology -&gt; Bool
+/= :: NetworkTopology -&gt; NetworkTopology -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057771"><span id="local-6989586621681057780"><span id="local-6989586621681057784"><span class="annot"><span class="annottext">Int -&gt; NetworkTopology -&gt; ShowS
+[NetworkTopology] -&gt; ShowS
+NetworkTopology -&gt; [Char]
+(Int -&gt; NetworkTopology -&gt; ShowS)
+-&gt; (NetworkTopology -&gt; [Char])
+-&gt; ([NetworkTopology] -&gt; ShowS)
+-&gt; Show NetworkTopology
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NetworkTopology -&gt; ShowS
+showsPrec :: Int -&gt; NetworkTopology -&gt; ShowS
+$cshow :: NetworkTopology -&gt; [Char]
+show :: NetworkTopology -&gt; [Char]
+$cshowList :: [NetworkTopology] -&gt; ShowS
+showList :: [NetworkTopology] -&gt; ShowS
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057788"><span id="local-6989586621681057791"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NetworkTopology"><span class="hs-identifier hs-type">NetworkTopology</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-178"></span><span>  </span><span id="local-6989586621681057807"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser NetworkTopology
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+-&gt; (Object -&gt; Parser NetworkTopology)
+-&gt; Value
+-&gt; Parser NetworkTopology
+forall a. [Char] -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;NetworkTopology&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser NetworkTopology)
+ -&gt; Value -&gt; Parser NetworkTopology)
+-&gt; (Object -&gt; Parser NetworkTopology)
+-&gt; Value
+-&gt; Parser NetworkTopology
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681057808"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057808"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-179"></span><span>                </span><span class="annot"><span class="annottext">LocalRootPeersGroups
+-&gt; [PublicRootPeers]
+-&gt; UseLedgerPeers
+-&gt; UseBootstrapPeers
+-&gt; NetworkTopology
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#RealNodeTopology"><span class="hs-identifier hs-var">RealNodeTopology</span></a></span><span> </span><span class="annot"><span class="annottext">(LocalRootPeersGroups
+ -&gt; [PublicRootPeers]
+ -&gt; UseLedgerPeers
+ -&gt; UseBootstrapPeers
+ -&gt; NetworkTopology)
+-&gt; Parser LocalRootPeersGroups
+-&gt; Parser
+     ([PublicRootPeers]
+      -&gt; UseLedgerPeers -&gt; UseBootstrapPeers -&gt; NetworkTopology)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057808"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser LocalRootPeersGroups
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;localRoots&quot;</span></span><span>                                  </span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>                                 </span><span class="annot"><span class="annottext">Parser
+  ([PublicRootPeers]
+   -&gt; UseLedgerPeers -&gt; UseBootstrapPeers -&gt; NetworkTopology)
+-&gt; Parser [PublicRootPeers]
+-&gt; Parser (UseLedgerPeers -&gt; UseBootstrapPeers -&gt; NetworkTopology)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057808"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [PublicRootPeers]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;publicRoots&quot;</span></span><span>                                 </span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>                                 </span><span class="annot"><span class="annottext">Parser (UseLedgerPeers -&gt; UseBootstrapPeers -&gt; NetworkTopology)
+-&gt; Parser UseLedgerPeers
+-&gt; Parser (UseBootstrapPeers -&gt; NetworkTopology)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057808"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe UseLedgerPeers)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;useLedgerAfterSlot&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe UseLedgerPeers)
+-&gt; UseLedgerPeers -&gt; Parser UseLedgerPeers
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">UseLedgerPeers
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.LedgerPeers.Type.html#DontUseLedgerPeers"><span class="hs-identifier hs-var">DontUseLedgerPeers</span></a></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>                                 </span><span class="annot"><span class="annottext">Parser (UseBootstrapPeers -&gt; NetworkTopology)
+-&gt; Parser UseBootstrapPeers -&gt; Parser NetworkTopology
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681057808"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe UseBootstrapPeers)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;bootstrapPeers&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe UseBootstrapPeers)
+-&gt; UseBootstrapPeers -&gt; Parser UseBootstrapPeers
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">UseBootstrapPeers
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.Bootstrap.html#DontUseBootstrapPeers"><span class="hs-identifier hs-var">DontUseBootstrapPeers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681057812"><span id="local-6989586621681057816"><span id="local-6989586621681057819"><span id="local-6989586621681057822"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NetworkTopology"><span class="hs-identifier hs-type">NetworkTopology</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-185"></span><span>  </span><span id="local-6989586621681057840"><span class="annot"><span class="annottext">toJSON :: NetworkTopology -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span id="local-6989586621681057841"><span class="annot"><span class="annottext">NetworkTopology
+</span><a href="#local-6989586621681057841"><span class="hs-identifier hs-var">top</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">NetworkTopology
+</span><a href="#local-6989586621681057841"><span class="hs-identifier hs-var">top</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-187"></span><span>      </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RealNodeTopology"><span class="hs-identifier hs-type">RealNodeTopology</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621681057842"><span class="annot"><span class="annottext">LocalRootPeersGroups
+ntLocalRootPeersGroups :: NetworkTopology -&gt; LocalRootPeersGroups
+ntLocalRootPeersGroups :: LocalRootPeersGroups
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntLocalRootPeersGroups"><span class="hs-identifier hs-var hs-var">ntLocalRootPeersGroups</span></a></span></span><span>
+</span><span id="line-188"></span><span>                       </span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057843"><span class="annot"><span class="annottext">[PublicRootPeers]
+ntPublicRootPeers :: NetworkTopology -&gt; [PublicRootPeers]
+ntPublicRootPeers :: [PublicRootPeers]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntPublicRootPeers"><span class="hs-identifier hs-var hs-var">ntPublicRootPeers</span></a></span></span><span>
+</span><span id="line-189"></span><span>                       </span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057844"><span class="annot"><span class="annottext">UseLedgerPeers
+ntUseLedgerPeers :: NetworkTopology -&gt; UseLedgerPeers
+ntUseLedgerPeers :: UseLedgerPeers
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntUseLedgerPeers"><span class="hs-identifier hs-var hs-var">ntUseLedgerPeers</span></a></span></span><span>
+</span><span id="line-190"></span><span>                       </span><span class="hs-special">,</span><span> </span><span id="local-6989586621681057845"><span class="annot"><span class="annottext">UseBootstrapPeers
+ntUseBootstrapPeers :: NetworkTopology -&gt; UseBootstrapPeers
+ntUseBootstrapPeers :: UseBootstrapPeers
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#ntUseBootstrapPeers"><span class="hs-identifier hs-var hs-var">ntUseBootstrapPeers</span></a></span></span><span>
+</span><span id="line-191"></span><span>                       </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;localRoots&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Key -&gt; LocalRootPeersGroups -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">LocalRootPeersGroups
+</span><a href="#local-6989586621681057842"><span class="hs-identifier hs-var">ntLocalRootPeersGroups</span></a></span><span>
+</span><span id="line-192"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;publicRoots&quot;</span></span><span>        </span><span class="annot"><span class="annottext">Key -&gt; [PublicRootPeers] -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">[PublicRootPeers]
+</span><a href="#local-6989586621681057843"><span class="hs-identifier hs-var">ntPublicRootPeers</span></a></span><span>
+</span><span id="line-193"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;useLedgerAfterSlot&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; UseLedgerPeers -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">UseLedgerPeers
+</span><a href="#local-6989586621681057844"><span class="hs-identifier hs-var">ntUseLedgerPeers</span></a></span><span>
+</span><span id="line-194"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;bootstrapPeers&quot;</span></span><span>     </span><span class="annot"><span class="annottext">Key -&gt; UseBootstrapPeers -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">UseBootstrapPeers
+</span><a href="#local-6989586621681057845"><span class="hs-identifier hs-var">ntUseBootstrapPeers</span></a></span><span>
+</span><span id="line-195"></span><span>                                   </span><span class="hs-special">]</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- | Read the `NetworkTopology` configuration from the specified file.</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--</span><span>
+</span><span id="line-199"></span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#readTopologyFile"><span class="hs-identifier hs-type">readTopologyFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#NodeConfiguration"><span class="hs-identifier hs-type">NodeConfiguration</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NetworkTopology"><span class="hs-identifier hs-type">NetworkTopology</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span id="readTopologyFile"><span class="annot"><span class="annottext">readTopologyFile :: NodeConfiguration -&gt; IO (Either Text NetworkTopology)
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#readTopologyFile"><span class="hs-identifier hs-var hs-var">readTopologyFile</span></a></span></span><span> </span><span id="local-6989586621681057846"><span class="annot"><span class="annottext">NodeConfiguration
+</span><a href="#local-6989586621681057846"><span class="hs-identifier hs-var">nc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-201"></span><span>  </span><span id="local-6989586621681057847"><span class="annot"><span class="annottext">Either IOException ByteString
+</span><a href="#local-6989586621681057847"><span class="hs-identifier hs-var">eBs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; IO (Either IOException ByteString)
+forall e a. Exception e =&gt; IO a -&gt; IO (Either e a)
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Control.Exception.Base.html#try"><span class="hs-identifier hs-var">Exception.try</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ByteString -&gt; IO (Either IOException ByteString))
+-&gt; IO ByteString -&gt; IO (Either IOException ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ByteString
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">BS.readFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TopologyFile -&gt; [Char]
+</span><a href="Cardano.Node.Types.html#unTopology"><span class="hs-identifier hs-var">unTopology</span></a></span><span> </span><span class="annot"><span class="annottext">(TopologyFile -&gt; [Char]) -&gt; TopologyFile -&gt; [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfiguration -&gt; TopologyFile
+</span><a href="Cardano.Node.Configuration.POM.html#ncTopologyFile"><span class="hs-identifier hs-var">ncTopologyFile</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfiguration
+</span><a href="#local-6989586621681057846"><span class="hs-identifier hs-var">nc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either IOException ByteString
+</span><a href="#local-6989586621681057847"><span class="hs-identifier hs-var">eBs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681057852"><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621681057852"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either Text NetworkTopology -&gt; IO (Either Text NetworkTopology)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either Text NetworkTopology -&gt; IO (Either Text NetworkTopology))
+-&gt; (Text -&gt; Either Text NetworkTopology)
+-&gt; Text
+-&gt; IO (Either Text NetworkTopology)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text NetworkTopology
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; IO (Either Text NetworkTopology))
+-&gt; Text -&gt; IO (Either Text NetworkTopology)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IOException -&gt; Text
+</span><a href="#local-6989586621681057853"><span class="hs-identifier hs-var">handler</span></a></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621681057852"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681057854"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681057854"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-206"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681057855"><span class="annot"><span class="annottext">bs' :: ByteString
+</span><a href="#local-6989586621681057855"><span class="hs-identifier hs-var hs-var">bs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#fromStrict"><span class="hs-identifier hs-var">LBS.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681057854"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-207"></span><span>        </span><span class="annot"><span class="annottext">Either Text NetworkTopology -&gt; IO (Either Text NetworkTopology)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either Text NetworkTopology -&gt; IO (Either Text NetworkTopology))
+-&gt; Either Text NetworkTopology -&gt; IO (Either Text NetworkTopology)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either [Char] NetworkTopology
+forall a. FromJSON a =&gt; ByteString -&gt; Either [Char] a
+</span><span class="hs-identifier hs-var">eitherDecode</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681057855"><span class="hs-identifier hs-var">bs'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-208"></span><span>          </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681057858"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681057858"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text NetworkTopology
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; Text
+</span><a href="#local-6989586621681057859"><span class="hs-identifier hs-var">handlerJSON</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681057858"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>          </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681057860"><span class="annot"><span class="annottext">NetworkTopology
+</span><a href="#local-6989586621681057860"><span class="hs-identifier hs-var">t</span></a></span></span><span>
+</span><span id="line-210"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">NetworkTopology -&gt; Bool
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#isValidTrustedPeerConfiguration"><span class="hs-identifier hs-var">isValidTrustedPeerConfiguration</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkTopology
+</span><a href="#local-6989586621681057860"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NetworkTopology -&gt; Either Text NetworkTopology
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkTopology
+</span><a href="#local-6989586621681057860"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-211"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text NetworkTopology
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681057862"><span class="hs-identifier hs-var">handlerBootstrap</span></a></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><a href="#local-6989586621681057853"><span class="hs-identifier hs-type">handler</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.IO.Exception.html#IOException"><span class="hs-identifier hs-type">IOException</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-214"></span><span>    </span><span id="local-6989586621681057853"><span class="annot"><span class="annottext">handler :: IOException -&gt; Text
+</span><a href="#local-6989586621681057853"><span class="hs-identifier hs-var hs-var">handler</span></a></span></span><span> </span><span id="local-6989586621681057863"><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621681057863"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Text
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Text) -&gt; [Char] -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Cardano.Node.Configuration.Topology.readTopologyFile: &quot;</span></span><span>
+</span><span id="line-215"></span><span>                          </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">IOException -&gt; [Char]
+forall e. Exception e =&gt; e -&gt; [Char]
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Exception.Type.html#displayException"><span class="hs-identifier hs-var">displayException</span></a></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621681057863"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><a href="#local-6989586621681057859"><span class="hs-identifier hs-type">handlerJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span id="local-6989586621681057859"><span class="annot"><span class="annottext">handlerJSON :: [Char] -&gt; Text
+</span><a href="#local-6989586621681057859"><span class="hs-identifier hs-var hs-var">handlerJSON</span></a></span></span><span> </span><span id="local-6989586621681057866"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681057866"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-218"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Is your topology file formatted correctly? &quot;</span></span><span>
+</span><span id="line-219"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Expecting P2P Topology file format. &quot;</span></span><span>
+</span><span id="line-220"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The port and valency fields should be numerical. &quot;</span></span><span>
+</span><span id="line-221"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;If you specified the correct topology file &quot;</span></span><span>
+</span><span id="line-222"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;make sure that you correctly setup EnableP2P &quot;</span></span><span>
+</span><span id="line-223"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;configuration flag. &quot;</span></span><span>
+</span><span id="line-224"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Text
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681057866"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-225"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-226"></span><span>    </span><span class="annot"><a href="#local-6989586621681057862"><span class="hs-identifier hs-type">handlerBootstrap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-227"></span><span>    </span><span id="local-6989586621681057862"><span class="annot"><span class="annottext">handlerBootstrap :: Text
+</span><a href="#local-6989586621681057862"><span class="hs-identifier hs-var hs-var">handlerBootstrap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-228"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;You seem to have not configured any trustable peers. &quot;</span></span><span>
+</span><span id="line-229"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;This is important in order for the node to make progress &quot;</span></span><span>
+</span><span id="line-230"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;in bootstrap mode. Make sure you provide at least one bootstrap peer &quot;</span></span><span>
+</span><span id="line-231"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;source. &quot;</span></span><span>
+</span><span id="line-232"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-233"></span><span>
+</span><span id="line-234"></span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#readTopologyFileOrError"><span class="hs-identifier hs-type">readTopologyFileOrError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#NodeConfiguration"><span class="hs-identifier hs-type">NodeConfiguration</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NetworkTopology"><span class="hs-identifier hs-type">NetworkTopology</span></a></span><span>
+</span><span id="line-235"></span><span id="readTopologyFileOrError"><span class="annot"><span class="annottext">readTopologyFileOrError :: NodeConfiguration -&gt; IO NetworkTopology
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#readTopologyFileOrError"><span class="hs-identifier hs-var hs-var">readTopologyFileOrError</span></a></span></span><span> </span><span id="local-6989586621681057867"><span class="annot"><span class="annottext">NodeConfiguration
+</span><a href="#local-6989586621681057867"><span class="hs-identifier hs-var">nc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-236"></span><span>      </span><span class="annot"><span class="annottext">NodeConfiguration -&gt; IO (Either Text NetworkTopology)
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#readTopologyFile"><span class="hs-identifier hs-var">readTopologyFile</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfiguration
+</span><a href="#local-6989586621681057867"><span class="hs-identifier hs-var">nc</span></a></span><span>
+</span><span id="line-237"></span><span>  </span><span class="annot"><span class="annottext">IO (Either Text NetworkTopology)
+-&gt; (Either Text NetworkTopology -&gt; IO NetworkTopology)
+-&gt; IO NetworkTopology
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; IO NetworkTopology)
+-&gt; (NetworkTopology -&gt; IO NetworkTopology)
+-&gt; Either Text NetworkTopology
+-&gt; IO NetworkTopology
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681057869"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681057869"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO NetworkTopology
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO NetworkTopology) -&gt; [Char] -&gt; IO NetworkTopology
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Cardano.Node.Configuration.TopologyP2P.readTopologyFile: &quot;</span></span><span>
+</span><span id="line-238"></span><span>                           </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Char]
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681057869"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>             </span><span class="annot"><span class="annottext">NetworkTopology -&gt; IO NetworkTopology
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-comment">--</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- Checking for chance of progress in bootstrap phase</span><span>
+</span><span id="line-243"></span><span class="hs-comment">--</span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- | This function returns false if non-trustable peers are configured</span><span>
+</span><span id="line-246"></span><span class="hs-comment">--</span><span>
+</span><span id="line-247"></span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#isValidTrustedPeerConfiguration"><span class="hs-identifier hs-type">isValidTrustedPeerConfiguration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#NetworkTopology"><span class="hs-identifier hs-type">NetworkTopology</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-248"></span><span id="isValidTrustedPeerConfiguration"><span class="annot"><span class="annottext">isValidTrustedPeerConfiguration :: NetworkTopology -&gt; Bool
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#isValidTrustedPeerConfiguration"><span class="hs-identifier hs-var hs-var">isValidTrustedPeerConfiguration</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#RealNodeTopology"><span class="hs-identifier hs-type">RealNodeTopology</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroups"><span class="hs-identifier hs-type">LocalRootPeersGroups</span></a></span><span> </span><span id="local-6989586621681057872"><span class="annot"><span class="annottext">[LocalRootPeersGroup]
+</span><a href="#local-6989586621681057872"><span class="hs-identifier hs-var">lprgs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[PublicRootPeers]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">UseLedgerPeers
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681057873"><span class="annot"><span class="annottext">UseBootstrapPeers
+</span><a href="#local-6989586621681057873"><span class="hs-identifier hs-var">ubp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-249"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">UseBootstrapPeers
+</span><a href="#local-6989586621681057873"><span class="hs-identifier hs-var">ubp</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-250"></span><span>      </span><span class="annot"><span class="annottext">UseBootstrapPeers
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.Bootstrap.html#DontUseBootstrapPeers"><span class="hs-identifier hs-var">DontUseBootstrapPeers</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-251"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.Bootstrap.html#UseBootstrapPeers"><span class="hs-identifier hs-type">UseBootstrapPeers</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621681057875"><span class="hs-identifier hs-var">anyTrustable</span></a></span><span>
+</span><span id="line-252"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.Bootstrap.html#UseBootstrapPeers"><span class="hs-identifier hs-type">UseBootstrapPeers</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RelayAccessPoint
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[RelayAccessPoint]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-254"></span><span>    </span><span id="local-6989586621681057875"><span class="annot"><span class="annottext">anyTrustable :: Bool
+</span><a href="#local-6989586621681057875"><span class="hs-identifier hs-var hs-var">anyTrustable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-255"></span><span>      </span><span class="annot"><span class="annottext">(LocalRootPeersGroup -&gt; Bool) -&gt; [LocalRootPeersGroup] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.TopologyP2P.html#LocalRootPeersGroup"><span class="hs-identifier hs-type">LocalRootPeersGroup</span></a></span><span> </span><span id="local-6989586621681057880"><span class="annot"><span class="annottext">RootConfig
+</span><a href="#local-6989586621681057880"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span class="annot"><span class="annottext">HotValency
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">WarmValency
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681057881"><span class="annot"><span class="annottext">PeerTrustable
+</span><a href="#local-6989586621681057881"><span class="hs-identifier hs-var">pt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PeerTrustable
+</span><a href="#local-6989586621681057881"><span class="hs-identifier hs-var">pt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-256"></span><span>              </span><span class="annot"><span class="annottext">PeerTrustable
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerTrustable.html#IsNotTrustable"><span class="hs-identifier hs-var">IsNotTrustable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-257"></span><span>              </span><span class="annot"><span class="annottext">PeerTrustable
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.10.0.0-e01c94e240e8b0c40b2a3d407da8c8f200a16b6bd69a6af4e725ed0757de93e8/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerTrustable.html#IsTrustable"><span class="hs-identifier hs-var">IsTrustable</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span>
+</span><span id="line-258"></span><span>                              </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (RootConfig -&gt; Bool) -&gt; RootConfig -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[RelayAccessPoint] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span>
+</span><span id="line-259"></span><span>                              </span><span class="annot"><span class="annottext">([RelayAccessPoint] -&gt; Bool)
+-&gt; (RootConfig -&gt; [RelayAccessPoint]) -&gt; RootConfig -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">RootConfig -&gt; [RelayAccessPoint]
+</span><a href="Cardano.Node.Configuration.TopologyP2P.html#rootAccessPoints"><span class="hs-identifier hs-var">rootAccessPoints</span></a></span><span>
+</span><span id="line-260"></span><span>                              </span><span class="annot"><span class="annottext">(RootConfig -&gt; Bool) -&gt; RootConfig -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RootConfig
+</span><a href="#local-6989586621681057880"><span class="hs-identifier hs-var">lr</span></a></span><span>
+</span><span id="line-261"></span><span>          </span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[LocalRootPeersGroup]
+</span><a href="#local-6989586621681057872"><span class="hs-identifier hs-var">lprgs</span></a></span><span>
+</span><span id="line-262"></span></pre></body></html>

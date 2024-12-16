@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Parsers.Run</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Parsers.Run.html#commands"><span class="hs-identifier">commands</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Parsers.Run.html#runTestnetCmd"><span class="hs-identifier">runTestnetCmd</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Parsers.Run.html#pref"><span class="hs-identifier">pref</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Parsers.Run.html#opts"><span class="hs-identifier">opts</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/cardano-cli-10.1.1.0-8a30f53f50ed80513ff67c8a783564e51988bb3c598bdf07177f831a11e8c5e2/share/doc/html/src/Cardano.CLI.Environment.html"><span class="hs-identifier">Cardano.CLI.Environment</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Opt</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Property.Run.html"><span class="hs-identifier">Testnet.Property.Run</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Cardano.html"><span class="hs-identifier">Testnet.Start.Cardano</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Parsers.Cardano.html"><span class="hs-identifier">Parsers.Cardano</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Parsers.Help.html"><span class="hs-identifier">Parsers.Help</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Parsers.Version.html"><span class="hs-identifier">Parsers.Version</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Parsers.Run.html#pref"><span class="hs-identifier hs-type">pref</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#ParserPrefs"><span class="hs-identifier hs-type">ParserPrefs</span></a></span><span>
+</span><span id="line-25"></span><span id="pref"><span class="annot"><span class="annottext">pref :: ParserPrefs
+</span><a href="Parsers.Run.html#pref"><span class="hs-identifier hs-var hs-var">pref</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PrefsMod -&gt; ParserPrefs
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#prefs"><span class="hs-identifier hs-var">Opt.prefs</span></a></span><span> </span><span class="annot"><span class="annottext">(PrefsMod -&gt; ParserPrefs) -&gt; PrefsMod -&gt; ParserPrefs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PrefsMod
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showHelpOnEmpty"><span class="hs-identifier hs-var">showHelpOnEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">PrefsMod -&gt; PrefsMod -&gt; PrefsMod
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PrefsMod
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showHelpOnError"><span class="hs-identifier hs-var">showHelpOnError</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Parsers.Run.html#opts"><span class="hs-identifier hs-type">opts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/cardano-cli-10.1.1.0-8a30f53f50ed80513ff67c8a783564e51988bb3c598bdf07177f831a11e8c5e2/share/doc/html/src/Cardano.CLI.Environment.html#EnvCli"><span class="hs-identifier hs-type">EnvCli</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#ParserInfo"><span class="hs-identifier hs-type">ParserInfo</span></a></span><span> </span><span class="annot"><a href="Parsers.Run.html#CardanoTestnetCommands"><span class="hs-identifier hs-type">CardanoTestnetCommands</span></a></span><span>
+</span><span id="line-28"></span><span id="opts"><span class="annot"><span class="annottext">opts :: EnvCli -&gt; ParserInfo CardanoTestnetCommands
+</span><a href="Parsers.Run.html#opts"><span class="hs-identifier hs-var hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679602802"><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679602802"><span class="hs-identifier hs-var">envCli</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser CardanoTestnetCommands
+-&gt; InfoMod CardanoTestnetCommands
+-&gt; ParserInfo CardanoTestnetCommands
+forall a. Parser a -&gt; InfoMod a -&gt; ParserInfo a
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#info"><span class="hs-identifier hs-var">Opt.info</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnvCli -&gt; Parser CardanoTestnetCommands
+</span><a href="Parsers.Run.html#commands"><span class="hs-identifier hs-var">commands</span></a></span><span> </span><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679602802"><span class="hs-identifier hs-var">envCli</span></a></span><span> </span><span class="annot"><span class="annottext">Parser CardanoTestnetCommands
+-&gt; Parser (CardanoTestnetCommands -&gt; CardanoTestnetCommands)
+-&gt; Parser CardanoTestnetCommands
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3C%2A%2A%3E"><span class="hs-operator hs-var">&lt;**&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (CardanoTestnetCommands -&gt; CardanoTestnetCommands)
+forall a. Parser (a -&gt; a)
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Extra.html#helper"><span class="hs-identifier hs-var">helper</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">InfoMod CardanoTestnetCommands
+forall m. Monoid m =&gt; m
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#idm"><span class="hs-identifier hs-var">idm</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- TODO: Remove StartBabbageTestnet and StartShelleyTestnet</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- by allowing the user to start testnets in any era (excluding Byron)</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- via StartCardanoTestnet</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">data</span><span> </span><span id="CardanoTestnetCommands"><span class="annot"><a href="Parsers.Run.html#CardanoTestnetCommands"><span class="hs-identifier hs-var">CardanoTestnetCommands</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="StartCardanoTestnet"><span class="annot"><a href="Parsers.Run.html#StartCardanoTestnet"><span class="hs-identifier hs-var">StartCardanoTestnet</span></a></span></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetCliOptions"><span class="hs-identifier hs-type">CardanoTestnetCliOptions</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GetVersion"><span class="annot"><a href="Parsers.Run.html#GetVersion"><span class="hs-identifier hs-var">GetVersion</span></a></span></span><span> </span><span class="annot"><a href="Parsers.Version.html#VersionOptions"><span class="hs-identifier hs-type">VersionOptions</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Help"><span class="annot"><a href="Parsers.Run.html#Help"><span class="hs-identifier hs-var">Help</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#ParserPrefs"><span class="hs-identifier hs-type">ParserPrefs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#ParserInfo"><span class="hs-identifier hs-type">ParserInfo</span></a></span><span> </span><span class="annot"><a href="Parsers.Run.html#CardanoTestnetCommands"><span class="hs-identifier hs-type">CardanoTestnetCommands</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Parsers.Help.html#HelpOptions"><span class="hs-identifier hs-type">HelpOptions</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Parsers.Run.html#commands"><span class="hs-identifier hs-type">commands</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/cardano-cli-10.1.1.0-8a30f53f50ed80513ff67c8a783564e51988bb3c598bdf07177f831a11e8c5e2/share/doc/html/src/Cardano.CLI.Environment.html#EnvCli"><span class="hs-identifier hs-type">EnvCli</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Parsers.Run.html#CardanoTestnetCommands"><span class="hs-identifier hs-type">CardanoTestnetCommands</span></a></span><span>
+</span><span id="line-39"></span><span id="commands"><span class="annot"><span class="annottext">commands :: EnvCli -&gt; Parser CardanoTestnetCommands
+</span><a href="Parsers.Run.html#commands"><span class="hs-identifier hs-var hs-var">commands</span></a></span></span><span> </span><span id="local-6989586621679602810"><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679602810"><span class="hs-identifier hs-var">envCli</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">[Parser CardanoTestnetCommands] -&gt; Parser CardanoTestnetCommands
+forall (t :: * -&gt; *) (f :: * -&gt; *) a.
+(Foldable t, Alternative f) =&gt;
+t (f a) -&gt; f a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Foldable.html#asum"><span class="hs-identifier hs-var">asum</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(CardanoTestnetCliOptions -&gt; CardanoTestnetCommands)
+-&gt; Parser CardanoTestnetCliOptions -&gt; Parser CardanoTestnetCommands
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTestnetCliOptions -&gt; CardanoTestnetCommands
+</span><a href="Parsers.Run.html#StartCardanoTestnet"><span class="hs-identifier hs-var">StartCardanoTestnet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Mod CommandFields CardanoTestnetCliOptions
+-&gt; Parser CardanoTestnetCliOptions
+forall a. Mod CommandFields a -&gt; Parser a
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#subparser"><span class="hs-identifier hs-var">subparser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnvCli -&gt; Mod CommandFields CardanoTestnetCliOptions
+</span><a href="Parsers.Cardano.html#cmdCardano"><span class="hs-identifier hs-var">cmdCardano</span></a></span><span> </span><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679602810"><span class="hs-identifier hs-var">envCli</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(VersionOptions -&gt; CardanoTestnetCommands)
+-&gt; Parser VersionOptions -&gt; Parser CardanoTestnetCommands
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">VersionOptions -&gt; CardanoTestnetCommands
+</span><a href="Parsers.Run.html#GetVersion"><span class="hs-identifier hs-var">GetVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Mod CommandFields VersionOptions -&gt; Parser VersionOptions
+forall a. Mod CommandFields a -&gt; Parser a
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#subparser"><span class="hs-identifier hs-var">subparser</span></a></span><span> </span><span class="annot"><span class="annottext">Mod CommandFields VersionOptions
+</span><a href="Parsers.Version.html#cmdVersion"><span class="hs-identifier hs-var">cmdVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(HelpOptions -&gt; CardanoTestnetCommands)
+-&gt; Parser HelpOptions -&gt; Parser CardanoTestnetCommands
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ParserPrefs
+-&gt; ParserInfo CardanoTestnetCommands
+-&gt; HelpOptions
+-&gt; CardanoTestnetCommands
+</span><a href="Parsers.Run.html#Help"><span class="hs-identifier hs-var">Help</span></a></span><span> </span><span class="annot"><span class="annottext">ParserPrefs
+</span><a href="Parsers.Run.html#pref"><span class="hs-identifier hs-var">pref</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnvCli -&gt; ParserInfo CardanoTestnetCommands
+</span><a href="Parsers.Run.html#opts"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679602810"><span class="hs-identifier hs-var">envCli</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Mod CommandFields HelpOptions -&gt; Parser HelpOptions
+forall a. Mod CommandFields a -&gt; Parser a
+</span><a href="file:///nix/store/1cldn5lwwsm8dlyqb99as5qqf5i4kmv4-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#subparser"><span class="hs-identifier hs-var">subparser</span></a></span><span> </span><span class="annot"><span class="annottext">Mod CommandFields HelpOptions
+</span><a href="Parsers.Help.html#cmdHelp"><span class="hs-identifier hs-var">cmdHelp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Parsers.Run.html#runTestnetCmd"><span class="hs-identifier hs-type">runTestnetCmd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Parsers.Run.html#CardanoTestnetCommands"><span class="hs-identifier hs-type">CardanoTestnetCommands</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span id="runTestnetCmd"><span class="annot"><span class="annottext">runTestnetCmd :: CardanoTestnetCommands -&gt; IO ()
+</span><a href="Parsers.Run.html#runTestnetCmd"><span class="hs-identifier hs-var hs-var">runTestnetCmd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="Parsers.Run.html#StartCardanoTestnet"><span class="hs-identifier hs-type">StartCardanoTestnet</span></a></span><span> </span><span id="local-6989586621679602816"><span class="annot"><span class="annottext">CardanoTestnetCliOptions
+</span><a href="#local-6989586621679602816"><span class="hs-identifier hs-var">cmdOpts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CardanoTestnetCliOptions -&gt; IO ()
+</span><a href="Parsers.Run.html#runCardanoOptions"><span class="hs-identifier hs-var">runCardanoOptions</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTestnetCliOptions
+</span><a href="#local-6989586621679602816"><span class="hs-identifier hs-var">cmdOpts</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="Parsers.Run.html#GetVersion"><span class="hs-identifier hs-type">GetVersion</span></a></span><span> </span><span id="local-6989586621679602818"><span class="annot"><span class="annottext">VersionOptions
+</span><a href="#local-6989586621679602818"><span class="hs-identifier hs-var">cmdOpts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">VersionOptions -&gt; IO ()
+</span><a href="Parsers.Version.html#runVersionOptions"><span class="hs-identifier hs-var">runVersionOptions</span></a></span><span> </span><span class="annot"><span class="annottext">VersionOptions
+</span><a href="#local-6989586621679602818"><span class="hs-identifier hs-var">cmdOpts</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Parsers.Run.html#Help"><span class="hs-identifier hs-type">Help</span></a></span><span> </span><span id="local-6989586621679602820"><span class="annot"><span class="annottext">ParserPrefs
+</span><a href="#local-6989586621679602820"><span class="hs-identifier hs-var">pPrefs</span></a></span></span><span> </span><span id="local-6989586621679602821"><span class="annot"><span class="annottext">ParserInfo CardanoTestnetCommands
+</span><a href="#local-6989586621679602821"><span class="hs-identifier hs-var">pInfo</span></a></span></span><span> </span><span id="local-6989586621679602822"><span class="annot"><span class="annottext">HelpOptions
+</span><a href="#local-6989586621679602822"><span class="hs-identifier hs-var">cmdOpts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ParserPrefs
+-&gt; ParserInfo CardanoTestnetCommands -&gt; HelpOptions -&gt; IO ()
+forall a. ParserPrefs -&gt; ParserInfo a -&gt; HelpOptions -&gt; IO ()
+</span><a href="Parsers.Help.html#runHelpOptions"><span class="hs-identifier hs-var">runHelpOptions</span></a></span><span> </span><span class="annot"><span class="annottext">ParserPrefs
+</span><a href="#local-6989586621679602820"><span class="hs-identifier hs-var">pPrefs</span></a></span><span> </span><span class="annot"><span class="annottext">ParserInfo CardanoTestnetCommands
+</span><a href="#local-6989586621679602821"><span class="hs-identifier hs-var">pInfo</span></a></span><span> </span><span class="annot"><span class="annottext">HelpOptions
+</span><a href="#local-6989586621679602822"><span class="hs-identifier hs-var">cmdOpts</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Parsers.Run.html#runCardanoOptions"><span class="hs-identifier hs-type">runCardanoOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetCliOptions"><span class="hs-identifier hs-type">CardanoTestnetCliOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span id="runCardanoOptions"><span class="annot"><span class="annottext">runCardanoOptions :: CardanoTestnetCliOptions -&gt; IO ()
+</span><a href="Parsers.Run.html#runCardanoOptions"><span class="hs-identifier hs-var hs-var">runCardanoOptions</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetCliOptions"><span class="hs-identifier hs-type">CardanoTestnetCliOptions</span></a></span><span> </span><span id="local-6989586621679602825"><span class="annot"><span class="annottext">CardanoTestnetOptions
+</span><a href="#local-6989586621679602825"><span class="hs-identifier hs-var">testnetOptions</span></a></span></span><span> </span><span id="local-6989586621679602826"><span class="annot"><span class="annottext">GenesisOptions
+</span><a href="#local-6989586621679602826"><span class="hs-identifier hs-var">shelleyOptions</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">(Conf -&gt; Integration TestnetRuntime) -&gt; IO ()
+forall a. (Conf -&gt; Integration a) -&gt; IO ()
+</span><a href="Testnet.Property.Run.html#runTestnet"><span class="hs-identifier hs-var">runTestnet</span></a></span><span> </span><span class="annot"><span class="annottext">((Conf -&gt; Integration TestnetRuntime) -&gt; IO ())
+-&gt; (Conf -&gt; Integration TestnetRuntime) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt;
+CardanoTestnetOptions
+-&gt; GenesisOptions -&gt; Conf -&gt; Integration TestnetRuntime
+CardanoTestnetOptions
+-&gt; GenesisOptions -&gt; Conf -&gt; Integration TestnetRuntime
+</span><a href="Testnet.Start.Cardano.html#cardanoTestnetDefault"><span class="hs-identifier hs-var">cardanoTestnetDefault</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTestnetOptions
+</span><a href="#local-6989586621679602825"><span class="hs-identifier hs-var">testnetOptions</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisOptions
+</span><a href="#local-6989586621679602826"><span class="hs-identifier hs-var">shelleyOptions</span></a></span><span>
+</span><span id="line-57"></span></pre></body></html>
