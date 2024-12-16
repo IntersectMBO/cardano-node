@@ -1,17 +1,9 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StrictData #-}
 
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
 
-{- HLINT ignore "Avoid lambda" -}
 {- HLINT ignore "Eta reduce" -}
-{- HLINT ignore "Use head" -}
 
 module Cardano.Analysis.BlockProp
   ( summariseMultiBlockProp
@@ -25,42 +17,18 @@ module Cardano.Analysis.BlockProp
   )
 where
 
-import Prelude                  (String, (!!), error, head, last, id, show, tail, read)
-import Cardano.Prelude          hiding (head, show)
+import           Cardano.Analysis.API
+import           Cardano.Prelude hiding (head, show)
+import           Cardano.Unlog.LogObject
+import           Cardano.Util
 
-import Control.Arrow            ((***), (&&&))
-import Data.Aeson               (ToJSON(..), FromJSON(..))
-import Data.Bifunctor
-import Data.Function            (on)
-import Data.List                (break, dropWhileEnd, intercalate, partition, span)
-import Data.Map.Strict          (Map)
-import Data.Map.Strict          qualified as Map
-import Data.Maybe               (catMaybes, mapMaybe, isNothing)
-import Data.Set                 (Set)
-import Data.Set                 qualified as Set
-import Data.Text                qualified as T
-import Data.Text.Short          (toText)
-import Data.Tuple               (swap)
-import Data.Tuple.Extra         (both, fst3, snd3, thd3)
-import Data.Vector              (Vector)
-import Data.Vector              qualified as Vec
+import           Prelude (id, read, show)
 
-import Data.Time.Clock          (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
-
-import Text.Printf              (printf)
-
-import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block  (BlockNo(..))
-
-import Data.Accum
-import Data.CDF
-
-import Cardano.Render
-import Cardano.Unlog.LogObject
-import Cardano.Unlog.Resources
-import Cardano.Util
-
-import Cardano.Analysis.API
+import           Data.List (partition)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Data.Text as T
+import           Data.Tuple.Extra (both, fst3, snd3, thd3)
 
 
 summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp
@@ -293,14 +261,14 @@ beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
 
-buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
+buildMachViews :: Run -> [(LogObjectSource, [LogObject])] -> IO [(LogObjectSource, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
 
 blockEventsAcceptance :: Genesis -> [ChainFilter] -> BlockEvents -> [(ChainFilter, Bool)]
 blockEventsAcceptance genesis flts be = flts <&> (id &&& testBlockEvents genesis be)
 
-rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, MachView)] -> Chain
-rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
+rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(LogObjectSource, MachView)] -> Chain
+rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
   Chain
   { cDomSlots   = DataDomain
                   (Interval (blk0  & beSlotNo)  (blkL  & beSlotNo) <&> I)
@@ -320,8 +288,8 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
                 doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
    (accepta, cRejecta) = partition (all snd . beAcceptance) cMainChain
 
-   blkSets :: (Set Hash, Set Hash)
-   blkSets@(acceptaBlocks, rejectaBlocks) =
+   acceptaBlocks, rejectaBlocks :: Set Hash
+   (acceptaBlocks, rejectaBlocks) =
      both (Set.fromList . fmap beBlock) (accepta, cRejecta)
    mvBlockStats :: MachView -> HostBlockStats
    mvBlockStats (fmap bfeBlock . mvForges -> fs) = HostBlockStats {..}
@@ -346,7 +314,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
    finalBlockNo   = mbeBlockNo finalBlockEv
 
    tipHash        = rewindChain eventMaps finalBlockNo 1 (mbeBlock finalBlockEv)
-   tipBlock       = getBlockForge eventMaps finalBlockNo tipHash
+   _tipBlock      = getBlockForge eventMaps finalBlockNo tipHash
 
    computeChainBlockGaps :: [BlockEvents] -> [BlockEvents]
    computeChainBlockGaps [] = error "computeChainBlockGaps on an empty chain"
@@ -376,11 +344,12 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
          ])
      & mapMbe id (error "Silly invariant failed.") (error "Silly invariant failed.")
 
-   adoptionMap    :: [Map Hash UTCTime]
-   adoptionMap    =  Map.mapMaybe (lazySMaybe . mbeAdopted) <$> eventMaps
+   adoptionMap  :: [Map Hash UTCTime]
+   adoptionMap  =  Map.mapMaybe (lazySMaybe . mbeAdopted) <$> eventMaps
 
-   heightHostMap      :: (Map BlockNo (Set Hash), Map Host (Set Hash))
-   heightHostMap@(heightMap, hostMap)
+   heightMap    :: Map BlockNo (Set Hash)
+   _hostMap     :: Map Host (Set Hash)
+   (heightMap, _hostMap)
      = foldr (\MachView{..} (accHeight, accHost) ->
                  (,)
                  (Map.foldr
@@ -405,7 +374,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
                 [ "No forger for hash ", show hash
                 , "\nErrors:\n"
                 ] ++ intercalate "\n" (show <$> ers)
-              blkEvs@(forgerEv:_, oEvs, ers) ->
+              (forgerEv:_, oEvs, ers) ->
                 go (bfePrevBlock forgerEv) (liftBlockEvents forgerEv oEvs ers : acc)
 
    liftBlockEvents :: ForgerEvents NominalDiffTime -> [ObserverEvents NominalDiffTime] -> [BPError] -> BlockEvents
@@ -535,7 +504,7 @@ renderBlockPropError = \case
          rejs
 
 blockProp :: Run -> Chain -> Either BlockPropError BlockPropOne
-blockProp run@Run{genesis} Chain{..} = do
+blockProp _ Chain{..} = do
   (c :: [BlockEvents]) <-
     case filter (all snd . beAcceptance) cMainChain of
       [] -> Left $
@@ -589,11 +558,6 @@ blockProp run@Run{genesis} Chain{..} = do
                                                 & filter (not . isNaN))
     }
  where
-   ne :: String -> [a] -> [a]
-   ne desc = \case
-     [] -> error desc
-     xs -> xs
-
    hostBlockStats = Map.elems cHostBlockStats
 
    boFetchedCum :: BlockObservation -> NominalDiffTime
@@ -629,10 +593,10 @@ blockProp run@Run{genesis} Chain{..} = do
      cdfZ percs $ concatMap f cbes
 
 -- | Given a single machine's log object stream, recover its block map.
-blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView
-blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), []) =
-  error $ mconcat ["0 LogObjects in ", fp]
-blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
+blockEventMapsFromLogObjects :: Run -> (LogObjectSource, [LogObject]) -> MachView
+blockEventMapsFromLogObjects _   (f, []) =
+  error $ mconcat ["0 LogObjects in ", logObjectSourceFile f]
+blockEventMapsFromLogObjects run (f, xs@(x:_)) =
   foldl' (blockPropMachEventsStep run f) initial xs
  where
    initial =
@@ -648,8 +612,8 @@ blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
      , mvMemSnap      = SNothing
      }
 
-blockPropMachEventsStep :: Run -> JsonLogfile -> MachView -> LogObject -> MachView
-blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = case lo of
+blockPropMachEventsStep :: Run -> LogObjectSource -> MachView -> LogObject -> MachView
+blockPropMachEventsStep Run{genesis} _ mv@MachView{..} lo = case lo of
   -- 0. Notice (observer only)
   LogObject{loAt, loHost, loBody=LOChainSyncClientSeenHeader{loBlock,loBlockNo,loSlotNo}} ->
     let mbe0 = getBlock loBlock

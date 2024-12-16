@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                1.36
+version:                2.0
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -50,6 +50,9 @@ common project-config
                         -Wcompat
                         -Wno-all-missed-specialisations
 
+  if impl(ghc >= 9.8)
+    ghc-options:        -Wno-x-partial
+
   build-depends:        base >= 4.14 && < 5,
 
   if os(windows)
@@ -89,7 +92,10 @@ library
                         Cardano.Org
                         Cardano.Render
 
+                        Cardano.Unlog.BackendDB
+                        Cardano.Unlog.BackendFile
                         Cardano.Unlog.LogObject
+                        Cardano.Unlog.LogObjectDB
                         Cardano.Unlog.Resources
 
   other-modules:        Paths_locli
@@ -116,6 +122,7 @@ library
                       , ouroboros-network-api ^>= 0.10
                       , sop-core
                       , split
+                      , sqlite-easy >= 1.1.0.1
                       , statistics
                       , strict-sop-core
                       , text
@@ -136,7 +143,7 @@ executable locli
   main-is:              locli.hs
   ghc-options:          -threaded
                         -rtsopts
-                        "-with-rtsopts=-T -N7 -A2m -qb -H64m"
+                        "-with-rtsopts=-T -N7 -A2m -c -H64m"
 
   build-depends:        aeson
                       , cardano-prelude
@@ -146,6 +153,30 @@ executable locli
                       , text-short
                       , transformers
                       , transformers-except
+
+executable locli-quick
+  import:               project-config
+
+  hs-source-dirs:       app
+  main-is:              locli-quick.hs
+  ghc-options:          -threaded
+                        -rtsopts
+                        "-with-rtsopts=-T -N7 -A2m -c -H64m"
+
+  build-depends:        locli
+                      , aeson
+                      , async
+                      , bytestring
+                      , containers
+                      , cardano-api
+                      , extra
+                      , split
+                      , text
+                      , text-short
+                      , time
+                      , trace-resources
+                      , sqlite-easy >= 1.1.0.1
+                      , unordered-containers
 
 test-suite test-locli
   import:               project-config
@@ -163,4 +194,5 @@ test-suite test-locli
                       , text
 
   other-modules:        Test.Analysis.CDF
+                        Test.Unlog.LogObjectDB
                         Test.Unlog.Org
