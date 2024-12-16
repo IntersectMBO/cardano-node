@@ -259,7 +259,7 @@ preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (scri
       { PlutusV3.txInfoInputs = []
       , PlutusV3.txInfoOutputs = []
       , PlutusV3.txInfoFee = 0
-      , PlutusV3.txInfoMint = mempty
+      , PlutusV3.txInfoMint = PlutusV3.emptyMintValue
       , PlutusV3.txInfoTxCerts = []
       , PlutusV3.txInfoWdrl = PlutusV3.unsafeFromList []
       , PlutusV3.txInfoValidRange = PlutusV3.always
