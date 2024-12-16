@@ -23,6 +23,7 @@ import qualified Cardano.Ledger.Api.Transition as Ledger
 import           Cardano.Ledger.BaseTypes (natVersion)
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
+import           Cardano.Node.Protocol.Checkpoints
 import qualified Cardano.Node.Protocol.Conway as Conway
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 import           Cardano.Node.Protocol.Types
@@ -34,7 +35,6 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
-import           Ouroboros.Consensus.Config (emptyCheckpointsMap)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
 import           Prelude
@@ -61,6 +61,7 @@ mkSomeConsensusProtocolCardano
   -> NodeAlonzoProtocolConfiguration
   -> NodeConwayProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
+  -> NodeCheckpointsConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
 mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
@@ -103,6 +104,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcTestConwayHardForkAtEpoch,
                              npcTestConwayHardForkAtVersion
                            }
+                           checkpointsConfiguration
                            files = do
     byronGenesis <-
       firstExceptT CardanoProtocolInstantiationErrorByron $
@@ -139,6 +141,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
     shelleyLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
         Shelley.readLeaderCredentials files
+
+    checkpointsMap <-
+      firstExceptT CardanoProtocolInstantiationCheckpointsReadError $
+        readCheckpointsMap checkpointsConfiguration
 
     return $!
       SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ Consensus.CardanoProtocolParams {
@@ -234,8 +240,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              (maybe 9 fromIntegral npcTestConwayHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
-       -- TODO: once https://github.com/IntersectMBO/cardano-node/issues/5730 is implemented 'emptyCheckpointsMap' needs to be replaced with the checkpoints map read from a configuration file.
-      , Consensus.cardanoCheckpoints = emptyCheckpointsMap
+      , Consensus.cardanoCheckpoints = checkpointsMap
       }
 
         ----------------------------------------------------------------------
@@ -265,6 +270,9 @@ data CardanoProtocolInstantiationError =
 
      | CardanoProtocolInstantiationErrorAlonzo
          Alonzo.AlonzoProtocolInstantiationError
+
+     | CardanoProtocolInstantiationCheckpointsReadError
+         CheckpointsReadError
   deriving Show
 
 instance Error CardanoProtocolInstantiationError where
@@ -279,4 +287,6 @@ instance Error CardanoProtocolInstantiationError where
   prettyError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
     prettyError err
   prettyError (CardanoProtocolInstantiationErrorAlonzo err) =
+    prettyError err
+  prettyError (CardanoProtocolInstantiationCheckpointsReadError err) =
     prettyError err

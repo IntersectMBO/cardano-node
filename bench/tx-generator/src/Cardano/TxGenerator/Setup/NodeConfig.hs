@@ -42,15 +42,15 @@ getGenesis (SomeConsensusProtocol CardanoBlockType proto)
 getGenesisPath :: NodeConfiguration -> Maybe GenesisFile
 getGenesisPath nodeConfig =
   case ncProtocolConfig nodeConfig of
-    NodeProtocolConfigurationCardano _ shelleyConfig _ _ _ ->
+    NodeProtocolConfigurationCardano _ shelleyConfig _ _ _ _ ->
       Just $ npcShelleyGenesisFile shelleyConfig
 
 mkConsensusProtocol :: NodeConfiguration -> IO (Either TxGenError SomeConsensusProtocol)
 mkConsensusProtocol nodeConfig =
   case ncProtocolConfig nodeConfig of
-    NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig conwayConfig hardforkConfig ->
+    NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig conwayConfig hardforkConfig checkpointsConfig ->
       first ProtocolError
-        <$> runExceptT (mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig conwayConfig hardforkConfig Nothing)
+        <$> runExceptT (mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig conwayConfig hardforkConfig checkpointsConfig Nothing)
 
 -- | Creates a NodeConfiguration from a config file;
 --   the result is devoid of any keys/credentials
