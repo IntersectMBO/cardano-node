@@ -19,6 +19,7 @@ module Testnet.Components.Query
   , getMinDRepDeposit
   , getMinGovActionDeposit
   , getGovState
+  , getGovState'
   , getCurrentEpochNo
   , getTreasuryValue
 
@@ -468,6 +469,19 @@ getGovState epochStateView ceo = withFrozenCallStack $ do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
   pure $ conwayEraOnwardsConstraints ceo $ newEpochState ^. L.newEpochStateGovStateL
+
+getGovState'
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadIO m
+  => MonadTest m
+  => EpochStateView
+  -> ShelleyBasedEra era
+  -> m (L.GovState (ShelleyLedgerEra era)) -- ^ The governance state
+getGovState' epochStateView sbe = withFrozenCallStack $ do
+  AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
+  Refl <- H.leftFail $ assertErasEqual sbe sbe'
+  pure $ shelleyBasedEraConstraints sbe $ newEpochState ^. L.newEpochStateGovStateL
 
 -- | Obtain the current value of the treasury from the node
 getTreasuryValue
