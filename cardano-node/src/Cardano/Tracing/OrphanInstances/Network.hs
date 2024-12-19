@@ -39,9 +39,12 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import qualified Ouroboros.Network.BlockFetch.Decision.Trace as BlockFetch
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
+import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..), LocalAddr (..))
+import           Ouroboros.Network.ConnectionManager.State (ConnStateId (..))
 import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
                    ConnectionManagerCounters (..),
                    OperationResult (..))
@@ -80,6 +83,7 @@ import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    LocalRootPeers, WarmValency (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (LocalRootConfig (..))
 import qualified Ouroboros.Network.PeerSelection.State.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
@@ -209,6 +213,12 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
           Left FetchDeclinePeerBusy {}           -> Info
           Left FetchDeclineConcurrencyLimit {}   -> Info
           Right _                                -> Info
+
+
+instance HasPrivacyAnnotation (BlockFetch.TraceDecisionEvent peer header)
+instance HasSeverityAnnotation (BlockFetch.TraceDecisionEvent peer header) where
+  getSeverityAnnotation (BlockFetch.PeersFetch xs) = getSeverityAnnotation xs
+  getSeverityAnnotation BlockFetch.PeerStarvedUs {} = Info
 
 
 instance HasPrivacyAnnotation (TraceTxSubmissionInbound txid tx)
@@ -453,7 +463,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
-      TraceVerifyPeerSnapshot    {} -> Info
+      -- TraceVerifyPeerSnapshot    {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -632,6 +642,13 @@ instance (HasHeader header, ConvertRawHash header, ToObject peer)
   trTransformer = trStructured
 instance (Show header, StandardHash header, Show peer)
      => HasTextFormatter (TraceLabelPeer peer (TraceFetchClientState header)) where
+  formatText a _ = pack (show a)
+
+instance (StandardHash header, Show peer, ToObject peer)
+      => Transformable Text IO (BlockFetch.TraceDecisionEvent peer header) where
+  trTransformer = trStructuredText
+instance (StandardHash header, Show peer)
+    => HasTextFormatter (BlockFetch.TraceDecisionEvent peer header) where
   formatText a _ = pack (show a)
 
 instance ToObject peer
@@ -1327,6 +1344,13 @@ instance (ToObject peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
   toObject verb (TraceLabelPeer peerid a) =
     mconcat [ "peer" .= toObject verb peerid ] <> toObject verb a
 
+instance ToObject peer
+      => ToObject (BlockFetch.TraceDecisionEvent peer header) where
+  toObject verb (BlockFetch.PeersFetch as) = toObject verb as
+  toObject verb (BlockFetch.PeerStarvedUs peer) = mconcat
+    [ "kind" .= String "PeersStarvedUs"
+    , "peer" .= toObject verb peer
+    ]
 
 instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
@@ -1577,6 +1601,16 @@ instance FromJSON HotValency where
 
 instance FromJSON WarmValency where
   parseJSON v = WarmValency <$> parseJSON v
+
+instance ToJSON LocalRootConfig where
+  toJSON LocalRootConfig { peerAdvertise,
+                           peerTrustable,
+                           diffusionMode } =
+    Aeson.object
+      [ "peerAdvertise" .= peerAdvertise
+      , "peerTrustable" .= peerTrustable
+      , "diffusionMode" .= show diffusionMode
+      ]
 
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
@@ -2049,9 +2083,6 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
             , "associationMode" .= dpssAssociationMode ds
             ]
-  toObject _verb (TraceVerifyPeerSnapshot result) =
-    mconcat [ "kind" .= String "VerifyPeerSnapshot"
-            , "result" .= result ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
@@ -2329,6 +2360,19 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       , "command" .= show cerr
       ]
 
+instance ToJSON addr => ToJSON (LocalAddr addr) where
+  toJSON (LocalAddr addr) = toJSON addr
+  toJSON UnknownLocalAddr = Null
+
+instance ToJSON NtN.DiffusionMode where
+  toJSON = String . pack . show
+
+instance ToJSON ConnStateId where
+  toJSON (ConnStateId connStateId) = toJSON connStateId
+
+instance ToObject ConnStateId where
+  toObject _ connStateId = mconcat [ "connStateId" .= toJSON connStateId ]
+
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
       => ToObject (ConnMgr.Trace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
@@ -2340,21 +2384,23 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toObject verb peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
-      TrReleaseConnection prov peerAddr ->
+      TrReleaseConnection prov connId ->
         mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
-          , "remoteAddress" .= toObject verb peerAddr
+          , "remoteAddress" .= toJSON connId
           , "provenance" .= String (pack . show $ prov)
           ]
-      TrConnect (Just localAddress) remoteAddress ->
+      TrConnect (Just localAddress) remoteAddress diffusionMode ->
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
+          , "diffusionMode" .= toJSON diffusionMode
           ]
-      TrConnect Nothing remoteAddress ->
+      TrConnect Nothing remoteAddress diffusionMode ->
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "remoteAddress" .= toObject verb remoteAddress
+          , "diffusionMode" .= toJSON diffusionMode
           ]
       TrConnectError (Just localAddress) remoteAddress err ->
         mconcat
@@ -2424,7 +2470,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           [ "kind" .= String "PruneConnections"
           , "prunedPeers" .= toJSON pruningSet
           , "numberPrunedPeers" .= toJSON numberPruned
-          , "choiceSet" .= toJSON (toObject verb `Set.map` chosenPeers)
+          , "choiceSet" .= toJSON (toJSON `Set.map` chosenPeers)
           ]
       TrConnectionCleanup connId ->
         mconcat
@@ -2449,12 +2495,20 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrState cmState ->
         mconcat
           [ "kind"  .= String "ConnectionManagerState"
-          , "state" .= listValue (\(addr, connState) ->
+          , "state" .= listValue (\(remoteAddr, inner) ->
                                          Aeson.object
-                                           [ "remoteAddress"   .= toJSON addr
-                                           , "connectionState" .= toJSON connState
-                                           ])
-                                       (Map.toList cmState)
+                                           [ "connections" .=
+                                             listValue (\(localAddr, connState) ->
+                                                Aeson.object
+                                                  [ "localAddress" .= localAddr
+                                                  , "state" .= toJSON connState  
+                                                  ]
+                                             )
+                                             (Map.toList inner)
+                                           , "remoteAddress" .= toJSON remoteAddr
+                                           ]
+                                 )
+                                 (Map.toList (getConnMap cmState))
           ]
       ConnMgr.TrUnexpectedlyFalseAssertion info ->
         mconcat
@@ -2489,9 +2543,9 @@ instance (Show addr, ToObject addr, ToJSON addr)
 
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (Server.Trace addr) where
-  toObject verb (Server.TrAcceptConnection peerAddr)     =
+  toObject _verb (Server.TrAcceptConnection connId)     =
     mconcat [ "kind" .= String "AcceptConnection"
-             , "address" .= toObject verb peerAddr
+             , "connectionId" .= toJSON connId
              ]
   toObject _verb (Server.TrAcceptError exception)         =
     mconcat [ "kind" .= String "AcceptErroor"

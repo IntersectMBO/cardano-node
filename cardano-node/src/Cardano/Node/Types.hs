@@ -123,11 +123,18 @@ instance FromJSON NodeConsensusMode where
         _ -> fail "Parsing NodeConsensusMode failed: can be either 'Genesis' or 'Praos'"
     parseJSON _ = fail "Parsing NodeConsensusMode failed"
 
--- | Newtype wrapper which provides 'FromJSON' instance for 'DiffusionMode'.
+-- | Newtype wrapper which provides 'ToJSON' and 'FromJSON' instances for
+-- 'DiffusionMode'.
 --
 newtype NodeDiffusionMode
   = NodeDiffusionMode { getDiffusionMode :: DiffusionMode }
-  deriving newtype Show
+  deriving newtype (Eq, Show)
+
+instance ToJSON NodeDiffusionMode where
+    toJSON (NodeDiffusionMode InitiatorOnlyDiffusionMode)
+      = String "InitiatorOnly"
+    toJSON (NodeDiffusionMode InitiatorAndResponderDiffusionMode)
+      = String "InitiatorAndResponder"
 
 instance FromJSON NodeDiffusionMode where
     parseJSON (String str) =
