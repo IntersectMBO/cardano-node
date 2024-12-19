@@ -21,6 +21,7 @@ module Cardano.Node.Tracing.Documentation
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
@@ -41,6 +42,11 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
+import           Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState
+                   (CardanoDebugPeerSelectionState (..), CardanoPeerSelectionState)
+import           Ouroboros.Cardano.Network.PeerSelection.Governor.Types
+                   (CardanoPeerSelectionView (..))
+import           Ouroboros.Cardano.Network.PublicRootPeers (CardanoPublicRootPeers)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
@@ -63,14 +69,15 @@ import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
-import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.Common as Common
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters, DebugPeerSelection (..),
+import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
+import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -512,7 +519,7 @@ docTracersFirstPhase condConfigFileName = do
                 ["Startup", "DiffusionInit"]
     configureTracers configReflection trConfig [dtDiffusionInitializationTr]
     dtDiffusionInitializationTrDoc <- documentTracer (dtDiffusionInitializationTr ::
-      Logging.Trace IO (Diffusion.DiffusionTracer Socket.SockAddr LocalAddress))
+      Logging.Trace IO (Common.DiffusionTracer Socket.SockAddr LocalAddress))
 
     dtLedgerPeersTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -527,7 +534,7 @@ docTracersFirstPhase condConfigFileName = do
       ["Net", "Peers", "LocalRoot"]
     configureTracers configReflection trConfig [localRootPeersTr]
     localRootPeersTrDoc <- documentTracer (localRootPeersTr ::
-      Logging.Trace IO (TraceLocalRootPeers RemoteAddress SomeException))
+      Logging.Trace IO (TraceLocalRootPeers PeerTrustable RemoteAddress SomeException))
 
     publicRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -541,28 +548,28 @@ docTracersFirstPhase condConfigFileName = do
       ["Net", "PeerSelection", "Selection"]
     configureTracers configReflection trConfig [peerSelectionTr]
     peerSelectionTrDoc <- documentTracer (peerSelectionTr ::
-      Logging.Trace IO (TracePeerSelection Socket.SockAddr))
+      Logging.Trace IO (TracePeerSelection CardanoDebugPeerSelectionState PeerTrustable (CardanoPublicRootPeers Socket.SockAddr) Socket.SockAddr))
 
     debugPeerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Initiator"]
     configureTracers configReflection trConfig [debugPeerSelectionTr]
     debugPeerSelectionTrDoc <- documentTracer (debugPeerSelectionTr ::
-      Logging.Trace IO (DebugPeerSelection Socket.SockAddr))
+      Logging.Trace IO (DebugPeerSelection CardanoPeerSelectionState PeerTrustable (CardanoPublicRootPeers Socket.SockAddr) Socket.SockAddr))
 
     debugPeerSelectionResponderTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Responder"]
     configureTracers configReflection trConfig [debugPeerSelectionResponderTr]
     debugPeerSelectionResponderTrDoc <- documentTracer (debugPeerSelectionResponderTr ::
-      Logging.Trace IO (DebugPeerSelection Socket.SockAddr))
+      Logging.Trace IO (DebugPeerSelection CardanoPeerSelectionState PeerTrustable (CardanoPublicRootPeers Socket.SockAddr) Socket.SockAddr))
 
     peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Counters"]
     configureTracers configReflection trConfig [peerSelectionCountersTr]
     peerSelectionCountersTrDoc <- documentTracer (peerSelectionCountersTr ::
-      Logging.Trace IO PeerSelectionCounters)
+      Logging.Trace IO (PeerSelectionCounters (CardanoPeerSelectionView Socket.SockAddr)))
 
     churnCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG

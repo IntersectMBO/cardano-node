@@ -15,6 +15,7 @@ module Cardano.Node.Tracing.Consistency
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
@@ -28,12 +29,15 @@ import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
+import           Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState
+                   (CardanoDebugPeerSelectionState, CardanoPeerSelectionState)
+import           Ouroboros.Cardano.Network.PeerSelection.Governor.Types (CardanoPeerSelectionView)
+import           Ouroboros.Cardano.Network.PublicRootPeers (CardanoPublicRootPeers)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
@@ -55,14 +59,15 @@ import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
-import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.Common as Common
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters, DebugPeerSelection (..),
+import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters)
+import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -259,7 +264,7 @@ getAllNamespaces =
         dtDiffusionInitializationNS = map (nsGetTuple . nsReplacePrefix
                                             ["Startup", "DiffusionInit"])
                                           (allNamespaces :: [Namespace
-                                            (Diffusion.DiffusionTracer Socket.SockAddr
+                                            (Common.DiffusionTracer Socket.SockAddr
                                                 LocalAddress)])
         dtLedgerPeersNS = map (nsGetTuple . nsReplacePrefix
                                ["Net", "Peers", "Ledger"])
@@ -270,26 +275,26 @@ getAllNamespaces =
         localRootPeersNS = map (nsGetTuple . nsReplacePrefix
                                ["Net", "Peers", "LocalRoot"])
                                (allNamespaces :: [Namespace
-                                 (TraceLocalRootPeers RemoteAddress SomeException)])
+                                 (TraceLocalRootPeers PeerTrustable RemoteAddress SomeException)])
         publicRootPeersNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "Peers", "PublicRoot"])
                                (allNamespaces :: [Namespace TracePublicRootPeers])
         peerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Selection"])
                                (allNamespaces :: [Namespace
-                                          (TracePeerSelection Socket.SockAddr)])
+                                          (TracePeerSelection CardanoDebugPeerSelectionState PeerTrustable (CardanoPublicRootPeers Socket.SockAddr) Socket.SockAddr)])
         debugPeerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Initiator"])
                                (allNamespaces :: [Namespace
-                                          (DebugPeerSelection Socket.SockAddr)])
+                                          (DebugPeerSelection CardanoPeerSelectionState PeerTrustable (CardanoPublicRootPeers Socket.SockAddr) Socket.SockAddr)])
         debugPeerSelectionResponderNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Responder"])
                                (allNamespaces :: [Namespace
-                                          (DebugPeerSelection Socket.SockAddr)])
+                                          (DebugPeerSelection CardanoPeerSelectionState PeerTrustable (CardanoPublicRootPeers Socket.SockAddr) Socket.SockAddr)])
         peerSelectionCountersNS = map (nsGetTuple . nsReplacePrefix
                                         ["Net", "PeerSelection", "Counters"])
                                       (allNamespaces :: [Namespace
-                                        PeerSelectionCounters])
+                                        (PeerSelectionCounters (CardanoPeerSelectionView Socket.SockAddr))])
         churnCountersNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "Churn"])
                                 (allNamespaces :: [Namespace ChurnCounters])

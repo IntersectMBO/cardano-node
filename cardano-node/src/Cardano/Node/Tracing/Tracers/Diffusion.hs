@@ -24,12 +24,12 @@ import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 import qualified Data.List as List
-import qualified Ouroboros.Network.Diffusion as ND
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
                    TraceLedgerPeers (..))
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 import Cardano.Node.Configuration.TopologyP2P ()
+import qualified Ouroboros.Network.Diffusion.Common as Common
 
 
 --------------------------------------------------------------------------------
@@ -582,108 +582,108 @@ instance MetaTrace (AnyMessage (HS.Handshake nt term)) where
 --------------------------------------------------------------------------------
 
 instance (Show ntnAddr, Show ntcAddr) =>
-  LogFormatting (ND.DiffusionTracer ntnAddr ntcAddr) where
-  forMachine _dtal (ND.RunServer sockAddr) = mconcat
+  LogFormatting (Common.DiffusionTracer ntnAddr ntcAddr) where
+  forMachine _dtal (Common.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
     ]
 
-  forMachine _dtal (ND.RunLocalServer localAddress) = mconcat
+  forMachine _dtal (Common.RunLocalServer localAddress) = mconcat
     [ "kind" .= String "RunLocalServer"
     , "localAddress" .= String (pack (show localAddress))
     ]
-  forMachine _dtal (ND.UsingSystemdSocket localAddress) = mconcat
+  forMachine _dtal (Common.UsingSystemdSocket localAddress) = mconcat
     [ "kind" .= String "UsingSystemdSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
 
-  forMachine _dtal (ND.CreateSystemdSocketForSnocketPath localAddress) = mconcat
+  forMachine _dtal (Common.CreateSystemdSocketForSnocketPath localAddress) = mconcat
     [ "kind" .= String "CreateSystemdSocketForSnocketPath"
     , "path" .= String (pack . show $ localAddress)
     ]
-  forMachine _dtal (ND.CreatedLocalSocket localAddress) = mconcat
+  forMachine _dtal (Common.CreatedLocalSocket localAddress) = mconcat
     [ "kind" .= String "CreatedLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
-  forMachine _dtal (ND.ConfiguringLocalSocket localAddress socket) = mconcat
+  forMachine _dtal (Common.ConfiguringLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ConfiguringLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ListeningLocalSocket localAddress socket) = mconcat
+  forMachine _dtal (Common.ListeningLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ListeningLocalSocket"
     , "path" .=  String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.LocalSocketUp localAddress fd) = mconcat
+  forMachine _dtal (Common.LocalSocketUp localAddress fd) = mconcat
     [ "kind" .= String "LocalSocketUp"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show fd))
     ]
-  forMachine _dtal (ND.CreatingServerSocket socket) = mconcat
+  forMachine _dtal (Common.CreatingServerSocket socket) = mconcat
     [ "kind" .= String "CreatingServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ListeningServerSocket socket) = mconcat
+  forMachine _dtal (Common.ListeningServerSocket socket) = mconcat
     [ "kind" .= String "ListeningServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ServerSocketUp socket) = mconcat
+  forMachine _dtal (Common.ServerSocketUp socket) = mconcat
     [ "kind" .= String "ServerSocketUp"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ConfiguringServerSocket socket) = mconcat
+  forMachine _dtal (Common.ConfiguringServerSocket socket) = mconcat
     [ "kind" .= String "ConfiguringServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.UnsupportedLocalSystemdSocket path) = mconcat
+  forMachine _dtal (Common.UnsupportedLocalSystemdSocket path) = mconcat
     [ "kind" .= String "UnsupportedLocalSystemdSocket"
     , "path" .= String (pack (show path))
     ]
-  forMachine _dtal ND.UnsupportedReadySocketCase = mconcat
+  forMachine _dtal Common.UnsupportedReadySocketCase = mconcat
     [ "kind" .= String "UnsupportedReadySocketCase"
     ]
-  forMachine _dtal (ND.DiffusionErrored exception) = mconcat
+  forMachine _dtal (Common.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
-  forMachine _dtal (ND.SystemdSocketConfiguration config) = mconcat
+  forMachine _dtal (Common.SystemdSocketConfiguration config) = mconcat
     [ "kind" .= String "SystemdSocketConfiguration"
     , "path" .= String (pack (show config))
     ]
 
-instance MetaTrace (ND.DiffusionTracer ntnAddr ntcAddr) where
-    namespaceFor ND.RunServer {} =
+instance MetaTrace (Common.DiffusionTracer ntnAddr ntcAddr) where
+    namespaceFor Common.RunServer {} =
       Namespace [] ["RunServer"]
-    namespaceFor ND.RunLocalServer {} =
+    namespaceFor Common.RunLocalServer {} =
       Namespace [] ["RunLocalServer"]
-    namespaceFor ND.UsingSystemdSocket {} =
+    namespaceFor Common.UsingSystemdSocket {} =
       Namespace [] ["UsingSystemdSocket"]
-    namespaceFor ND.CreateSystemdSocketForSnocketPath {} =
+    namespaceFor Common.CreateSystemdSocketForSnocketPath {} =
       Namespace [] ["CreateSystemdSocketForSnocketPath"]
-    namespaceFor ND.CreatedLocalSocket {} =
+    namespaceFor Common.CreatedLocalSocket {} =
       Namespace [] ["CreatedLocalSocket"]
-    namespaceFor ND.ConfiguringLocalSocket {} =
+    namespaceFor Common.ConfiguringLocalSocket {} =
       Namespace [] ["ConfiguringLocalSocket"]
-    namespaceFor ND.ListeningLocalSocket {} =
+    namespaceFor Common.ListeningLocalSocket {} =
       Namespace [] ["ListeningLocalSocket"]
-    namespaceFor ND.LocalSocketUp {} =
+    namespaceFor Common.LocalSocketUp {} =
       Namespace [] ["LocalSocketUp"]
-    namespaceFor ND.CreatingServerSocket {} =
+    namespaceFor Common.CreatingServerSocket {} =
       Namespace [] ["CreatingServerSocket"]
-    namespaceFor ND.ListeningServerSocket {} =
+    namespaceFor Common.ListeningServerSocket {} =
       Namespace [] ["ListeningServerSocket"]
-    namespaceFor ND.ServerSocketUp {} =
+    namespaceFor Common.ServerSocketUp {} =
       Namespace [] ["ServerSocketUp"]
-    namespaceFor ND.ConfiguringServerSocket {} =
+    namespaceFor Common.ConfiguringServerSocket {} =
       Namespace [] ["ConfiguringServerSocket"]
-    namespaceFor ND.UnsupportedLocalSystemdSocket {} =
+    namespaceFor Common.UnsupportedLocalSystemdSocket {} =
       Namespace [] ["UnsupportedLocalSystemdSocket"]
-    namespaceFor ND.UnsupportedReadySocketCase {} =
+    namespaceFor Common.UnsupportedReadySocketCase {} =
       Namespace [] ["UnsupportedReadySocketCase"]
-    namespaceFor ND.DiffusionErrored {} =
+    namespaceFor Common.DiffusionErrored {} =
       Namespace [] ["DiffusionErrored"]
-    namespaceFor ND.SystemdSocketConfiguration {} =
+    namespaceFor Common.SystemdSocketConfiguration {} =
       Namespace [] ["SystemdSocketConfiguration"]
 
     severityFor (Namespace _ ["RunServer"]) _ = Just Info

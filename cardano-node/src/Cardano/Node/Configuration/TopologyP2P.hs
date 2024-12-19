@@ -22,15 +22,15 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
+import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
-import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))

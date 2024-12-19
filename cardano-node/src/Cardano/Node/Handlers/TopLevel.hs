@@ -46,7 +46,7 @@ module Cardano.Node.Handlers.TopLevel
 -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import qualified Ouroboros.Network.Diffusion as Network
+import qualified Ouroboros.Network.Diffusion.Common as Network
 
 import           Prelude
 

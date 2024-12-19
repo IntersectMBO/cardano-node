@@ -15,6 +15,7 @@ import qualified Cardano.Api as Api
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
@@ -34,7 +35,6 @@ import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))

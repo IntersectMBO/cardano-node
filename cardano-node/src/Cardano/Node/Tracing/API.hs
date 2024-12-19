@@ -8,6 +8,7 @@ module Cardano.Node.Tracing.API
   ) where
 
 import           Cardano.Logging hiding (traceWith)
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.NodeAddress (File (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
@@ -21,6 +22,10 @@ import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
+import           Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState
+                   (CardanoDebugPeerSelectionState, CardanoPeerSelectionState)
+import           Ouroboros.Cardano.Network.PeerSelection.Governor.Types (CardanoPeerSelectionView)
+import           Ouroboros.Cardano.Network.PublicRootPeers (CardanoPublicRootPeers)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Node (NetworkP2PMode)
@@ -55,7 +60,7 @@ initTraceDispatcher ::
   -> NetworkMagic
   -> NodeKernelData blk
   -> NetworkP2PMode p2p
-  -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p)
+  -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p CardanoPeerSelectionState CardanoDebugPeerSelectionState PeerTrustable (CardanoPublicRootPeers RemoteAddress) (CardanoPeerSelectionView RemoteAddress) IO)
 initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
   trConfig <- readConfigurationWithDefault
                 (unConfigPath $ ncConfigFile nc)

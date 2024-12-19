@@ -105,9 +105,9 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 7e8909f97d6ecc9fff320b3ac2b785aec74751c6
-  --sha256: sha256-Evv2EwaXbr2tXlxnHVr/AAV+QB7B8EWJbQR6t4IvOQ4=
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: d4d72615a0f02ec760f2d25371771c47cf3076d7
+  --sha256: sha256-heZyNLqWjqD6ZxdOdYauDm7Vm82FeKESfLgWS3FTa/w=
   subdir:
     cardano-client
     cardano-ping
@@ -124,33 +124,34 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 8b0a1e2893cae744026565deff1e6a4596dd4161
-  --sha256: sha256-mIdoQXTSVZvnxPayyk4yoZkXYsbXHnms5fBgq7bXfU8=
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 7993903f54e6d4734da10f975fbbb21b1589d6e0
+  --sha256: sha256-6E2Mnd/junQvL70lDywAd/N0NaVjZxW5diknZieliv8=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
     ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 43a2524194769ac0c44fc7d8ae6be98256a1a11d
-  --sha256: sha256-vomTIsTCIqe4NvhhP1x/JYem6e7wocaAg/UV9OHb6tc=
+  location: https://github.com/input-output-hk/cardano-api
+  tag: 580d33fe6bbdccb7d542b20bbe57126e43f5f3d7
+  --sha256: sha256-Nv6njiRDOFAE7xEfXJtt0Uapl3s5AuGfof1oSew5Thc=
   subdir:
     cardano-api
+    cardano-api-gen
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: c6b442a7eace5bcd576037199648b0c9355203a5
-  --sha256: sha256-D66uuQ9ulgvUHU42Vr4qbWWTAxI70ox9Kknkm9IRIM8=
+  location: https://github.com/input-output-hk/cardano-cli
+  tag: 4e6ea221adee79d66c4486f5059309af378af70c
+  --sha256: sha256-+PQ6OtWcP9fZ7p9l3jAZLmF65EhrtMqF3xVUC3u0JCE=
   subdir:
     cardano-cli
 
 source-repository-package
   type: git
-  location: https://github.com/neilmayhew/ekg-forward.git
+  location: https://github.com/neilmayhew/ekg-forward
   tag: 4ba8bb693093f6cf54d43d6e9bbce1e08b0457dd
   --sha256: sha256-g0gYqzRGjmZwxEzihJ4JifJe+GRfdLIMzaot7rUcjlI=

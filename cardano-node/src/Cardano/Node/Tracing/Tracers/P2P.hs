@@ -33,7 +33,7 @@ import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..),
+import           Ouroboros.Network.PeerSelection.Governor (
                    DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
                    PeerSelectionState (..), PeerSelectionTargets (..), PeerSelectionView (..),
                    TracePeerSelection (..), peerSelectionStateToCounters)
@@ -60,6 +60,11 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
+import Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
+import Ouroboros.Cardano.Network.PeerSelection.Governor.Types (CardanoPeerSelectionView(..), cardanoPeerSelectionStatetoCounters)
+import Ouroboros.Cardano.Network.PublicRootPeers (toSet, CardanoPublicRootPeers)
+import Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
+import Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState (CardanoDebugPeerSelectionState, CardanoPeerSelectionState)
 
 
 
@@ -73,7 +78,7 @@ instance
   , ToJSONKey RelayAccessPoint
   , Show ntnAddr
   , Show exception
-  ) => LogFormatting (TraceLocalRootPeers ntnAddr exception) where
+  ) => LogFormatting (TraceLocalRootPeers PeerTrustable ntnAddr exception) where
   forMachine _dtal (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
@@ -114,7 +119,7 @@ instance
       ]
   forHuman = pack . show
 
-instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
+instance MetaTrace (TraceLocalRootPeers ntnAddr extraFlags exception) where
   namespaceFor = \case
     TraceLocalRootDomains {}      -> Namespace [] ["LocalRootDomains"]
     TraceLocalRootWaiting {}      -> Namespace [] ["LocalRootWaiting"]
@@ -222,7 +227,7 @@ instance MetaTrace TracePublicRootPeers where
 -- PeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (TracePeerSelection SockAddr) where
+instance LogFormatting (TracePeerSelection CardanoDebugPeerSelectionState PeerTrustable (CardanoPublicRootPeers SockAddr) SockAddr) where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -567,7 +572,7 @@ instance LogFormatting (TracePeerSelection SockAddr) where
     ]
   asMetrics _ = []
 
-instance MetaTrace (TracePeerSelection SockAddr) where
+instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers SockAddr) where
     namespaceFor TraceLocalRootPeersChanged {} =
       Namespace [] ["LocalRootPeersChanged"]
     namespaceFor TraceTargetsChanged {}        =
@@ -828,14 +833,14 @@ instance MetaTrace (TracePeerSelection SockAddr) where
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (DebugPeerSelection SockAddr) where
+instance LogFormatting (DebugPeerSelection CardanoPeerSelectionState PeerTrustable (CardanoPublicRootPeers SockAddr) SockAddr) where
   forMachine dtal@DNormal (TraceGovernorState blockedAt wakeupAfter
                    st@PeerSelectionState { targets }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
-             , "counters" .= forMachine dtal (peerSelectionStateToCounters st)
+             , "counters" .= forMachine dtal (peerSelectionStateToCounters toSet cardanoPeerSelectionStatetoCounters st)
              ]
   forMachine _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -865,7 +870,7 @@ peerSelectionTargetsToObject
                , "activeBigLedgerPeers" .= targetNumberOfActiveBigLedgerPeers
                ]
 
-instance MetaTrace (DebugPeerSelection SockAddr) where
+instance MetaTrace (DebugPeerSelection extraState extraFlags extraPeers SockAddr) where
     namespaceFor TraceGovernorState {} = Namespace [] ["GovernorState"]
 
     severityFor (Namespace _ ["GovernorState"]) _ = Just Debug
@@ -883,7 +888,7 @@ instance MetaTrace (DebugPeerSelection SockAddr) where
 -- PeerSelectionCounters
 --------------------------------------------------------------------------------
 
-instance LogFormatting PeerSelectionCounters where
+instance (Show addr, ToJSON addr) => LogFormatting (PeerSelectionCounters (CardanoPeerSelectionView addr)) where
   forMachine _dtal PeerSelectionCounters {..} =
     mconcat [ "kind" .= String "PeerSelectionCounters"
 
@@ -918,13 +923,13 @@ instance LogFormatting PeerSelectionCounters where
             , "activeNonRootPeers" .= numberOfActiveNonRootPeers
             , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
 
-            , "knownBootstrapPeers" .= numberOfKnownBootstrapPeers
-            , "coldBootstrapPeersPromotions" .= numberOfColdBootstrapPeersPromotions
-            , "establishedBootstrapPeers" .= numberOfEstablishedBootstrapPeers
-            , "warmBootstrapPeersDemotions" .= numberOfWarmBootstrapPeersDemotions
-            , "warmBootstrapPeersPromotions" .= numberOfWarmBootstrapPeersPromotions
-            , "activeBootstrapPeers" .= numberOfActiveBootstrapPeers
-            , "ActiveBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
+            , "knownBootstrapPeers" .= viewKnownBootstrapPeers extraCounters
+            , "coldBootstrapPeersPromotions" .= viewColdBootstrapPeersPromotions extraCounters
+            , "establishedBootstrapPeers" .= viewEstablishedBootstrapPeers extraCounters
+            , "warmBootstrapPeersDemotions" .= viewWarmBootstrapPeersDemotions extraCounters
+            , "warmBootstrapPeersPromotions" .= viewWarmBootstrapPeersPromotions extraCounters
+            , "activeBootstrapPeers" .= viewActiveBootstrapPeers extraCounters
+            , "ActiveBootstrapPeersDemotions" .= viewActiveBootstrapPeersDemotions extraCounters
             ]
   forHuman = pack . show
   asMetrics psc =
@@ -994,16 +999,16 @@ instance LogFormatting PeerSelectionCounters where
         , IntM "peerSelection.ActiveNonRootPeers" (fromIntegral numberOfActiveNonRootPeers)
         , IntM "peerSelection.ActiveNonRootPeersDemotions" (fromIntegral numberOfActiveNonRootPeersDemotions)
 
-        , IntM "peerSelection.KnownBootstrapPeers" (fromIntegral numberOfKnownBootstrapPeers)
-        , IntM "peerSelection.ColdBootstrapPeersPromotions" (fromIntegral numberOfColdBootstrapPeersPromotions)
-        , IntM "peerSelection.EstablishedBootstrapPeers" (fromIntegral numberOfEstablishedBootstrapPeers)
-        , IntM "peerSelection.WarmBootstrapPeersDemotions" (fromIntegral numberOfWarmBootstrapPeersDemotions)
-        , IntM "peerSelection.WarmBootstrapPeersPromotions" (fromIntegral numberOfWarmBootstrapPeersPromotions)
-        , IntM "peerSelection.ActiveBootstrapPeers" (fromIntegral numberOfActiveBootstrapPeers)
-        , IntM "peerSelection.ActiveBootstrapPeersDemotions" (fromIntegral numberOfActiveBootstrapPeersDemotions)
+        , IntM "peerSelection.KnownBootstrapPeers" (fromIntegral $ snd $ viewKnownBootstrapPeers extraCounters)
+        , IntM "peerSelection.ColdBootstrapPeersPromotions" (fromIntegral $ snd $ viewColdBootstrapPeersPromotions extraCounters)
+        , IntM "peerSelection.EstablishedBootstrapPeers" (fromIntegral $ snd $ viewEstablishedBootstrapPeers extraCounters)
+        , IntM "peerSelection.WarmBootstrapPeersDemotions" (fromIntegral $ snd $ viewWarmBootstrapPeersDemotions extraCounters)
+        , IntM "peerSelection.WarmBootstrapPeersPromotions" (fromIntegral $ snd $ viewWarmBootstrapPeersPromotions extraCounters)
+        , IntM "peerSelection.ActiveBootstrapPeers" (fromIntegral $ snd $ viewActiveBootstrapPeers extraCounters)
+        , IntM "peerSelection.ActiveBootstrapPeersDemotions" (fromIntegral $ snd $ viewActiveBootstrapPeersDemotions extraCounters)
         ]
 
-instance MetaTrace PeerSelectionCounters where
+instance MetaTrace (PeerSelectionCounters extraCounters) where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
 
     severityFor (Namespace _ ["Counters"]) _ = Just Info
