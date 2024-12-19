@@ -39,6 +39,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import qualified Ouroboros.Network.BlockFetch.Decision.Trace as BlockFetch
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
@@ -212,6 +213,12 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
           Left FetchDeclinePeerBusy {}           -> Info
           Left FetchDeclineConcurrencyLimit {}   -> Info
           Right _                                -> Info
+
+
+instance HasPrivacyAnnotation (BlockFetch.TraceDecisionEvent peer header)
+instance HasSeverityAnnotation (BlockFetch.TraceDecisionEvent peer header) where
+  getSeverityAnnotation (BlockFetch.PeersFetch xs) = getSeverityAnnotation xs
+  getSeverityAnnotation BlockFetch.PeerStarvedUs {} = Info
 
 
 instance HasPrivacyAnnotation (TraceTxSubmissionInbound txid tx)
@@ -456,7 +463,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
-      TraceVerifyPeerSnapshot    {} -> Info
+      -- TraceVerifyPeerSnapshot    {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -635,6 +642,13 @@ instance (HasHeader header, ConvertRawHash header, ToObject peer)
   trTransformer = trStructured
 instance (Show header, StandardHash header, Show peer)
      => HasTextFormatter (TraceLabelPeer peer (TraceFetchClientState header)) where
+  formatText a _ = pack (show a)
+
+instance (StandardHash header, Show peer, ToObject peer)
+      => Transformable Text IO (BlockFetch.TraceDecisionEvent peer header) where
+  trTransformer = trStructuredText
+instance (StandardHash header, Show peer)
+    => HasTextFormatter (BlockFetch.TraceDecisionEvent peer header) where
   formatText a _ = pack (show a)
 
 instance ToObject peer
@@ -1330,6 +1344,13 @@ instance (ToObject peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
   toObject verb (TraceLabelPeer peerid a) =
     mconcat [ "peer" .= toObject verb peerid ] <> toObject verb a
 
+instance ToObject peer
+      => ToObject (BlockFetch.TraceDecisionEvent peer header) where
+  toObject verb (BlockFetch.PeersFetch as) = toObject verb as
+  toObject verb (BlockFetch.PeerStarvedUs peer) = mconcat
+    [ "kind" .= String "PeersStarvedUs"
+    , "peer" .= toObject verb peer
+    ]
 
 instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
@@ -2062,9 +2083,6 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
             , "associationMode" .= dpssAssociationMode ds
             ]
-  toObject _verb (TraceVerifyPeerSnapshot result) =
-    mconcat [ "kind" .= String "VerifyPeerSnapshot"
-            , "result" .= result ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
@@ -2525,7 +2543,7 @@ instance (Show addr, ToObject addr, ToJSON addr)
 
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (Server.Trace addr) where
-  toObject verb (Server.TrAcceptConnection connId)     =
+  toObject _verb (Server.TrAcceptConnection connId)     =
     mconcat [ "kind" .= String "AcceptConnection"
              , "connectionId" .= toJSON connId
              ]
