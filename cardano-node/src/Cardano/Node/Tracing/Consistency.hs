@@ -53,11 +53,10 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
-import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerTrace (..))
+import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
-import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -79,7 +78,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuer
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
-import           Ouroboros.Network.Server2 (ServerTrace (..))
+import qualified Ouroboros.Network.Server2 as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription.Dns (DnsTrace (..), WithDomainName (..))
 import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
@@ -88,7 +87,7 @@ import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbo
 
 import           Control.Exception (SomeException)
 import qualified Data.Text as T
-import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
+import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 
 
@@ -244,10 +243,10 @@ getAllNamespaces =
 
         dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
                              (allNamespaces :: [Namespace
-                                 (WithMuxBearer (ConnectionId RemoteAddress) MuxTrace)])
+                                 (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
         dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
                              (allNamespaces :: [Namespace
-                                 (WithMuxBearer (ConnectionId LocalAddress) MuxTrace)])
+                                 (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace)])
         dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "Handshake", "Remote"])
                             (allNamespaces :: [Namespace
@@ -301,7 +300,7 @@ getAllNamespaces =
         connectionManagerNS = map (nsGetTuple . nsReplacePrefix
                                     ["Net", "ConnectionManager", "Remote"])
                                   (allNamespaces :: [Namespace
-                                    (ConnectionManagerTrace
+                                    (ConnectionManager.Trace
                                     Socket.SockAddr
                                       (ConnectionHandlerTrace
                                         UnversionedProtocol
@@ -313,11 +312,11 @@ getAllNamespaces =
                                                 Socket.SockAddr)])
         serverNS = map (nsGetTuple . nsReplacePrefix
                          ["Net", "Server", "Remote"])
-                       (allNamespaces :: [Namespace (ServerTrace Socket.SockAddr)])
+                       (allNamespaces :: [Namespace (Server.Trace Socket.SockAddr)])
         inboundGovernorNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "InboundGovernor", "Remote"])
                                 (allNamespaces :: [Namespace
-                                  (InboundGovernorTrace Socket.SockAddr)])
+                                  (InboundGovernor.Trace Socket.SockAddr)])
         inboundGovernorTransitionsNS = map (nsGetTuple . nsReplacePrefix
                                       ["Net", "InboundGovernor", "Transition"])
                                            (allNamespaces :: [Namespace
@@ -325,7 +324,7 @@ getAllNamespaces =
         localConnectionManagerNS = map (nsGetTuple . nsReplacePrefix
                                          ["Net", "ConnectionManager", "Local"])
                                        (allNamespaces :: [Namespace
-                                       (ConnectionManagerTrace
+                                       (ConnectionManager.Trace
                                           Socket.SockAddr
                                           (ConnectionHandlerTrace
                                             UnversionedProtocol
@@ -333,11 +332,11 @@ getAllNamespaces =
         localServerNS = map (nsGetTuple . nsReplacePrefix
                               ["Net", "Server", "Local"])
                             (allNamespaces :: [Namespace
-                              (ServerTrace LocalAddress)])
+                              (Server.Trace LocalAddress)])
         localInboundGovernorNS = map (nsGetTuple . nsReplacePrefix
                                         ["Net", "InboundGovernor", "Local"])
                                      (allNamespaces :: [Namespace
-                                        (InboundGovernorTrace LocalAddress)])
+                                        (InboundGovernor.Trace LocalAddress)])
 
 
 -- -- DiffusionTracersExtra nonP2P

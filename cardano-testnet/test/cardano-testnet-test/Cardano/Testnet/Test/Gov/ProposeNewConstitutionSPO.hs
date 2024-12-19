@@ -52,7 +52,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def

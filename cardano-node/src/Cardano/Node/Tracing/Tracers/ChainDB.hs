@@ -417,8 +417,6 @@ instance ( LogFormatting (Header blk)
           "Popping block from queue"
         FallingEdgeWith pt ->
           "Popped block from queue: " <> renderRealPointAsPhrase pt
-  forHuman (ChainDB.BlockInTheFuture pt slot) =
-      "Ignoring block from future: " <> renderRealPointAsPhrase pt <> ", slot " <> condenseT slot
   forHuman (ChainDB.StoreButDontChange pt) =
       "Ignoring block: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.TryAddToCurrentChain pt) =
@@ -438,8 +436,6 @@ instance ( LogFormatting (Header blk)
       case enclosing of
         RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
         FallingEdge -> "Chain added block " <> renderRealPointAsPhrase pt
-  forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
-      "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHumanOrMachine ev'
   forHuman ChainDB.AddedReprocessLoEBlocksToQueue =
       "Added request to queue to reprocess blocks postponed by LoE."
@@ -468,10 +464,6 @@ instance ( LogFormatting (Header blk)
                , case edgePt of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
-  forMachine dtal (ChainDB.BlockInTheFuture pt slot) =
-      mconcat [ "kind" .= String "BlockInTheFuture"
-               , "block" .= forMachine dtal pt
-               , "slot" .= forMachine dtal slot ]
   forMachine dtal (ChainDB.StoreButDontChange pt) =
       mconcat [ "kind" .= String "StoreButDontChange"
                , "block" .= forMachine dtal pt ]
@@ -562,9 +554,6 @@ instance ( LogFormatting (Header blk)
                 , "block" .= forMachine dtal pt
                 , "blockNo" .= showT bn ]
                 <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
-  forMachine dtal (ChainDB.ChainSelectionForFutureBlock pt) =
-      mconcat [ "kind" .= String "TChainSelectionForFutureBlock"
-               , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
   forMachine _dtal ChainDB.AddedReprocessLoEBlocksToQueue =
@@ -640,8 +629,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["AddedBlockToQueue"]
   namespaceFor ChainDB.PoppedBlockFromQueue {} =
     Namespace [] ["PoppedBlockFromQueue"]
-  namespaceFor ChainDB.BlockInTheFuture {} =
-    Namespace [] ["BlockInTheFuture"]
   namespaceFor ChainDB.AddedBlockToVolatileDB {} =
     Namespace [] ["AddedBlockToVolatileDB"]
   namespaceFor ChainDB.TryAddToCurrentChain {} =
@@ -658,8 +645,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["ChangingSelection"]
   namespaceFor (ChainDB.AddBlockValidation ev') =
     nsPrependInner "AddBlockValidation" (namespaceFor ev')
-  namespaceFor ChainDB.ChainSelectionForFutureBlock {} =
-    Namespace [] ["ChainSelectionForFutureBlock"]
   namespaceFor (ChainDB.PipeliningEvent ev') =
     nsPrependInner "PipeliningEvent" (namespaceFor ev')
   namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue =
@@ -673,7 +658,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   severityFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreInvalidBlock"]) _ = Just Info
   severityFor (Namespace _ ["AddedBlockToQueue"]) _ = Just Debug
-  severityFor (Namespace _ ["BlockInTheFuture"]) _ = Just Info
   severityFor (Namespace _ ["AddedBlockToVolatileDB"]) _ = Just Debug
   severityFor (Namespace _ ["PoppedBlockFromQueue"]) _ = Just Debug
   severityFor (Namespace _ ["TryAddToCurrentChain"]) _ = Just Debug
@@ -693,7 +677,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
               (Just (ChainDB.AddBlockValidation ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace _ ("AddBlockValidation" : _tl)) Nothing = Just Notice
-  severityFor (Namespace _ ["ChainSelectionForFutureBlock"]) _ = Just Debug
   severityFor (Namespace out ("PipeliningEvent" : tl)) (Just (ChainDB.PipeliningEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("PipeliningEvent" : tl)) Nothing =
@@ -793,10 +776,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     [ "The block was added to the queue and will be added to the ChainDB by"
     , " the background thread. The size of the queue is included.."
     ]
-  documentFor (Namespace _ ["BlockInTheFuture"]) = Just $ mconcat
-    [ "The block is from the future, i.e., its slot number is greater than"
-    , " the current slot (the second argument)."
-    ]
   documentFor (Namespace _ ["AddedBlockToVolatileDB"]) = Just
     "A block was added to the Volatile DB"
   documentFor (Namespace _ ["PoppedBlockFromQueue"]) = Just ""
@@ -829,11 +808,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     ]
   documentFor (Namespace out ("AddBlockValidation" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceValidationEvent blk))
-  documentFor (Namespace _ ["ChainSelectionForFutureBlock"]) = Just $ mconcat
-    [ "Run chain selection for a block that was previously from the future."
-    , " This is done for all blocks from the future each time a new block is"
-    , " added."
-    ]
   documentFor (Namespace out ("PipeliningEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TracePipeliningEvent blk))
   documentFor _ = Nothing
@@ -844,7 +818,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     , Namespace [] ["IgnoreBlockAlreadyInVolatileDB"]
     , Namespace [] ["IgnoreInvalidBlock"]
     , Namespace [] ["AddedBlockToQueue"]
-    , Namespace [] ["BlockInTheFuture"]
     , Namespace [] ["AddedBlockToVolatileDB"]
     , Namespace [] ["PoppedBlockFromQueue"]
     , Namespace [] ["TryAddToCurrentChain"]
@@ -853,7 +826,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     , Namespace [] ["ChangingSelection"]
     , Namespace [] ["AddedToCurrentChain"]
     , Namespace [] ["SwitchedToAFork"]
-    , Namespace [] ["ChainSelectionForFutureBlock"]
     , Namespace [] ["AddedReprocessLoEBlocksToQueue"]
     , Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
     , Namespace [] ["ChainSelectionLoEDebug"]
@@ -1171,14 +1143,6 @@ instance ( LedgerSupportsProtocol blk
         "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
     forHuman (ChainDB.ValidCandidate c) =
         "Valid candidate " <> renderPointAsPhrase (AF.headPoint c)
-    forHuman (ChainDB.CandidateContainsFutureBlocks c hdrs) =
-        "Candidate contains blocks from near future:  " <>
-          renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
-          Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
-    forHuman (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs) =
-        "Candidate contains blocks from future exceeding clock skew limit: " <>
-          renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
-          Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
     forHuman (ChainDB.UpdateLedgerDbTraceEvent
                 (StartedPushingBlockToTheLedgerDb
                   (LedgerDB.PushStart start)
@@ -1200,14 +1164,6 @@ instance ( LedgerSupportsProtocol blk
     forMachine dtal  (ChainDB.ValidCandidate c) =
             mconcat [ "kind" .= String "ValidCandidate"
                      , "block" .= renderPointForDetails dtal (AF.headPoint c) ]
-    forMachine dtal  (ChainDB.CandidateContainsFutureBlocks c hdrs) =
-            mconcat [ "kind" .= String "CandidateContainsFutureBlocks"
-                     , "block"   .= renderPointForDetails dtal (AF.headPoint c)
-                     , "headers" .= map (renderPointForDetails dtal . headerPoint) hdrs ]
-    forMachine dtal  (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs) =
-            mconcat [ "kind" .= String "CandidateContainsFutureBlocksExceedingClockSkew"
-                     , "block"   .= renderPointForDetails dtal (AF.headPoint c)
-                     , "headers" .= map (renderPointForDetails dtal . headerPoint) hdrs ]
     forMachine _dtal (ChainDB.UpdateLedgerDbTraceEvent
                         (StartedPushingBlockToTheLedgerDb
                           (LedgerDB.PushStart start)
@@ -1222,18 +1178,12 @@ instance ( LedgerSupportsProtocol blk
 instance MetaTrace (ChainDB.TraceValidationEvent blk) where
     namespaceFor ChainDB.ValidCandidate {} =
       Namespace [] ["ValidCandidate"]
-    namespaceFor ChainDB.CandidateContainsFutureBlocks {} =
-      Namespace [] ["CandidateContainsFutureBlocks"]
-    namespaceFor ChainDB.CandidateContainsFutureBlocksExceedingClockSkew {} =
-      Namespace [] ["CandidateContainsFutureBlocksExceedingClockSkew"]
     namespaceFor ChainDB.InvalidBlock {} =
       Namespace [] ["InvalidBlock"]
     namespaceFor ChainDB.UpdateLedgerDbTraceEvent {} =
       Namespace [] ["UpdateLedgerDb"]
 
     severityFor (Namespace _ ["ValidCandidate"]) _ = Just Info
-    severityFor (Namespace _ ["CandidateContainsFutureBlocks"]) _ = Just Debug
-    severityFor (Namespace _ ["CandidateContainsFutureBlocksExceedingClockSkew"]) _ = Just Error
     severityFor (Namespace _ ["InvalidBlock"]) _ = Just Error
     severityFor (Namespace _ ["UpdateLedgerDb"]) _ = Just Debug
     severityFor _ _ = Nothing
@@ -1241,16 +1191,6 @@ instance MetaTrace (ChainDB.TraceValidationEvent blk) where
     documentFor (Namespace _ ["ValidCandidate"]) = Just $ mconcat
         [ "An event traced during validating performed while adding a block."
         , " A candidate chain was valid."
-        ]
-    documentFor (Namespace _ ["CandidateContainsFutureBlocks"]) = Just $ mconcat
-        [ "An event traced during validating performed while adding a block."
-        , " Candidate contains headers from the future which do no exceed the"
-        , " clock skew."
-        ]
-    documentFor (Namespace _ ["CandidateContainsFutureBlocksExceedingClockSkew"]) = Just $ mconcat
-        [ "An event traced during validating performed while adding a block."
-        , " Candidate contains headers from the future which exceed the"
-        , " clock skew."
         ]
     documentFor (Namespace _ ["InvalidBlock"]) = Just $ mconcat
         [ "An event traced during validating performed while adding a block."
@@ -1261,8 +1201,6 @@ instance MetaTrace (ChainDB.TraceValidationEvent blk) where
 
     allNamespaces =
       [ Namespace [] ["ValidCandidate"]
-      , Namespace [] ["CandidateContainsFutureBlocks"]
-      , Namespace [] ["CandidateContainsFutureBlocksExceedingClockSkew"]
       , Namespace [] ["InvalidBlock"]
       , Namespace [] ["UpdateLedgerDb"]
       ]
@@ -1584,21 +1522,35 @@ instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
   forHuman (LedgerDB.TookSnapshot snap pt RisingEdge) =
-      "Taking ledger snapshot " <> showT snap <>
-        " at " <> renderRealPointAsPhrase pt
+    Text.unwords [ "Taking ledger snapshot"
+                 , showT snap
+                 , "at"
+                 , renderRealPointAsPhrase pt
+                 ]
   forHuman (LedgerDB.TookSnapshot snap pt (FallingEdgeWith t)) =
-      "Took ledger snapshot " <> showT snap <>
-        " at " <> renderRealPointAsPhrase pt <> ", duration: " <> showT t
+    Text.unwords [ "Took ledger snapshot"
+                 , showT snap
+                 , "at"
+                 , renderRealPointAsPhrase pt
+                 , ", duration:"
+                 , showT t
+                 ]
   forHuman (LedgerDB.DeletedSnapshot snap) =
-      "Deleted old snapshot " <> showT snap
+    Text.unwords ["Deleted old snapshot", showT snap]
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
-      "Invalid snapshot " <> showT snap <> showT failure <> context
+    Text.unwords [ "Invalid snapshot"
+                 , showT snap
+                 , showT failure
+                 , context
+                 ]
     where
       context = case failure of
         LedgerDB.InitFailureRead{} ->
              " This is most likely an expected change in the serialization format,"
           <> " which currently requires a chain replay"
         _ -> ""
+  forHuman (LedgerDB.SnapshotMissingChecksum snap) =
+      "Checksum file is missing for snapshot " <> showT snap
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
@@ -1612,15 +1564,21 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "InvalidSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
+  forMachine dtals (LedgerDB.SnapshotMissingChecksum snap) =
+      mconcat [ "kind" .= String "SnapshotMissingChecksum"
+               , "snapshot" .= forMachine dtals snap
+               ]
 
 instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
+    namespaceFor LedgerDB.SnapshotMissingChecksum {} = Namespace [] ["SnapshotMissingChecksum"]
 
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
+    severityFor  (Namespace _ ["SnapshotMissingChecksum"]) _ = Just Warning
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["TookSnapshot"]) = Just $ mconcat
@@ -1632,12 +1590,15 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
           "A snapshot was deleted from the disk."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just
           "An on disk snapshot was invalid. Unless it was suffixed, it will be deleted"
+    documentFor (Namespace _ ["SnapshotMissingChecksum"]) = Just
+          "Checksum file was missing for snapshot."
     documentFor _ = Nothing
 
     allNamespaces =
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
       , Namespace [] ["InvalidSnapshot"]
+      , Namespace [] ["SnapshotMissingChecksum"]
       ]
 
 
@@ -2337,24 +2298,4 @@ instance (Show (PBFT.PBftVerKeyHash c))
     mconcat
       [ "kind" .= String "PBftCannotForgeThresholdExceeded"
       , "numForged" .= numForged
-      ]
-
-instance ( ConvertRawHash blk
-         , StandardHash blk
-         , LogFormatting (LedgerError blk)
-         , LogFormatting (RealPoint blk)
-         , LogFormatting (OtherHeaderEnvelopeError blk)
-         , LogFormatting (ExtValidationError blk)
-         , LogFormatting (ValidationErr (BlockProtocol blk))
-         )
-      => LogFormatting (ChainDB.InvalidBlockReason blk) where
-  forMachine dtal (ChainDB.ValidationError extvalerr) =
-    mconcat
-      [ "kind" .= String "ValidationError"
-      , "error" .= forMachine dtal extvalerr
-      ]
-  forMachine dtal (ChainDB.InFutureExceedsClockSkew point) =
-    mconcat
-      [ "kind" .= String "InFutureExceedsClockSkew"
-      , "point" .= forMachine dtal point
       ]

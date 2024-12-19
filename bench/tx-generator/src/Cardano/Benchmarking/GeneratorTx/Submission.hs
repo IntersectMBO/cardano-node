@@ -45,7 +45,7 @@ import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Ouroboros.Network.Protocol.TxSubmission2.Type (TokBlockingStyle (..))
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (SingBlockingStyle (..))
 
 import           Cardano.Api hiding (Active)
 import           Cardano.TxGenerator.Types (TPSRate, TxGenError)
@@ -124,11 +124,11 @@ mkSubmissionSummary startTime reportsRefs
 txStreamSource :: forall era. MVar (StreamState (TxStream IO era)) -> TpsThrottle -> TxSource era
 txStreamSource streamRef tpsThrottle = Active worker
  where
-  worker :: forall m blocking . MonadIO m => TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
+  worker :: forall m blocking . MonadIO m => SingBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
   worker blocking req = do
     (done, txCount) <- case blocking of
-       TokBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
-       TokNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
+       SingBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
+       SingNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
     txList <- liftIO $ unFold txCount
     case done of
       Stop -> return (Exhausted, txList)

@@ -55,7 +55,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     ceo = ConwayEraOnwardsConway
-    sbe = conwayEraOnwardsToShelleyBasedEra ceo
+    sbe = convert ceo
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
     options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }

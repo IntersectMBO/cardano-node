@@ -6,8 +6,9 @@ module Trace.Forward.Run.DataPoint.Acceptor
   , acceptDataPointsResp
   ) where
 
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), RunMiniProtocol (..))
 
 import qualified Codec.Serialise as CBOR
 import           Control.Concurrent.STM.TMVar (putTMVar)
@@ -29,7 +30,7 @@ acceptDataPointsInit
   :: AcceptorConfiguration
   -> (initiatorCtx -> IO DataPointRequestor)
   -> (initiatorCtx -> IO ())
-  -> RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
+  -> RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
 acceptDataPointsInit config mkDPRequestor peerErrorHandler =
   InitiatorProtocolOnly $ runPeerWithRequestor config mkDPRequestor peerErrorHandler
 
@@ -37,7 +38,7 @@ acceptDataPointsResp
   :: AcceptorConfiguration
   -> (responderCtx -> IO DataPointRequestor)
   -> (responderCtx -> IO ())
-  -> RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
+  -> RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
 acceptDataPointsResp config mkDPRequestor peerErrorHandler =
   ResponderProtocolOnly $ runPeerWithRequestor config mkDPRequestor peerErrorHandler
 
