@@ -51,7 +51,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
 
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       eraName = eraToString sbe
       asbe = AnyShelleyBasedEra sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }

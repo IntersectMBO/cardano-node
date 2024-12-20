@@ -20,11 +20,12 @@ import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   MiniProtocolNum (..), OuroborosApplication (..),
                    RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
@@ -33,21 +34,22 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
                    makeLocalBearer)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), HandshakeCallbacks (..),
-                   SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
-                   newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
-                   withServerNode)
+import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
+                   HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
+                   connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
+                   nullNetworkServerTracers, withServerNode)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
 import           Control.DeepSeq (NFData)
+import           Control.Exception (throwIO)
 import           Control.Monad (forever)
 import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTracer)
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (getCurrentTime)
-import           Data.Void (Void)
+import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
 import           GHC.Generics
 import           System.Directory
@@ -157,15 +159,11 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
   dpStore <- initDataPointStore
   writeToStore dpStore "test.data.point" $ DataPoint mkTestDataPoint
   withAsync (traceObjectsWriter sink) $ \_ -> do
-    connectToNode
+    done <- connectToNode
       snocket
       muxBearer
+      args
       mempty
-      (codecHandshake forwardingVersionCodec)
-      timeLimits
-      (cborTermVersionDataCodec forwardingCodecCBORTerm)
-      nullNetworkConnectTracers
-      (HandshakeCallbacks acceptableVersion queryVersion)
       (simpleSingletonVersions
          ForwardingV_1
          (ForwardingVersionData $ unI tsNetworkMagic)
@@ -177,10 +175,22 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       )
       Nothing
       address
+    case done of
+      Left err -> throwIO err
+      Right choice -> case choice of
+        Left () -> return ()
+        Right void -> absurd void
  where
+  args = ConnectToArgs {
+    ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
+    ctaHandshakeTimeLimits = timeLimits,
+    ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+    ctaConnectTracers = nullNetworkConnectTracers,
+    ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
+
   forwarderApp
-    :: [(RunMiniProtocol 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
-    -> OuroborosApplication 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void
+    :: [(RunMiniProtocol 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol
@@ -240,8 +250,8 @@ doListenToAcceptor TestSetup{..}
               $ \_ serverAsync -> wait serverAsync -- Block until async exception.
  where
   forwarderApp
-    :: [(RunMiniProtocol 'ResponderMode initCtx respCtx LBS.ByteString IO Void (), Word16)]
-    -> OuroborosApplication 'ResponderMode initCtx respCtx LBS.ByteString IO Void ()
+    :: [(RunMiniProtocol 'Mux.ResponderMode initCtx respCtx LBS.ByteString IO Void (), Word16)]
+    -> OuroborosApplication 'Mux.ResponderMode initCtx respCtx LBS.ByteString IO Void ()
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol

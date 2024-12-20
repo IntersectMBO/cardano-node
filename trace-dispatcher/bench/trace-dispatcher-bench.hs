@@ -6,7 +6,7 @@ import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 
 import           Data.IORef
-import           System.Remote.Monitoring (forkServer)
+import           System.Remote.Monitoring.Wai (forkServer)
 
 import           Criterion.Main
 

@@ -19,6 +19,8 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Types (PeerSnapshotFile)
+import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
@@ -34,9 +36,8 @@ import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig, WarmValency)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
@@ -106,9 +107,10 @@ data StartupTrace blk =
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint LocalRootConfig)]
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
+                  (Maybe PeerSnapshotFile)
 
   -- | Warn when 'DisabledP2P' is set.
   | NonP2PWarning
@@ -127,6 +129,7 @@ data StartupTrace blk =
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
+  | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
 
 data EnabledBlockForging = EnabledBlockForging
                          | DisabledBlockForging
