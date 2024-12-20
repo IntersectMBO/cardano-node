@@ -237,6 +237,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
   getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
+  getSeverityAnnotation (ChainDB.TraceChainSelStarvationEvent _) = Warning -- TODO: review
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -749,6 +750,7 @@ instance ( ConvertRawHash blk
         VolDb.Truncate e pth offs   -> "Truncating the file at " <> showT pth <> " at offset " <> showT offs <> ": " <> showT e
         VolDb.InvalidFileNames fs   -> "Invalid Volatile DB files: " <> showT fs
         VolDb.DBClosed              -> "Closed Volatile DB."
+      ChainDB.TraceChainSelStarvationEvent _ -> "ChainSelStarvationEvent" -- TODO: review
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -1012,7 +1014,6 @@ instance ( ConvertRawHash blk
           [ "anchor" .= renderPointForVerbosity verb (AF.anchorPoint frag)
           , "head" .= renderPointForVerbosity verb (AF.headPoint frag)
           ]
-
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)
@@ -1239,6 +1240,10 @@ instance ( ConvertRawHash blk
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
     VolDb.DBClosed -> mconcat [ "kind" .= String "TraceVolatileDbEvent.DBClosed"]
+  toObject _verb (ChainDB.TraceChainSelStarvationEvent _) =
+    mconcat [ "kind" .= String "ChainSelStarvationEvent"
+            -- TODO: add fields
+            ]
 
 instance ConvertRawHash blk => ToObject (ImmDB.TraceChunkValidation blk ChunkNo) where
   toObject verb ev = case ev of
