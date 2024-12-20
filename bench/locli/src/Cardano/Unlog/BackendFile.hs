@@ -16,8 +16,14 @@ import qualified Data.Text.Short as Text
 import           GHC.Conc (numCapabilities)
 
 
+readRunLogsBare :: JsonInputFile a -> ExceptT String IO (RunLogs ())
+readRunLogsBare rlf =
+  AE.eitherDecode
+    <$> LBS.readFile (unJsonInputFile rlf)
+        & newExceptT
+
 runLiftLogObjects :: RunLogs () -> Bool -> Maybe [LOAnyType]
-                  -> ExceptT TS.Text IO (RunLogs [LogObject])
+                  -> ExceptT String IO (RunLogs [LogObject])
 runLiftLogObjects rl@RunLogs{..} okDErr loAnyLimit = liftIO $
  go Map.empty 0 simultaneousReads
  where
