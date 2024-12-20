@@ -189,10 +189,12 @@ logObjectToSql :: LogObject -> Maybe SQLRunnable
 logObjectToSql lo@LogObject{loAt, loBody, loTid} =
   case loBody of
 
-    -- no suitable interpreter found when parsing log object stream
-    LOAny{}                       -> Nothing
     -- trace not emitted by the node
     LOGeneratorSummary{}          -> Nothing
+
+    -- no suitable interpreter found when parsing log object stream
+    LOAny{}                       -> Nothing
+
     -- not required for analysis
     LOTxsAcked{}                  -> Nothing
 
@@ -235,8 +237,8 @@ logObjectToSql lo@LogObject{loAt, loBody, loTid} =
     LODecodeError rawText err     -> Just (insertError, toArgs $ Tuple ("", err) ("", rawText))
 
     where
-      newLOEvent = Just . insertVariadic "event" lo
-      newLOTxns  = Just . insertVariadic "txns"  lo
+      newLOEvent        = Just . insertVariadic "event" lo
+      newLOTxns         = Just . insertVariadic "txns"  lo
 
 
 insertVariadic :: SQL -> LogObject -> ArgNTuple -> SQLRunnable

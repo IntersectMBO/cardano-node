@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -100,7 +101,7 @@ data HostLogs a
     , hlRawFirstAt     :: Maybe UTCTime
     , hlRawLastAt      :: Maybe UTCTime
     }
-  deriving (Generic, NFData)
+  deriving (Generic, Functor, NFData)
 
 deriving instance FromJSON a => FromJSON (HostLogs a)
 deriving instance   ToJSON a =>   ToJSON (HostLogs a)
@@ -113,11 +114,10 @@ data RunLogs a
     { rlHostLogs      :: Map.Map Host (HostLogs a)
     , rlFilterDate    :: UTCTime
     }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Functor, FromJSON, ToJSON, NFData)
 
 rlLogs :: RunLogs a -> [(LogObjectSource, a)]
 rlLogs = fmap hlLogs . Map.elems . rlHostLogs
-
 
 data LogObject
   = LogObject
