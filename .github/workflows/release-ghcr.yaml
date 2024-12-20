@@ -67,19 +67,37 @@ jobs:
     - name: Uploading intersectmbo/cardano-node
       run: |
         echo "::group::Downloading from cache"
-        nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/node
+        nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 --out-link ./result-node ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/node
         echo "::endgroup::"
 
         echo "::group::Uploading to registry"
-        skopeo copy docker-archive:./result docker://ghcr.io/intersectmbo/cardano-node:$GITHUB_REF_NAME
+        skopeo copy docker-archive:./result-node docker://ghcr.io/intersectmbo/cardano-node:$GITHUB_REF_NAME
         echo "::endgroup::"
 
     - name: Uploading intersectmbo/cardano-submit-api
       run: |
         echo "::group::Downloading from cache"
-        nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/submit-api
+        nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 --out-link ./result-api ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/submit-api
         echo "::endgroup::"
 
         echo "::group::Uploading to registry"
-        skopeo copy docker-archive:./result docker://ghcr.io/intersectmbo/cardano-submit-api:$GITHUB_REF_NAME
+        skopeo copy docker-archive:./result-api docker://ghcr.io/intersectmbo/cardano-submit-api:$GITHUB_REF_NAME
+        echo "::endgroup::"
+
+    - name: Obtaining latest release tag
+      id: latest-tag
+      run: |
+        LATEST_TAG=$(gh api repos/$GITHUB_REPOSITORY/releases/latest --jq '.tag_name')
+        echo "LATEST_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+        echo "Latest release tag is: $LATEST_TAG"
+
+    - name: Tagging intersectmbo container latest
+      if: ${{ github.event.release.tag_name == steps.latest-tag.outputs.LATEST_TAG }}
+      run: |
+        echo "::group::Tagging latest for intersectmbo/cardano-node"
+        skopeo copy docker-archive:./result-node docker://ghcr.io/intersectmbo/cardano-node:latest
+        echo "::endgroup::"
+
+        echo "::group::Tagging latest for intersectmbo/cardano-submit-api"
+        skopeo copy docker-archive:./result-api docker://ghcr.io/intersectmbo/cardano-submit-api:latest
         echo "::endgroup::"
