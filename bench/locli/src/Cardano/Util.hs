@@ -18,6 +18,7 @@ module Cardano.Util
   , module Control.Applicative
   , module Control.Concurrent.Async
   , module Control.Monad.Trans.Except.Extra
+  -- , module LedgerStrictMaybe
   , module Ouroboros.Consensus.Util.Time
   , module Text.Printf
   , module Cardano.Util
