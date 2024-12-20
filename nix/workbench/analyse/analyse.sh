@@ -243,7 +243,7 @@ EOF
         local script=(
             hash-timeline
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
-            read-context
+            read-context       $(test $storage -eq 1 && echo 'dump-tracefreqs')      # with DB storage backend, *.tracefreq.json isn't created with jq, needs to be dumped in an extra step
 
             build-mach-views   $(test -n "$dump_machviews"  && echo 'dump-mach-views')
             rebuild-chain

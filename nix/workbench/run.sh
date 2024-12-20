@@ -698,7 +698,7 @@ EOF
            then fail "fetch-analysis:  run has not been analysed on remote: $(white $run)"
            else local analysis_files=(
                    $(ssh $env -- \
-                     sh -c "'cd $depl/$dir/$run && ls analysis/{cdf/*.cdf,*.{json,org,txt}} | fgrep -v -e flt.json -e flt.logobjs.json -e flt.perf-stats.json'" \
+                     sh -c "'cd $depl/$dir/$run && ls analysis/{cdf/*.cdf,*.{json,org,txt}} | fgrep -v -e flt.json -e logobjs.json -e perf-stats.json -e mach-views.json'" \
                      2>/dev/null)
                 )
                 local args=(
@@ -902,11 +902,11 @@ run_remote_get() {
     jq . <<<$meta > $dir/meta.json
 
     local common_run_files=(
-        genesis-alonzo.json
+        genesis.alonzo.json
         genesis-shelley.json
-        machines.json
-        network-latency-matrix.json
         profile.json
+        generator/protocol-parameters-queried.json
+        generator/plutus-budget-summary.json
     )
     local xs0=(${objects[*]})
     local xs1=(${xs0[*]/#all-hosts/        $(jq -r '.hostname | keys | .[]' <<<$meta)})

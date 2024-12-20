@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -15,6 +16,7 @@ module Cardano.Unlog.LogObject
   ( HostLogs (..)
   , TraceFreqs
   , hlRawLogObjects
+  , hlTraceFreqs
   , RunLogs (..)
   , rlLogs
   , LogObject (..)
@@ -100,7 +102,7 @@ data HostLogs a
     , hlRawFirstAt     :: Maybe UTCTime
     , hlRawLastAt      :: Maybe UTCTime
     }
-  deriving (Generic, NFData)
+  deriving (Generic, Functor, NFData)
 
 deriving instance FromJSON a => FromJSON (HostLogs a)
 deriving instance   ToJSON a =>   ToJSON (HostLogs a)
@@ -108,16 +110,19 @@ deriving instance   ToJSON a =>   ToJSON (HostLogs a)
 hlRawLogObjects :: HostLogs a -> Int
 hlRawLogObjects = sum . Map.elems . hlRawTraceFreqs
 
+hlTraceFreqs :: HostLogs a -> HostLogs TraceFreqs
+hlTraceFreqs HostLogs{hlLogs = (source, _), ..} =
+  HostLogs {hlLogs = (source, hlRawTraceFreqs), ..}
+
 data RunLogs a
   = RunLogs
     { rlHostLogs      :: Map.Map Host (HostLogs a)
     , rlFilterDate    :: UTCTime
     }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Functor, FromJSON, ToJSON, NFData)
 
 rlLogs :: RunLogs a -> [(LogObjectSource, a)]
 rlLogs = fmap hlLogs . Map.elems . rlHostLogs
-
 
 data LogObject
   = LogObject
