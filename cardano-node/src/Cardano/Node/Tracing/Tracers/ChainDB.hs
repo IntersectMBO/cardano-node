@@ -96,6 +96,7 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHumanOrMachine v
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
+  forHuman (ChainDB.TraceChainSelStarvationEvent v)= forHumanOrMachine v
 
   forMachine _ ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "LastShutdownUnclean" ]
@@ -121,6 +122,8 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
+  forMachine details (ChainDB.TraceChainSelStarvationEvent v) =
+    forMachine details v
 
   asMetrics ChainDB.TraceLastShutdownUnclean        = []
   asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
@@ -134,6 +137,7 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceLedgerReplayEvent v)      = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
+  asMetrics (ChainDB.TraceChainSelStarvationEvent v)= asMetrics v
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
@@ -161,6 +165,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
+  namespaceFor (ChainDB.TraceChainSelStarvationEvent ev) =
+     nsPrependInner "ChainSelStarvationEvent" (namespaceFor ev)
 
   severityFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Info
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
