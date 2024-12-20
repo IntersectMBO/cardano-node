@@ -1155,7 +1155,7 @@ instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) 
              ]
   forMachine _dtal (AcquireConnectionError exception) =
     mconcat [ "kind" .= String "AcquireConnectionError"
-            , "exception" .= displayException exception
+            , "error" .= displayException exception
             ]
   forHuman = pack . show
 

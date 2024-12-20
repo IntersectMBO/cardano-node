@@ -2185,7 +2185,7 @@ instance Show lAddr => ToObject (PeerSelectionActionsTrace SockAddr lAddr) where
              ]
   toObject _verb (AcquireConnectionError exception) =
     mconcat [ "kind" .= String "AcquireConnectionError"
-            , "exception" .= displayException exception
+            , "error" .= displayException exception
             ]
 
 instance ToObject PeerSelectionCounters where

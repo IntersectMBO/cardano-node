@@ -187,6 +187,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
     ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
     ctaConnectTracers = nullNetworkConnectTracers,
     ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
+
   forwarderApp
     :: [(RunMiniProtocol 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
     -> OuroborosApplication 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void
