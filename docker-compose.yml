@@ -1,8 +1,6 @@
-version: "3.5"
-
 services:
   cardano-node:
-    image: ghcr.io/intersectmbo/cardano-node:${CARDANO_NODE_VERSION:-10.1.2}
+    image: ghcr.io/intersectmbo/cardano-node:${CARDANO_NODE_VERSION:-latest}
     environment:
       - NETWORK=${NETWORK:-mainnet}
     volumes:
@@ -15,7 +13,7 @@ services:
         max-file: "10"
 
   cardano-submit-api:
-    image: ghcr.io/intersectmbo/cardano-submit-api:${CARDANO_SUBMIT_API_VERSION:-10.1.2}
+    image: ghcr.io/intersectmbo/cardano-submit-api:${CARDANO_SUBMIT_API_VERSION:-latest}
     environment:
       - NETWORK=${NETWORK:-mainnet}
     depends_on:
