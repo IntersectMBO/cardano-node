@@ -1,7 +1,13 @@
-import           Cardano.Api (SlotNo (..))
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
+import           Cardano.Api (ExceptT, SlotNo (..))
+
+import           Cardano.Analysis.API.Ground (JsonInputFile (..))
 import           Cardano.Unlog.BackendDB
-import           Cardano.Unlog.LogObject (LOBody (..), LogObject (..))
+import           Cardano.Unlog.BackendFile (readRunLogsBare)
+import           Cardano.Unlog.LogObject (LOBody (..), LogObject (..), rlCastWith, rlLogs)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util
 
@@ -13,13 +19,54 @@ import           Data.Maybe
 import           System.Environment (getArgs)
 
 import           Database.Sqlite.Easy hiding (Text)
+import           Graphics.EasyPlot
 
 
 main :: IO ()
 main = do
   getArgs >>= \case
-    []     -> putStrLn "please specify DB file"
+    []     -> testPlot >> putStrLn "please specify DB file"
     db : _ -> runDB $ fromString db
+
+testPlot :: IO Bool
+testPlot =
+  plot' [Debug] _term2 plotData
+  where
+    _term1 = Terminal PNGCairo "test.png" Nothing
+    _term2 = Terminal X11 "test plot" (Just (1024, 768))
+    _term3 = Terminal Dumb "" Nothing
+    plotData =
+        [ Data2D [Title "Graph 1", Color Red] [] [(x, x ** 3) | x <- [-4,-3.9 :: Double .. 4]]
+        , Function2D [Title "Function 2", Color Blue] [] (\x -> negate $ x ** 2)
+        , Gnuplot2D [Title "Function Expr", Color Green] [] "x*x"
+        , File2D [Title "from file", Color Yellow] [] "_plot1.dat" Nothing
+        ]
+
+
+_heapPlots :: [[LogObject]] -> IO ()
+_heapPlots inputStreams = do
+    mapM_ print bySlotStreams
+    pure ()
+  where
+    bySlotStreams :: [[(SlotNo, [LogObject])]]
+    bySlotStreams = [ map (second safeLast) (bySlotDomain s) | s <- inputStreams ]
+
+
+_runOnRun :: FilePath -> ExceptT String IO [[LogObject]]
+_runOnRun logManifest = do
+  rl <- readRunLogsBare (JsonInputFile logManifest)
+  loaded <- runLiftLogObjectsDB (LoadLogObjectsWith query) (rlCastWith (const []) rl)
+
+  let
+    _loStreams :: [[LogObject]]
+    _loStreams = snd <$> rlLogs loaded
+
+  pure _loStreams
+  where
+    query =
+      [ sqlGetSlot
+      , sqlGetResource
+      ]
 
 -- sample case:
 -- we want to know the txns in mempool for each slot
@@ -35,9 +82,10 @@ runDB dbName = do
 
   -- TODO: needs a reducer
   mapM_ (print . second safeLast) (bySlotDomain logObjects)
-  where
-    safeLast [] = []
-    safeLast xs = [last xs]
+
+safeLast :: [a] -> [a]
+safeLast [] = []
+safeLast xs = [last xs]
 
 bySlotDomain :: [LogObject] -> [(SlotNo, [LogObject])]
 bySlotDomain logObjs =

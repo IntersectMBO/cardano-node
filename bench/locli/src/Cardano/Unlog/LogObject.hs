@@ -17,6 +17,7 @@ module Cardano.Unlog.LogObject
   , hlRawLogObjects
   , RunLogs (..)
   , rlLogs
+  , rlCastWith
   , LogObject (..)
   , loPretty
   --
@@ -118,6 +119,11 @@ data RunLogs a
 rlLogs :: RunLogs a -> [(LogObjectSource, a)]
 rlLogs = fmap hlLogs . Map.elems . rlHostLogs
 
+rlCastWith :: (a -> b) -> RunLogs a -> RunLogs b
+rlCastWith f (RunLogs a b) = RunLogs a' b
+  where
+    castHl hl@HostLogs{hlLogs = (src, val)} = hl {hlLogs = (src, f val)}
+    a' = castHl <$> a
 
 data LogObject
   = LogObject

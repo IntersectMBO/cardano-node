@@ -2,6 +2,7 @@
 module Cardano.Unlog.BackendDB
        ( prepareDB
        , runLiftLogObjectsDB
+       , LoadLogObjects(..)
 
        -- specific SQLite queries or statements
        , getSummary
@@ -14,7 +15,7 @@ module Cardano.Unlog.BackendDB
        ) where
 
 import           Cardano.Analysis.API.Ground (Host (..), LogObjectSource (..))
-import           Cardano.Prelude (ExceptT, Text)
+import           Cardano.Prelude (ExceptT)
 import           Cardano.Unlog.LogObject (HostLogs (..), LogObject (..), RunLogs (..), fromTextRef)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
@@ -36,23 +37,31 @@ import           System.Directory (removeFile)
 
 import           Database.Sqlite.Easy hiding (Text)
 
+data LoadLogObjects =
+    LoadLogObjectsAll
+  | LoadLogObjectsWith [SQLSelect6Cols]
+  | LoadTraceFreqsOnly
+  deriving (Eq, Show)
 
-runLiftLogObjectsDB :: RunLogs () -> ExceptT Text IO (RunLogs [LogObject])
-runLiftLogObjectsDB RunLogs{rlHostLogs, ..} = liftIO $ do
+
+runLiftLogObjectsDB :: LoadLogObjects -> RunLogs [LogObject] -> ExceptT String IO (RunLogs [LogObject])
+runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = liftIO $ do
   hostLogs' <- Map.fromList
     <$> sequenceConcurrentlyChunksOf numCapabilities loadActions
-  pure $ RunLogs{ rlHostLogs = hostLogs', ..}
+  pure $ RunLogs{rlHostLogs = hostLogs', ..}
   where
     loadActions = map load (Map.toList rlHostLogs)
+    timingInfo h
+      | loadMode == LoadLogObjectsAll  = withTimingInfo ("loadHostLogsDB/" ++ ShortText.unpack h)
+      | otherwise                      = id
 
-    load (host@(Host h), hl) =
-      withTimingInfo ("loadHostLogsDB/" ++ ShortText.unpack h) $
-        (,) host <$> loadHostLogsDB hl
+    load (host@(Host h), hl) = timingInfo h $
+      (,) host <$> loadHostLogsDB hl loadMode
 
 -- If the logs have been split up into multiple files, e.g. by a log rotator,
 -- this assumes sorting log files by *name* results in chronological order
 -- of all *trace messages* contained in them.
-prepareDB :: String -> [FilePath] -> FilePath -> ExceptT Text IO ()
+prepareDB :: String -> [FilePath] -> FilePath -> ExceptT String IO ()
 prepareDB machName (sort -> logFiles) outFile = liftIO $ do
 
   removeFile outFile `catch` \SomeException{} -> pure ()
@@ -136,20 +145,29 @@ getTraceFreqs =
   ML.fromList . map fromSqlDataPair
     <$> run "SELECT * FROM tracefreq"
 
-loadHostLogsDB :: HostLogs a -> IO (HostLogs [LogObject])
-loadHostLogsDB hl =
+loadHostLogsDB :: HostLogs [LogObject] -> LoadLogObjects -> IO (HostLogs [LogObject])
+loadHostLogsDB hl loadMode =
   case fst $ hlLogs hl of
     log@(LogObjectSourceSQLite dbFile) ->
       withDb (fromString dbFile) $ do
         summary@SummaryDB{..} <- getSummary
-        traceFreqs            <- getTraceFreqs
-        rows                  <- run selectAll
+        traceFreqs            <- if loadMode == LoadLogObjectsAll || loadMode == LoadTraceFreqsOnly
+                                   then getTraceFreqs
+                                   else pure (hlRawTraceFreqs hl)
+        rows                  <- case loadMode of
+                                   LoadLogObjectsAll          -> run selectAll
+                                   LoadLogObjectsWith selects -> run $ sqlOrdered selects
+                                   LoadTraceFreqsOnly         -> pure []
+        let
+          rows'
+            | loadMode == LoadTraceFreqsOnly  = snd $ hlLogs hl
+            | otherwise                       = map (sqlToLogObject summary) rows
 
         pure $ hl
           { hlRawTraceFreqs = traceFreqs
           , hlRawFirstAt    = Just sdbFirstAt
           , hlRawLastAt     = Just sdbLastAt
           , hlRawLines      = sdbLines
-          , hlLogs          = (log, map (sqlToLogObject summary) rows)
+          , hlLogs          = (log, rows')
           }
     other -> error $ "loadHostLogsDB: expected SQLite DB file, got " ++ show other

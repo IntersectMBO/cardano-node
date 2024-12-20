@@ -419,28 +419,25 @@ runChainCommand _ c@WriteMetaGenesis{} = missingCommandData c
 runChainCommand s
   c@(Unlog rlf okDErr loAnyLimit) = do
   progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
-  runLogsBare <- Aeson.eitherDecode @(RunLogs ())
-                 <$> LBS.readFile (unJsonInputFile rlf)
-                 & newExceptT
+  runLogsBare <- readRunLogsBare rlf
                  & firstExceptT (CommandError c . pack)
   progress "logs" (Q $ printf "parsing logs for %d hosts" $
                    Map.size $ rlHostLogs runLogsBare)
   progress "logs" (Q $ printf "LOAny constraint:  %s" (show loAnyLimit :: String))
   runLogs <- runLiftLogObjects runLogsBare okDErr loAnyLimit
-             & firstExceptT (CommandError c)
+             & firstExceptT (CommandError c . pack)
   pure s { sRunLogs = Just runLogs }
 
 runChainCommand s
   c@(UnlogDB rlf) = do
   progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
-  runLogsBare <- Aeson.eitherDecode @(RunLogs ())
-                 <$> LBS.readFile (unJsonInputFile rlf)
-                 & newExceptT
-                 & firstExceptT (CommandError c . pack)
+  runLogsBare <- rlCastWith (const [])
+    <$> readRunLogsBare rlf
+        & firstExceptT (CommandError c . pack)
   progress "logs" (Q $ printf "loading logs from DBs for %d hosts" $
                    Map.size $ rlHostLogs runLogsBare)
-  runLogs <- runLiftLogObjectsDB runLogsBare
-             & firstExceptT (CommandError c)
+  runLogs <- runLiftLogObjectsDB LoadLogObjectsAll runLogsBare
+             & firstExceptT (CommandError c . pack)
   pure s { sRunLogs = Just runLogs }
 
 runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
@@ -457,7 +454,7 @@ runChainCommand s
   c@(PrepareDB machName inFiles outFile) = do
     progress "prepare-db" (Q $ printf "preparing DB %s from '%s' logs" (unSqliteOutputFile outFile) machName)
     prepareDB machName (map unTextInputFile inFiles) (unSqliteOutputFile outFile)
-      & firstExceptT (CommandError c)
+      & firstExceptT (CommandError c . pack)
     pure s
 
 runChainCommand s
