@@ -36,7 +36,7 @@ main = do
 --------------------------------------------------------------------------------
 
 -- | Locations from the CLI are parsed first using the "legacy mode" for
--- backward compatiblity, in this mode locations have a default AWS region that
+-- backward compatibility, in this mode locations have a default AWS region that
 -- are the ones cardano-ops is using. The new format is either "loopback" or a
 -- supported AWS Region.
 cliLocation :: String -> Either String Topo.Location
