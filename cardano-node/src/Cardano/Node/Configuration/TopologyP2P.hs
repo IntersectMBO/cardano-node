@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -28,7 +29,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
-import           Cardano.Logging (traceWith)
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.ConsensusMode
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
@@ -45,6 +45,7 @@ import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Exception.Base (Exception (..))
 import           Control.Monad.Trans.Except.Extra
+import qualified "contra-tracer" Control.Tracer as CT
 import           Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -213,26 +214,26 @@ instance ToJSON NetworkTopology where
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 --
-readTopologyFile :: NodeConfiguration -> IO (Either Text NetworkTopology)
-readTopologyFile nc = do
+readTopologyFile :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text NetworkTopology)
+readTopologyFile nc tr = do
   eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e
     Right bs ->
       let bs' = LBS.fromStrict bs in
-        return $ case eitherDecode bs' of
-          Left err -> Left (handlerJSON err)
+        case eitherDecode bs' of
+          Left err -> return $ Left (handlerJSON err)
           Right t
             | isValidTrustedPeerConfiguration t ->
                 if isGenesisCompatible (ncConsensusMode nc) (ntUseBootstrapPeers t)
                   then return (Right t)
                   else do
-                    traceWith (ncTraceConfig nc) $
+                    CT.traceWith tr $
                       NetworkConfigUpdateError genesisIncompatible
                     return . Right $ t { ntUseBootstrapPeers = DontUseBootstrapPeers }
             | otherwise ->
-                Left handlerBootstrap
+                pure $ Left handlerBootstrap
   where
     handler :: IOException -> Text
     handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
@@ -260,9 +261,9 @@ readTopologyFile nc = do
     isGenesisCompatible GenesisMode (UseBootstrapPeers{}) = False
     isGenesisCompatible _ _ = True
 
-readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
-readTopologyFileOrError nc =
-      readTopologyFile nc
+readTopologyFileOrError :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO NetworkTopology
+readTopologyFileOrError nc tr =
+      readTopologyFile nc tr
   >>= either (\err -> error $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
                            <> Text.unpack err)
              pure
