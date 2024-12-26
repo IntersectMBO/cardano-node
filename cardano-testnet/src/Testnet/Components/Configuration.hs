@@ -236,3 +236,4 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
         []
         DontUseLedgerPeers
         DontUseBootstrapPeers
+        Nothing
