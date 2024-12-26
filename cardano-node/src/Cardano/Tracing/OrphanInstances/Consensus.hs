@@ -79,6 +79,7 @@ import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
+import           Network.TypedProtocol.Core
 
 import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
@@ -237,7 +238,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
   getSeverityAnnotation ChainDB.TraceLastShutdownUnclean = Warning
-  getSeverityAnnotation (ChainDB.TraceChainSelStarvationEvent _) = Warning -- TODO: review
+
+  getSeverityAnnotation ChainDB.TraceChainSelStarvationEvent{} = Debug
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -269,6 +271,7 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceJumpResult _) = Debug
   getSeverityAnnotation TraceJumpingWaitingForNextInstruction = Debug
   getSeverityAnnotation (TraceJumpingInstructionIs _) = Debug
+  getSeverityAnnotation (TraceDrainingThePipe _) = Debug
 
 
 instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
@@ -750,7 +753,9 @@ instance ( ConvertRawHash blk
         VolDb.Truncate e pth offs   -> "Truncating the file at " <> showT pth <> " at offset " <> showT offs <> ": " <> showT e
         VolDb.InvalidFileNames fs   -> "Invalid Volatile DB files: " <> showT fs
         VolDb.DBClosed              -> "Closed Volatile DB."
-      ChainDB.TraceChainSelStarvationEvent _ -> "ChainSelStarvationEvent" -- TODO: review
+      ChainDB.TraceChainSelStarvationEvent ev -> case ev of
+        ChainDB.ChainSelStarvation RisingEdge -> "Chain Selection was starved."
+        ChainDB.ChainSelStarvation (FallingEdgeWith pt) -> "Chain Selection was unstarved by " <> renderRealPoint pt
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -1240,10 +1245,12 @@ instance ( ConvertRawHash blk
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
     VolDb.DBClosed -> mconcat [ "kind" .= String "TraceVolatileDbEvent.DBClosed"]
-  toObject _verb (ChainDB.TraceChainSelStarvationEvent _) =
-    mconcat [ "kind" .= String "ChainSelStarvationEvent"
-            -- TODO: add fields
-            ]
+  toObject verb (ChainDB.TraceChainSelStarvationEvent (ChainDB.ChainSelStarvation edge)) =
+     mconcat [ "kind" .= String "ChainDB.ChainSelStarvation"
+             , case edge of
+                 RisingEdge -> "risingEdge" .= True
+                 FallingEdgeWith pt -> "fallingEdge" .= toObject verb pt
+             ]
 
 instance ConvertRawHash blk => ToObject (ImmDB.TraceChunkValidation blk ChunkNo) where
   toObject verb ev = case ev of
@@ -1375,6 +1382,10 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpingInstructionIs"
                , "instr" .= toObject verb instr
                ]
+    TraceDrainingThePipe n ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceDrainingThePipe"
+               , "n" .= natToInt n
+               ]
 
 instance ( LedgerSupportsProtocol blk,
            ConvertRawHash blk
@@ -1408,6 +1419,21 @@ instance ( LedgerSupportsProtocol blk,
               , "mostRecentIntersection" .= toObject verb (ChainSync.Client.jMostRecentIntersection info)
               , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
               , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info)) ]
+
+-- TODO @tweag-genesis
+instance HasPrivacyAnnotation (ChainSync.Client.TraceEvent peer) where
+instance HasSeverityAnnotation (ChainSync.Client.TraceEvent peer) where
+  getSeverityAnnotation _ = Info
+instance Show peer => Transformable Text IO (ChainSync.Client.TraceEvent peer) where
+  trTransformer = trStructured
+
+instance Show peer => ToObject (ChainSync.Client.TraceEvent peer) where
+  toObject _verb (ChainSync.Client.RotatedDynamo fromPeer toPeer) =
+    mconcat
+      [ "kind" .= String "RotatedDynamo"
+      , "from" .= showT fromPeer
+      , "to" .= showT toPeer
+      ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
