@@ -182,7 +182,7 @@ genLocalRootPeersGroup = do
     ra <- genRootConfig
     hval <- Gen.int (Range.linear 0 (length (rootAccessPoints ra)))
     wval <- WarmValency <$> Gen.int (Range.linear 0 hval)
-    LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable
+    LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable <*> undefined -- TODO @ouroboros-network
 
 genLocalRootPeersGroups :: Gen LocalRootPeersGroups
 genLocalRootPeersGroups =
@@ -212,7 +212,7 @@ genPeerSnapshotPath =
   Gen.element
     [ Nothing
     , Just . PeerSnapshotFile $ "dummy"
-    ]  
+    ]
 
 genPeerTrustable :: Gen PeerTrustable
 genPeerTrustable = Gen.element [ IsNotTrustable, IsTrustable ]
