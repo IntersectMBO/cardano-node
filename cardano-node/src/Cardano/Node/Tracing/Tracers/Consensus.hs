@@ -65,6 +65,7 @@ import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -697,6 +698,36 @@ calculateBlockFetchClientMetrics cm _lc _ = pure cm
 --------------------------------------------------------------------------------
 -- BlockFetchDecision Tracer
 --------------------------------------------------------------------------------
+
+-- TODO @ouroboros-network
+instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
+  namespaceFor PeersFetch{} = Namespace [] ["PeersFetch"]
+  namespaceFor PeerStarvedUs{} = Namespace [] ["PeerStarvedUs"]
+
+  severityFor (Namespace _ ["PeersFetch"]) _ = Just Debug
+  severityFor (Namespace _ ["PeerStarvedUs"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["PeersFetch"]) =
+    Just "TODO: @ouroboros-network"
+  documentFor (Namespace [] ["PeerStarvedUs"]) =
+    Just "TODO: @ouroboros-network"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
+
+-- TODO @ouroboros-network
+instance LogFormatting (TraceDecisionEvent peer (Header blk)) where
+  forHuman (PeersFetch _traces) =
+    "TODO: @ouroboros-network"
+  forHuman (PeerStarvedUs _traces) =
+    "TODO: @ouroboros-network"
+
+  forMachine _dtal (PeersFetch _traces) =
+    mconcat [ "kind" .= String "TODO: @ouroboros-network" ]
+  forMachine _dtal (PeerStarvedUs _traces) =
+    mconcat [ "kind" .= String "TODO: @ouroboros-network" ]
 
 instance (LogFormatting peer, Show peer) =>
     LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where

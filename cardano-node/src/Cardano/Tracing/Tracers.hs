@@ -93,6 +93,7 @@ import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHea
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision.Trace
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
@@ -1455,6 +1456,7 @@ nodeToNodeTracers' trSel verb tr =
                   verb "KeepAliveProtocol" tr
   }
 
+-- TODO @ouroboros-network
 teeTraceBlockFetchDecision
     :: ( Eq peer
        , HasHeader blk
@@ -1464,11 +1466,14 @@ teeTraceBlockFetchDecision
     => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
     -> Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecision verb eliding tr =
-  Tracer $ \ev -> do
-    traceWith (teeTraceBlockFetchDecision' meTr) ev
-    traceWith (teeTraceBlockFetchDecisionElide verb eliding bfdTr) ev
+  Tracer $ \(WithSeverity s ev) -> case ev of
+    PeerStarvedUs {} -> do
+      traceWith (toLogObject' verb meTr) ev
+    PeersFetch ev' -> do
+      traceWith (teeTraceBlockFetchDecision' meTr) (WithSeverity s ev')
+      traceWith (teeTraceBlockFetchDecisionElide verb eliding bfdTr) (WithSeverity s ev')
  where
    meTr  = appendName "metrics" tr
    bfdTr = appendName "BlockFetchDecision" tr
