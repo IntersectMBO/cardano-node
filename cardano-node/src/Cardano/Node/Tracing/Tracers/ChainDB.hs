@@ -93,10 +93,20 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHumanOrMachine v
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
-  forHuman (ChainDB.TraceChainSelStarvationEvent v)= forHumanOrMachine v
+  forHuman (ChainDB.TraceChainSelStarvationEvent ev) = case ev of
+        ChainDB.ChainSelStarvation RisingEdge ->
+          "Chain Selection was starved."
+        ChainDB.ChainSelStarvation (FallingEdgeWith pt) ->
+          "Chain Selection was unstarved by " <> renderRealPoint pt
 
   forMachine _ ChainDB.TraceLastShutdownUnclean =
     mconcat [ "kind" .= String "LastShutdownUnclean" ]
+  forMachine dtal (ChainDB.TraceChainSelStarvationEvent (ChainDB.ChainSelStarvation edge)) =
+    mconcat [ "kind" .= String "ChainSelStarvation"
+             , case edge of
+                 RisingEdge -> "risingEdge" .= True
+                 FallingEdgeWith pt -> "fallingEdge" .= forMachine dtal pt
+             ]
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceFollowerEvent v) =
@@ -119,27 +129,27 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
-  forMachine details (ChainDB.TraceChainSelStarvationEvent v) =
-    forMachine details v
 
-  asMetrics ChainDB.TraceLastShutdownUnclean        = []
-  asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
-  asMetrics (ChainDB.TraceFollowerEvent v)          = asMetrics v
-  asMetrics (ChainDB.TraceCopyToImmutableDBEvent v) = asMetrics v
-  asMetrics (ChainDB.TraceGCEvent v)                = asMetrics v
-  asMetrics (ChainDB.TraceInitChainSelEvent v)      = asMetrics v
-  asMetrics (ChainDB.TraceOpenEvent v)              = asMetrics v
-  asMetrics (ChainDB.TraceIteratorEvent v)          = asMetrics v
-  asMetrics (ChainDB.TraceSnapshotEvent v)          = asMetrics v
-  asMetrics (ChainDB.TraceLedgerReplayEvent v)      = asMetrics v
-  asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
-  asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
-  asMetrics (ChainDB.TraceChainSelStarvationEvent v)= asMetrics v
+  asMetrics ChainDB.TraceLastShutdownUnclean         = []
+  asMetrics (ChainDB.TraceChainSelStarvationEvent _) = []
+  asMetrics (ChainDB.TraceAddBlockEvent v)           = asMetrics v
+  asMetrics (ChainDB.TraceFollowerEvent v)           = asMetrics v
+  asMetrics (ChainDB.TraceCopyToImmutableDBEvent v)  = asMetrics v
+  asMetrics (ChainDB.TraceGCEvent v)                 = asMetrics v
+  asMetrics (ChainDB.TraceInitChainSelEvent v)       = asMetrics v
+  asMetrics (ChainDB.TraceOpenEvent v)               = asMetrics v
+  asMetrics (ChainDB.TraceIteratorEvent v)           = asMetrics v
+  asMetrics (ChainDB.TraceSnapshotEvent v)           = asMetrics v
+  asMetrics (ChainDB.TraceLedgerReplayEvent v)       = asMetrics v
+  asMetrics (ChainDB.TraceImmutableDBEvent v)        = asMetrics v
+  asMetrics (ChainDB.TraceVolatileDBEvent v)         = asMetrics v
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
   namespaceFor ChainDB.TraceLastShutdownUnclean =
     Namespace [] ["LastShutdownUnclean"]
+  namespaceFor ChainDB.TraceChainSelStarvationEvent{} =
+    Namespace [] ["ChainSelStarvationEvent"]
   namespaceFor (ChainDB.TraceAddBlockEvent ev) =
     nsPrependInner "AddBlockEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceFollowerEvent ev) =
@@ -162,10 +172,9 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
-  namespaceFor (ChainDB.TraceChainSelStarvationEvent ev) =
-     nsPrependInner "ChainSelStarvationEvent" (namespaceFor ev)
 
   severityFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Info
+  severityFor (Namespace _ ["ChainSelStarvationEvent"]) _ = Just Debug
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -213,6 +222,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   severityFor _ns _ = Nothing
 
   privacyFor (Namespace _ ["LastShutdownUnclean"]) _ = Just Public
+  privacyFor (Namespace _ ["ChainSelStarvationEvent"]) _ = Just Public
   privacyFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -260,6 +270,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   privacyFor _ _ = Nothing
 
   detailsFor (Namespace _ ["LastShutdownUnclean"]) _ = Just DNormal
+  detailsFor (Namespace _ ["ChainSelStarvationEvent"]) _ = Just DNormal
   detailsFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("AddBlockEvent" : tl)) Nothing =
@@ -335,6 +346,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     , " state. Therefore, revalidating all the immutable chunks is necessary to"
     , " ensure the correctness of the chain."
     ]
+  documentFor (Namespace _ ["ChainSelStarvationEvent"]) = Just $ mconcat
+    [ "ChainSel is waiting for a next block to process, but there is no block in the queue."
+    , " Despite the name, it is a pretty normal (and frequent) event."
+    ]
   documentFor (Namespace out ("AddBlockEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceAddBlockEvent blk))
   documentFor (Namespace out ("FollowerEvent" : tl)) =
@@ -361,7 +376,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
 
   allNamespaces =
         Namespace [] ["LastShutdownUnclean"]
-
+          : Namespace [] ["ChainSelStarvationEvent"]
           : (map  (nsPrependInner "AddBlockEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceAddBlockEvent blk)])
           ++ map  (nsPrependInner "FollowerEvent")
