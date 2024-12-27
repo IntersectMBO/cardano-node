@@ -27,6 +27,7 @@ import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..
                    PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
 import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Network.NodeToNode.Version
 import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
@@ -182,7 +183,7 @@ genLocalRootPeersGroup = do
     ra <- genRootConfig
     hval <- Gen.int (Range.linear 0 (length (rootAccessPoints ra)))
     wval <- WarmValency <$> Gen.int (Range.linear 0 hval)
-    LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable <*> undefined -- TODO @ouroboros-network
+    LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable <*> pure InitiatorAndResponderDiffusionMode
 
 genLocalRootPeersGroups :: Gen LocalRootPeersGroups
 genLocalRootPeersGroups =

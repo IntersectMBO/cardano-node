@@ -60,8 +60,7 @@ package plutus-scripts-bench
 constraints:
   , wai-extra < 3.1.15
   , Cabal < 3.14
-  , hedgehog-extras ==0.6.4.0
-  , io-sim ==1.5.1.0
+  , hedgehog-extras <0.6.5.1
 
 allow-newer:
   , katip:Win32

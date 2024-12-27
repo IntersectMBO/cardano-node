@@ -789,7 +789,7 @@ updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
 updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
                             useBootsrapPeersVar ledgerPeerSnapshotPathVar = do
     traceWith startupTracer NetworkConfigUpdate
-    result <- try $ readTopologyFileOrError nc
+    result <- try $ readTopologyFileOrError nc startupTracer
     case result of
       Left (FatalError err) ->
         traceWith startupTracer
