@@ -12,7 +12,7 @@ ConwayGenesisHash: 15a199f895e461ec0ffc6dd4e4028af28a492ab4e806d39cb674c88f7643e
 ShelleyGenesisFile: mainnet-shelley-genesis.json
 ShelleyGenesisHash: 1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81
 
-EnableP2P: true
+EnableP2P: True
 
 ##### Core protocol parameters #####
 
