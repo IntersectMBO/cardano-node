@@ -125,6 +125,9 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     , "--tx-file", stakeCertTxSignedFp
     ]
 
+  -- make sure that stake registration cert gets into a block
+  _ <- waitForBlocks epochStateView 1
+
   -- Create a proposal
   (governanceActionTxId, _governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView ceo (baseDir </> "proposal")

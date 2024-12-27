@@ -160,6 +160,9 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
     , "--tx-file", stakeCertTxSignedFp
     ]
 
+  -- make sure that stake registration cert gets into a block
+  _ <- waitForBlocks epochStateView 1
+
   minGovActDeposit <- getMinGovActionDeposit epochStateView ceo
 
   ccColdKeys <- H.noteShowM $
