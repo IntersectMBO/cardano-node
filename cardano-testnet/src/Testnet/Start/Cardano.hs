@@ -54,7 +54,6 @@ import qualified GHC.Stack as GHC
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 import qualified System.Info as OS
-import           Text.Printf (printf)
 
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
@@ -62,7 +61,6 @@ import           Testnet.Filepath
 import           Testnet.Process.Run (execCli', execCli_, mkExecConfig)
 import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
-import qualified Testnet.Start.Byron as Byron
 import           Testnet.Start.Types
 import           Testnet.Types as TR hiding (shelleyGenesis)
 
@@ -130,11 +128,7 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 
 -- | Setup a number of credentials and nodes (SPOs and relays), like this:
 --
--- > ├── byron
--- > │   └── genesis.json
 -- > ├── byron-gen-command
--- > │   ├── delegate-keys.00{1,2}.key
--- > │   ├── delegation-cert.00{1,2}.json
 -- > │   └── genesis-keys.00{0,1,2}.key
 -- > ├── delegate-keys
 -- > │   ├── delegate{1,2,3}
@@ -187,6 +181,7 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 -- > │   │   └── utxo.{addr,skey,vkey}
 -- > │   └── README.md
 -- > ├── alonzo-genesis.json
+-- > ├── byron.genesis.json
 -- > ├── byron.genesis.spec.json
 -- > ├── configuration.yaml
 -- > ├── conway-genesis.json
@@ -215,7 +210,6 @@ cardanoTestnet
         , cardanoNumDReps=nDReps
         , cardanoNodes
         } = testnetOptions
-      startTime = sgSystemStart shelleyGenesis
       testnetMagic = fromIntegral $ sgNetworkMagic shelleyGenesis
       nPools = cardanoNumPools testnetOptions
   AnyShelleyBasedEra sbe <- pure asbe
@@ -230,16 +224,6 @@ cardanoTestnet
     -- makes assumptions about where things should go and where genesis template files should be.
     -- See all of the ad hoc file creation/renaming/dir creation etc below.
     H.failMessage GHC.callStack "Specifying node configuration files per node not supported yet."
-
-  H.lbsWriteFile (tmpAbsPath </> "byron.genesis.spec.json")
-    . encode $ Defaults.defaultByronProtocolParamsJsonValue
-
-  Byron.createByronGenesis
-    testnetMagic
-    startTime
-    Byron.byronDefaultGenesisOptions
-    (tmpAbsPath </> "byron.genesis.spec.json")
-    (tmpAbsPath </> "byron-gen-command")
 
   -- Write specification files. Those are the same as the genesis files
   -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
@@ -296,16 +280,10 @@ cardanoTestnet
   let portNumbers = snd <$> portNumbersWithNodeOptions
 
   -- Byron related
-  forM_ (zip [1..] portNumbersWithNodeOptions) $ \(i, (nodeOptions, portNumber)) -> do
-    let iStr = printf "%03d" (i - 1)
-        nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-        nodePoolKeysDir = tmpAbsPath </> Defaults.defaultSpoKeysDir i
+  forM_ (zip [1..] portNumbersWithNodeOptions) $ \(i, (_nodeOptions, portNumber)) -> do
+    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
     H.writeFile (nodeDataDir </> "port") (show portNumber)
-    when (isSpoNodeOptions nodeOptions) $ do
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (nodePoolKeysDir </> "byron-delegate.key")
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (nodePoolKeysDir </> "byron-delegation.cert")
-
 
   -- Make Non P2P topology files
   forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do

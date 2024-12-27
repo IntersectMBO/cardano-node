@@ -126,6 +126,8 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
     , "--tx-file", stakeCertTxSignedFp
     ]
 
+  -- make sure that stake registration cert gets into a block
+  _ <- waitForBlocks epochStateView 1
 
   let propVotes :: [(String, Int)]
       propVotes = mkVotes [(1, "yes")]

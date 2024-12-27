@@ -335,6 +335,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "GSM"]
     configureTracers configReflection trConfig [consensusGsmTr]
 
+    !consensusCsjTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "CSJ"]
+    configureTracers configReflection trConfig [consensusCsjTr]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -377,6 +382,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusStartupErrorTr . ConsensusStartupException
       , Consensus.gsmTracer = Tracer $
           traceWith consensusGsmTr
+      , Consensus.csjTracer = Tracer $
+          traceWith consensusCsjTr
       }
 
 mkNodeToClientTracers :: forall blk.

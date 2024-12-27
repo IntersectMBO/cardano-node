@@ -559,9 +559,6 @@ instance LogFormatting (TracePeerSelection SockAddr) where
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
             ]
-  forMachine _dtal (TraceVerifyPeerSnapshot result) =
-    mconcat [ "kind" .= String "VerifyPeerSnapshot"
-            , "result" .= result]
 
   forHuman = pack . show
 
@@ -688,8 +685,6 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnTimeout"]
     namespaceFor TraceDebugState {} =
       Namespace [] ["DebugState"]
-    namespaceFor TraceVerifyPeerSnapshot {} =
-      Namespace [] ["VerifyPeerSnapshot"]
 
     severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
     severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice
@@ -1206,7 +1201,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           , "remoteAddress" .= forMachine dtal peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
-    forMachine dtal (TrReleaseConnection prov connId) =
+    forMachine _dtal (TrReleaseConnection prov connId) =
         mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
           , "remoteAddress" .= toJSON connId
@@ -1323,7 +1318,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
                                              listValue (\(localAddr, connState) ->
                                                 object
                                                   [ "localAddress" .= localAddr
-                                                  , "state" .= toJSON connState  
+                                                  , "state" .= toJSON connState
                                                   ]
                                              )
                                              (Map.toList inner)
@@ -1537,7 +1532,7 @@ instance MetaTrace (ConnectionManager.AbstractTransitionTrace peerAddr) where
 
 instance (Show addr, LogFormatting addr, ToJSON addr)
       => LogFormatting (Server.Trace addr) where
-  forMachine dtal (TrAcceptConnection connId)     =
+  forMachine _dtal (TrAcceptConnection connId)     =
     mconcat [ "kind" .= String "AcceptConnection"
              , "address" .= toJSON connId
              ]

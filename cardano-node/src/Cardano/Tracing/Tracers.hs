@@ -93,6 +93,7 @@ import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHea
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision.Trace
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
@@ -512,6 +513,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
       , Consensus.gsmTracer = nullTracer
+      , Consensus.csjTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -723,6 +725,8 @@ mkConsensusTracers
   :: forall blk peer localPeer.
      ( Show peer
      , Eq peer
+     , ToObject peer
+     , ToJSON peer
      , LedgerQueries blk
      , ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
@@ -732,7 +736,6 @@ mkConsensusTracers
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
-     , ToObject peer
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
@@ -813,6 +816,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
+    , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1453,20 +1457,25 @@ nodeToNodeTracers' trSel verb tr =
                   verb "KeepAliveProtocol" tr
   }
 
+-- TODO @ouroboros-network
 teeTraceBlockFetchDecision
     :: ( Eq peer
-       , HasHeader blk
        , Show peer
-       , ToObject peer
+       , ToJSON peer
+       , HasHeader blk
+       , ConvertRawHash blk
        )
     => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
     -> Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    -> Tracer IO (WithSeverity (TraceDecisionEvent peer (Header blk)))
 teeTraceBlockFetchDecision verb eliding tr =
-  Tracer $ \ev -> do
-    traceWith (teeTraceBlockFetchDecision' meTr) ev
-    traceWith (teeTraceBlockFetchDecisionElide verb eliding bfdTr) ev
+  Tracer $ \(WithSeverity s ev) -> case ev of
+    PeerStarvedUs {} -> do
+      traceWith (toLogObject' verb meTr) ev
+    PeersFetch ev' -> do
+      traceWith (teeTraceBlockFetchDecision' meTr) (WithSeverity s ev')
+      traceWith (teeTraceBlockFetchDecisionElide verb eliding bfdTr) (WithSeverity s ev')
  where
    meTr  = appendName "metrics" tr
    bfdTr = appendName "BlockFetchDecision" tr
@@ -1482,9 +1491,10 @@ teeTraceBlockFetchDecision' tr =
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer
-       , HasHeader blk
        , Show peer
-       , ToObject peer
+       , ToJSON peer
+       , HasHeader blk
+       , ConvertRawHash blk
        )
     => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)

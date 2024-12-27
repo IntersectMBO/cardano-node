@@ -32,6 +32,7 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block
@@ -49,8 +50,7 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
-                   JumpInstruction (..), JumpResult (..))
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Jumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -66,12 +66,14 @@ import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
+import           Network.TypedProtocol.Core
 
 import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
@@ -231,6 +233,8 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         [ "ChainSync Jumping -- the client is asked to jump to "
         , showT (jumpInstructionToPoint instruction)
         ]
+    TraceDrainingThePipe n ->
+      "ChainSync client is draining the pipe. Pipelined messages expected: " <> showT (natToInt n)
     where
       jumpInstructionToPoint = AF.headPoint . jTheirFragment . \case
         JumpTo ji          -> ji
@@ -304,6 +308,11 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         [ "kind" .= String "TraceJumpingInstructionIs"
         , "instr" .= instructionToObject instruction
         ]
+    TraceDrainingThePipe n ->
+      mconcat
+        [ "kind" .= String "TraceDrainingThePipe"
+        , "n" .= natToInt n
+        ]
     where
       instructionToObject :: Instruction blk -> Aeson.Object
       instructionToObject = \case
@@ -326,6 +335,30 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                   , "point" .= showT (jumpInfoToPoint info) ]
 
       jumpInfoToPoint = AF.headPoint . jTheirFragment
+
+-- TODO @tweag-genesis
+instance MetaTrace (Jumping.TraceEvent addr) where
+  namespaceFor RotatedDynamo{} = Namespace [] ["RotatedDynamo"]
+
+  severityFor (Namespace [] ["RotatedDynamo"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["RotatedDynamo"]) =
+    Just "The dynamo rotated"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["RotatedDynamo"] ]
+
+instance Show addr => LogFormatting (Jumping.TraceEvent addr) where
+  forHuman (RotatedDynamo fromPeer toPeer) =
+    "Rotated the dynamo from " <> showT fromPeer <> " to " <> showT toPeer
+  forMachine _dtal (RotatedDynamo fromPeer toPeer) =
+    mconcat
+      [ "kind" .= String "RotatedDynamo"
+      , "from" .= showT fromPeer
+      , "to" .= showT toPeer
+      ]
 
 tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
 tipToObject = \case
@@ -368,6 +401,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace [] ["JumpingWaitingForNextInstruction"]
     TraceJumpingInstructionIs _ ->
       Namespace [] ["JumpingInstructionIs"]
+    TraceDrainingThePipe _ ->
+      Namespace [] ["DrainingThePipe"]
 
   severityFor ns _ =
     case ns of
@@ -396,6 +431,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace _ ["JumpingWaitingForNextInstruction"] ->
         Just Debug
       Namespace _ ["JumpingInstructionIs"] ->
+        Just Debug
+      Namespace _ ["DrainingThePipe"] ->
         Just Debug
       _ ->
         Nothing
@@ -434,6 +471,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
         Just "The client is waiting for the next instruction"
       Namespace _ ["JumpingInstructionIs"] ->
         Just "The client got its next instruction"
+      Namespace _ ["DrainingThePipe"] ->
+        Just "The client is draining the pipe of messages"
       _ ->
         Nothing
 
@@ -451,6 +490,7 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
     , Namespace [] ["JumpResult"]
     , Namespace [] ["JumpingWaitingForNextInstruction"]
     , Namespace [] ["JumpingInstructionIs"]
+    , Namespace [] ["DrainingThePipe"]
     ]
 
 --------------------------------------------------------------------------------
@@ -659,6 +699,38 @@ calculateBlockFetchClientMetrics cm _lc _ = pure cm
 --------------------------------------------------------------------------------
 -- BlockFetchDecision Tracer
 --------------------------------------------------------------------------------
+
+instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
+  namespaceFor PeersFetch{} = Namespace [] ["PeersFetch"]
+  namespaceFor PeerStarvedUs{} = Namespace [] ["PeerStarvedUs"]
+
+  severityFor (Namespace _ ["PeersFetch"]) _ = Just Debug
+  severityFor (Namespace _ ["PeerStarvedUs"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["PeersFetch"]) =
+    Just "list of block-fetch decisions"
+  documentFor (Namespace [] ["PeerStarvedUs"]) =
+    Just "current peer starved us, the node will switch to a different peer"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
+
+instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk)
+      => LogFormatting (TraceDecisionEvent peer (Header blk)) where
+  forHuman = Text.pack . show
+
+  forMachine dtal (PeersFetch xs) =
+    mconcat [ "kind" .= String "PeerFetch"
+            , "decisions" .= if dtal >= DMaximum
+                               then toJSON (Verbose <$> xs)
+                               else toJSON xs
+            ]
+  forMachine _dtal (PeerStarvedUs peer) =
+    mconcat [ "kind" .= String "PeerStarvedUs"
+            , "peer" .= toJSON peer
+            ]
 
 instance (LogFormatting peer, Show peer) =>
     LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
