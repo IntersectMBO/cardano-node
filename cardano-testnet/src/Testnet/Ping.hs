@@ -28,7 +28,6 @@ import qualified Control.Monad.Class.MonadTimer.SI as MT
 import           Control.Monad.IO.Class
 import qualified Control.Retry as R
 import           Control.Tracer (nullTracer)
-import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
 import           Data.IORef
