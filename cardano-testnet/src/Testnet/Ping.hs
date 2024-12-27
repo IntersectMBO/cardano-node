@@ -33,11 +33,11 @@ import           Data.Either
 import           Data.IORef
 import qualified Data.List as L
 import           Data.Word (Word32)
+import qualified Network.Mux as Mux
 import           Network.Mux.Bearer (MakeBearer (..), makeSocketBearer)
 import           Network.Mux.Timeout (TimeoutFn, withTimeoutSerial)
 import           Network.Mux.Types (MiniProtocolDir (InitiatorDir), MiniProtocolNum (..),
                    RemoteClockModel (RemoteClockModel), SDU (..), SDUHeader (..))
-import qualified Network.Mux as Mux
 import qualified Network.Mux.Types as Mux
 import           Network.Socket (AddrInfo (..), PortNumber, StructLinger (..))
 import qualified Network.Socket as Socket
@@ -68,7 +68,7 @@ pingNode :: MonadIO m
 pingNode networkMagic sprocket = liftIO $ bracket
   (Socket.socket (Socket.addrFamily peer) Socket.Stream Socket.defaultProtocol)
   Socket.close
-  (\sd -> withTimeoutSerial $ \timeoutfn -> do
+  (\sd -> handle (pure . Left . PceException) $ withTimeoutSerial $ \timeoutfn -> do
     when (Socket.addrFamily peer /= Socket.AF_UNIX) $ do
       Socket.setSocketOption sd Socket.NoDelay 1
       Socket.setSockOpt sd Socket.Linger
@@ -195,6 +195,8 @@ data PingClientError
       !String -- ^ peer string
       ![NodeVersion] -- ^ requested versions
       ![NodeVersion] -- ^ received node versions
+  | PceException
+      !SomeException
 
 instance Error PingClientError where
   prettyError = \case
@@ -204,5 +206,6 @@ instance Error PingClientError where
       [ pretty peerStr <+> "Version negotiation error: No overlapping versions with" <+> viaShow requestedVersions
       , "Received versions:" <+> viaShow receivedVersions
       ]
+    PceException exception -> "An unknown exception occurred:" <+> pretty (displayException exception)
 
 
