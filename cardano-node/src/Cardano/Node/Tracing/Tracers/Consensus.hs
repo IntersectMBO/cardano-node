@@ -49,8 +49,7 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
-                   JumpInstruction (..), JumpResult (..))
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Jumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -66,12 +65,14 @@ import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
+import           Network.TypedProtocol.Core
 
 import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
@@ -231,6 +232,8 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         [ "ChainSync Jumping -- the client is asked to jump to "
         , showT (jumpInstructionToPoint instruction)
         ]
+    TraceDrainingThePipe n ->
+      "ChainSync client is draining the pipe. Pipelined messages expected: " <> showT (natToInt n)
     where
       jumpInstructionToPoint = AF.headPoint . jTheirFragment . \case
         JumpTo ji          -> ji
@@ -304,6 +307,11 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         [ "kind" .= String "TraceJumpingInstructionIs"
         , "instr" .= instructionToObject instruction
         ]
+    TraceDrainingThePipe n ->
+      mconcat
+        [ "kind" .= String "TraceDrainingThePipe"
+        , "n" .= natToInt n
+        ]
     where
       instructionToObject :: Instruction blk -> Aeson.Object
       instructionToObject = \case
@@ -326,6 +334,30 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                   , "point" .= showT (jumpInfoToPoint info) ]
 
       jumpInfoToPoint = AF.headPoint . jTheirFragment
+
+-- TODO @tweag-genesis
+instance MetaTrace (Jumping.TraceEvent addr) where
+  namespaceFor RotatedDynamo{} = Namespace [] ["RotatedDynamo"]
+
+  severityFor (Namespace [] ["RotatedDynamo"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["RotatedDynamo"]) =
+    Just "The dynamo rotated"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["RotatedDynamo"] ]
+
+instance Show addr => LogFormatting (Jumping.TraceEvent addr) where
+  forHuman (RotatedDynamo fromPeer toPeer) =
+    "Rotated the dynamo from " <> showT fromPeer <> " to " <> showT toPeer
+  forMachine _dtal (RotatedDynamo fromPeer toPeer) =
+    mconcat
+      [ "kind" .= String "RotatedDynamo"
+      , "from" .= showT fromPeer
+      , "to" .= showT toPeer
+      ]
 
 tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
 tipToObject = \case
@@ -368,6 +400,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace [] ["JumpingWaitingForNextInstruction"]
     TraceJumpingInstructionIs _ ->
       Namespace [] ["JumpingInstructionIs"]
+    TraceDrainingThePipe _ ->
+      Namespace [] ["DrainingThePipe"]
 
   severityFor ns _ =
     case ns of
@@ -396,6 +430,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace _ ["JumpingWaitingForNextInstruction"] ->
         Just Debug
       Namespace _ ["JumpingInstructionIs"] ->
+        Just Debug
+      Namespace _ ["DrainingThePipe"] ->
         Just Debug
       _ ->
         Nothing
@@ -434,6 +470,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
         Just "The client is waiting for the next instruction"
       Namespace _ ["JumpingInstructionIs"] ->
         Just "The client got its next instruction"
+      Namespace _ ["DrainingThePipe"] ->
+        Just "The client is draining the pipe of messages"
       _ ->
         Nothing
 
@@ -451,6 +489,7 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
     , Namespace [] ["JumpResult"]
     , Namespace [] ["JumpingWaitingForNextInstruction"]
     , Namespace [] ["JumpingInstructionIs"]
+    , Namespace [] ["DrainingThePipe"]
     ]
 
 --------------------------------------------------------------------------------
@@ -659,6 +698,36 @@ calculateBlockFetchClientMetrics cm _lc _ = pure cm
 --------------------------------------------------------------------------------
 -- BlockFetchDecision Tracer
 --------------------------------------------------------------------------------
+
+-- TODO @ouroboros-network
+instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
+  namespaceFor PeersFetch{} = Namespace [] ["PeersFetch"]
+  namespaceFor PeerStarvedUs{} = Namespace [] ["PeerStarvedUs"]
+
+  severityFor (Namespace _ ["PeersFetch"]) _ = Just Debug
+  severityFor (Namespace _ ["PeerStarvedUs"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["PeersFetch"]) =
+    Just "TODO: @ouroboros-network"
+  documentFor (Namespace [] ["PeerStarvedUs"]) =
+    Just "TODO: @ouroboros-network"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
+
+-- TODO @ouroboros-network
+instance LogFormatting (TraceDecisionEvent peer (Header blk)) where
+  forHuman (PeersFetch _traces) =
+    "TODO: @ouroboros-network"
+  forHuman (PeerStarvedUs _traces) =
+    "TODO: @ouroboros-network"
+
+  forMachine _dtal (PeersFetch _traces) =
+    mconcat [ "kind" .= String "TODO: @ouroboros-network" ]
+  forMachine _dtal (PeerStarvedUs _traces) =
+    mconcat [ "kind" .= String "TODO: @ouroboros-network" ]
 
 instance (LogFormatting peer, Show peer) =>
     LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where

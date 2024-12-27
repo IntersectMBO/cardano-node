@@ -73,7 +73,7 @@ createConfigJson :: ()
   -> ShelleyBasedEra era -- ^ The era used for generating the hard fork configuration toggle
   -> m LBS.ByteString
 createConfigJson (TmpAbsolutePath tempAbsPath) sbe = GHC.withFrozenCallStack $ do
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
+  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron-genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
@@ -126,7 +126,7 @@ createSPOGenesisAndFiles
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply sbe shelleyGenesis
+createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply asbe@(AnyShelleyBasedEra sbe) shelleyGenesis
                          alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
@@ -162,8 +162,10 @@ createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply sbe shelleyGenesis
   H.note_ $ "Number of stake delegators: " <> show nPoolNodes
   H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
 
-  execCli_
-    [ anyShelleyBasedEraToString sbe, "genesis", "create-testnet-data"
+  let eraString =  anyShelleyBasedEraToString asbe
+      era = toCardanoEra sbe
+  execCli_ $
+    [ eraString, "genesis", "create-testnet-data"
     , "--spec-shelley", inputGenesisShelleyFp
     , "--spec-alonzo",  inputGenesisAlonzoFp
     , "--spec-conway",  inputGenesisConwayFp
@@ -171,22 +173,17 @@ createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply sbe shelleyGenesis
     , "--pools", show nPoolNodes
     , "--total-supply",     show maxSupply -- Half of this will be delegated, see https://github.com/IntersectMBO/cardano-cli/pull/874
     , "--stake-delegators", show numStakeDelegators
-    , "--utxo-keys", show numSeededUTxOKeys
-    , "--drep-keys", show nDelReps
-    , "--start-time", DTC.formatIso8601 startTime
+    , "--utxo-keys", show numSeededUTxOKeys]
+    <> monoidForEraInEon @ConwayEraOnwards era (const ["--drep-keys", show nDelReps])
+    <> [ "--start-time", DTC.formatIso8601 startTime
     , "--out-dir", tempAbsPath
     ]
 
   -- Remove the input files. We don't need them anymore, since create-testnet-data wrote new versions.
   forM_ [inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp] (liftIO . System.removeFile)
 
-  -- Move all genesis related files
-  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath </> "byron"
-
   files <- H.listDirectory tempAbsPath
   forM_ files H.note
-
-  H.renameFile (tempAbsPath </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
 
   return genesisShelleyDir
   where
@@ -236,3 +233,4 @@ mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
         []
         DontUseLedgerPeers
         DontUseBootstrapPeers
+        Nothing

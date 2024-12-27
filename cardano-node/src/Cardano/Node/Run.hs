@@ -437,7 +437,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
           { ntUseLedgerPeers
           , ntUseBootstrapPeers
           , ntPeerSnapshotPath
-          } <- TopologyP2P.readTopologyFileOrError nc
+          } <- TopologyP2P.readTopologyFileOrError nc (startupTracer tracers)
         let (localRoots, publicRoots) = producerAddresses nt
         traceWith (startupTracer tracers)
                 $ NetworkConfig localRoots
@@ -789,7 +789,7 @@ updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
 updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
                             useBootsrapPeersVar ledgerPeerSnapshotPathVar = do
     traceWith startupTracer NetworkConfigUpdate
-    result <- try $ readTopologyFileOrError nc
+    result <- try $ readTopologyFileOrError nc startupTracer
     case result of
       Left (FatalError err) ->
         traceWith startupTracer
@@ -922,8 +922,6 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadUseLedgerPeers
       , P2P.daReadUseBootstrapPeers
       , P2P.daReadLedgerPeerSnapshot
-      , P2P.daConsensusMode = ncConsensusMode
-      , P2P.daMinBigLedgerPeersForTrustedState = ncMinBigLedgerPeersForTrustedState
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = Configuration.defaultDeadlineChurnInterval

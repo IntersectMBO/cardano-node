@@ -134,6 +134,9 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , "--tx-file", stakeCertTxSignedFp
     ]
 
+  -- make sure that stake registration cert gets into a block
+  _ <- waitForBlocks epochStateView 1
+
   -- Create info action proposal
 
   void $ execCli' execConfig

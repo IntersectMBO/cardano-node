@@ -91,13 +91,15 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
     . encode $ defaultByronProtocolParamsJsonValue
 
+  let byronGenesisOutputDir = tempAbsPath' </> "byron"
+
   startTime <- H.noteShowIO DTC.getCurrentTime
   createByronGenesis
     testnetMagic'
     startTime
     byronDefaultGenesisOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
-    (tempAbsPath' </> "byron")
+    byronGenesisOutputDir
 
   shelleyDir <- H.createDirectoryIfMissing $ tempAbsPath' </> "shelley"
 
@@ -118,8 +120,9 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
     , "--start-time", formatIso8601 startTime
     ]
 
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"
+  byronGenesisHash <- getByronGenesisHash $ byronGenesisOutputDir </> "genesis.json"
   -- Move the files to the paths expected by 'defaultYamlHardforkViaConfig' below
+  H.renameFile (byronGenesisOutputDir </> "genesis.json") (tempAbsPath' </> defaultGenesisFilepath ByronEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
