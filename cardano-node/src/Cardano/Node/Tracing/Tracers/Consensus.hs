@@ -32,6 +32,7 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block
@@ -65,7 +66,7 @@ import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
-import           Ouroboros.Network.BlockFetch.Decision.Trace
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -699,7 +700,6 @@ calculateBlockFetchClientMetrics cm _lc _ = pure cm
 -- BlockFetchDecision Tracer
 --------------------------------------------------------------------------------
 
--- TODO @ouroboros-network
 instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   namespaceFor PeersFetch{} = Namespace [] ["PeersFetch"]
   namespaceFor PeerStarvedUs{} = Namespace [] ["PeerStarvedUs"]
@@ -709,25 +709,28 @@ instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   severityFor _ _ = Nothing
 
   documentFor (Namespace [] ["PeersFetch"]) =
-    Just "TODO: @ouroboros-network"
+    Just "list of block-fetch decisions"
   documentFor (Namespace [] ["PeerStarvedUs"]) =
-    Just "TODO: @ouroboros-network"
+    Just "current peer starved us, the node will switch to a different peer"
   documentFor _ = Nothing
 
   allNamespaces =
     [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
 
--- TODO @ouroboros-network
-instance LogFormatting (TraceDecisionEvent peer (Header blk)) where
-  forHuman (PeersFetch _traces) =
-    "TODO: @ouroboros-network"
-  forHuman (PeerStarvedUs _traces) =
-    "TODO: @ouroboros-network"
+instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk)
+      => LogFormatting (TraceDecisionEvent peer (Header blk)) where
+  forHuman = Text.pack . show
 
-  forMachine _dtal (PeersFetch _traces) =
-    mconcat [ "kind" .= String "TODO: @ouroboros-network" ]
-  forMachine _dtal (PeerStarvedUs _traces) =
-    mconcat [ "kind" .= String "TODO: @ouroboros-network" ]
+  forMachine dtal (PeersFetch xs) =
+    mconcat [ "kind" .= String "PeerFetch"
+            , "decisions" .= if dtal >= DMaximum
+                               then toJSON (Verbose <$> xs)
+                               else toJSON xs
+            ]
+  forMachine _dtal (PeerStarvedUs peer) =
+    mconcat [ "kind" .= String "PeerStarvedUs"
+            , "peer" .= toJSON peer
+            ]
 
 instance (LogFormatting peer, Show peer) =>
     LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
