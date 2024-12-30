@@ -58,6 +58,7 @@ case "$op" in
 
         local svcs=$dir/profile/node-services.json
         local gtor=$dir/profile/generator-service.json
+        local work=$dir/profile/workloads-service.json
         local trac=$dir/profile/tracer-service.json
         local hche=$dir/profile/healthcheck-service.json
 
@@ -76,6 +77,15 @@ case "$op" in
         cp $(jq '."plutus-redeemer"'               -r $gtor)  "$gen_dir"/plutus-redeemer.json
         cp $(jq '."plutus-datum"'                  -r $gtor)  "$gen_dir"/plutus-datum.json
 
+        local work_dir="$dir"/workloads
+        mkdir -p                                              "$work_dir"
+        for workload in $(jq_tolist 'map(.name)' "$work")
+        do
+            mkdir -p                                          "$work_dir"/"${workload}"
+            cp $(jq "map(select(.name == \"${workload}\"))[0] | .start" -r $work) \
+                                                              "$work_dir"/"${workload}"/start.sh
+        done
+
         local trac_dir="$dir"/tracer
         mkdir -p                                    "$trac_dir"
         cp $(jq '."start"'                        -r $trac) "$trac_dir"/start.sh
@@ -84,8 +94,6 @@ case "$op" in
         local hche_dir="$dir"/healthcheck
         mkdir -p                                    "$hche_dir"
         cp $(jq '."start"'                        -r $hche) "$hche_dir"/start.sh
-
-        mkdir -p                                    "$dir"/latency
         ;;
 
     deploy-genesis )
@@ -274,6 +282,30 @@ EOF
         fi
         backend_supervisor save-child-pids "$dir";;
 
+    start-workloads )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        while test $# -gt 0
+        do case "$1" in
+               --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
+               * ) break;; esac; shift; done
+
+        # For every workload
+        for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
+        do
+            if ! supervisorctl start "${workload}"
+            then progress "supervisor" "$(red fatal: failed to start) $(white "${workload} workload")"
+                 echo "$(red "${workload}" workload stdout) ----------------------" >&2
+                 cat "$dir"/workloads/"${workload}"/stdout
+                 echo "$(red "${workload}" workload stderr) ----------------------" >&2
+                 cat "$dir"/workloads/"${workload}"/stderr
+                 echo "$(white -------------------------------------------------)" >&2
+                 fatal "could not start $(white "${workload} workload")"
+            fi
+        done
+        backend_supervisor save-child-pids "$dir";;
+
     wait-node-stopped )
         local usage="USAGE: wb backend $op RUN-DIR NODE"
         local dir=${1:?$usage}; shift
@@ -319,6 +351,40 @@ EOF
         else
             touch "${dir}"/flag/cluster-stopping
             echo " All nodes exited      -- after $(yellow ${elapsed})s" >&2
+        fi
+        ;;
+
+    wait-workloads-stopped )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        local start_time=$(date +%s)
+        msg_ne "supervisor:  waiting until all workloads are stopped: 000000"
+        for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
+        do
+            while \
+                ! test -f "${dir}"/flag/cluster-stopping \
+                && \
+                supervisorctl status "${workload}" > /dev/null
+            do
+                echo -ne "\b\b\b\b\b\b"
+                printf "%6d" "$(($(date +%s) - start_time))"
+                sleep 1
+            done
+            if ! test -f "${dir}"/flag/cluster-stopping
+            then
+                echo -ne "\b\b\b\b\b\b"
+                echo -n "${workload} 000000"
+            fi
+        done >&2
+        echo -ne "\b\b\b\b\b\b"
+        local elapsed=$(($(date +%s) - start_time))
+        if test -f "${dir}"/flag/cluster-stopping
+        then
+            echo " Termination requested -- after $(yellow ${elapsed})s" >&2
+        else
+            touch "${dir}"/flag/cluster-stopping
+            echo " All workloads exited  -- after $(yellow ${elapsed})s" >&2
         fi
         ;;
 

@@ -1,6 +1,7 @@
 { pkgs
 , profile
 , nodeSpecs
+, workload
 }:
 
 let
@@ -17,12 +18,14 @@ let
   ################
 
   testnet_magic = profile.genesis.network_magic;
-  gov_action_deposit = profile.genesis.conway.govActionDeposit;
+  gov_action_deposit =
+    if __hasAttr "conway" profile.genesis
+    then profile.genesis.conway.govActionDeposit
+    else throw "Conway genesis needed!"
+  ;
   # Where to obtain the genesis funds from.
-  genesis_funds_vkey = "../genesis/cache-entry/utxo-keys/utxo2.vkey";
-  genesis_funds_skey = "../genesis/cache-entry/utxo-keys/utxo2.skey";
-  # Workload
-  workload = builtins.elemAt profile.workload 0; # Only workload 0 exists now!
+  genesis_funds_vkey = "../../genesis/cache-entry/utxo-keys/utxo2.vkey";
+  genesis_funds_skey = "../../genesis/cache-entry/utxo-keys/utxo2.skey";
   # Initial donation from genesis funds to make "valid" withdrawal proposals.
   treasury_donation = 500000;
 
@@ -81,7 +84,9 @@ let
   ;
   dreps_per_producer = builtins.floor (profile.genesis.dreps / producers_count);
   # Max number of '--tx-out' when splitting funds.
-  outs_per_split_transaction = workload.outs_per_split_transaction or 100;
+  outs_per_split_transaction =
+    workload.parameters.outs_per_split_transaction or 100
+  ;
 
   # Sleeps.
   # Used when splitting funds to wait for funds to arrive, as this initial funds
@@ -103,7 +108,7 @@ let
   wait_proposals_count_sleep = 10;
 
   # No decimals also needed because of how the Bash script treats this number.
-  votes_per_tx = builtins.ceil (workload.votes_per_tx or 1);
+  votes_per_tx = builtins.ceil (workload.parameters.votes_per_tx or 1);
   # The most important one. To calculate and achieve a predictable TPS.
   # For reference:
   ### A local 2-node cluster with no tx-generator, max TPS was:
@@ -122,8 +127,8 @@ let
   create_proposals = true;
   build_vote       = true; use_build_raw = true;
   sign_vote        = true;
-  submit_vote      = workload.submit_vote or true;
-  wait_submit      = workload.submit_vote or false;
+  submit_vote      = workload.parameters.submit_vote or true;
+  wait_submit      = workload.parameters.submit_vote or false;
 
 in ''
 
@@ -143,7 +148,7 @@ function get_socket_path {
   # Function arguments.
   local node_str=$1       # node name / folder to find the socket.
 
-  local socket_path="../''${node_str}/node.socket"
+  local socket_path="../../''${node_str}/node.socket"
   ${coreutils}/bin/echo "''${socket_path}"
 }
 
@@ -202,14 +207,13 @@ function calculate_next_utxo {
 function store_address_utxo_expected {
 
   # Function arguments.
-  local node_str=$1       # node name / folder where to store the files.
-  local tx_signed=$2
-  local addr=$3
+  local tx_signed=$1
+  local addr=$2
 
-  local utxo_file=../"''${node_str}"/addr."''${addr}".json
-    calculate_next_utxo                       \
-      "''${tx_signed}"                        \
-      "''${addr}"                             \
+  local utxo_file=./addr."''${addr}".json      # Store in workload's directory!
+    calculate_next_utxo                        \
+      "''${tx_signed}"                         \
+      "''${addr}"                              \
   > "''${utxo_file}"
 }
 
@@ -221,10 +225,9 @@ function store_address_utxo_expected {
 function get_address_utxo_expected_id {
 
   # Function arguments.
-  local node_str=$1       # node name / folder where to store the files.
-  local addr=$2
+  local addr=$1
 
-  local utxo_file=../"''${node_str}"/addr."''${addr}".json
+  local utxo_file=./addr."''${addr}".json      # Store in workload's directory!
   if test -f "''${utxo_file}"
   then
     ${jq}/bin/jq --raw-output                  \
@@ -241,10 +244,9 @@ function get_address_utxo_expected_id {
 function get_address_utxo_expected_value {
 
   # Function arguments.
-  local node_str=$1       # node name / folder where to store the files.
-  local addr=$2
+  local addr=$1
 
-  local utxo_file=../"''${node_str}"/addr."''${addr}".json
+  local utxo_file=./addr."''${addr}".json      # Store in workload's directory!
   if test -f "''${utxo_file}"
   then
     ${jq}/bin/jq --raw-output '.value' "''${utxo_file}"
@@ -294,7 +296,7 @@ function funds_submit_retry {
   socket_path="$(get_socket_path "''${node_str}")"
 
   local utxo_id
-  utxo_id="$(get_address_utxo_expected_id "''${node_str}" "''${addr}")"
+  utxo_id="$(get_address_utxo_expected_id "''${addr}")"
 
   local contains_addr="false"
   local submit_tries=${toString funds_submit_tries}
@@ -458,7 +460,7 @@ function funds_from_to {
         # Not the first batch.
         # The input comes from the last transaction submitted.
         # No need to wait for it because the submission function does this!
-        tx_in="$(get_address_utxo_expected_id "''${node_str}" "''${funds_addr}")"
+        tx_in="$(get_address_utxo_expected_id "''${funds_addr}")"
         # Treasury donation happens only once.
         treasury_donation_args_array=()
       fi
@@ -468,7 +470,7 @@ function funds_from_to {
 
       # Send this batch to each node!
       # Build transaction.
-      tx_filename=../"''${node_str}"/funds_from_to."''${funds_addr}"."''${i}"
+      tx_filename=./funds_from_to."''${funds_addr}"."''${i}"
       ${cardano-cli}/bin/cardano-cli conway transaction build               \
         --testnet-magic         ${toString testnet_magic}                   \
         --socket-path           "''${socket_path}"                          \
@@ -488,14 +490,12 @@ function funds_from_to {
       for addr_cache in "''${txOuts_addrs_array[@]}"
       do
         store_address_utxo_expected \
-          "''${node_str}"           \
           "''${tx_filename}.signed" \
           "''${addr_cache}"
       done
       # Without the change address we can't wait for the funds after submission
       # or calculate the next input to use if an extra batch is needed!
       store_address_utxo_expected \
-        "''${node_str}"           \
         "''${tx_filename}.signed" \
         "''${funds_addr}"
 
@@ -645,7 +645,7 @@ function create_node_prop_drep_key_files {
   local prop_i=$3
   local drep_i=$4
 
-  local filename=../"''${node_str}"-prop-"''${prop_i}"-drep-"''${drep_i}"
+  local filename=./"''${node_str}"-prop-"''${prop_i}"-drep-"''${drep_i}"
   # Now with the extensions.
   local skey="''${filename}".skey
   local vkey="''${filename}".vkey
@@ -764,7 +764,7 @@ function governance_funds_genesis {
       ${jq}/bin/jq --raw-output            \
         --arg keyName "''${producer_name}" \
         '.[$keyName].i'                    \
-        ../node-specs.json                 \
+        ../../node-specs.json              \
     )"
     local producer_addr
     # Drep 0 is No DRep (funds for the node).
@@ -802,7 +802,7 @@ function governance_funds_producer {
     ${jq}/bin/jq --raw-output            \
       --arg keyName "''${producer_name}" \
       '.[$keyName].i'                    \
-      ../node-specs.json                 \
+      ../../node-specs.json              \
   )"
   local producer_addr producer_vkey producer_skey
   producer_addr="$(build_node_prop_drep_address    "''${producer_name}" "''${producer_i}" 0 0)"
@@ -914,7 +914,7 @@ function governance_create_constitution {
   # No waiting! But, if last submitted transaction fails (function
   # `governance_funds_genesis` in current workflow), everything else fails.
   local funds_tx
-  funds_tx="$(get_address_utxo_expected_id "''${node_str}" "''${node_addr}")"
+  funds_tx="$(get_address_utxo_expected_id "''${node_addr}")"
 
   # Show current gov-state.
     ${cardano-cli}/bin/cardano-cli conway query gov-state            \
@@ -925,31 +925,31 @@ function governance_create_constitution {
 
   # Create dummy constitution.
     ${coreutils}/bin/echo "My Constitution: free mate and asado"     \
-  > ../"''${node_str}"/constitution.txt
+  > ./constitution.txt
   # Calculate constitution hash.
   ${cardano-cli}/bin/cardano-cli hash anchor-data                    \
-    --file-text ../"''${node_str}"/constitution.txt                  \
-    --out-file  ../"''${node_str}"/constitution.hash
+    --file-text ./constitution.txt                                   \
+    --out-file  ./constitution.hash
   # Copy guardrails-script.
   ${coreutils}/bin/cp                                                \
-    ../genesis/guardrails-script.plutus                              \
-    ../"''${node_str}"/guardrails-script.plutus
+    ../../genesis/guardrails-script.plutus                           \
+    ./guardrails-script.plutus
   # Calculate guardrails-script hash.
   ${cardano-cli}/bin/cardano-cli hash script                         \
-    --script-file ../"''${node_str}"/guardrails-script.plutus        \
-    --out-file    ../"''${node_str}"/guardrails-script.hash
+    --script-file ./guardrails-script.plutus                         \
+    --out-file    ./guardrails-script.hash
 
   # Create action.
-  local tx_filename=../"''${node_str}"/create-constitution
+  local tx_filename=./create-constitution
   ${cardano-cli}/bin/cardano-cli conway governance action create-constitution \
     --testnet \
     --anchor-url "https://raw.githubusercontent.com/cardano-foundation/CIPs/master/CIP-0100/cip-0100.common.schema.json" \
     --anchor-data-hash "9d99fbca260b2d77e6d3012204e1a8658f872637ae94cdb1d8a53f4369400aa9" \
     --constitution-url "https://ipfs.io/ipfs/Qmdo2J5vkGKVu2ur43PuTrM7FdaeyfeFav8fhovT6C2tto" \
-    --constitution-hash        "$(${coreutils}/bin/cat ../"''${node_str}"/constitution.hash)" \
-    --constitution-script-hash "$(${coreutils}/bin/cat ../"''${node_str}"/guardrails-script.hash)" \
+    --constitution-hash        "$(${coreutils}/bin/cat ./constitution.hash)" \
+    --constitution-script-hash "$(${coreutils}/bin/cat ./guardrails-script.hash)" \
     --governance-action-deposit "''${action_deposit}" \
-    --deposit-return-stake-verification-key-file ../genesis/cache-entry/stake-delegators/delegator0/staking.vkey \
+    --deposit-return-stake-verification-key-file ../../genesis/cache-entry/stake-delegators/delegator0/staking.vkey \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
@@ -977,7 +977,6 @@ function governance_create_constitution {
   wait_proposal_id "''${node_str}" "''${tx_filename}".signed >/dev/null
 
   store_address_utxo_expected \
-    "''${node_str}"           \
     "''${tx_filename}.signed" \
     "''${node_addr}"
 }
@@ -1013,9 +1012,9 @@ function governance_create_withdrawal {
   # No waiting! But, if last submitted transaction fails (function
   # `governance_funds_producer` current workflow), everything else fails.
   local funds_tx
-  funds_tx="$(get_address_utxo_expected_id "''${node_str}" "''${node_drep_addr}")"
+  funds_tx="$(get_address_utxo_expected_id "''${node_drep_addr}")"
 
-  local tx_filename=../"''${node_str}"/create-withdrawal."''${node_str}"."''${drep_i}"
+  local tx_filename=./create-withdrawal."''${node_str}"."''${drep_i}"
   # Create action.
   ${cardano-cli}/bin/cardano-cli conway governance action create-treasury-withdrawal \
     --testnet                                                                                                                    \
@@ -1023,8 +1022,8 @@ function governance_create_withdrawal {
     --anchor-data-hash "311b148ca792007a3b1fee75a8698165911e306c3bc2afef6cf0145ecc7d03d4"                                        \
     --governance-action-deposit "''${action_deposit}"                                                                            \
     --transfer 50                                                                                                                \
-    --deposit-return-stake-verification-key-file  ../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey    \
-    --funds-receiving-stake-verification-key-file ../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey    \
+    --deposit-return-stake-verification-key-file  ../../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey \
+    --funds-receiving-stake-verification-key-file ../../genesis/cache-entry/stake-delegators/"delegator''${node_i}"/staking.vkey \
     --out-file "''${tx_filename}".action
   # Build transaction.
   ${cardano-cli}/bin/cardano-cli conway transaction build            \
@@ -1052,7 +1051,6 @@ function governance_create_withdrawal {
   wait_proposal_id "''${node_str}" "''${tx_filename}".signed >/dev/null
 
   store_address_utxo_expected \
-    "''${node_str}"           \
     "''${tx_filename}.signed" \
     "''${node_drep_addr}"
 }
@@ -1066,8 +1064,8 @@ function vote_tps_throttle() {
   local node_str=$1       # node name / folder to find the socket to use.
   local txs_count=$2      # Actual number of total txs already submitted.
 
-  local filepath_first=../"''${node_str}"/first_vote_time
-  local filepath_last=../"''${node_str}"/last_vote_time
+  local filepath_first=./first_vote_time
+  local filepath_last=./last_vote_time
   if ! test -f "''${filepath_first}"
   then
     local start_time
@@ -1170,7 +1168,7 @@ function governance_vote_all {
         dreps_array=()
       fi
     done
-    local proposal_flag="../''${node_str}/proposal.''${proposal_tx_id}.voted"
+    local proposal_flag="./proposal.''${proposal_tx_id}.voted"
     ${coreutils}/bin/touch "''${proposal_flag}"
   done
 }
@@ -1212,26 +1210,26 @@ function governance_vote_proposal {
       # No waiting! But, if last submitted transaction fails (function
       # `governance_funds_producer` or `governance_vote_proposal` in current
       # workflow), everything else fails.
-      funds_tx="$(get_address_utxo_expected_id       "''${node_str}" "''${node_drep_addr}")"
+      funds_tx="$(get_address_utxo_expected_id "''${node_drep_addr}")"
       # A next UTxO must be cached by `funds_from_to` when splitting the funds,
       # we don't check the response to be sure there is an expected UTxO to be
       # really sure we are not querying the node unnecessarily.
-      funds_value="$(get_address_utxo_expected_value "''${node_str}" "''${node_drep_addr}")"
+      funds_value="$(get_address_utxo_expected_value "''${node_drep_addr}")"
       # Need to be used twice to sign
       signing_key_file_params_array+=("--signing-key-file ''${node_drep_skey}")
     fi
-    local vote_filename=../"''${node_str}"/proposal."''${proposal_tx_id}"."''${drep_i}"
+    local vote_filename=./proposal."''${proposal_tx_id}"."''${drep_i}"
     ${cardano-cli}/bin/cardano-cli conway governance vote create   \
       --yes                                                        \
       --governance-action-tx-id "''${proposal_tx_id}"              \
       --governance-action-index "0"                                \
-      --drep-verification-key-file ../genesis/cache-entry/drep-keys/drep"''${drep_i}"/drep.vkey \
+      --drep-verification-key-file ../../genesis/cache-entry/drep-keys/drep"''${drep_i}"/drep.vkey \
       --out-file "''${vote_filename}".action
     vote_file_params_array+=("--vote-file ''${vote_filename}.action")
-    signing_key_file_params_array+=("--signing-key-file ../genesis/cache-entry/drep-keys/drep''${drep_i}/drep.skey")
+    signing_key_file_params_array+=("--signing-key-file ../../genesis/cache-entry/drep-keys/drep''${drep_i}/drep.skey")
   done
 
-  local tx_filename=../"''${node_str}"/proposal."''${proposal_tx_id}"."''${dreps_array[0]}"-"''${dreps_array[-1]}"
+  local tx_filename=./proposal."''${proposal_tx_id}"."''${dreps_array[0]}"-"''${dreps_array[-1]}"
   # Build the transaction.
   ${if build_vote
   then (
@@ -1309,7 +1307,7 @@ function workflow_generator_log_proposals {
           --testnet-magic ${toString testnet_magic}                          \
           --socket-path "''${socket_path}"                                   \
       | ${jq}/bin/jq '.proposals'                                            \
-    > ../"''${node_str}"/proposals."''$(${coreutils}/bin/date +"%Y-%m-%d-%H-%M-%S-%3N")".json
+    > ./proposals."''$(${coreutils}/bin/date +"%Y-%m-%d-%H-%M-%S-%3N")".json
     ${coreutils}/bin/sleep 60
   done
 }
@@ -1350,6 +1348,18 @@ function workflow_generator {
 }
 
 function workflow_producer {
+  # Run the producer workflow for each deployed producer.
+  local producers=${toString producers_bash_array}
+  for producer_name in ''${producers[*]}
+  do
+    if test -d "../../''${producer_name}"
+    then
+      workflow_producer_deployed "''${producer_name}"
+    fi
+  done
+}
+
+function workflow_producer_deployed {
   # Function arguments.
   local node_str=$1       # node name / folder to find the socket to use.
 
@@ -1358,7 +1368,7 @@ function workflow_producer {
     ${jq}/bin/jq --raw-output            \
       --arg keyName "''${node_str}"      \
       '.[$keyName].i'                    \
-      ../node-specs.json                 \
+      ../../node-specs.json              \
   )"
 
   #- Splitting 1 --------------------------------------------------------------#
@@ -1385,7 +1395,7 @@ function workflow_producer {
     ${cardano-cli}/bin/cardano-cli conway query gov-state            \
       --testnet-magic ${toString testnet_magic}                      \
       --socket-path "''${socket_path}"                               \
-  > "../''${node_str}/gov-state.start.json"
+  > "./gov-state.start.json"
   ${coreutils}/bin/echo "governance_vote_all:             Start: $(${coreutils}/bin/date --rfc-3339=seconds)"
   governance_vote_all "''${node_str}" "''${producer_i}"
   ${coreutils}/bin/echo "governance_vote_all:             End:   $(${coreutils}/bin/date --rfc-3339=seconds)"
@@ -1394,7 +1404,7 @@ function workflow_producer {
     ${cardano-cli}/bin/cardano-cli conway query gov-state            \
       --testnet-magic ${toString testnet_magic}                      \
       --socket-path "''${socket_path}"                               \
-  > "../''${node_str}/gov-state.end.json"
+  > "./gov-state.end.json"
   #----------------------------------------------------------------------------#
   ''
   else ''

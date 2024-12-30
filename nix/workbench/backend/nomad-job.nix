@@ -902,6 +902,19 @@ let
             }
           ])
           ++
+          # workloads
+          (builtins.map (workload:
+            ## workload start.sh script.
+            {
+              env = false;
+              destination = "local/${stateDir}/workloads/${workload.name}/start.sh";
+              data = escapeTemplate workload.start.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+          ) profileData.workloads-service)
+          ++
           # healthcheck
           [
             ## healthcheck start.sh script.
@@ -910,20 +923,6 @@ let
               destination = "local/${stateDir}/healthcheck/start.sh";
               data = escapeTemplate
                 profileData.healthcheck-service.start.value;
-              change_mode = "noop";
-              error_on_missing_key = true;
-              perms = "744"; # Only for every "start.sh" script. Default: "644"
-            }
-          ]
-          ++
-          # latency
-          [
-            ## Latency start.sh script.
-            {
-              env = false;
-              destination = "local/${stateDir}/latency/start.sh";
-              data = escapeTemplate
-                profileData.latency-service.start.value;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"

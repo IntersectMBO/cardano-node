@@ -71,28 +71,18 @@ case "$op" in
         ############
         backend start-nodes          "$dir"
         backend start-generator      "$dir"
+        backend start-workloads      "$dir"
         backend start-healthchecks   "$dir"
-        scenario_setup_workload_termination   "$dir"
+        if     jqtest '.workloads == []'              "$dir"/profile.json \
+            || jqtest '.workloads | any(.wait_pools)' "$dir"/profile.json
+        then
+            scenario_setup_workload_termination   "$dir"
+            backend wait-pools-stopped "$dir"
+        else
+            backend wait-workloads-stopped "$dir"
+        fi
         # Trap end
         ##########
-
-        backend wait-pools-stopped   "$dir"
-        scenario_cleanup_termination
-
-        backend stop-all             "$dir"
-        ;;
-
-    latency )
-
-        scenario_setup_exit_trap     "$dir"
-        # Trap start
-        ############
-        backend start-nodes          "$dir"
-        backend start-latencies      "$dir"
-        # Trap end
-        ##########
-
-        backend wait-latencies-stopped   "$dir"
         scenario_cleanup_termination
 
         backend stop-all             "$dir"

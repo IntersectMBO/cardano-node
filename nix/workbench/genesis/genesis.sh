@@ -735,7 +735,7 @@ genesis-create-testnet-data() {
     link_keys utxo-keys utxo-keys
 
     local is_voting
-    is_voting=$(jq --raw-output '.generator.drep_voting' "$profile_json")
+    is_voting=$(jq --raw-output '.workloads | any( .name == "voting")' "$profile_json")
     if [[ "$is_voting" == "true" ]];
     then
         info genesis "voting workload specified - keeping one stake key per producer"

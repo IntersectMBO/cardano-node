@@ -63,6 +63,8 @@ def era_defaults($era):
       }
     }
 
+  , workloads: []
+
   , node:
     { rts_flags_override:             []
     , heap_limit:                     null                ## optional: heap limit in MB (translates to RTS flag -M)

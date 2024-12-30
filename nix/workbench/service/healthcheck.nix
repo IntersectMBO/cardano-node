@@ -124,9 +124,6 @@ let
             for node in ''${nodes[*]}
             do
 
-              # TODO: A couple of simple pings
-              # latency_topology_producers "''${node}"
-
               # Cardano cluster connectivity (cardano-ping)
               connectivity_topology_producers "''${node}"
 
@@ -193,26 +190,9 @@ let
 
               done
             else
-              # Producers only!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-              ############################# VOTING #############################
-              ############################# VOTING #############################
-              ############################# VOTING #############################
-              # If running supervisord (local only), only one healthcheck is run
-              # for all nodes, so sending to background and sleeping forever all
-              # but the last node on the list fits all backends for all
-              # producers to vote simultaneously.
-              for node in ''${nodes[*]} # nodes array is only deployed nodes!
-              do
-                if test "''${node}" = "''${nodes[-1]}"
-                then
-                  workflow_producer "''${node}"
-                else
-                  workflow_producer "''${node}" &
-                fi
-              done
-              ############################# VOTING #############################
-              ############################# VOTING #############################
-              ############################# VOTING #############################
+              # Seconds supervisor needs to consider the start successful
+              ${coreutils}/bin/sleep 5
+              msg "Done, bye!"
             fi
 
           }
@@ -220,8 +200,6 @@ let
           ######################################################################
           # Network functions ##################################################
           ######################################################################
-
-          # TODO: latency_topology_producers "''${node}"
 
           function connectivity_topology_producers() {
             local node=$1
@@ -952,20 +930,6 @@ let
               ${bashInteractive}/bin/sh -c \
                 "${coreutils}/bin/echo -e \"$(${coreutils}/bin/date --rfc-3339=seconds): $1\" | ${coreutils}/bin/tee /dev/stderr"
             exit 22
-          }
-
-          ######################################################################
-          # Conway/governance functions! #######################################
-          ######################################################################
-
-          ${if profile.generator.drep_voting or false
-            then
-              ''
-              ${import ./voting.nix {inherit pkgs profile nodeSpecs;}}
-              ''
-            else
-              ''
-              ''
           }
 
           if test -n "''${NOMAD_DEBUG:-}"

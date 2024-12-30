@@ -81,13 +81,13 @@ backend_nomadcloud() {
       backend_nomad wait-pools-stopped     60 "$@"
     ;;
 
-    wait-latencies-stopped )
+    wait-workloads-stopped )
       # It passes the sleep time (in seconds) required argument.
       # This time is different between local and cloud backends to avoid
       # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
       # first one it waits to stop inside a loop) and at the same time be less
       # sensitive to network failures.
-      backend_nomad wait-latencies-stopped 60 "$@"
+      backend_nomad wait-workloads-stopped 60 "$@"
     ;;
 
     fetch-logs )
@@ -146,12 +146,12 @@ backend_nomadcloud() {
       backend_nomad start-generator         "$@"
     ;;
 
-    start-healthchecks )
-      backend_nomad start-healthchecks      "$@"
+    start-workloads )
+      backend_nomad start-workloads         "$@"
     ;;
 
-    start-latencies )
-      backend_nomad start-latencies         "$@"
+    start-healthchecks )
+      backend_nomad start-healthchecks      "$@"
     ;;
 
     start-node )
@@ -998,18 +998,6 @@ fetch-logs-ssh-node() {
   local ssh_config_path ssh_command
   ssh_config_path="$(wb nomad ssh config)"
   ssh_command="ssh -F ${ssh_config_path} -p 32000 -l nobody"
-  # Download latency(ies) logs. ################################################
-  ##############################################################################
-  msg "$(blue "Fetching") $(yellow "program \"latency\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-  if ! rsync -e "${ssh_command}" -au                      \
-         -f'- start.sh'                                   \
-         "${public_ipv4}":/local/run/current/latency/     \
-         "${dir}"/latency/"${node}"/
-  then
-    node_ok="false"
-    touch "${dir}"/nomad/"${node}"/download_failed
-    msg "$(red Error fetching) $(yellow "program \"latency\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-  fi
   # Download healthcheck(s) logs. ##############################################
   ##############################################################################
   msg "$(blue "Fetching") $(yellow "program \"healthcheck\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
@@ -1022,6 +1010,22 @@ fetch-logs-ssh-node() {
     touch "${dir}"/nomad/"${node}"/download_failed
     msg "$(red Error fetching) $(yellow "program \"healthcheck\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
   fi
+  # Download workload(s) logs. #################################################
+  ##############################################################################
+  # For every workload
+  for workload in $(jq_tolist '.workloads | map(.name)' "$dir"/profile.json)
+  do
+    msg "$(blue "Fetching") $(yellow "program \"${workload}\" workload") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    if ! rsync -e "${ssh_command}" -au                                      \
+           -f'- start.sh'                                                   \
+           "${public_ipv4}":/local/run/current/workloads/"${workload}"/     \
+           "${dir}"/workloads/"${workload}"/"${node}"/
+    then
+      node_ok="false"
+      touch "${dir}"/nomad/"${node}"/download_failed
+      msg "$(red Error fetching) $(yellow "program \"${workload}\" workload") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    fi
+  done
   # Download generator logs. ###################################################
   ##############################################################################
   if test "${node}" = "explorer"
