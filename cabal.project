@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-12-10T16:20:07Z
-  , cardano-haskell-packages 2025-01-02T14:22:02Z
+  , cardano-haskell-packages 2025-01-02T20:31:56Z
 
 packages:
   cardano-node
@@ -97,9 +97,3 @@ source-repository-package
   --sha256: sha256-HolhCVVZh5D7zNkvhhnT0uQ0w5BTJbIhT5sO3BCnTww=
   subdir:
     cardano-cli
-
-source-repository-package
-  type: git
-  location: https://github.com/neilmayhew/ekg-forward.git
-  tag: d51ade51b2367345183095ae623bdddb708b8b22
-  --sha256: sha256-HykoFsyC68wznXaIiP6uJclpQTWVWW2FrXGCDLAs3zg=
