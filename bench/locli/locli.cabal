@@ -119,7 +119,7 @@ library
                       , hashable
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus
-                      , ouroboros-network-api ^>= 0.11
+                      , ouroboros-network-api ^>= 0.12
                       , sop-core
                       , split
                       , sqlite-easy >= 1.1.0.1
