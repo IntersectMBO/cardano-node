@@ -73,28 +73,9 @@ allow-newer:
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 4920b7a8e1a639e6b6a85611bef6d541e21d012a
-  --sha256: sha256-mrGXtC/mStln5KqoXlruKYl2vHYZhgw3biRlZm82h7A=
-  subdir:
-    cardano-client
-    cardano-ping
-    monoidal-synchronisation
-    network-mux
-    ntp-client
-    ouroboros-network
-    ouroboros-network-api
-    ouroboros-network-framework
-    ouroboros-network-mock
-    ouroboros-network-protocols
-    ouroboros-network-testing
-    quickcheck-monoids
-
-source-repository-package
-  type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: f2d134da6d6d4f7bcbfb85ba94b30f49b3f2b7c6
-  --sha256: sha256-4Lu716WX9S+5dguxa8lUjAgeCQYsxj9QZZ9xLyyjivQ=
+  tag: 98d2087ed0f7594760b9bdbfe92821883b09dbc0
+  --sha256: sha256-kgiHxl26/6/ckJ+V0Ov/rn+LVN2WmWeJRB2dTQ8+Hj8=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -104,21 +85,21 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 04ac6b36284ea823da0a7b88210c03b586f7f808
-  --sha256: sha256-LcZe9GcH2qRvNCk4leJHMLEX0KMiqbkYP4xACBE/znE=
+  tag: dca44167864887d9c7db71d4ed4781babb1daffb
+  --sha256: sha256-UUbEd8OTZE92hZ4kKmK5Pu4Mr8wns2ODDGZYbdr/8Hc=
   subdir:
     cardano-api
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: e2940caf43f5ba3194173523369553c93c2340b7
-  --sha256: sha256-Bzic7wIBU8Md/vzj87d9kgdpOGfTXOtjBYLyTR/rZ5g=
+  tag: 23ccb91eeafa7716f4ba1e90fc9130075881f29f
+  --sha256: sha256-HolhCVVZh5D7zNkvhhnT0uQ0w5BTJbIhT5sO3BCnTww=
   subdir:
     cardano-cli
 
 source-repository-package
   type: git
   location: https://github.com/neilmayhew/ekg-forward.git
-  tag: 4ba8bb693093f6cf54d43d6e9bbce1e08b0457dd
-  --sha256: sha256-g0gYqzRGjmZwxEzihJ4JifJe+GRfdLIMzaot7rUcjlI=
+  tag: d51ade51b2367345183095ae623bdddb708b8b22
+  --sha256: sha256-HykoFsyC68wznXaIiP6uJclpQTWVWW2FrXGCDLAs3zg=
