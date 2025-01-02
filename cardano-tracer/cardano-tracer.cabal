@@ -178,7 +178,7 @@ library
                       , mime-mail
                       , network-mux
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.18
+                      , ouroboros-network ^>= 0.19
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
