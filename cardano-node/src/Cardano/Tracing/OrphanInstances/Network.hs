@@ -22,7 +22,10 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 #endif
 
-module Cardano.Tracing.OrphanInstances.Network () where
+module Cardano.Tracing.OrphanInstances.Network
+  ( Verbose (..)
+  , FetchDecisionToJSON (..)
+  ) where
 
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
@@ -630,7 +633,7 @@ instance HasTextFormatter NtN.AcceptConnectionsPolicyTrace where
   formatText a _ = pack (show a)
 
 
-instance (StandardHash header, Show peer, ToObject peer)
+instance (StandardHash header, Show peer, ToJSON peer, ConvertRawHash header)
       => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer = trStructuredText
 instance (StandardHash header, Show peer)
@@ -644,7 +647,7 @@ instance (Show header, StandardHash header, Show peer)
      => HasTextFormatter (TraceLabelPeer peer (TraceFetchClientState header)) where
   formatText a _ = pack (show a)
 
-instance (StandardHash header, Show peer, ToObject peer)
+instance (StandardHash header, Show peer, ToJSON peer, ConvertRawHash header)
       => Transformable Text IO (BlockFetch.TraceDecisionEvent peer header) where
   trTransformer = trStructuredText
 instance (StandardHash header, Show peer)
@@ -1129,16 +1132,6 @@ instance Aeson.ToJSON ConnectionManagerCounters where
                  , "outbound"       .= outboundConns
                  ]
 
-instance ToObject (FetchDecision [Point header]) where
-  toObject _verb (Left decline) =
-    mconcat [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (pack (show decline))
-             ]
-  toObject _verb (Right results) =
-    mconcat [ "kind" .= String "FetchDecision results"
-             , "length" .= String (pack $ show $ length results)
-             ]
-
 -- TODO: use 'ToJSON' constraints
 instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.DiffusionTracer ntnAddr ntcAddr) where
   toObject _verb (ND.RunServer sockAddr) = mconcat
@@ -1244,17 +1237,45 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
              ]
 
 
+instance ConvertRawHash header
+      => ToJSON (Point header) where
+  toJSON GenesisPoint = String "GenesisPoint"
+  toJSON (BlockPoint (SlotNo slotNo) hash) =
+    -- it is unlikely that there will be two short hashes in the same slot
+    String $ renderHeaderHashForVerbosity
+               (Proxy @header)
+                MinimalVerbosity
+                hash
+          <> "@"
+          <> pack (show slotNo)
+
+
+newtype Verbose a = Verbose a
+
+instance ConvertRawHash header
+      => ToJSON (Verbose (Point header)) where
+  toJSON (Verbose GenesisPoint) = String "GenesisPoint"
+  toJSON (Verbose (BlockPoint (SlotNo slotNo) hash)) =
+    -- it is unlikely that there will be two short hashes in the same slot
+    String $ renderHeaderHashForVerbosity
+               (Proxy @header)
+                MaximalVerbosity
+                hash
+          <> "@"
+          <> pack (show slotNo)
+
+
 instance ConvertRawHash blk
       => ToObject (Point blk) where
   toObject _verb GenesisPoint =
-    mconcat
-      [ "kind" .= String "GenesisPoint" ]
-  toObject verb (BlockPoint slot h) =
-    mconcat
-      [ "kind" .= String "BlockPoint"
-      , "slot" .= toJSON (unSlotNo slot)
-      , "headerHash" .= renderHeaderHashForVerbosity (Proxy @blk) verb h
-      ]
+    mconcat [ "point" .= String "GenesisPoint" ]
+  toObject verb point@BlockPoint{} =
+    mconcat [ "point" .=
+                case verb of
+                  MaximalVerbosity
+                    -> toJSON (Verbose point)
+                  _ -> toJSON point
+            ]
 
 
 instance ToObject SlotNo where
@@ -1330,26 +1351,51 @@ instance (HasHeader header, ConvertRawHash header)
              , "outstanding" .= outstanding
              ]
 
-
-instance (ToObject peer)
+instance (ToJSON peer, ConvertRawHash header)
       => ToObject [TraceLabelPeer peer (FetchDecision [Point header])] where
   toObject MinimalVerbosity _ = mempty
   toObject _ [] = mempty
   toObject _ xs = mconcat
-    [ "kind"  .= String "PeersFetch"
-    , "peers" .= toJSON
-      (foldl' (\acc x -> toObject MaximalVerbosity x : acc) [] xs) ]
+    [ "kind" .= String "FetchDecisions"
+    , "decisions" .= toJSON xs
+    ]
 
 instance (ToObject peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
   toObject verb (TraceLabelPeer peerid a) =
     mconcat [ "peer" .= toObject verb peerid ] <> toObject verb a
 
-instance ToObject peer
+instance (ToJSON peer, ToJSON point)
+      => ToJSON (TraceLabelPeer peer (FetchDecision [point])) where
+  toJSON (TraceLabelPeer peer decision) =
+    Aeson.object
+      [ "peer" .= toJSON peer
+      , "decision" .= toJSON (FetchDecisionToJSON decision)
+      ]
+
+instance (ToJSON peer, ToJSON (Verbose point))
+    => ToJSON (Verbose (TraceLabelPeer peer (FetchDecision [point]))) where
+              toJSON (Verbose (TraceLabelPeer peer decision)) =
+                Aeson.object
+                [ "peer" .= toJSON peer
+                , "decision" .= toJSON (FetchDecisionToJSON $ map Verbose <$> decision)
+                ]
+
+newtype FetchDecisionToJSON point =
+    FetchDecisionToJSON (FetchDecision [point])
+
+instance ToJSON point
+      => ToJSON (FetchDecisionToJSON point) where
+  toJSON (FetchDecisionToJSON (Left decline)) =
+    Aeson.object [ "declined" .= String (pack . show $ decline) ]
+  toJSON (FetchDecisionToJSON (Right points)) =
+    toJSON points
+
+instance (ToJSON peer, ConvertRawHash header)
       => ToObject (BlockFetch.TraceDecisionEvent peer header) where
-  toObject verb (BlockFetch.PeersFetch as) = toObject verb as
-  toObject verb (BlockFetch.PeerStarvedUs peer) = mconcat
-    [ "kind" .= String "PeersStarvedUs"
-    , "peer" .= toObject verb peer
+  toObject  verb (BlockFetch.PeersFetch as) = toObject verb as
+  toObject _verb (BlockFetch.PeerStarvedUs peer) = mconcat
+    [ "kind" .= String "PeerStarvedUs"
+    , "peer" .= toJSON peer
     ]
 
 instance ToObject (AnyMessage ps)

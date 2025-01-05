@@ -725,6 +725,8 @@ mkConsensusTracers
   :: forall blk peer localPeer.
      ( Show peer
      , Eq peer
+     , ToObject peer
+     , ToJSON peer
      , LedgerQueries blk
      , ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
@@ -734,7 +736,6 @@ mkConsensusTracers
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
-     , ToObject peer
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
@@ -1459,9 +1460,10 @@ nodeToNodeTracers' trSel verb tr =
 -- TODO @ouroboros-network
 teeTraceBlockFetchDecision
     :: ( Eq peer
-       , HasHeader blk
        , Show peer
-       , ToObject peer
+       , ToJSON peer
+       , HasHeader blk
+       , ConvertRawHash blk
        )
     => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
@@ -1489,9 +1491,10 @@ teeTraceBlockFetchDecision' tr =
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer
-       , HasHeader blk
        , Show peer
-       , ToObject peer
+       , ToJSON peer
+       , HasHeader blk
+       , ConvertRawHash blk
        )
     => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
