@@ -171,7 +171,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
-      , Consensus.cardanoProtocolVersion = ProtVer (natVersion @10) 1
+      , Consensus.cardanoProtocolVersion = ProtVer (natVersion @10) 2
         -- The remaining arguments specify the parameters needed to transition between two eras
       , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
