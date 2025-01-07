@@ -62,13 +62,43 @@ instance ToJSON TxGenTxParams where
 instance FromJSON TxGenTxParams where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
--- FIXME: workaround instances
+-- FIXME: workaround instance
 instance ToJSON (SigningKey PaymentKey) where
   toJSON = toJSON . serialiseToTextEnvelope Nothing
 instance FromJSON (SigningKey PaymentKey) where
   parseJSON o = do
     te <- parseJSON o
     case deserialiseFromTextEnvelope (AsSigningKey AsPaymentKey) te of
+      Right k   -> pure k
+      Left err  -> fail $ show err
+
+-- FIXME: workaround instance
+instance ToJSON (SigningKey DRepKey) where
+  toJSON = toJSON . serialiseToTextEnvelope Nothing
+instance FromJSON (SigningKey DRepKey) where
+  parseJSON o = do
+    te <- parseJSON o
+    case deserialiseFromTextEnvelope (AsSigningKey AsDRepKey) te of
+      Right k   -> pure k
+      Left err  -> fail $ show err
+
+-- FIXME: workaround instance
+instance ToJSON (VerificationKey DRepKey) where
+  toJSON = toJSON . serialiseToTextEnvelope Nothing
+instance FromJSON (VerificationKey DRepKey) where
+  parseJSON o = do
+    te <- parseJSON o
+    case deserialiseFromTextEnvelope (AsVerificationKey AsDRepKey) te of
+      Right k   -> pure k
+      Left err  -> fail $ show err
+
+-- FIXME: workaround instance
+instance ToJSON (VerificationKey StakeKey) where
+  toJSON = toJSON . serialiseToTextEnvelope Nothing
+instance FromJSON (VerificationKey StakeKey) where
+  parseJSON o = do
+    te <- parseJSON o
+    case deserialiseFromTextEnvelope (AsVerificationKey AsStakeKey) te of
       Right k   -> pure k
       Left err  -> fail $ show err
 

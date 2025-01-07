@@ -9,6 +9,7 @@ PROFILES_LEGACY := ci-test-dense10 dish dish-10M dish-plutus dish-10M-plutus
 PROFILES_SCALING := faststartup-24M
 PROFILES_NOMAD_PERF := value-nomadperf value-nomadperf-nop2p value-drep1k-nomadperf value-drep2k-nomadperf value-drep10k-nomadperf value-drep100k-nomadperf value-oldtracing-nomadperf value-oldtracing-nomadperf-nop2p value-volt-nomadperf plutus-nomadperf plutus-nomadperf-nop2p plutus-drep1k-nomadperf plutus-drep2k-nomadperf plutus-drep10k-nomadperf plutus-drep100k-nomadperf plutus24-nomadperf plutus-secp-ecdsa-nomadperf plutus-secp-schnorr-nomadperf plutusv3-blst-nomadperf plutusv3-blst-double-nomadperf plutusv3-blst-half-nomadperf plutus-volt-nomadperf fast-nomadperf fast-nomadperf-nop2p ci-test-nomadperf ci-test-nomadperf-nop2p ci-test-oldtracing-nomadperf default-nomadperf-nop2p default-nomadperf oldtracing-nomadperf oldtracing-nomadperf-nop2p ci-bench-nomadperf ci-bench-nomadperf-nop2p ci-bench-oldtracing-nomadperf
 PROFILES_NOMAD_PERFSSD := utxoscale-solo-12M16G-nomadperfssd utxoscale-solo-12M64G-nomadperfssd utxoscale-solo-24M64G-nomadperfssd fast-nomadperfssd value-nomadperfssd
+PROFILES_DEV := development-voting
 
 LOCAL_PROFILES += $(PROFILES_EMPTY)
 LOCAL_PROFILES += $(PROFILES_MINIATURE)
@@ -21,3 +22,4 @@ LOCAL_PROFILES += $(PROFILES_LEGACY)
 LOCAL_PROFILES += $(PROFILES_SCALING)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERFSSD)
+LOCAL_PROFILES += $(PROFILES_DEV)
