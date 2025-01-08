@@ -1,6 +1,6 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -10,13 +10,14 @@ module Cardano.Node.Orphans () where
 
 import           Cardano.Api ()
 
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag(..))
 import           Ouroboros.Consensus.Node
-import qualified Data.Text as Text
+import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Data.Aeson.Types
+import qualified Data.Text as Text
 import           Text.Printf (PrintfArg (..))
 
 deriving instance Eq NodeDatabasePaths
@@ -60,3 +61,15 @@ instance FromJSON NodeDatabasePaths where
 
 deriving newtype instance FromJSON (Flag symbol)
 deriving newtype instance ToJSON (Flag symbol)
+
+instance FromJSON GenesisConfigFlags where
+  parseJSON = withObject "GenesisConfigFlags" $ \v ->
+    GenesisConfigFlags
+      <$> v .:? "EnableCSJ"       .!= True
+      <*> v .:? "EnableLoEAndGDD" .!= True
+      <*> v .:? "EnableLoP"       .!= True
+      <*> v .:? "BlockFetchGracePeriod"
+      <*> v .:? "BucketCapacity"
+      <*> v .:? "BucketRate"
+      <*> v .:? "CSJJumpSize"
+      <*> v .:? "GDDRateLimit"

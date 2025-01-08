@@ -35,11 +35,12 @@ import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Node (NodeDatabasePaths (..),
-                   pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag,
-                   NumOfDiskSnapshots (..), SnapshotInterval (..))
+import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags (..),
+                   defaultGenesisConfigFlags, mkGenesisConfig)
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag, NumOfDiskSnapshots (..),
+                   SnapshotInterval (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 
 import           Control.Monad (when)
@@ -178,6 +179,9 @@ data NodeConfiguration
 
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
+
+         -- Ouroboros Genesis
+       , ncGenesisConfig :: GenesisConfig
        } deriving (Eq, Show)
 
 
@@ -252,6 +256,9 @@ data PartialNodeConfiguration
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
+
+         -- Ouroboros Genesis
+       , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -360,6 +367,9 @@ instance FromJSON PartialNodeConfiguration where
       -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
 
+      -- pncConsensusMode determines whether Genesis is enabled in the first place.
+      pncGenesisConfigFlags <- Last <$> v .:? "LowLevelGenesisOptions"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -401,6 +411,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncConsensusMode
            , pncEnableP2P
            , pncPeerSharing
+           , pncGenesisConfigFlags
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -584,6 +595,7 @@ defaultPartialNodeConfiguration =
     , pncConsensusMode = Last (Just defaultConsensusMode)
     , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just defaultPeerSharing)
+    , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
     }
   where
     Configuration.PeerSelectionTargets {
@@ -682,6 +694,14 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing PeerSharing"
     $ pncPeerSharing pnc
 
+  mGenesisConfigFlags <- case ncConsensusMode of
+    PraosMode -> pure Nothing
+    GenesisMode ->
+        fmap Just
+      $ lastToEither "Missing GenesisConfigFlags"
+      $ pncGenesisConfigFlags pnc
+  let ncGenesisConfig = mkGenesisConfig mGenesisConfigFlags
+
   -- TODO: This is not mandatory
   experimentalProtocols <-
     lastToEither "Missing ExperimentalProtocolsEnabled" $
@@ -736,6 +756,7 @@ makeNodeConfiguration pnc = do
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
              , ncConsensusMode
+             , ncGenesisConfig
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
