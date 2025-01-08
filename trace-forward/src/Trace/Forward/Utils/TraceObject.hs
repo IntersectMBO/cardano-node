@@ -1,7 +1,11 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ViewPatterns #-}
+
+
 
 module Trace.Forward.Utils.TraceObject
   ( ForwardSink (..)
@@ -14,6 +18,7 @@ module Trace.Forward.Utils.TraceObject
 import           Control.Concurrent.STM (STM, atomically, check)
 import           Control.Concurrent.STM.TBQueue
 import           Control.Concurrent.STM.TVar
+import           Control.DeepSeq
 import           Control.Monad (forM_, replicateM, unless, when, (<$!>))
 import           Control.Monad.Extra (whenM)
 import qualified Data.List.NonEmpty as NE
@@ -24,7 +29,7 @@ import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import           Trace.Forward.Protocol.TraceObject.Type
 
 
-data ForwardSink lo = ForwardSink
+data NFData lo => ForwardSink lo = ForwardSink
   { forwardQueue     :: !(TVar (TBQueue lo))
   , disconnectedSize :: !Word
   , connectedSize    :: !Word
@@ -33,7 +38,8 @@ data ForwardSink lo = ForwardSink
   }
 
 initForwardSink
-  :: ForwarderConfiguration lo
+  :: NFData lo
+  => ForwarderConfiguration lo
   -> ([lo] -> IO ())
   -> IO (ForwardSink lo)
 initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize} callback = do
@@ -56,7 +62,8 @@ initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize
 --   3. The queue is full. In this case flush all tracing items to stdout and continue.
 --   4. The queue isn't empty and isn't full. Just continue writing.
 writeToSink ::
-     ForwardSink lo
+     NFData lo
+  => ForwardSink lo
   -> lo
   -> IO ()
 writeToSink ForwardSink{
@@ -64,7 +71,7 @@ writeToSink ForwardSink{
               disconnectedSize,
               connectedSize,
               wasUsed,
-              overflowCallback} traceObject = do
+              overflowCallback} (force -> !traceObject) = do
   condToFlush <- atomically $ do
     q <- readTVar forwardQueue
     ((,) <$> isFullTBQueue q
@@ -117,7 +124,8 @@ writeToSink ForwardSink{
     newTBQueue (fromIntegral size) >>= modifyTVar' forwardQueue . const
 
 readFromSink
-  :: ForwardSink lo -- ^ The sink contains the queue we read 'TraceObject's from.
+  :: NFData lo
+  => ForwardSink lo -- ^ The sink contains the queue we read 'TraceObject's from.
   -> Forwarder.TraceObjectForwarder lo IO ()
 readFromSink ForwardSink{forwardQueue, wasUsed} =
   Forwarder.TraceObjectForwarder

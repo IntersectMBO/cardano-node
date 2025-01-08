@@ -58,6 +58,7 @@ module Cardano.Logging.Types (
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import           Codec.Serialise (Serialise (..))
+import           Control.DeepSeq
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
@@ -363,6 +364,10 @@ data TraceObject = TraceObject {
   , toHostname  :: !HostName
   , toThreadId  :: !Text
 } deriving (Eq, Show)
+
+deriving instance NFData TraceObject
+deriving instance NFData SeverityS
+deriving instance NFData DetailLevel
 
 -- |
 data BackendConfig =
