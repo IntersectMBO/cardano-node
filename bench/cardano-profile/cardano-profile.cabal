@@ -63,6 +63,8 @@ library
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
+                      , Cardano.Benchmarking.Profile.Workload.Latency
+                      , Cardano.Benchmarking.Profile.Workload.Voting
   build-depends:        base >=4.12 && <5
                       , time
                       , aeson
