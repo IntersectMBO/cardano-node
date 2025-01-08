@@ -319,6 +319,7 @@ ciTestBage = Types.Profile {
     , Types.extra_future_offset = 0
     , Types.per_pool_balance = 1000000000000000
     , Types.funds_balance = 10000000000000
+    , Types.utxo_keys = 1
     , Types.network_magic = 42
     , Types.pool_coin = 1000000000000000
     , Types.delegator_coin = 0
@@ -350,6 +351,7 @@ ciTestBage = Types.Profile {
     , Types.tx_count = Just 9000
     , Types.add_tx_size = 100
   }
+  , Types.workloads = []
   , Types.tracer = Types.Tracer {
       Types.rtview = False
     , Types.ekg = False
@@ -570,6 +572,18 @@ testGroupMap = Tasty.testGroup
             (zip
               (Map.assocs $ Map.map Types.generator allProfiles)
               (Map.assocs $ Map.map Types.generator profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show the first profile with differences in the Workloads list.
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - [Workload]")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map Types.workloads allProfiles)
+              (Map.assocs $ Map.map Types.workloads profiles)
             )
           ----------------------------------------------------------------------
           -- Show the first profile with differences in the Tracer type.

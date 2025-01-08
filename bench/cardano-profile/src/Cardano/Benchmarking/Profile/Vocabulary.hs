@@ -11,7 +11,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleMainnet, timescaleDevops
 
 , genesisVariant300, genesisVariantLatest, genesisVariantPreVoltaire, genesisVariantVoltaire
-, fundsDefault, fundsDouble
+, fundsDefault, fundsDouble, fundsVoting
 
 , hosts
 
@@ -118,11 +118,14 @@ genesisVariantVoltaire = genesisVariantLatest
 
 -- Defined in the "genesis" property and it's for the tx-generator.
 fundsDefault :: Types.Profile -> Types.Profile
-fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000
+fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000 . P.utxoKeys 1
 
 -- Some profiles have a higher `funds_balance` in `Genesis`. Needed? Fix it?
 fundsDouble :: Types.Profile -> Types.Profile
-fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000
+fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoKeys 1
+
+fundsVoting :: Types.Profile -> Types.Profile
+fundsVoting =  P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 2
 
 -- Definition vocabulary: composition.
 --------------------------------------
