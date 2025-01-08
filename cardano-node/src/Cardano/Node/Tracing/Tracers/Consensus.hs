@@ -73,7 +73,6 @@ import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
-import           Network.TypedProtocol.Core
 
 import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
@@ -87,6 +86,7 @@ import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Time (DiffTime, NominalDiffTime)
 import           Data.Word (Word32, Word64)
+import           Network.TypedProtocol.Core
 
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
@@ -335,30 +335,6 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                   , "point" .= showT (jumpInfoToPoint info) ]
 
       jumpInfoToPoint = AF.headPoint . jTheirFragment
-
--- TODO @tweag-genesis
-instance MetaTrace (Jumping.TraceEvent addr) where
-  namespaceFor RotatedDynamo{} = Namespace [] ["RotatedDynamo"]
-
-  severityFor (Namespace [] ["RotatedDynamo"]) _ = Just Info
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace [] ["RotatedDynamo"]) =
-    Just "The dynamo rotated"
-  documentFor _ = Nothing
-
-  allNamespaces =
-    [ Namespace [] ["RotatedDynamo"] ]
-
-instance Show addr => LogFormatting (Jumping.TraceEvent addr) where
-  forHuman (RotatedDynamo fromPeer toPeer) =
-    "Rotated the dynamo from " <> showT fromPeer <> " to " <> showT toPeer
-  forMachine _dtal (RotatedDynamo fromPeer toPeer) =
-    mconcat
-      [ "kind" .= String "RotatedDynamo"
-      , "from" .= showT fromPeer
-      , "to" .= showT toPeer
-      ]
 
 tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
 tipToObject = \case
@@ -2260,6 +2236,44 @@ instance MetaTrace (TraceGsmEvent selection) where
     , Namespace [] ["LeaveCaughtUp"]
     , Namespace [] ["GsmEventPreSyncingToSyncing"]
     , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    ]
+
+--------------------------------------------------------------------------------
+-- CSJ Tracer
+--------------------------------------------------------------------------------
+
+instance ( LogFormatting peer, Show peer
+         ) => LogFormatting (Jumping.TraceEvent peer) where
+  forMachine dtal =
+    \case
+      RotatedDynamo oldPeer newPeer ->
+        mconcat
+          [ "kind" .= String "RotatedDynamo"
+          , "oldPeer" .= forMachine dtal oldPeer
+          , "newPeer" .= forMachine dtal newPeer
+          ]
+
+  forHuman (RotatedDynamo fromPeer toPeer) =
+    "Rotated the dynamo from " <> showT fromPeer <> " to " <> showT toPeer
+
+instance MetaTrace (Jumping.TraceEvent peer) where
+  namespaceFor =
+    \case
+      RotatedDynamo {}        -> Namespace [] ["RotatedDynamo"]
+
+  severityFor ns _ =
+    case ns of
+      Namespace _ ["RotatedDynamo"]               -> Just Info
+      Namespace _ _                               -> Nothing
+
+  documentFor = \case
+    Namespace _ ["RotatedDynamo"] ->
+      Just "The ChainSync Jumping module has been asked to rotate its dynamo"
+    Namespace _ _ ->
+      Nothing
+
+  allNamespaces =
+    [ Namespace [] ["RotatedDynamo"]
     ]
 
 --------------------------------------------------------------------------------
