@@ -454,7 +454,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                                                 (const . pure $ ())
 
         let nodeArgs = RunNodeArgs
-              { rnGenesisConfig  = disableGenesisConfig
+              { rnGenesisConfig  = ncGenesisConfig nc
               , rnTraceConsensus = consensusTracers tracers
               , rnTraceNTN       = nodeToNodeTracers tracers
               , rnTraceNTC       = nodeToClientTracers tracers
@@ -545,7 +545,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            (length ipProducerAddrs)
 
             nodeArgs = RunNodeArgs
-                { rnGenesisConfig  = disableGenesisConfig
+                { rnGenesisConfig  = ncGenesisConfig nc
                 , rnTraceConsensus = consensusTracers tracers
                 , rnTraceNTN       = nodeToNodeTracers tracers
                 , rnTraceNTC       = nodeToClientTracers tracers

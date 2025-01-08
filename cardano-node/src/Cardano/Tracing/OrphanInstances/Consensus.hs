@@ -26,13 +26,13 @@ import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderHeaderHash,
-                   renderHeaderHashForVerbosity, renderPointAsPhrase,
-                   renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
-                   renderTipBlockNo, renderTipHash, renderWithOrigin)
+                   renderHeaderHashForVerbosity, renderPointAsPhrase, renderPointForVerbosity,
+                   renderRealPoint, renderRealPointAsPhrase, renderTipBlockNo, renderTipHash,
+                   renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader (..),
-                   Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader,
-                   pointHash, realPointHash, realPointSlot, withOriginToMaybe)
+                   Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, pointHash,
+                   realPointHash, realPointSlot, withOriginToMaybe)
 import           Ouroboros.Consensus.Block.SupportsSanityCheck
 import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
                    TraceGDDEvent (..))
@@ -79,7 +79,6 @@ import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import           Network.TypedProtocol.Core
 
 import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
@@ -92,6 +91,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word32)
 import           GHC.Generics (Generic)
+import           Network.TypedProtocol.Core
 import           Numeric (showFFloat)
 
 
@@ -1420,19 +1420,18 @@ instance ( LedgerSupportsProtocol blk,
               , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
               , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info)) ]
 
--- TODO @tweag-genesis
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEvent peer) where
 instance HasSeverityAnnotation (ChainSync.Client.TraceEvent peer) where
-  getSeverityAnnotation _ = Info
-instance Show peer => Transformable Text IO (ChainSync.Client.TraceEvent peer) where
+  getSeverityAnnotation _ = Debug
+instance ToObject peer => Transformable Text IO (ChainSync.Client.TraceEvent peer) where
   trTransformer = trStructured
 
-instance Show peer => ToObject (ChainSync.Client.TraceEvent peer) where
-  toObject _verb (ChainSync.Client.RotatedDynamo fromPeer toPeer) =
+instance ToObject peer => ToObject (ChainSync.Client.TraceEvent peer) where
+  toObject verb (ChainSync.Client.RotatedDynamo oldPeer newPeer) =
     mconcat
       [ "kind" .= String "RotatedDynamo"
-      , "from" .= showT fromPeer
-      , "to" .= showT toPeer
+      , "oldPeer" .= toObject verb oldPeer
+      , "newPeer" .= toObject verb newPeer
       ]
 
 instance ConvertRawHash blk

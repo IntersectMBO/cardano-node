@@ -133,6 +133,7 @@ nodeRunParser = do
            , pncConsensusMode = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncGenesisConfigFlags = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
