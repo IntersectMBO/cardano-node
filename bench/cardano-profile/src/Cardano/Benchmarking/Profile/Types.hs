@@ -24,6 +24,9 @@ module Cardano.Benchmarking.Profile.Types (
 , Generator (..)
 , Plutus (..), Redeemer (..)
 
+, Workload (..)
+, Entrypoints (..)
+
 , Tracer (..)
 
 , Cluster (..)
@@ -84,6 +87,7 @@ data Profile = Profile
   , node :: Node
 
   , generator :: Generator
+  , workloads :: [Workload]
 
   , tracer :: Tracer
   , cluster :: Cluster
@@ -104,7 +108,7 @@ instance Aeson.FromJSON Profile
 --------------------------------------------------------------------------------
 
 -- Scenario "fixed" is actually not being used.
-data Scenario = Idle | TracerOnly | Fixed | FixedLoaded | Chainsync | Latency
+data Scenario = Idle | TracerOnly | Fixed | FixedLoaded | Chainsync
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON Scenario where
@@ -113,7 +117,6 @@ instance Aeson.ToJSON Scenario where
   toJSON Fixed       = Aeson.toJSON ("fixed"        :: Text.Text)
   toJSON FixedLoaded = Aeson.toJSON ("fixed-loaded" :: Text.Text)
   toJSON Chainsync   = Aeson.toJSON ("chainsync"    :: Text.Text)
-  toJSON Latency     = Aeson.toJSON ("latency"      :: Text.Text)
 
 instance Aeson.FromJSON Scenario where
   parseJSON = Aeson.withText "Scenario" $ \t -> case t of
@@ -122,7 +125,6 @@ instance Aeson.FromJSON Scenario where
     "fixed"        -> return Fixed
     "fixed-loaded" -> return FixedLoaded
     "chainsync"    -> return Chainsync
-    "latency"      -> return Latency
     _              -> fail $ "Unknown Scenario: \"" ++ Text.unpack t ++ "\""
 
 --------------------------------------------------------------------------------
@@ -285,6 +287,7 @@ data Genesis = Genesis
   -- And the others!
   , per_pool_balance :: Integer
   , funds_balance :: Integer
+  , utxo_keys :: Integer
 
   -- Testnet:
   , network_magic :: Integer
@@ -488,6 +491,44 @@ instance Aeson.FromJSON Redeemer where
           RedeemerFields
             <$> o Aeson..: "constructor"
             <*> o Aeson..: "fields"
+
+--------------------------------------------------------------------------------
+
+data Workload = Workload
+  { workloadName :: String
+  , parameters :: Aeson.Object
+  , entrypoints :: Entrypoints
+  , wait_pools :: Bool
+  }
+  deriving (Eq, Show, Generic)
+
+data Entrypoints = Entrypoints
+  { pre_generator :: Maybe String
+  , producers :: String
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON Workload where
+  toJSON p =
+    Aeson.object
+      [ "name"        Aeson..= workloadName p
+      , "parameters"  Aeson..= parameters   p
+      , "entrypoints" Aeson..= entrypoints  p
+      , "wait_pools"  Aeson..= wait_pools   p
+      ]
+
+instance Aeson.FromJSON Workload where
+  parseJSON =
+    Aeson.withObject "Workload" $ \o -> do
+      Workload
+        <$> o Aeson..: "name"
+        <*> o Aeson..: "parameters"
+        <*> o Aeson..: "entrypoints"
+        <*> o Aeson..: "wait_pools"
+
+instance Aeson.ToJSON Entrypoints
+
+instance Aeson.FromJSON Entrypoints
 
 --------------------------------------------------------------------------------
 

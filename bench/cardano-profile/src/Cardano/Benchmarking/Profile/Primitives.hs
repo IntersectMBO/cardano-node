@@ -25,7 +25,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , name, desc
 
   -- Scenario.
-  , idle, tracerOnly, fixedLoaded, chainsync, latency
+  , idle, tracerOnly, fixedLoaded, chainsync
 
   -- Composition
   -- Composition topology.
@@ -41,7 +41,9 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Set the epoch number from the "epoch-timeline".
   , pparamsEpoch
   -- Overlays to use.
-  , v8Preview, v9Preview, v10Preview, stepHalf, doubleBudget, blocksize64k
+  , v8Preview, v9Preview, v10Preview
+  , stepHalf, doubleBudget, blocksize64k
+  , voting
  -- Customize the "shelley", "alonzo" or "conway" properties.
   , shelley, alonzo, conway
   -- Time and block params.
@@ -51,7 +53,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- If the genesis file is big more time is needed for deployment.
   , extraFutureOffset
   -- Funds for the generator.
-  , poolBalance, funds
+  , poolBalance, funds, utxoKeys
 
   -- ChainDB
   , chaindb
@@ -77,6 +79,9 @@ module Cardano.Benchmarking.Profile.Primitives (
   , redeemerInt, redeemerFields
   , generatorEpochs
 
+  -- Workload params.
+  , workloadAppend
+
   -- Tracer's params.
   , tracerRtview, tracerWithresources
 
@@ -88,7 +93,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Analysis params.
   , analysisOff, analysisStandard, analysisPerformance
   , analysisSizeSmall, analysisSizeModerate, analysisSizeModerate2, analysisSizeFull
-  , analysisUnitary, analysisEpoch3Plus
+  , analysisUnitary, analysisEpoch3Plus, analysisEpoch4Plus, analysisEpoch5Plus
   , cBlockMinimumAdoptions
 
   , preset
@@ -151,6 +156,7 @@ empty = Types.Profile {
     , Types.extra_future_offset = 0
     , Types.per_pool_balance = 0
     , Types.funds_balance = 0
+    , Types.utxo_keys = 0
     , Types.network_magic = 0
     , Types.pool_coin = 0
     , Types.delegator_coin = 0
@@ -178,6 +184,7 @@ empty = Types.Profile {
     , Types.tx_count = Nothing
     , Types.add_tx_size = 0
   }
+  , Types.workloads = []
   , Types.tracer = Types.Tracer {
       Types.rtview = False
     , Types.ekg = False
@@ -280,9 +287,6 @@ fixedLoaded p = p {Types.scenario = Types.FixedLoaded}
 
 chainsync :: Types.Profile -> Types.Profile
 chainsync p = p {Types.scenario = Types.Chainsync}
-
-latency :: Types.Profile -> Types.Profile
-latency p = p {Types.scenario = Types.Latency}
 
 -- Composition.
 --------------------------------------------------------------------------------
@@ -432,6 +436,9 @@ doubleBudget = helper_addOverlayOrDie "doublebudget"
 blocksize64k :: HasCallStack => Types.Profile -> Types.Profile
 blocksize64k = helper_addOverlayOrDie "blocksize64k"
 
+voting :: HasCallStack => Types.Profile -> Types.Profile
+voting = helper_addOverlayOrDie "voting"
+
 -- ensures a specific overlay is added only once to the list; redudancies point to ill-formed profile specification and thus error out
 helper_addOverlayOrDie :: HasCallStack => String -> Types.Profile -> Types.Profile
 helper_addOverlayOrDie overlayName = genesis
@@ -540,6 +547,14 @@ funds i = genesis
     if Types.funds_balance g /= 0
     then error "funds: `funds_balance` already set (not zero)."
     else g {Types.funds_balance = i}
+  )
+
+utxoKeys :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+utxoKeys i = genesis
+  (\g ->
+    if Types.utxo_keys g /= 0
+    then error "funds: `utxo_keys` already set (not zero)."
+    else g {Types.utxo_keys = i}
   )
 
 -- ChainDB.
@@ -751,6 +766,12 @@ generatorEpochs i = generator
     else g {Types.epochs = i}
   )
 
+-- Workload.
+--------------------------------------------------------------------------------
+
+workloadAppend :: Types.Workload -> Types.Profile -> Types.Profile
+workloadAppend w p = p {Types.workloads = Types.workloads p ++ [w]}
+
 -- Tracer.
 --------------------------------------------------------------------------------
 
@@ -857,6 +878,12 @@ analysisUnitary = analysisFiltersAppend "unitary"
 
 analysisEpoch3Plus :: HasCallStack => Types.Profile -> Types.Profile
 analysisEpoch3Plus = analysisFiltersAppend "epoch3+"
+
+analysisEpoch4Plus :: HasCallStack => Types.Profile -> Types.Profile
+analysisEpoch4Plus = analysisFiltersAppend "epoch4+"
+
+analysisEpoch5Plus :: HasCallStack => Types.Profile -> Types.Profile
+analysisEpoch5Plus = analysisFiltersAppend "epoch5+"
 
 -- Analysis expressions:
 ------------------------

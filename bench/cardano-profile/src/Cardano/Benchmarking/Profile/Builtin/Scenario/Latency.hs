@@ -19,6 +19,7 @@ import qualified Cardano.Benchmarking.Profile.Extra.Scaling as S
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
+import qualified Cardano.Benchmarking.Profile.Workload.Latency as L
 
 --------------------------------------------------------------------------------
 
@@ -26,7 +27,7 @@ profilesNoEraLatency :: [Types.Profile]
 profilesNoEraLatency =
   let latency =
           P.empty & B.base
-        . P.latency
+        . P.fixedLoaded
         . C.composeFiftytwo
         -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
         . V.genesisVariantPreVoltaire
@@ -34,6 +35,7 @@ profilesNoEraLatency =
          -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
         . P.delegators 0
+        . P.workloadAppend L.latencyWorkload
         . P.analysisStandard
   in [
     latency & P.name "latency-nomadperf"
