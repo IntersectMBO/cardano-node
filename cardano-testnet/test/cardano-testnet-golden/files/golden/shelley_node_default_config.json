@@ -46,6 +46,7 @@
     "TraceLocalTxSubmissionServer": false,
     "TraceMempool": true,
     "TraceMux": false,
+    "TraceOptions": {},
     "TracePeerSelection": true,
     "TracePeerSelectionActions": true,
     "TracePublicRootPeers": true,
