@@ -76,6 +76,7 @@ import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Vector as Vector
 import           Data.Word (Word64)
+import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           Numeric.Natural
 import           System.FilePath ((</>))
@@ -161,6 +162,7 @@ defaultYamlHardforkViaConfig :: ShelleyBasedEra era -> Aeson.KeyMap Aeson.Value
 defaultYamlHardforkViaConfig sbe =
   defaultYamlConfig
     <> tracers
+    <> fromList [("TraceOptions", Aeson.Object mempty)]
     <> protocolVersions sbe
     <> hardforkViaConfig sbe
  where
