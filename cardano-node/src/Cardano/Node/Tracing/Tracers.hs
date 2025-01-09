@@ -217,7 +217,7 @@ mkConsensusTracers :: forall blk.
   -> TraceConfig
   -> NodeKernelData blk
   -> IO (Consensus.Tracers IO (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk)
-mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = do
+mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig _nodeKernel = do
     !chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                  ["ChainSync", "Client"]
@@ -301,11 +301,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Mempool"]
     configureTracers configReflection trConfig [mempoolTr]
 
-    !forgeTr    <- mkCardanoTracer'
-                trBase trForward mbTrEKG
-                ["Forge", "Loop"]
-                (forgeTracerTransform nodeKernel)
-    configureTracers configReflection trConfig [forgeTr]
+    -- !forgeTr    <- mkCardanoTracer'
+    --             trBase trForward mbTrEKG
+    --             ["Forge", "Loop"]
+    --             (forgeTracerTransform nodeKernel)
+    -- configureTracers configReflection trConfig [forgeTr] TODO YUP
 
     !forgeThreadStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
@@ -362,10 +362,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith localTxSubmissionServerTr
       , Consensus.mempoolTracer = Tracer $
           traceWith mempoolTr
-      , Consensus.forgeTracer =
-           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeTr) x)
-           <>
-           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeThreadStatsTr) x)
+      , Consensus.forgeTracer = mempty
+      -- , Consensus.forgeTracer =
+      --      Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x) //TODO YUP
+      --      <>
+      --      Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeThreadStatsTr x)
       , Consensus.blockchainTimeTracer = Tracer $
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $

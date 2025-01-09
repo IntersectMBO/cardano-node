@@ -14,10 +14,7 @@
 
 module Cardano.Node.Tracing.Tracers.Consensus
   (
-    TraceStartLeadershipCheckPlus (..)
-  , ForgeTracerType
-  , forgeTracerTransform
-  , initialClientMetrics
+    initialClientMetrics
   , calculateBlockFetchClientMetrics
   , ClientMetrics
   ) where
@@ -30,7 +27,6 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
-import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block
@@ -1308,100 +1304,6 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["ManuallyRemovedTxs"]
       ]
 
---------------------------------------------------------------------------------
--- ForgeTracerType
---------------------------------------------------------------------------------
-
-instance ( tx ~ GenTx blk
-         , ConvertRawHash blk
-         , GetHeader blk
-         , HasHeader blk
-         , HasKESInfo blk
-         , LedgerSupportsProtocol blk
-         , LedgerSupportsMempool blk
-         , SerialiseNodeToNodeConstraints blk
-         , HasTxId (GenTx blk)
-         , Show (ForgeStateUpdateError blk)
-         , Show (CannotForge blk)
-         , LogFormatting (InvalidBlockReason blk)
-         , LogFormatting (CannotForge blk)
-         , LogFormatting (ForgeStateUpdateError blk))
-         => LogFormatting (ForgeTracerType blk) where
-  forMachine dtal (Left i)  = forMachine dtal i
-  forMachine dtal (Right i) = forMachine dtal i
-  forHuman (Left i)  = forHumanOrMachine i
-  forHuman (Right i) = forHumanOrMachine i
-  asMetrics (Left i)  = asMetrics i
-  asMetrics (Right i) = asMetrics i
-
-instance MetaTrace  (ForgeTracerType blk) where
-  namespaceFor (Left ev) =
-    nsCast (namespaceFor ev)
-  namespaceFor (Right _ev) =
-    Namespace [] ["StartLeadershipCheckPlus"]
-
-  severityFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
-    Info
-  severityFor ns (Just (Left ev')) =
-    severityFor (nsCast ns) (Just ev')
-  severityFor ns Nothing =
-    severityFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
-  severityFor _ _ = Nothing
-
-  detailsFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
-    DNormal
-  detailsFor ns (Just (Left ev')) =
-    detailsFor (nsCast ns) (Just ev')
-  detailsFor ns Nothing =
-    detailsFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
-  detailsFor _ _ = Nothing
-
-  privacyFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
-    Public
-  privacyFor ns (Just (Left ev')) =
-    privacyFor (nsCast ns) (Just ev')
-  privacyFor ns Nothing =
-    privacyFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
-  privacyFor _ _ = Nothing
-
-  metricsDocFor (Namespace _ ["StartLeadershipCheckPlus"]) =
-      [ ("Forge.UtxoSize", "")
-      , ("Forge.DelegMapSize", "")
-      ]
-  metricsDocFor ns =
-    metricsDocFor (nsCast ns :: Namespace (TraceForgeEvent blk))
-
-  documentFor (Namespace _ ["StartLeadershipCheckPlus"]) = Just $ mconcat
-    [ "We adopted the block we produced, we also trace the transactions"
-    , "  that were adopted."
-    ]
-  documentFor ns =
-    documentFor (nsCast ns :: Namespace (TraceForgeEvent blk))
-
-  allNamespaces =
-    Namespace [] ["StartLeadershipCheckPlus"]
-    : map nsCast (allNamespaces :: [Namespace (TraceForgeEvent blk)])
-
---------------------------------------------------------------------------------
--- TraceStartLeadershipCheck
---------------------------------------------------------------------------------
-
-instance LogFormatting TraceStartLeadershipCheckPlus where
-  forMachine _dtal TraceStartLeadershipCheckPlus {..} =
-        mconcat [ "kind" .= String "TraceStartLeadershipCheck"
-                , "slot" .= toJSON (unSlotNo tsSlotNo)
-                , "utxoSize" .= Number (fromIntegral tsUtxoSize)
-                , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
-                , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
-                ]
-  forHuman TraceStartLeadershipCheckPlus {..} =
-      "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
-      <> " utxoSize "     <> showT tsUtxoSize
-      <> " delegMapSize " <> showT tsDelegMapSize
-      <> " chainDensity " <> showT tsChainDensity
-  asMetrics TraceStartLeadershipCheckPlus {..} =
-    [IntM "utxoSize"     (fromIntegral tsUtxoSize),
-     IntM "delegMapSize" (fromIntegral tsDelegMapSize)]
 
 
 --------------------------------------------------------------------------------

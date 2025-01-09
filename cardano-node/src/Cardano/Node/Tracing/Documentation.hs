@@ -355,12 +355,12 @@ docTracersFirstPhase condConfigFileName = do
     mempoolTrDoc <- documentTracer (mempoolTr ::
       Trace IO (TraceEventMempool blk))
 
-    forgeTr <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Forge", "Loop"]
-    configureTracers configReflection trConfig [forgeTr]
-    forgeTrDoc <- documentTracer (forgeTr ::
-      Trace IO (ForgeTracerType blk))
+    -- forgeTr <-  mkCardanoTracer
+    --             trBase trForward mbTrEKG
+    --             ["Forge", "Loop"]
+    -- configureTracers configReflection trConfig [forgeTr]
+    -- -- forgeTrDoc <- documentTracer (forgeTr ::
+    -- --   Trace IO (ForgeTracerType blk)) TODO YUP
 
 
     forgeTr' <-  mkCardanoTracer
@@ -718,7 +718,7 @@ docTracersFirstPhase condConfigFileName = do
             <> txOutboundTrDoc
             <> localTxSubmissionServerTrDoc
             <> mempoolTrDoc
-            <> forgeTrDoc
+--            <> forgeTrDoc TODO YUP
             <> forgeThreadStatsTrDoc
             <> blockchainTimeTrDoc
 -- NodeToClient

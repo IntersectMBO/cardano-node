@@ -111,6 +111,7 @@ library
                         Cardano.Node.Tracing.Tracers.Diffusion
                         Cardano.Node.Tracing.Tracers.ForgingThreadStats
                         Cardano.Node.Tracing.Tracers.KESInfo
+                        Cardano.Node.Tracing.Tracers.LedgerQuery
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
@@ -119,7 +120,6 @@ library
                         Cardano.Node.Tracing.Tracers.Peer
                         Cardano.Node.Tracing.Tracers.Resources
                         Cardano.Node.Tracing.Tracers.Shutdown
-                        Cardano.Node.Tracing.Tracers.StartLeadershipCheck
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
                         Cardano.Tracing.Config

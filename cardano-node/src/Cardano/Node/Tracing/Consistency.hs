@@ -22,13 +22,11 @@ import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
@@ -179,8 +177,8 @@ getAllNamespaces =
                           (TraceLocalTxSubmissionServerEvent blk)])
         mempoolNS = map (nsGetTuple . nsReplacePrefix ["Mempool"])
                         (allNamespaces :: [Namespace (TraceEventMempool blk)])
-        forgeNS = map (nsGetTuple . nsReplacePrefix ["Forge", "Loop"])
-                        (allNamespaces :: [Namespace (ForgeTracerType blk)])
+        -- forgeNS = map (nsGetTuple . nsReplacePrefix ["Forge", "Loop"])
+        --                 (allNamespaces :: [Namespace (ForgeTracerType blk)]) TODO YUP
 
         blockchainTimeNS = map (nsGetTuple . nsReplacePrefix  ["BlockchainTime"])
                         (allNamespaces :: [Namespace (TraceBlockchainTimeEvent RelativeTime)])
@@ -388,7 +386,7 @@ getAllNamespaces =
             <> txOutboundNS
             <> localTxSubmissionServerNS
             <> mempoolNS
-            <> forgeNS
+--            <> forgeNS TODO YUP
             <> blockchainTimeNS
 -- NodeToClient
             <> keepAliveClientNS
