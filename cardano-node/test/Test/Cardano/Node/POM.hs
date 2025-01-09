@@ -15,6 +15,7 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
                    partialTraceSelectionToEither)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
+import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..), pattern DoDiskSnapshotChecksum)
 import           Ouroboros.Network.Block (SlotNo (..))
@@ -151,6 +152,7 @@ testPartialYamlConfig =
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
+    , pncGenesisConfigFlags = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -198,6 +200,7 @@ testPartialCliConfig =
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
+    , pncGenesisConfigFlags = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -251,6 +254,7 @@ eExpectedConfig = do
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
+    , ncGenesisConfig = disableGenesisConfig
     }
 
 -- -----------------------------------------------------------------------------
