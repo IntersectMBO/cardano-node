@@ -108,7 +108,7 @@ library
                       , bytestring
                       , cardano-api ^>= 10.6
                       , cardano-binary
-                      , cardano-cli ^>= 10.1
+                      , cardano-cli ^>= 10.3
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
