@@ -18,11 +18,14 @@
   "TurnOnLogging": true,
   "TurnOnLogMetrics": true,
   "UseTraceDispatcher": true,
-  "TraceOptionForwarder": null,
   "TraceOptionMetricsPrefix": "cardano.node.metrics.",
   "TraceOptionNodeName": "mainnetsingle",
   "TraceOptionPeerFrequency": 2000,
   "TraceOptionResourceFrequency": 1000,
+  "TraceOptionForwarder": {
+    "connQueueSize": 64,
+    "disconnQueueSize": 128
+  },
   "TraceOptions": {
     "": {
       "backends": [
