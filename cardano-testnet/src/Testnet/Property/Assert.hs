@@ -117,7 +117,7 @@ assertChainExtended deadline nodeLoggingFormat nodeStdoutFile = withFrozenCallSt
     case nodeLoggingFormat of
       NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdoutFile
       NodeLoggingFormatAsJson -> fileJsonGrep nodeStdoutFile $ \v ->
-                                    Aeson.parseMaybe (Aeson.parseJSON @(LogEntry Kind)) v == Just (LogEntry (Kind "TraceAddBlockEvent.AddedToCurrentChain"))
+                                    Aeson.parseMaybe (Aeson.parseJSON @(LogEntry Kind)) v == Just (LogEntry (Kind "AddedToCurrentChain"))
 
 newtype LogEntry a = LogEntry
   { unLogEntry :: a
