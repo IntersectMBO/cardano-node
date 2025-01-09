@@ -127,6 +127,7 @@ let
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
+            packages.ouroboros-network.components.library.doHaddock = false; # Currently broken
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
