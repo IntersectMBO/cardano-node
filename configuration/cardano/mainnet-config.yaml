@@ -34,7 +34,6 @@ MaxKnownMajorProtocolVersion: 2
 
 ##### Network Configuration #####
 
-ConsensusMode: PraosMode
 PeerSharing: True
 TargetNumberOfActivePeers: 20
 TargetNumberOfEstablishedPeers: 40
