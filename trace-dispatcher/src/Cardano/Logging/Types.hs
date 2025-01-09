@@ -445,20 +445,35 @@ data TraceOptionForwarder = TraceOptionForwarder {
   , tofVerbosity        :: Verbosity
 } deriving (Eq, Generic, Ord, Show, AE.ToJSON)
 
+-- A word regarding queue sizes:
+-- In case of a missing forwarding service consumer, traces messages will be
+-- buffered. This mitigates short forwarding interruptions, or delays at startup time.
+--
+-- The queue capacity should thus correlate to the expected log lines per second given
+-- a particular tracing configuration - to avoid unnecessarily increasing memory footprint.
+--
+-- The default values here are chosen to accomodate verbose tracing output
+-- (i.e., buffering 1min worth of trace data given ~32 messages per second). A config
+-- that results in less than 5 msgs per second should also provide TraceOptionForwarder
+-- queue size values considerably lower. The `disconnQueueSize` is the hard limit in that case.
+--
+-- The queue sizes tie in with the max number of trace objects cardano-tracer requests periodically,
+-- the default for that being 100. Here, the basic queue can hold enough traces for 10 subsequent polls
+-- by cardano-tracer.
 instance AE.FromJSON TraceOptionForwarder where
     parseJSON (AE.Object obj) =
       TraceOptionForwarder
-        <$> obj AE..:? "connQueueSize"    AE..!= 2000
-        <*> obj AE..:? "disconnQueueSize" AE..!= 200000
+        <$> obj AE..:? "connQueueSize"    AE..!= 1024
+        <*> obj AE..:? "disconnQueueSize" AE..!= 2048
         <*> obj AE..:? "verbosity"        AE..!= Minimum
     parseJSON _ = mempty
 
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
-    tofConnQueueSize = 2000
-  , tofDisconnQueueSize = 200000
-  , tofVerbosity = Minimum
+    tofConnQueueSize    = 1024
+  , tofDisconnQueueSize = 2048
+  , tofVerbosity        = Minimum
 }
 
 instance AE.FromJSON ForwarderMode where
