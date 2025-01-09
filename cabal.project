@@ -74,15 +74,15 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: dca44167864887d9c7db71d4ed4781babb1daffb
-  --sha256: sha256-UUbEd8OTZE92hZ4kKmK5Pu4Mr8wns2ODDGZYbdr/8Hc=
+  tag: 1caaa8b1abbe6fe8f57664c53821013f8f1ae491
+  --sha256: sha256-cPqbx/Fqtij6T6DWkGwuwi7wDpaXwCfK5v4DOD3fjBI=
   subdir:
     cardano-api
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: 23ccb91eeafa7716f4ba1e90fc9130075881f29f
-  --sha256: sha256-HolhCVVZh5D7zNkvhhnT0uQ0w5BTJbIhT5sO3BCnTww=
+  tag: 83c003984c004b20661206389d4af1f490d9b836
+  --sha256: sha256-n/o10h29sbMUCRJLd3+R0k//IaB5RPLmofpwBxhokKc=
   subdir:
     cardano-cli
