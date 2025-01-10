@@ -31,6 +31,7 @@ def era_defaults($era):
     ## UTxO & delegation
     , per_pool_balance:               1000000000000000
     , funds_balance:                  10000000000000
+    , utxo_keys:                      1
     , utxo:                           0
 
     ## DReps
@@ -61,6 +62,8 @@ def era_defaults($era):
       , script: null
       }
     }
+
+  , workloads: []
 
   , node:
     { rts_flags_override:             []
