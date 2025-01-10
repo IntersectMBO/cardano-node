@@ -113,48 +113,9 @@ jobs:
     - name: Build dry run
       run: cabal build all --enable-tests --dry-run --minimize-conflict-set
 
-    # From the install plan we generate a dependency list.
-    - name: Record dependencies
-      id: record-deps
-      run: |
-        cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
-
-    # Use a fresh cache each month
-    - name: Store month number as environment variable used in cache version
-      run:  echo "MONTHNUM=$(date -u '+%m')" >> $GITHUB_ENV
-
-    # From the dependency list we restore the cached dependencies.
-    # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
-    # until the `index-state` values in the `cabal.project` file changes.
-    - name: Restore cached dependencies
-      uses: actions/cache/restore@v4
-      id: cache
+    - uses: andreabedini/cabal-cache-native@main
       with:
-        path: |
-          ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist-newstyle
-        key:
-          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-${{ hashFiles('dependencies.txt') }}
-        # try to restore previous cache from this month if there's no cache for the dependencies set
-        restore-keys: |
-          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-
-
-    # Now we install the dependencies. If the cache was found and restored in the previous step,
-    # this should be a no-op, but if the cache key was not found we need to build stuff so we can
-    # cache it for the next step.
-    - name: Install dependencies
-      run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
-
-    # Always store the cabal cache.
-    # This can fail (benign failure) if there is already a hash at that key.
-    - name: Cache Cabal store
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist-newstyle
-        key:
-          ${{ steps.cache.outputs.cache-primary-key }}
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
 
     # Now we build.
     - name: Build all
