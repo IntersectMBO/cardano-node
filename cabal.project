@@ -58,10 +58,7 @@ package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
 constraints:
-  , wai-extra < 3.1.15
   , Cabal < 3.14
-  , hedgehog-extras <0.6.5.1
-
 allow-newer:
   , katip:Win32
   , ekg-wai:time
