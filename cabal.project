@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-12-24T12:56:48Z
+  , hackage.haskell.org 2025-01-01T23:24:19Z
   , cardano-haskell-packages 2025-01-08T16:35:32Z
 
 packages:
@@ -57,8 +57,6 @@ package bitvec
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
-constraints:
-  , Cabal < 3.14
 allow-newer:
   , katip:Win32
   , ekg-wai:time
