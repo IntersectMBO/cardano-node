@@ -23,11 +23,15 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Lens as Aeson
 import           Data.Default.Class
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
+import           Data.Text.Encoding (decodeUtf8)
+import qualified Data.Vector as Vector
 import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           System.FilePath ((</>))
@@ -103,7 +107,9 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
+  let proposalAnchorUrl = "https://tinyurl.com/3wrwb2as"
   constitutionFile <- H.note $ gov </> "sample-constitution"
+  let constitutionAnchorUrl = "https://tinyurl.com/2pahcy6z"
   constitutionActionFp <- H.note $ gov </> "constitution.action"
 
   H.writeFile proposalAnchorFile $
@@ -175,9 +181,9 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     , "--testnet"
     , "--governance-action-deposit", show minDRepDeposit
     , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
+    , "--anchor-url", proposalAnchorUrl
     , "--anchor-data-hash", proposalAnchorDataHash
-    , "--constitution-url", "https://tinyurl.com/2pahcy6z"
+    , "--constitution-url", constitutionAnchorUrl
     , "--constitution-hash", constitutionHash
     , "--constitution-script-hash", constitutionScriptHash
     , "--out-file", constitutionActionFp
@@ -226,15 +232,8 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   txid <- execCli' execConfig [ eraName, "transaction", "txid", "--tx-file", unFile signedProposalTx ]
 
-  -- Uncomment this if you wanna compare the output with "query gov-state":
-  -- H.noteM_ $ execCli' execConfig [ eraName, "query", "gov-state" ]
   let txNoNewline = Text.unpack (Text.strip (Text.pack txid))
   H.noteShow_ txNoNewline
-  H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals", "--governance-action-tx-id", txNoNewline 
-                                 , "--governance-action-index", "0" ]
-  -- Command returned:
-  --
-  -- []
 
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.
@@ -257,61 +256,72 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       ()
       (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
-  H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals", "--governance-action-tx-id", txNoNewline 
-                                 , "--governance-action-index", "0" ]
-  -- Command returned:
-  --
-  -- [
-  --   {
-  --       "actionId": {
-  --           "govActionIx": 0,
-  --           "txId": "d3877f2694dcd3853abf44506977cbd25f94a26cf887e426f601b29fffb256c3"
-  --       },
-  --       "committeeVotes": {},
-  --       "dRepVotes": {
-  --           "keyHash-11885af93181919dd2749bf828de656045c78f5d5f511055eec54306": "VoteNo",
-  --           "keyHash-42cdea9e46396ad3f145b7834c16675ec7962c11648b5c031210ceb1": "VoteYes",
-  --           "keyHash-8453f733cb6e3d873993c9e94a423b3e4385547381f10a1f4da0b995": "VoteYes",
-  --           "keyHash-85454551839aab47b09f25e75deff03403047d081ab5ecff6243cb0f": "Abstain",
-  --           "keyHash-adbcfc9e9bcede4ab2db8d7d85d6f556fa57fa6e2897b31592d9819c": "VoteNo",
-  --           "keyHash-bbe6163dd619fa83ae1ee3a061639cc50b8305e1d97f2837458fa995": "VoteYes",
-  --           "keyHash-c4f60d2624acb06de54db22fb25e59818ee62d3e7c2464974d9af728": "Abstain",
-  --           "keyHash-ec9ac276b3727015dfef084ad251ff6925353581b33e3453bda9fb2f": "VoteNo",
-  --           "keyHash-f6173095513bf9a575f91251649280890ca9d3849859f28179ec2a63": "VoteYes"
-  --       },
-  --       "expiresAfter": 2,
-  --       "proposalProcedure": {
-  --           "anchor": {
-  --               "dataHash": "0ddee8482655dcaf1471243432069483a029bce680457d01f547f6b5f097d73f",
-  --               "url": "https://tinyurl.com/3wrwb2as"
-  --           },
-  --           "deposit": 1000000,
-  --           "govAction": {
-  --               "contents": [
-  --                   null,
-  --                   {
-  --                       "anchor": {
-  --                           "dataHash": "c9247db6ab4e0d795bec6aed1b565f92f056d235f777329df546689ca834c46e",
-  --                           "url": "https://tinyurl.com/2pahcy6z"
-  --                       },
-  --                       "script": "186e32faa80a26810392fda6d559c7ed4721a65ce1c9d4ef3e1c87b4"
-  --                   }
-  --               ],
-  --               "tag": "NewConstitution"
-  --           },
-  --           "returnAddr": {
-  --               "credential": {
-  --                   "keyHash": "74c5f83aa5ff896923939329a1e46aadc193a44894ef6a9e969a2e22"
-  --               },
-  --               "network": "Testnet"
-  --           }
-  --       },
-  --       "proposedIn": 1,
-  --       "stakePoolVotes": {}
-  --   }
-  -- ]
+  proposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
+                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txNoNewline
+                                    , "--governance-action-index", "0"
+                                    ]
 
-  assert False
+  -- Display JSON returned in case of failure
+  H.note_ $ Text.unpack . decodeUtf8 $ prettyPrintJSON proposalsJSON
+
+  -- Check that the proposals array has only one element and fetch it
+  proposalsArray <- H.evalMaybe $ proposalsJSON ^? Aeson._Array
+  length proposalsArray === 1
+  let proposal = proposalsArray Vector.! 0
+
+  -- Check TxId returned is the same as the one we used
+  proposalsTxId <- H.evalMaybe $ proposal ^? Aeson.key "actionId" . Aeson.key "txId" . Aeson._String
+  proposalsTxId === Text.pack txNoNewline
+
+  -- Check that committeeVotes is an empty object
+  proposalsCommitteeVotes <- H.evalMaybe $ proposal ^? Aeson.key "committeeVotes" . Aeson._Object
+  proposalsCommitteeVotes === mempty
+
+  -- Check that dRepVotes has the expected number of votes
+  proposalsDRepVotes <- H.evalMaybe $ proposal ^? Aeson.key "dRepVotes" . Aeson._Object
+  length proposalsDRepVotes === numVotes
+
+  -- Fetch proposalProcedure and anchor
+  proposalsProcedure <- H.evalMaybe $ proposal ^? Aeson.key "proposalProcedure"
+  proposalsAnchor <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "anchor"
+
+  -- Check the dataHash of the anchor is the expected one
+  proposalsAnchorDataHash <- H.evalMaybe $ proposalsAnchor ^? Aeson.key "dataHash" . Aeson._String
+  proposalsAnchorDataHash === Text.pack proposalAnchorDataHash
+
+  -- Check the url of the anchor is the expected one
+  proposalsAnchorUrl <- H.evalMaybe $ proposalsAnchor ^? Aeson.key "url" . Aeson._String
+  proposalsAnchorUrl === Text.pack proposalAnchorUrl
+
+  -- Check the deposit amount is the expected one
+  proposalsDeposit <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "deposit" . Aeson._Integer
+  proposalsDeposit === 1_000_000
+
+  -- Ensure there is only one non-null content in the proposalProcedure and fetch it
+  proposalsContents <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "govAction" . Aeson.key "contents" . Aeson._Array
+  let nonEmptyContents = Vector.filter (/= Aeson.Null) proposalsContents
+  length nonEmptyContents === 1
+  let firstContent = nonEmptyContents Vector.! 0
+
+  -- Check the constitution hash and url are the expected ones
+  proposalsConstitutionAnchor <- H.evalMaybe $ firstContent ^? Aeson.key "anchor"
+  proposalsConstitutionAnchorDataHash <- H.evalMaybe $ proposalsConstitutionAnchor ^? Aeson.key "dataHash" . Aeson._String
+  proposalsConstitutionAnchorDataHash === Text.pack constitutionHash
+
+  proposalsConstitutionAnchorUrl <- H.evalMaybe $ proposalsConstitutionAnchor ^? Aeson.key "url" . Aeson._String
+  proposalsConstitutionAnchorUrl === Text.pack constitutionAnchorUrl
+
+  -- Check the constitution script hash is the expected one
+  proposalsScriptHash <- H.evalMaybe $ firstContent ^? Aeson.key "script" . Aeson._String
+  proposalsScriptHash === Text.pack constitutionScriptHash
+
+  -- Check the tag of the govAction is "NewConstitution"
+  proposalsTag <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "govAction" . Aeson.key "tag" . Aeson._String
+  proposalsTag === "NewConstitution"
+
+  -- Check the stake pool votes are empty
+  proposalsStakePoolVotes <- H.evalMaybe $ proposal ^? Aeson.key "stakePoolVotes" . Aeson._Object
+  proposalsStakePoolVotes === mempty
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
