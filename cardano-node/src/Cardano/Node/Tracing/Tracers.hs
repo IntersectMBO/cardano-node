@@ -31,6 +31,7 @@ import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
+import           Cardano.Node.Tracing.Tracers.LedgerMetrics ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
@@ -117,6 +118,9 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     !resourcesTr <- mkCardanoTracer trBase trForward mbTrEKG []
     configureTracers configReflection trConfig [resourcesTr]
 
+    !ledgerMetricsTr <- mkCardanoTracer trBase trForward mbTrEKG []
+    configureTracers configReflection trConfig [ledgerMetricsTr]
+
     !startupTr <- mkCardanoTracer trBase trForward mbTrEKG ["Startup"]
     configureTracers configReflection trConfig [startupTr]
 
@@ -199,6 +203,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
       , resourcesTracer = Tracer (traceWith resourcesTr)
       , peersTracer     = Tracer (traceWith peersTr)
                           <> Tracer (traceNodePeers nodePeersDP)
+      , ledgerMetricsTracer = Tracer (traceWith ledgerMetricsTr)
     }
 
 mkConsensusTracers :: forall blk.
@@ -301,11 +306,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Mempool"]
     configureTracers configReflection trConfig [mempoolTr]
 
-    -- !forgeTr    <- mkCardanoTracer'
-    --             trBase trForward mbTrEKG
-    --             ["Forge", "Loop"]
-    --             (forgeTracerTransform nodeKernel)
-    -- configureTracers configReflection trConfig [forgeTr] TODO YUP
+    !forgeTr    <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Forge", "Loop"]
+    configureTracers configReflection trConfig [forgeTr]
 
     !forgeThreadStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
@@ -362,11 +366,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith localTxSubmissionServerTr
       , Consensus.mempoolTracer = Tracer $
           traceWith mempoolTr
-      , Consensus.forgeTracer = mempty
-      -- , Consensus.forgeTracer =
-      --      Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x) //TODO YUP
-      --      <>
-      --      Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeThreadStatsTr x)
+      , Consensus.forgeTracer =
+           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x)
+           <>
+           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeThreadStatsTr x)
       , Consensus.blockchainTimeTracer = Tracer $
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $

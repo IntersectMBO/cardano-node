@@ -68,7 +68,7 @@ import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Control.Monad (guard)
 import           Control.Monad.Class.MonadTime.SI (Time (..))
-import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable(toList))
 import           Data.Int (Int64)

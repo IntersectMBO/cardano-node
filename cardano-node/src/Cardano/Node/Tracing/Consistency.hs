@@ -44,6 +44,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
@@ -177,8 +178,8 @@ getAllNamespaces =
                           (TraceLocalTxSubmissionServerEvent blk)])
         mempoolNS = map (nsGetTuple . nsReplacePrefix ["Mempool"])
                         (allNamespaces :: [Namespace (TraceEventMempool blk)])
-        -- forgeNS = map (nsGetTuple . nsReplacePrefix ["Forge", "Loop"])
-        --                 (allNamespaces :: [Namespace (ForgeTracerType blk)]) TODO YUP
+        forgeNS = map (nsGetTuple . nsReplacePrefix ["Forge", "Loop"])
+                         (allNamespaces :: [Namespace (TraceForgeEvent blk)])
 
         blockchainTimeNS = map (nsGetTuple . nsReplacePrefix  ["BlockchainTime"])
                         (allNamespaces :: [Namespace (TraceBlockchainTimeEvent RelativeTime)])
@@ -386,7 +387,7 @@ getAllNamespaces =
             <> txOutboundNS
             <> localTxSubmissionServerNS
             <> mempoolNS
---            <> forgeNS TODO YUP
+            <> forgeNS
             <> blockchainTimeNS
 -- NodeToClient
             <> keepAliveClientNS
