@@ -2,8 +2,14 @@
   description = "Cardano Node";
 
   nixConfig = {
-    extra-substituters = [ "https://cache.iog.io" ];
-    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
+    extra-substituters = [
+      "https://cache.iog.io"
+      "https://cache.garnix.io"
+    ];
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+    ];
   };
 
   inputs = {
@@ -392,6 +398,26 @@
           };
         }) required;
       });
+
+      checks = let
+        # https://github.com/numtide/flake-utils/issues/121#issuecomment-2589899217
+        recurseIntoDeepAttrs = attrs:
+          lib.recurseIntoAttrs (lib.mapAttrs (_: v:
+            if builtins.typeOf v == "set" && !lib.isDerivation v
+            then recurseIntoDeepAttrs v
+            else v
+          ) attrs);
+      in lib.genAttrs supportedSystems (system:
+        utils.lib.flattenTree (recurseIntoDeepAttrs flake.ciJobs.${system})
+        // {
+          inherit (
+            let pkgs = self.legacyPackages.${system}; in
+            pkgs.callPackages iohkNix.utils.ciJobsAggregates {
+              ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobs.${system};
+            }
+          ) required;
+        }
+      );
 
       # allows precise paths (avoid fallbacks) with nix build/eval:
       outputs = self;
