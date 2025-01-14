@@ -435,8 +435,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
 
     TestQueryProposalsCmd -> do
-      -- TODO @cardano-cli team
-      pure ()
+      -- query proposals
+      -- Tested further in Cardano.Testnet.Test.Gov.ProposeNewConstitution.hprop_ledger_events_propose_new_constitution
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals", "--all-proposals" ]
 
     TestQueryLedgerPeerSnapshotCmd -> do
       -- TODO @cardano-cli team
