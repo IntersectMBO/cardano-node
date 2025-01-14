@@ -436,7 +436,8 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
 
     TestQueryProposalsCmd -> do
       -- query proposals
-      H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals" ]
+      -- Tested further in Cardano.Testnet.Test.Gov.ProposeNewConstitution.hprop_ledger_events_propose_new_constitution
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals", "--all-proposals" ]
 
   where
   -- | Wait for the part of the epoch when futurePParams are known
