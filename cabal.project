@@ -81,3 +81,22 @@ source-repository-package
   --sha256: sha256-WSI5zsVON99O9Elm2xqB05KCLHHjgf3Fw6nejdTyMAs=
   subdir:
     cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 596a3e7edc160d22faf5791034eb6417adaf6fc2
+  --sha256: sha256-CCQFuNsWvuNL2XvaJghpSZnB+yocZ0zT8xecO0acXek=
+  subdir:
+    cardano-ping
+    monoidal-synchronisation
+    quickcheck-monoids
+    network-mux
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    ntp-client
+    cardano-client
