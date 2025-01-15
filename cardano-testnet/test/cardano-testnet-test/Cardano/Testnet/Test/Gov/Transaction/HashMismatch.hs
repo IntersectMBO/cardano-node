@@ -47,7 +47,7 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
