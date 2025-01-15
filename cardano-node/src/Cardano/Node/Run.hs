@@ -25,6 +25,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
+import qualified Debug.Trace as DT
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
 
@@ -504,11 +505,13 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar useLedgerVar)
                   (readTVar useBootstrapVar)
                   (readTVar ledgerPeerSnapshotVar)
-          in
+          in do
+          DT.traceIO "Node.run"
           Node.run
             nodeArgs {
                 rnNodeKernelHook = \registry nodeKernel -> do
                   -- reinstall `SIGHUP` handler
+                  DT.traceIO "rnNodeKernelHook run"
                   installP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
                                           localRootsVar publicRootsVar useLedgerVar useBootstrapVar
                                           ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
