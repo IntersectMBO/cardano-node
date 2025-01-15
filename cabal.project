@@ -35,7 +35,7 @@ packages:
 extra-packages: Cabal
 
 program-options
---  ghc-options: -Werror
+  ghc-options: -Werror
 
 test-show-details: direct
 
