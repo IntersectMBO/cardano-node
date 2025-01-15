@@ -494,6 +494,7 @@ emptyTraceConfig = TraceConfig {
   , tcMetricsPrefix = Nothing
   , tcPeerFrequency = Just 2000 -- Every 2 seconds
   , tcResourceFrequency = Just 5000 -- Every five seconds
+  , tcLedgerMetricsFrequency = Just 1000
   }
 
 ---------------------------------------------------------------------------
