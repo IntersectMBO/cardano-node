@@ -41,4 +41,4 @@ RUN chown -R 1001:1001 /home/cardano/data
 RUN chown -R 1001:1001 /home/cardano/cardano-configurations
 USER 1001:1001
 WORKDIR /home/cardano
-ENTRYPOINT cardano-node run --database-path /home/cardano/data/db --topology "$TOPOLOGY_LOCATION" --socket-path /home/cardano/ipc/node.socket --host-addr "$PUBLIC_IP" --port "$PORT" --config /home/cardano/cardano-configurations/network/"$NETWORK"/cardano-node/config.json +RTS -N14 -A16m -M25000.000000M -H20856M -I0.020 -Iw1200 -RTS
+ENTRYPOINT cardano-node run --database-path /home/cardano/data/db --topology "$TOPOLOGY_LOCATION" --socket-path /home/cardano/ipc/node.socket --host-addr "$PUBLIC_IP" --port "$PORT" --host-ipv6-addr "$PUBLIC_IPV6 --config /home/cardano/cardano-configurations/network/"$NETWORK"/cardano-node/config.json +RTS -N14 -A16m -M25000.000000M -H20856M -I0.020 -Iw1200 -RTS
