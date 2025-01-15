@@ -6,14 +6,13 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Node.Tracing.Tracers.LedgerMetrics
   ( LedgerMetrics (..)
   , traceLedgerMetrics
   , startLedgerMetricsTracer
   ) where
-
 
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import           Cardano.Logging hiding (traceWith)
@@ -37,9 +36,7 @@ startLedgerMetricsTracer
    . IsLedger (LedgerState blk)
   => LedgerQueries blk
   => AF.HasHeader (Header blk)
-#if __GLASGOW_HASKELL__ >= 908
   => AF.HasHeader blk
-#endif
   => Tracer IO LedgerMetrics
   -> Int
   -> NodeKernelData blk
