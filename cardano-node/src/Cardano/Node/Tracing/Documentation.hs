@@ -33,6 +33,7 @@ import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
+import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
@@ -231,6 +232,10 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [resourcesTr]
     resourcesTrDoc <- documentTracer (resourcesTr :: Trace IO ResourceStats)
 
+    ledgerMetricsTr <- mkCardanoTracer trBase trForward mbTrEKG []
+    configureTracers configReflection trConfig [ledgerMetricsTr]
+    ledgerMetricsTrDoc <- documentTracer (ledgerMetricsTr :: Trace IO LedgerMetrics)
+
     -- Startup tracer
     startupTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -375,6 +380,8 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [blockchainTimeTr]
     blockchainTimeTrDoc <- documentTracer (blockchainTimeTr ::
       Trace IO (TraceBlockchainTimeEvent RelativeTime))
+
+
 
 -- Node to client
 
@@ -698,6 +705,7 @@ docTracersFirstPhase condConfigFileName = do
             <> nodeStartupInfoDpDoc
             <> stateTrDoc
             <> resourcesTrDoc
+            <> ledgerMetricsTrDoc
             <> startupTrDoc
             <> shutdownTrDoc
             <> nodeVersionDoc

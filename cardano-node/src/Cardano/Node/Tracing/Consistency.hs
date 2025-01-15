@@ -24,6 +24,7 @@ import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
+import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
@@ -127,6 +128,8 @@ getAllNamespaces =
                       (allNamespaces :: [Namespace [PeerT blk]])
         resourcesNS = map nsGetTuple
                           (allNamespaces :: [Namespace ResourceStats])
+        ledgerMetricsNS = map nsGetTuple
+                          (allNamespaces :: [Namespace LedgerMetrics])
         startupNS = map (nsGetTuple . nsReplacePrefix ["Startup"])
                         (allNamespaces :: [Namespace (StartupTrace blk)])
         shutdownNS = map (nsGetTuple . nsReplacePrefix ["Shutdown"])
@@ -370,6 +373,7 @@ getAllNamespaces =
             stateNS
             <> peersNS
             <> resourcesNS
+            <> ledgerMetricsNS
             <> startupNS
             <> shutdownNS
             <> nodeVersionNS
