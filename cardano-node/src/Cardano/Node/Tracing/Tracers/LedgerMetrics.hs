@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,22 +15,24 @@ module Cardano.Node.Tracing.Tracers.LedgerMetrics
   , startLedgerMetricsTracer
   ) where
 
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..))
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..), mapNodeKernelDataIO,
                    nkQueryChain, nkQueryLedger)
 import           Cardano.Node.Tracing.Tracers.ChainDB (fragmentChainDensity)
+import           Ouroboros.Consensus.BlockchainTime.API
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
+import           Ouroboros.Consensus.Node (NodeKernel (getBlockchainTime))
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
-import           Control.Monad (forever)
 import           Control.Monad.Class.MonadAsync (link)
+import           Control.Monad.STM (atomically, retry)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
-import           Data.Aeson (Value (Number, String), (.=))
+import           Data.Aeson (Value (Number, String), toJSON, (.=))
 
 startLedgerMetricsTracer
   :: forall blk
@@ -41,18 +44,32 @@ startLedgerMetricsTracer
   -> Int
   -> NodeKernelData blk
   -> IO ()
-startLedgerMetricsTracer tr delayMilliseconds nodeKernelData = do
+startLedgerMetricsTracer tr _delayMilliseconds nodeKernelData = do
     as <- async ledgerMetricsThread
     link as
   where
     ledgerMetricsThread :: IO ()
-    ledgerMetricsThread = forever $ do
-      traceLedgerMetrics nodeKernelData tr
-      threadDelay (delayMilliseconds * 1000)
+    ledgerMetricsThread = go (-1) where
+      go slot = do
+        !query <- waitForDifferentSlot slot
+        threadDelay $ 700 * 1000
+        case query of
+          SJust slot' -> traceLedgerMetrics nodeKernelData slot' tr >> go slot'
+          SNothing    -> go slot
+
+    waitForDifferentSlot :: SlotNo -> IO (StrictMaybe SlotNo)
+    waitForDifferentSlot s = do
+      mapNodeKernelDataIO (\nk -> atomically $ do
+          mSlot <- getCurrentSlot (getBlockchainTime nk)
+          case mSlot of
+            CurrentSlot s' | s' /= s  -> return s'
+            _                         -> retry
+        ) nodeKernelData
 
 data LedgerMetrics =
   LedgerMetrics {
-        tsUtxoSize     :: Int
+        tsSlotNo       :: SlotNo
+      , tsUtxoSize     :: Int
       , tsDelegMapSize :: Int
       , tsChainDensity :: Double
     }
@@ -65,9 +82,10 @@ traceLedgerMetrics ::
 #endif
   ,  AF.HasHeader (Header blk))
   => NodeKernelData blk
+  -> SlotNo
   -> Tracer IO LedgerMetrics
   -> IO ()
-traceLedgerMetrics nodeKern tracer = do
+traceLedgerMetrics nodeKern slotNo tracer = do
   query <- mapNodeKernelDataIO
               (\nk ->
                 (,,)
@@ -79,6 +97,7 @@ traceLedgerMetrics nodeKern tracer = do
     SNothing -> pure ()
     SJust (utxoSize, delegMapSize, chainDensity) ->
         let msg = LedgerMetrics
+                    slotNo
                     utxoSize
                     delegMapSize
                     (fromRational chainDensity)
@@ -91,6 +110,7 @@ traceLedgerMetrics nodeKern tracer = do
 instance LogFormatting LedgerMetrics where
   forMachine _dtal LedgerMetrics {..} =
         mconcat [ "kind" .= String "LedgerMetrics"
+                , "slot" .= toJSON (unSlotNo tsSlotNo)
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                 , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
