@@ -68,3 +68,17 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- exposes getBlockchainTime in NodeKernel
+source-repository-package
+  type: git
+  location: https://github.com/mgmeier/ouroboros-consensus.git
+  tag: 509bf8eafcf8ec7e28a1abe587d8913ed8838404
+  --sha256: 1klx7x85bkzl83gmjpc2jhihjcvy3vcm75k5f0rxivgwxg4gh3k2
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core
