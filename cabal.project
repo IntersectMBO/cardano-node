@@ -57,10 +57,6 @@ package bitvec
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 
-constraints:
-  , wai-extra < 3.1.15
-  , Cabal < 3.14
-
 allow-newer:
   , katip:Win32
   , ekg-wai:time
