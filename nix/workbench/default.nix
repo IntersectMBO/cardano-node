@@ -10,7 +10,7 @@ let
   # recover CHaP location from cardano's project
   chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
-  nixPlanJson = cardanoNodeProject.plan-nix.json;
+  nixPlanJson = cardanoNodeProject.plan-nix + "/plan.json";
 
   # Workbench derivation and functions to create derivations from `wb` commands.
   ##############################################################################

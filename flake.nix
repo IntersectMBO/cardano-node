@@ -15,9 +15,7 @@
       flake = false;
     };
     haskellNix = {
-      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
-      # Unpin this once we no longer need GHC 8.10.7.
-      url = "github:input-output-hk/haskell.nix/cb139fa956158397aa398186bb32dd26f7318784";
+      url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
