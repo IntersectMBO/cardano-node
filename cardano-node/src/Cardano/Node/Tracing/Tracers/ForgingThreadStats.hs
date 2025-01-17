@@ -10,7 +10,6 @@ module Cardano.Node.Tracing.Tracers.ForgingThreadStats
   ) where
 
 import           Cardano.Logging
-import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -155,31 +154,30 @@ emptyForgingStats :: ForgingStats
 emptyForgingStats = ForgingStats mempty 0 0 0 0
 
 forgeThreadStats :: Trace IO ForgingStats
-  -> IO (Trace IO (ForgeTracerType blk))
+   -> IO (Trace IO (TraceForgeEvent blk))
 forgeThreadStats tr =
-  let tr' = contramap unfold tr
-  in foldCondTraceM calculateThreadStats emptyForgingStats
-      (\case
-          Left Consensus.TraceStartLeadershipCheck{} -> True
-          Left _ -> False
-          Right _  -> True
-          )
-      tr'
+    let tr' = contramap unfold tr
+    in foldCondTraceM calculateThreadStats emptyForgingStats
+        (\case
+            Consensus.TraceStartLeadershipCheck{} -> True
+            _ -> False
+            )
+        tr'
 
 calculateThreadStats :: MonadIO m
   => ForgingStats
   -> LoggingContext
-  -> ForgeTracerType blk
+  -> TraceForgeEvent blk
   -> m ForgingStats
 calculateThreadStats stats _context
-    (Left TraceNodeCannotForge {}) = do
+    (TraceNodeCannotForge {}) = do
       mapThreadStats
         stats
         (\fts -> (fts { ftsNodeCannotForgeNum = ftsNodeCannotForgeNum fts + 1}
                       , Nothing))
         (\fs _ ->  (fs  { fsNodeCannotForgeNum  = fsNodeCannotForgeNum fs + 1 }))
 calculateThreadStats stats _context
-    (Left (TraceNodeIsLeader (SlotNo slot'))) = do
+    (TraceNodeIsLeader (SlotNo slot')) = do
       let slot = fromIntegral slot'
       mapThreadStats
         stats
@@ -187,14 +185,14 @@ calculateThreadStats stats _context
                    , ftsLastSlot = slot}, Nothing))
         (\fs _ ->  (fs  { fsNodeIsLeaderNum  = fsNodeIsLeaderNum fs + 1 }))
 calculateThreadStats stats _context
-    (Left TraceForgedBlock {}) = do
+    (TraceForgedBlock {}) = do
       mapThreadStats
         stats
         (\fts -> (fts { ftsBlocksForgedNum = ftsBlocksForgedNum fts + 1}
                       , Nothing))
         (\fs _ ->  (fs  { fsBlocksForgedNum  = fsBlocksForgedNum fs + 1 }))
 calculateThreadStats stats _context
-    (Left (TraceNodeNotLeader (SlotNo slot'))) = do
+    (TraceNodeNotLeader (SlotNo slot')) = do
       let slot = fromIntegral slot'
       mapThreadStats
         stats

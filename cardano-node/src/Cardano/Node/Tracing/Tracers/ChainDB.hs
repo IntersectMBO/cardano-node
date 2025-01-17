@@ -11,6 +11,7 @@
 
 module Cardano.Node.Tracing.Tracers.ChainDB
    ( withAddedToCurrentChainEmptyLimited
+   , fragmentChainDensity
    ) where
 
 import           Cardano.Logging

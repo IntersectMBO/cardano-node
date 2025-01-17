@@ -70,8 +70,8 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool, ByteSize32 (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTx,
+                   GenTxId, HasTxs, LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -176,6 +176,7 @@ nullTracersP2P = Tracers
   , nodeVersionTracer = nullTracer
   , resourcesTracer = nullTracer
   , peersTracer = nullTracer
+  , ledgerMetricsTracer = nullTracer
   }
 
 nullTracersNonP2P :: Tracers peer localPeer blk 'Diffusion.NonP2P
@@ -194,6 +195,7 @@ nullTracersNonP2P = Tracers
   , nodeVersionTracer = nullTracer
   , resourcesTracer = nullTracer
   , peersTracer = nullTracer
+  , ledgerMetricsTracer = nullTracer
   }
 
 indexGCType :: ChainDB.TraceGCEvent a -> Int
@@ -360,6 +362,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
     , nodeStateTracer = nullTracer
     , resourcesTracer = nullTracer
     , peersTracer = nullTracer
+    , ledgerMetricsTracer = nullTracer
     }
  where
    traceForgeEnabledMetric :: Maybe EKGDirect -> StartupTrace blk -> IO ()
@@ -538,6 +541,7 @@ mkTracers _ _ _ _ _ enableP2P =
     , nodeVersionTracer = nullTracer
     , resourcesTracer = nullTracer
     , peersTracer = nullTracer
+    , ledgerMetricsTracer = nullTracer
     }
 
 --------------------------------------------------------------------------------

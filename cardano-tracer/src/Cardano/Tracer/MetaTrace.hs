@@ -302,6 +302,7 @@ mkTracerTracer defSeverity = do
      , tcNodeName          = Nothing
      , tcPeerFrequency     = Nothing
      , tcResourceFrequency = Nothing
+     , tcLedgerMetricsFrequency = Nothing
      , tcMetricsPrefix     = Nothing
      , tcOptions = Map.fromList
                    [ ([],         [ConfSeverity defSeverity])
