@@ -26,12 +26,13 @@ import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
-                   ConnectionManagerTrace (..))
+import           Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))
+import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
+import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
-import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
+import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
-import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
+import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..),
                    DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
@@ -47,9 +48,10 @@ import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.Types ()
 import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..))
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
-import           Ouroboros.Network.Server2 (ServerTrace (..))
+import           Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 
+import           Control.Exception (displayException)
 import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList,
                    (.=))
 import           Data.Aeson.Types (listValue)
@@ -515,6 +517,9 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
     mconcat [ "kind" .= String "BootstrapPeersFlagChangedWhilstInSensitiveState"
             ]
+  forMachine _dtal (TraceVerifyPeerSnapshot result) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "result" .= toJSON result ]
   forMachine _dtal (TraceOutboundGovernorCriticalFailure err) =
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
             , "reason" .= show err
@@ -668,6 +673,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["OnlyBootstrapPeers"]
     namespaceFor TraceUseBootstrapPeersChanged {} =
       Namespace [] ["UseBootstrapPeersChanged"]
+    namespaceFor TraceVerifyPeerSnapshot {} =
+      Namespace [] ["VerifyPeerSnapshot"]
     namespaceFor TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
       Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
     namespaceFor TraceOutboundGovernorCriticalFailure {} =
@@ -713,6 +720,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     severityFor (Namespace [] ["ChurnAction"]) _ = Just Info
     severityFor (Namespace [] ["ChurnTimeout"]) _ = Just Notice
     severityFor (Namespace [] ["DebugState"]) _ = Just Info
+    severityFor (Namespace [] ["VerifyPeerSnapshot"]) _ = Just Error
     severityFor _ _ = Nothing
 
     documentFor (Namespace [] ["LocalRootPeersChanged"]) = Just  ""
@@ -771,6 +779,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       "Outbound Governor was killed unexpectedly"
     documentFor (Namespace [] ["DebugState"]) = Just
       "peer selection internal state"
+    documentFor (Namespace [] ["VerifyPeerSnapshot"]) = Just
+      "Verification outcome of big ledger peer snapshot"
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["ChurnAction"]) =
@@ -816,6 +826,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       , Namespace [] ["PickInboundPeers"]
       , Namespace [] ["OutboundGovernorCriticalFailure"]
       , Namespace [] ["DebugState"]
+      , Namespace [] ["VerifyPeerSnapshot"]
       ]
 
 --------------------------------------------------------------------------------
@@ -1000,7 +1011,7 @@ instance LogFormatting PeerSelectionCounters where
 instance MetaTrace PeerSelectionCounters where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
 
-    severityFor (Namespace _ ["Counters"]) _ = Just Info
+    severityFor (Namespace _ ["Counters"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Counters"]) = Just
@@ -1137,6 +1148,10 @@ instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) 
              , "connectionId" .= toJSON connId
              , "withProtocolTemp" .= show wf
              ]
+  forMachine _dtal (AcquireConnectionError exception) =
+    mconcat [ "kind" .= String "AcquireConnectionError"
+            , "error" .= displayException exception
+            ]
   forHuman = pack . show
 
 instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
@@ -1144,11 +1159,13 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
     namespaceFor PeerStatusChangeFailure {} = Namespace [] ["StatusChangeFailure"]
     namespaceFor PeerMonitoringError {} = Namespace [] ["MonitoringError"]
     namespaceFor PeerMonitoringResult {} = Namespace [] ["MonitoringResult"]
+    namespaceFor AcquireConnectionError {} = Namespace [] ["ConnectionError"]
 
     severityFor (Namespace _ ["StatusChanged"]) _ = Just Info
     severityFor (Namespace _ ["StatusChangeFailure"]) _ = Just Error
     severityFor (Namespace _ ["MonitoringError"]) _ = Just Error
     severityFor (Namespace _ ["MonitoringResult"]) _ = Just Debug
+    severityFor (Namespace _ ["ConnectionError"]) _ = Just Error
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["StatusChanged"]) = Just
@@ -1159,6 +1176,8 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
       ""
     documentFor (Namespace _ ["MonitoringResult"]) = Just
       ""
+    documentFor (Namespace _ ["ConnectionError"]) = Just
+      ""
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -1166,6 +1185,7 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
       , Namespace [] ["StatusChangeFailure"]
       , Namespace [] ["MonitoringError"]
       , Namespace [] ["MonitoringResult"]
+      , Namespace [] ["ConnectionError"]
       ]
 
 --------------------------------------------------------------------------------
@@ -1174,28 +1194,30 @@ instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
-      => LogFormatting (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
+      => LogFormatting (ConnectionManager.Trace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
     forMachine dtal (TrIncludeConnection prov peerAddr) =
         mconcat $ reverse
           [ "kind" .= String "IncludeConnection"
           , "remoteAddress" .= forMachine dtal peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
-    forMachine dtal (TrUnregisterConnection prov peerAddr) =
+    forMachine _dtal (TrReleaseConnection prov connId) =
         mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
-          , "remoteAddress" .= forMachine dtal peerAddr
+          , "remoteAddress" .= toJSON connId
           , "provenance" .= String (pack . show $ prov)
           ]
-    forMachine _dtal (TrConnect (Just localAddress) remoteAddress) =
+    forMachine _dtal (TrConnect (Just localAddress) remoteAddress diffusionMode) =
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
+          , "diffusionMode" .= toJSON diffusionMode
           ]
-    forMachine dtal (TrConnect Nothing remoteAddress) =
+    forMachine dtal (TrConnect Nothing remoteAddress diffusionMode) =
         mconcat
-          [ "kind" .= String "ConnectTo"
+          [ "kind" .= String "Connect"
           , "remoteAddress" .= forMachine dtal remoteAddress
+          , "diffusionMode" .= toJSON diffusionMode
           ]
     forMachine _dtal (TrConnectError (Just localAddress) remoteAddress err) =
         mconcat
@@ -1260,12 +1282,12 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           , "remoteAddress" .= forMachine dtal remoteAddress
           , "connectionState" .= toJSON connState
           ]
-    forMachine dtal (TrPruneConnections pruningSet numberPruned chosenPeers) =
+    forMachine _dtal (TrPruneConnections pruningSet numberPruned chosenPeers) =
         mconcat
           [ "kind" .= String "PruneConnections"
           , "prunedPeers" .= toJSON pruningSet
           , "numberPrunedPeers" .= toJSON numberPruned
-          , "choiceSet" .= toJSON (forMachine dtal `Set.map` chosenPeers)
+          , "choiceSet" .= toJSON (toJSON `Set.map` chosenPeers)
           ]
     forMachine _dtal (TrConnectionCleanup connId) =
         mconcat
@@ -1290,12 +1312,20 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
     forMachine _dtal (TrState cmState) =
         mconcat
           [ "kind"  .= String "ConnectionManagerState"
-          , "state" .= listValue (\(addr, connState) ->
+          , "state" .= listValue (\(remoteAddr, inner) ->
                                          object
-                                           [ "remoteAddress"   .= toJSON addr
-                                           , "connectionState" .= toJSON connState
-                                           ])
-                                       (Map.toList cmState)
+                                           [ "connections" .=
+                                             listValue (\(localAddr, connState) ->
+                                                object
+                                                  [ "localAddress" .= localAddr
+                                                  , "state" .= toJSON connState
+                                                  ]
+                                             )
+                                             (Map.toList inner)
+                                           , "remoteAddress" .= toJSON remoteAddr
+                                           ]
+                                 )
+                                 (Map.toList (getConnMap cmState))
           ]
     forMachine _dtal (ConnectionManager.TrUnexpectedlyFalseAssertion info) =
         mconcat
@@ -1356,10 +1386,10 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
         , "command" .= show cerr
         ]
 
-instance MetaTrace (ConnectionManagerTrace addr
+instance MetaTrace (ConnectionManager.Trace addr
                       (ConnectionHandlerTrace versionNumber agreedOptions)) where
     namespaceFor TrIncludeConnection {}  = Namespace [] ["IncludeConnection"]
-    namespaceFor TrUnregisterConnection {}  = Namespace [] ["UnregisterConnection"]
+    namespaceFor TrReleaseConnection {}  = Namespace [] ["UnregisterConnection"]
     namespaceFor TrConnect {}  = Namespace [] ["Connect"]
     namespaceFor TrConnectError {}  = Namespace [] ["ConnectError"]
     namespaceFor TrTerminatingConnection {}  = Namespace [] ["TerminatingConnection"]
@@ -1407,7 +1437,7 @@ instance MetaTrace (ConnectionManagerTrace addr
     severityFor (Namespace _  ["ConnectionCleanup"]) _ = Just Debug
     severityFor (Namespace _  ["ConnectionTimeWait"]) _ = Just Debug
     severityFor (Namespace _  ["ConnectionTimeWaitDone"]) _ = Just Info
-    severityFor (Namespace _  ["ConnectionManagerCounters"]) _ = Just Info
+    severityFor (Namespace _  ["ConnectionManagerCounters"]) _ = Just Debug
     severityFor (Namespace _  ["State"]) _ = Just Info
     severityFor (Namespace _  ["UnexpectedlyFalseAssertion"]) _ = Just Error
     severityFor _ _ = Nothing
@@ -1501,10 +1531,10 @@ instance MetaTrace (ConnectionManager.AbstractTransitionTrace peerAddr) where
 --------------------------------------------------------------------------------
 
 instance (Show addr, LogFormatting addr, ToJSON addr)
-      => LogFormatting (ServerTrace addr) where
-  forMachine dtal (TrAcceptConnection peerAddr)     =
+      => LogFormatting (Server.Trace addr) where
+  forMachine _dtal (TrAcceptConnection connId)     =
     mconcat [ "kind" .= String "AcceptConnection"
-             , "address" .= forMachine dtal peerAddr
+             , "address" .= toJSON connId
              ]
   forMachine _dtal (TrAcceptError exception)         =
     mconcat [ "kind" .= String "AcceptErroor"
@@ -1527,7 +1557,7 @@ instance (Show addr, LogFormatting addr, ToJSON addr)
              ]
   forHuman = pack . show
 
-instance MetaTrace (ServerTrace addr) where
+instance MetaTrace (Server.Trace addr) where
     namespaceFor TrAcceptConnection {} = Namespace [] ["AcceptConnection"]
     namespaceFor TrAcceptError {} = Namespace [] ["AcceptError"]
     namespaceFor TrAcceptPolicyTrace {} = Namespace [] ["AcceptPolicy"]
@@ -1564,10 +1594,10 @@ instance MetaTrace (ServerTrace addr) where
 -- InboundGovernor Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (InboundGovernorTrace SockAddr) where
+instance LogFormatting (InboundGovernor.Trace SockAddr) where
   forMachine = forMachineGov
   forHuman = pack . show
-  asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
+  asMetrics (TrInboundGovernorCounters InboundGovernor.Counters {..}) =
             [ IntM
                 "inboundGovernor.idle"
                 (fromIntegral idlePeersRemote)
@@ -1583,10 +1613,10 @@ instance LogFormatting (InboundGovernorTrace SockAddr) where
               ]
   asMetrics _ = []
 
-instance LogFormatting (InboundGovernorTrace LocalAddress) where
+instance LogFormatting (InboundGovernor.Trace LocalAddress) where
   forMachine = forMachineGov
   forHuman = pack . show
-  asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
+  asMetrics (TrInboundGovernorCounters InboundGovernor.Counters {..}) =
             [ IntM
                 "localInboundGovernor.idle"
                 (fromIntegral idlePeersRemote)
@@ -1603,7 +1633,7 @@ instance LogFormatting (InboundGovernorTrace LocalAddress) where
   asMetrics _ = []
 
 
-forMachineGov :: (ToJSON adr, Show adr) => DetailLevel -> InboundGovernorTrace adr -> Object
+forMachineGov :: (ToJSON adr, Show adr) => DetailLevel -> InboundGovernor.Trace adr -> Object
 forMachineGov _dtal (TrNewConnection p connId)            =
   mconcat [ "kind" .= String "NewConnection"
             , "provenance" .= show p
@@ -1697,7 +1727,7 @@ forMachineGov _dtal (InboundGovernor.TrInactive fresh) =
           , "fresh" .= toJSON fresh
           ]
 
-instance MetaTrace (InboundGovernorTrace addr) where
+instance MetaTrace (InboundGovernor.Trace addr) where
     namespaceFor TrNewConnection {}         = Namespace [] ["NewConnection"]
     namespaceFor TrResponderRestarted {}    = Namespace [] ["ResponderRestarted"]
     namespaceFor TrResponderStartFailure {} = Namespace [] ["ResponderStartFailure"]

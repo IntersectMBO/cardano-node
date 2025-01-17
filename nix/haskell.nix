@@ -4,6 +4,7 @@
 { haskell-nix
 , incl
 , CHaP
+, macOS-security
 }:
 let
 
@@ -127,6 +128,7 @@ let
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
+            packages.ouroboros-network.components.library.doHaddock = false; # Currently broken
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
@@ -281,7 +283,11 @@ let
                   unset TMPDIR
                   export TMPDIR=$(mktemp -d)
                   export TMP=$TMPDIR
-                '';
+                '' + (if pkgs.stdenv.hostPlatform.isDarwin
+                     then ''
+                  export PATH=${macOS-security}/bin:$PATH
+                          ''
+                     else '''');
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:

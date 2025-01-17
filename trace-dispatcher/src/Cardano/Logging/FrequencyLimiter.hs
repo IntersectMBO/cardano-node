@@ -23,6 +23,9 @@ budgetLimit = 30.0
 reminderPeriod :: Double
 reminderPeriod = 10.0
 
+data MaybeTuple' a b = Nothing' | Just' !a !b
+     deriving Show
+
 data LimiterSpec = LimiterSpec {
     lsNs        :: [Text]
   , lsName      :: Text
@@ -37,7 +40,7 @@ data FrequencyRec a = FrequencyRec {
                               --   and stop limiting. When messages arrive in shorter frequency then
                               --   by the given thresholdFrequency budget is earned, and if they
                               --   arrive in a longer period budget is spend.
-  , frActive   :: Maybe (Int, Double)
+  , frActive   :: !(MaybeTuple' Int Double)
                               -- ^ Just is active and carries the number
                               --   of suppressed messages and the time of last send message
 } deriving (Show)
@@ -81,7 +84,7 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
     timeNow <- systemTimeToSeconds <$> liftIO getSystemTime
     foldTraceM
       (checkLimiting (1.0 / thresholdFrequency))
-      (FrequencyRec Nothing timeNow 0.0 0.0 Nothing)
+      (FrequencyRec Nothing timeNow 0.0 0.0 Nothing')
       (Trace $ T.contramap unfoldTrace (unpackTrace (filterTraceMaybe vtracer)))
   where
     checkLimiting ::
@@ -110,7 +113,7 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
       let newBudget        = min budgetLimit (max (-budgetLimit)
                                   (normaSpendReward + frBudget))
       case frActive of
-        Nothing -> -- limiter not active
+        Nothing' -> -- limiter not active
           if normaSpendReward + frBudget >= budgetLimit
             then do  -- start limiting
               traceWith
@@ -121,7 +124,7 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
                        , frLastTime    = timeNow
                        , frLastRem     = timeNow
                        , frBudget      = newBudget
-                       , frActive      = Just (0, timeNow)
+                       , frActive      = Just' 0 timeNow
                        }
             else  -- continue without limiting
               pure fs  { frMessage     = Just message
@@ -129,7 +132,7 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
                        , frLastRem     = 0.0
                        , frBudget      = newBudget
                        }
-        Just (nSuppressed, lastTimeSend) -> -- is active
+        Just' nSuppressed lastTimeSend -> -- is active
            if normaSpendReward + frBudget <= (- budgetLimit)
             then do -- stop limiting
               traceWith
@@ -139,7 +142,7 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
               pure fs  { frMessage     = Just message
                        , frLastTime    = timeNow
                        , frBudget      = newBudget
-                       , frActive      = Nothing
+                       , frActive      = Nothing'
                        }
             else
               let lastPeriod = timeNow - lastTimeSend
@@ -160,14 +163,14 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
                              , frLastTime    = timeNow
                              , frLastRem     = newFrLastRem
                              , frBudget      = newBudget
-                             , frActive      = Just (nSuppressed, timeNow)
+                             , frActive      = Just' nSuppressed timeNow
                              }
                   else  -- suppress
                     pure fs  { frMessage     = Nothing
                              , frLastTime    = timeNow
                              , frLastRem     = newFrLastRem
                              , frBudget      = newBudget
-                             , frActive      = Just (nSuppressed + 1, lastTimeSend)
+                             , frActive      = Just' (nSuppressed + 1) lastTimeSend
                              }
     unfoldTrace ::
          (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))

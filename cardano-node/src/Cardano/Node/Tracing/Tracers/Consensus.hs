@@ -32,6 +32,7 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block
@@ -40,6 +41,7 @@ import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockch
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Genesis.Governor (DensityBounds (..), GDDDebugInfo (..),
                    TraceGDDEvent (..))
+import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, ByteSize32 (..), GenTxId,
                    HasTxId, LedgerSupportsMempool, txForgetValidated, txId)
@@ -48,8 +50,7 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping (Instruction (..),
-                   JumpInstruction (..), JumpResult (..))
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Jumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State (JumpInfo (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -65,6 +66,7 @@ import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -84,6 +86,7 @@ import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Time (DiffTime, NominalDiffTime)
 import           Data.Word (Word32, Word64)
+import           Network.TypedProtocol.Core
 
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
@@ -230,6 +233,8 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         [ "ChainSync Jumping -- the client is asked to jump to "
         , showT (jumpInstructionToPoint instruction)
         ]
+    TraceDrainingThePipe n ->
+      "ChainSync client is draining the pipe. Pipelined messages expected: " <> showT (natToInt n)
     where
       jumpInstructionToPoint = AF.headPoint . jTheirFragment . \case
         JumpTo ji          -> ji
@@ -303,6 +308,11 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         [ "kind" .= String "TraceJumpingInstructionIs"
         , "instr" .= instructionToObject instruction
         ]
+    TraceDrainingThePipe n ->
+      mconcat
+        [ "kind" .= String "TraceDrainingThePipe"
+        , "n" .= natToInt n
+        ]
     where
       instructionToObject :: Instruction blk -> Aeson.Object
       instructionToObject = \case
@@ -367,6 +377,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace [] ["JumpingWaitingForNextInstruction"]
     TraceJumpingInstructionIs _ ->
       Namespace [] ["JumpingInstructionIs"]
+    TraceDrainingThePipe _ ->
+      Namespace [] ["DrainingThePipe"]
 
   severityFor ns _ =
     case ns of
@@ -395,6 +407,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace _ ["JumpingWaitingForNextInstruction"] ->
         Just Debug
       Namespace _ ["JumpingInstructionIs"] ->
+        Just Debug
+      Namespace _ ["DrainingThePipe"] ->
         Just Debug
       _ ->
         Nothing
@@ -433,6 +447,8 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
         Just "The client is waiting for the next instruction"
       Namespace _ ["JumpingInstructionIs"] ->
         Just "The client got its next instruction"
+      Namespace _ ["DrainingThePipe"] ->
+        Just "The client is draining the pipe of messages"
       _ ->
         Nothing
 
@@ -450,6 +466,7 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
     , Namespace [] ["JumpResult"]
     , Namespace [] ["JumpingWaitingForNextInstruction"]
     , Namespace [] ["JumpingInstructionIs"]
+    , Namespace [] ["DrainingThePipe"]
     ]
 
 --------------------------------------------------------------------------------
@@ -658,6 +675,38 @@ calculateBlockFetchClientMetrics cm _lc _ = pure cm
 --------------------------------------------------------------------------------
 -- BlockFetchDecision Tracer
 --------------------------------------------------------------------------------
+
+instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
+  namespaceFor PeersFetch{} = Namespace [] ["PeersFetch"]
+  namespaceFor PeerStarvedUs{} = Namespace [] ["PeerStarvedUs"]
+
+  severityFor (Namespace _ ["PeersFetch"]) _ = Just Debug
+  severityFor (Namespace _ ["PeerStarvedUs"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["PeersFetch"]) =
+    Just "list of block-fetch decisions"
+  documentFor (Namespace [] ["PeerStarvedUs"]) =
+    Just "current peer starved us, the node will switch to a different peer"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
+
+instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk)
+      => LogFormatting (TraceDecisionEvent peer (Header blk)) where
+  forHuman = Text.pack . show
+
+  forMachine dtal (PeersFetch xs) =
+    mconcat [ "kind" .= String "PeerFetch"
+            , "decisions" .= if dtal >= DMaximum
+                               then toJSON (Verbose <$> xs)
+                               else toJSON xs
+            ]
+  forMachine _dtal (PeerStarvedUs peer) =
+    mconcat [ "kind" .= String "PeerStarvedUs"
+            , "peer" .= toJSON peer
+            ]
 
 instance (LogFormatting peer, Show peer) =>
     LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
@@ -1374,8 +1423,8 @@ instance ( tx ~ GenTx blk
          , HasTxId (GenTx blk)
          , Show (ForgeStateUpdateError blk)
          , Show (CannotForge blk)
-         , LogFormatting (InvalidBlockReason blk)
          , LogFormatting (CannotForge blk)
+         , LogFormatting (ExtValidationError blk)
          , LogFormatting (ForgeStateUpdateError blk))
          => LogFormatting (ForgeTracerType blk) where
   forMachine dtal (Left i)  = forMachine dtal i
@@ -1471,8 +1520,8 @@ instance ( tx ~ GenTx blk
          , Show (ForgeStateUpdateError blk)
          , Show (CannotForge blk)
          , Show (TxId (GenTx blk))
-         , LogFormatting (InvalidBlockReason blk)
          , LogFormatting (CannotForge blk)
+         , LogFormatting (ExtValidationError blk)
          , LogFormatting (ForgeStateUpdateError blk))
       => LogFormatting (TraceForgeEvent blk) where
   forMachine _dtal (TraceStartLeadershipCheck slotNo) =
@@ -2187,6 +2236,44 @@ instance MetaTrace (TraceGsmEvent selection) where
     , Namespace [] ["LeaveCaughtUp"]
     , Namespace [] ["GsmEventPreSyncingToSyncing"]
     , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    ]
+
+--------------------------------------------------------------------------------
+-- CSJ Tracer
+--------------------------------------------------------------------------------
+
+instance ( LogFormatting peer, Show peer
+         ) => LogFormatting (Jumping.TraceEvent peer) where
+  forMachine dtal =
+    \case
+      RotatedDynamo oldPeer newPeer ->
+        mconcat
+          [ "kind" .= String "RotatedDynamo"
+          , "oldPeer" .= forMachine dtal oldPeer
+          , "newPeer" .= forMachine dtal newPeer
+          ]
+
+  forHuman (RotatedDynamo fromPeer toPeer) =
+    "Rotated the dynamo from " <> showT fromPeer <> " to " <> showT toPeer
+
+instance MetaTrace (Jumping.TraceEvent peer) where
+  namespaceFor =
+    \case
+      RotatedDynamo {}        -> Namespace [] ["RotatedDynamo"]
+
+  severityFor ns _ =
+    case ns of
+      Namespace _ ["RotatedDynamo"]               -> Just Info
+      Namespace _ _                               -> Nothing
+
+  documentFor = \case
+    Namespace _ ["RotatedDynamo"] ->
+      Just "The ChainSync Jumping module has been asked to rotate its dynamo"
+    Namespace _ _ ->
+      Nothing
+
+  allNamespaces =
+    [ Namespace [] ["RotatedDynamo"]
     ]
 
 --------------------------------------------------------------------------------

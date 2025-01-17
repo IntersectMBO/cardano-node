@@ -45,7 +45,7 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
       shelleyOptions = def { genesisEpochLength = 100 }
 

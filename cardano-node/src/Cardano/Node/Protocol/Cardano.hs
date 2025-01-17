@@ -29,9 +29,9 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
+import           Data.Function ((&))
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import           Ouroboros.Consensus.Config (emptyCheckpointsMap)
@@ -91,17 +91,11 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                             -- not-yet-ready eras in released node versions without mainnet nodes
                             -- prematurely advertising that they could hard fork into the new era.
                              npcTestShelleyHardForkAtEpoch,
-                             npcTestShelleyHardForkAtVersion,
                              npcTestAllegraHardForkAtEpoch,
-                             npcTestAllegraHardForkAtVersion,
                              npcTestMaryHardForkAtEpoch,
-                             npcTestMaryHardForkAtVersion,
                              npcTestAlonzoHardForkAtEpoch,
-                             npcTestAlonzoHardForkAtVersion,
                              npcTestBabbageHardForkAtEpoch,
-                             npcTestBabbageHardForkAtVersion,
-                             npcTestConwayHardForkAtEpoch,
-                             npcTestConwayHardForkAtVersion
+                             npcTestConwayHardForkAtEpoch
                            }
                            files = do
     byronGenesis <-
@@ -171,7 +165,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
-      , Consensus.cardanoProtocolVersion = ProtVer (natVersion @10) 0
+      , Consensus.cardanoProtocolVersion = ProtVer (natVersion @10) 2
         -- The remaining arguments specify the parameters needed to transition between two eras
       , Consensus.cardanoLedgerTransitionConfig =
           Ledger.mkLatestTransitionConfig
@@ -182,7 +176,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         Consensus.CardanoHardForkTriggers' {
           triggerHardForkShelley =
             -- What will trigger the Byron -> Shelley hard fork?
-            case npcTestShelleyHardForkAtEpoch of
+            npcTestShelleyHardForkAtEpoch & maybe
 
                -- This specifies the major protocol version number update that will
                -- trigger us moving to the Shelley protocol.
@@ -202,37 +196,36 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                -- But we also provide an override to allow for simpler test setups
                -- such as triggering at the 0 -> 1 transition .
                --
-               Nothing -> Consensus.TriggerHardForkAtVersion
-                            (maybe 2 fromIntegral npcTestShelleyHardForkAtVersion)
+               Consensus.CardanoTriggerHardForkAtDefaultVersion
 
                -- Alternatively, for testing we can transition at a specific epoch.
                --
-               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+               Consensus.CardanoTriggerHardForkAtEpoch
         , triggerHardForkAllegra =
-            case npcTestAllegraHardForkAtEpoch of
-               Nothing -> Consensus.TriggerHardForkAtVersion
-                            (maybe 3 fromIntegral npcTestAllegraHardForkAtVersion)
-               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+            npcTestAllegraHardForkAtEpoch &
+              maybe
+                Consensus.CardanoTriggerHardForkAtDefaultVersion
+                Consensus.CardanoTriggerHardForkAtEpoch
         , triggerHardForkMary =
-            case npcTestMaryHardForkAtEpoch of
-               Nothing -> Consensus.TriggerHardForkAtVersion
-                            (maybe 4 fromIntegral npcTestMaryHardForkAtVersion)
-               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+            npcTestMaryHardForkAtEpoch &
+              maybe
+                Consensus.CardanoTriggerHardForkAtDefaultVersion
+                Consensus.CardanoTriggerHardForkAtEpoch
         , triggerHardForkAlonzo =
-            case npcTestAlonzoHardForkAtEpoch of
-               Nothing -> Consensus.TriggerHardForkAtVersion
-                            (maybe 5 fromIntegral npcTestAlonzoHardForkAtVersion)
-               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+            npcTestAlonzoHardForkAtEpoch &
+              maybe
+                Consensus.CardanoTriggerHardForkAtDefaultVersion
+                Consensus.CardanoTriggerHardForkAtEpoch
         , triggerHardForkBabbage =
-             case npcTestBabbageHardForkAtEpoch of
-                Nothing -> Consensus.TriggerHardForkAtVersion
-                             (maybe 7 fromIntegral npcTestBabbageHardForkAtVersion)
-                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+            npcTestBabbageHardForkAtEpoch &
+              maybe
+                Consensus.CardanoTriggerHardForkAtDefaultVersion
+                Consensus.CardanoTriggerHardForkAtEpoch
         , triggerHardForkConway =
-             case npcTestConwayHardForkAtEpoch of
-                Nothing -> Consensus.TriggerHardForkAtVersion
-                             (maybe 9 fromIntegral npcTestConwayHardForkAtVersion)
-                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+            npcTestConwayHardForkAtEpoch &
+              maybe
+                Consensus.CardanoTriggerHardForkAtDefaultVersion
+                Consensus.CardanoTriggerHardForkAtEpoch
         }
        -- TODO: once https://github.com/IntersectMBO/cardano-node/issues/5730 is implemented 'emptyCheckpointsMap' needs to be replaced with the checkpoints map read from a configuration file.
       , Consensus.cardanoCheckpoints = emptyCheckpointsMap

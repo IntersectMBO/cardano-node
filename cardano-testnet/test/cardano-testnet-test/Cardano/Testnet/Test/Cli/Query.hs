@@ -81,7 +81,7 @@ import qualified Hedgehog.Extras.Test.Golden as H
 
 -- | Test CLI queries
 -- Execute me with:
--- @cabal test cardano-testnet-test --test-options '-p "/CliQueries/"'@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/CliQueries/"'@
 -- If you want to recreate golden files, run the comment with
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
@@ -438,6 +438,14 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryTreasuryValueCmd -> do
       -- treasury
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
+
+    TestQueryProposalsCmd -> do
+      -- TODO @cardano-cli team
+      pure ()
+
+    TestQueryLedgerPeerSnapshotCmd -> do
+      -- TODO @cardano-cli team
+      pure ()
 
   where
   -- | Wait for the part of the epoch when futurePParams are known

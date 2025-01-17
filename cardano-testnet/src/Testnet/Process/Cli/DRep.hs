@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,6 +27,7 @@ import           Prelude
 
 import           Control.Monad (forM, void)
 import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.Trans.Control (MonadBaseControl)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
 import           Data.Text (Text)
@@ -35,11 +37,13 @@ import           Data.Word (Word16)
 import           GHC.Exts (fromString)
 import           GHC.Stack
 import           Lens.Micro ((^?))
+import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Query
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (execCli', execCliStdoutToJson)
+import           Testnet.Process.Run (addEnvVarsToConfig, execCli', execCliStdoutToJson)
 import           Testnet.Types
 
 import           Hedgehog (MonadTest, evalMaybe)
@@ -227,7 +231,7 @@ registerDRep
                     -- as returned by 'cardanoTestnetDefault'.
   -> m (KeyPair PaymentKey)
 registerDRep execConfig epochStateView ceo work prefix wallet = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
@@ -339,7 +343,7 @@ getLastPParamUpdateActionId execConfig = do
 -- | Create a proposal to change the DRep activity interval.
 -- Return the transaction id and the index of the governance action.
 makeActivityChangeProposal
-  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Typeable era)
+  :: (HasCallStack, MonadBaseControl IO m, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
@@ -354,51 +358,59 @@ makeActivityChangeProposal
 makeActivityChangeProposal execConfig epochStateView ceo work
                            prevGovActionInfo drepActivity stakeKeyPair wallet timeout = do
 
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       KeyPair{verificationKey=File stakeVkeyFp} = stakeKeyPair
 
   baseDir <- H.createDirectoryIfMissing work
 
-  proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
-  H.writeFile proposalAnchorFile $
-    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
-
+  let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
+  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-binary", proposalAnchorFile
     ]
+
+  proposalFile <- H.note $ baseDir </> "proposa-file"
 
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
-  proposalFile <- H.note $ baseDir </> "sample-proposal-anchor"
-
-  void $ execCli' execConfig $
-    [ "conway", "governance", "action", "create-protocol-parameters-update"
-    , "--testnet"
-    , "--governance-action-deposit", show @Integer minDRepDeposit
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
-    ] ++ concatMap (\(prevGovernanceActionTxId, prevGovernanceActionIndex) ->
-                      [ "--prev-governance-action-tx-id", prevGovernanceActionTxId
-                      , "--prev-governance-action-index", show prevGovernanceActionIndex
-                      ]) prevGovActionInfo ++
-    [ "--drep-activity", show (unEpochInterval drepActivity)
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
-    , "--anchor-data-hash", proposalAnchorDataHash
-    , "--out-file", proposalFile
-    ]
+  let relativeUrl = ["ipfs", proposalAnchorDataIpfsHash]
 
   proposalBody <- H.note $ baseDir </> "tx.body"
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe wallet
 
-  void $ execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
-    , "--tx-in", Text.unpack $ renderTxIn txIn
-    , "--proposal-file", proposalFile
-    , "--out-file", proposalBody
-    ]
+  -- Create temporary HTTP server with files required by the call to `cardano-cli`
+  -- In this case, the server emulates an IPFS gateway
+  serveFilesWhile
+    [(relativeUrl, proposalAnchorFile)]
+    ( \port -> do
+        let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
+        void $ execCli' execConfig' $
+          [ "conway", "governance", "action", "create-protocol-parameters-update"
+          , "--testnet"
+          , "--governance-action-deposit", show @Integer minDRepDeposit
+          , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+          ] ++ concatMap (\(prevGovernanceActionTxId, prevGovernanceActionIndex) ->
+                            [ "--prev-governance-action-tx-id", prevGovernanceActionTxId
+                            , "--prev-governance-action-index", show prevGovernanceActionIndex
+                            ]) prevGovActionInfo ++
+          [ "--drep-activity", show (unEpochInterval drepActivity)
+          , "--anchor-url", "ipfs://" ++ proposalAnchorDataIpfsHash
+          , "--anchor-data-hash", proposalAnchorDataHash
+          , "--check-anchor-data"
+          , "--out-file", proposalFile
+          ]
+
+        void $ execCli' execConfig'
+          [ "conway", "transaction", "build"
+          , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
+          , "--tx-in", Text.unpack $ renderTxIn txIn
+          , "--proposal-file", proposalFile
+          , "--out-file", proposalBody
+          ]
+    )
 
   signedProposalTx <- signTx execConfig cEra baseDir "signed-proposal"
                              (File proposalBody) [Some $ paymentKeyInfoPair wallet]

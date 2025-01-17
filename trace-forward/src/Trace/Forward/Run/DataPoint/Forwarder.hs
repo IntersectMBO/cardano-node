@@ -5,8 +5,9 @@ module Trace.Forward.Run.DataPoint.Forwarder
   , forwardDataPointsResp
   ) where
 
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), RunMiniProtocol (..))
 
 import qualified Codec.Serialise as CBOR
 import qualified Data.ByteString.Lazy as LBS
@@ -20,14 +21,14 @@ import           Trace.Forward.Utils.DataPoint
 forwardDataPointsInit
   :: ForwarderConfiguration
   -> DataPointStore
-  -> RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
+  -> RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
 forwardDataPointsInit config dpStore =
   InitiatorProtocolOnly $ runPeerWithDPStore config dpStore
 
 forwardDataPointsResp
   :: ForwarderConfiguration
   -> DataPointStore
-  -> RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
+  -> RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
 forwardDataPointsResp config dpStore =
   ResponderProtocolOnly $ runPeerWithDPStore config dpStore
 

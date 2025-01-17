@@ -92,6 +92,7 @@ nodeRunParser = do
            , pncDiffusionMode = mempty
            , pncNumOfDiskSnapshots = numOfDiskSnapshots
            , pncSnapshotInterval = snapshotInterval
+           , pncDoDiskSnapshotChecksum = mempty
            , pncExperimentalProtocolsEnabled = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
@@ -117,15 +118,22 @@ nodeRunParser = do
            , pncTimeWaitTimeout = mempty
            , pncChainSyncIdleTimeout = mempty
            , pncAcceptedConnectionsLimit = mempty
-           , pncTargetNumberOfRootPeers = mempty
-           , pncTargetNumberOfKnownPeers = mempty
-           , pncTargetNumberOfEstablishedPeers = mempty
-           , pncTargetNumberOfActivePeers = mempty
-           , pncTargetNumberOfKnownBigLedgerPeers = mempty
-           , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
-           , pncTargetNumberOfActiveBigLedgerPeers = mempty
+           , pncDeadlineTargetOfRootPeers = mempty
+           , pncDeadlineTargetOfKnownPeers = mempty
+           , pncDeadlineTargetOfEstablishedPeers = mempty
+           , pncDeadlineTargetOfActivePeers = mempty
+           , pncDeadlineTargetOfKnownBigLedgerPeers = mempty
+           , pncDeadlineTargetOfEstablishedBigLedgerPeers = mempty
+           , pncDeadlineTargetOfActiveBigLedgerPeers = mempty
+           , pncSyncTargetOfActivePeers = mempty
+           , pncSyncTargetOfKnownBigLedgerPeers = mempty
+           , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
+           , pncSyncTargetOfActiveBigLedgerPeers = mempty
+           , pncMinBigLedgerPeersForTrustedState = mempty
+           , pncConsensusMode = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncGenesisConfigFlags = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath

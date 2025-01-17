@@ -1,5 +1,9 @@
 # ChangeLog
 
+## NEXT
+
+* Updated to `typed-protocols-0.3`.
+
 ## 2.2.8 - Oct 2024
 
 * Bump for version bound

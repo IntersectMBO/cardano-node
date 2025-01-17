@@ -26,6 +26,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
+import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
@@ -215,17 +216,24 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal NetworkConfigUpdate =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
                , "message" .= String "network configuration update" ]
+  forMachine _dtal (LedgerPeerSnapshotLoaded wOrigin) =
+      mconcat [ "kind" .= String "LedgerPeerSnapshotLoaded"
+              , "message" .= String (showT wOrigin)]
   forMachine _dtal NetworkConfigUpdateUnsupported =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
               , "message" .= String "network topology reconfiguration is not supported in non-p2p mode" ]
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
-  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers) =
+  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFileMaybe) =
       mconcat [ "kind" .= String "NetworkConfig"
                , "localRoots" .= toJSON localRoots
                , "publicRoots" .= toJSON publicRoots
                , "useLedgerAfter" .= useLedgerPeers
+               , "peerSnapshotFile" .=
+                   case peerSnapshotFileMaybe of
+                     Nothing -> Null
+                     Just (PeerSnapshotFile path) -> String (pack path)
                ]
   forMachine _dtal NonP2PWarning =
       mconcat [ "kind" .= String "NonP2PWarning"
@@ -305,6 +313,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["BlockForgingBlockTypeMismatch"]
   namespaceFor NetworkConfigUpdate {}  =
     Namespace [] ["NetworkConfigUpdate"]
+  namespaceFor LedgerPeerSnapshotLoaded {} =
+    Namespace [] ["LedgerPeerSnapshotLoaded"]
   namespaceFor NetworkConfigUpdateUnsupported {}  =
     Namespace [] ["NetworkConfigUpdateUnsupported"]
   namespaceFor NetworkConfigUpdateError {}  =
@@ -433,16 +443,10 @@ instance MetaTrace  (StartupTrace blk) where
 
 nodeToClientVersionToInt :: NodeToClientVersion -> Int
 nodeToClientVersionToInt = \case
-  NodeToClientV_9 -> 9
-  NodeToClientV_10 -> 10
-  NodeToClientV_11 -> 11
-  NodeToClientV_12 -> 12
-  NodeToClientV_13 -> 13
-  NodeToClientV_14 -> 14
-  NodeToClientV_15 -> 15
   NodeToClientV_16 -> 16
   NodeToClientV_17 -> 17
   NodeToClientV_18 -> 18
+  NodeToClientV_19 -> 19
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case
@@ -512,7 +516,7 @@ ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration upda
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
   "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
-ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
+ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFile) =
     pack
   $ intercalate "\n"
   [ "\nLocal Root Groups:"
@@ -528,7 +532,14 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
         ++ show (unSlotNo slotNo)
       UseLedgerPeers Always         ->
         "Use ledger peers in any slot."
+  , case peerSnapshotFile of
+      Nothing -> "Topology configuration does not specify ledger peer snapshot file"
+      Just p ->    "Topology configuration specifies ledger peer snapshot file: "
+                <> show (unPeerSnapshotFile p)
   ]
+
+ppStartupInfoTrace (LedgerPeerSnapshotLoaded wOrigin) =
+  "Topology: Peer snapshot containing ledger peers " <> showT wOrigin <> " loaded."
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 

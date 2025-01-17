@@ -54,13 +54,14 @@ library
                       , containers
                       , contra-tracer
                       , deepseq
-                      , ekg
+                      , ekg-wai
                       , ekg-core
-                      , ekg-forward >= 0.5
+                      , ekg-forward >= 0.8
                       , hostname
                       , network
+                      , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.17
+                      , ouroboros-network ^>= 0.19
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
@@ -116,7 +117,6 @@ test-suite trace-dispatcher-test
                       , cardano-prelude
                       , containers
                       , deepseq
-                      , ekg
                       , ekg-core
                       , generic-data
                       , hostname
@@ -164,7 +164,7 @@ benchmark trace-dispatcher-bench
                       , aeson
                       , containers
                       , criterion
-                      , ekg
+                      , ekg-wai
                       , text
                       , time
                       , trace-dispatcher

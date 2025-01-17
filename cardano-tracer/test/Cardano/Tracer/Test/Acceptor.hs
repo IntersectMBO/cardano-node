@@ -51,8 +51,11 @@ launchAcceptorsSimple mode localSock dpName = do
 #endif
   currentLogLock <- newLock
   currentDPLock <- newLock
+
+  tr <- mkTracerTracer $ SeverityF $ Just Warning
+
 #if RTVIEW
-  eventsQueues <- initEventsQueues Nothing connectedNodesNames dpRequestors currentDPLock
+  eventsQueues <- initEventsQueues tr Nothing connectedNodesNames dpRequestors currentDPLock
 
   chainHistory <- initBlockchainHistory
   resourcesHistory <- initResourcesHistory
@@ -60,8 +63,6 @@ launchAcceptorsSimple mode localSock dpName = do
 
   rtViewPageOpened <- newTVarIO False
 #endif
-
-  tr <- mkTracerTracer $ SeverityF $ Just Warning
 
   registry <- newRegistry
 

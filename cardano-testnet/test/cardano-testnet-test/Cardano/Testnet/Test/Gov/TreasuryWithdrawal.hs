@@ -35,13 +35,15 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as Text
 import           GHC.Stack
 import           Lens.Micro
+import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
-import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -58,7 +60,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       era = toCardanoEra sbe
       eraName = eraToString era
 
@@ -88,15 +90,14 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
+
+  let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
+  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+
   treasuryWithdrawalActionFp <- H.note $ work </> gov </> "treasury-withdrawal.action"
 
-  -- pls configure your editors to trim trailing whitespace >.>
-  H.writeFile proposalAnchorFile $
-    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
-
   proposalAnchorDataHash <- execCli' execConfig
-    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-binary", proposalAnchorFile
     ]
 
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
@@ -142,35 +143,45 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
   -- {{{ Create treasury withdrawal
   let withdrawalAmount = 3_300_777 :: Integer
   govActionDeposit <- getMinDRepDeposit epochStateView ceo
-  void $ execCli' execConfig
-    [ eraName, "governance", "action", "create-treasury-withdrawal"
-    , "--testnet"
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
-    , "--anchor-data-hash", proposalAnchorDataHash
-    , "--governance-action-deposit", show govActionDeposit
-    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
-    , "--transfer", show withdrawalAmount
-    , "--funds-receiving-stake-verification-key-file", verificationKeyFp stakeKeys
-    , "--out-file", treasuryWithdrawalActionFp
-    ]
 
+  let relativeUrl = ["ipfs", proposalAnchorDataIpfsHash]
 
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  -- wait for one block before using wallet0 again
-  _ <- waitForBlocks epochStateView 1
 
-  txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+  -- Create temporary HTTP server with files required by the call to `cardano-cli`
+  -- In this case, the server emulates an IPFS gateway
+  serveFilesWhile
+    [(relativeUrl, proposalAnchorFile)]
+    ( \port -> do
+      let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
+      void $ execCli' execConfig'
+        [ eraName, "governance", "action", "create-treasury-withdrawal"
+        , "--testnet"
+        , "--anchor-url", "ipfs://" ++ proposalAnchorDataIpfsHash
+        , "--anchor-data-hash", proposalAnchorDataHash
+        , "--governance-action-deposit", show govActionDeposit
+        , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
+        , "--transfer", show withdrawalAmount
+        , "--funds-receiving-stake-verification-key-file", verificationKeyFp stakeKeys
+        , "--out-file", treasuryWithdrawalActionFp
+        ]
 
-  void $ execCli' execConfig
-    [ eraName, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--tx-in", Text.unpack $ renderTxIn txin3
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 5_000_000
-    , "--proposal-file", treasuryWithdrawalActionFp
-    , "--out-file", txbodyFp
-    ]
+      -- wait for one block before using wallet0 again
+      _ <- waitForBlocks epochStateView 1
+
+      txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+
+      void $ execCli' execConfig'
+        [ eraName, "transaction", "build"
+        , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
+        , "--tx-in", Text.unpack $ renderTxIn txin3
+        , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 5_000_000
+        , "--proposal-file", treasuryWithdrawalActionFp
+        , "--out-file", txbodyFp
+        ]
+    )
 
   void $ execCli' execConfig
     [ eraName, "transaction", "sign"

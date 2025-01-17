@@ -44,12 +44,12 @@ in with final;
       ghc927 = "3.5";
       ghc928 = "3.5";
     }.${config.compiler-nix-name} or "3.6.1";
-    index-state = "2023-08-05T00:00:00Z";
+    index-state = "2024-12-24T12:56:48Z";
   });
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
     version = "0.8.7";
-    index-state = "2023-08-05T00:00:00Z";
+    index-state = "2024-12-24T12:56:48Z";
   };
 
   # The ghc-hls point release compatibility table is documented at
@@ -71,7 +71,7 @@ in with final;
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    index-state = "2023-08-05T00:00:00Z";
+    index-state = "2024-12-24T12:56:48Z";
   };
 
   profiteur = haskell-nix.tool compiler-nix-name "profiteur" {

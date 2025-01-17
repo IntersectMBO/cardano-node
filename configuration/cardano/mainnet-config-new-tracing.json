@@ -18,11 +18,14 @@
   "TurnOnLogging": true,
   "TurnOnLogMetrics": true,
   "UseTraceDispatcher": true,
-  "TraceOptionForwarder": null,
-  "TraceOptionMetricsPrefix": null,
-  "TraceOptionNodeName": null,
-  "TraceOptionPeerFrequency": 3000,
-  "TraceOptionResourceFrequency": 5000,
+  "TraceOptionMetricsPrefix": "cardano.node.metrics.",
+  "TraceOptionNodeName": "mainnetsingle",
+  "TraceOptionPeerFrequency": 2000,
+  "TraceOptionResourceFrequency": 1000,
+  "TraceOptionForwarder": {
+    "connQueueSize": 64,
+    "disconnQueueSize": 128
+  },
   "TraceOptions": {
     "": {
       "backends": [
@@ -42,7 +45,7 @@
       "severity": "Silence"
     },
     "ChainSync.Client": {
-      "severity": "Info"
+      "severity": "Warning"
     },
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
@@ -74,17 +77,20 @@
     "Mempool": {
       "severity": "Info"
     },
-    "Mempool.Synced": {
-      "severity": "Silence"
-    },
     "Net.Mux.Remote": {
       "severity": "Info"
     },
+    "Net.InboundGovernor": {
+      "severity": "Warning"
+    },
     "Net.PeerSelection": {
-      "severity": "Info"
+      "severity": "Silence"
+    },
+    "Net.ConnectionManager.Remote.ConnectionManagerCounters": {
+      "severity": "Silence"
     },
     "Resources": {
-      "severity": "Info"
+      "severity": "Silence"
     },
     "ChainDB.AddBlockEvent.AddedBlockToQueue": {
       "maxFrequency": 2.0
@@ -96,9 +102,6 @@
       "maxFrequency": 2.0
     },
     "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
-      "maxFrequency": 2.0
-    },
-    "ChainSync.Client.DownloadedHeader": {
       "maxFrequency": 2.0
     },
     "BlockFetch.Client.CompletedBlockFetch": {

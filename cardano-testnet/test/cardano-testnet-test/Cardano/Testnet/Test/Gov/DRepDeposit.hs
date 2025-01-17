@@ -42,7 +42,7 @@ hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \temp
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def
