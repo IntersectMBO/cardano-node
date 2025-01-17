@@ -62,7 +62,7 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.6.4
+                      , hedgehog-extras ^>= 0.7
                       , lens-aeson
                       , microlens
                       , monad-control
