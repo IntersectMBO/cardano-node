@@ -250,7 +250,12 @@ readTopologyFile nc tr = do
       ]
     genesisIncompatible
       = Text.pack $  "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                  <> "Bootstrap peers are not used in Genesis consensus mode."
+                  <> "Bootstrap peers (field 'bootstrapPeers') are not compatible "
+                  <> "with Genesis syncing mode, reverting to 'DontUseBootstrapPeers'. "
+                  <> "Big ledger peers will be leveraged for decentralized syncing - it "
+                  <> "is recommened to provide an up-to-date big ledger peer snapshot file "
+                  <> "(field 'peerSnapshotFile' in topology configuration) to facilitate "
+                  <> "this process."
     handlerBootstrap :: Text
     handlerBootstrap = mconcat
       [ "You seem to have not configured any trustable peers. "
