@@ -52,7 +52,7 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = def
@@ -91,8 +91,12 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
   constitutionFile <- H.note $ work </> gov </> "sample-constitution"
   constitutionActionFp <- H.note $ work </> gov </> "constitution.action"
 
-  H.writeFile proposalAnchorFile "dummy anchor data"
-  H.writeFile constitutionFile "dummy constitution data"
+  H.writeFile proposalAnchorFile $
+    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
+
+  H.copyFile
+    "test/cardano-testnet-test/files/input/sample-constitution.txt"
+    constitutionFile
   constitutionHash <- execCli' execConfig
     [ "hash", "anchor-data", "--file-text", constitutionFile
     ]

@@ -14,12 +14,14 @@ module Cardano.Node.Types
   , ConfigYamlFilePath(..)
   , DbFile(..)
   , GenesisFile(..)
+  , PeerSnapshotFile (..)
   , ProtocolFilepaths (..)
   , GenesisHash(..)
   , MaxConcurrencyBulkSync(..)
   , MaxConcurrencyDeadline(..)
     -- * Networking
   , TopologyFile(..)
+  , NodeConsensusMode (..)
   , NodeDiffusionMode (..)
     -- * Consensus protocol configuration
   , NodeByronProtocolConfiguration(..)
@@ -38,6 +40,7 @@ import           Cardano.Api
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
+import           Ouroboros.Network.ConsensusMode (ConsensusMode (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 import           Control.Exception
@@ -80,6 +83,14 @@ newtype GenesisFile = GenesisFile
   deriving stock (Eq, Ord)
   deriving newtype (IsString, Show)
 
+-- | Path containing a serialized ledger peer snapshot
+-- for use by diffusion layer to facilitate bootstrapping
+-- a node in Genesis consensus mode
+--
+newtype PeerSnapshotFile = PeerSnapshotFile { unPeerSnapshotFile :: FilePath }
+  deriving stock (Eq, Show)
+  deriving newtype (FromJSON, ToJSON)
+
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = fail $ "Parsing of GenesisFile failed due to type mismatch. "
@@ -96,11 +107,34 @@ newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
   deriving newtype (FromJSON, Show)
 
 
--- | Newtype wrapper which provides 'FromJSON' instance for 'DiffusionMode'.
+-- | Newtype wrapper which provides 'FromJSON' instance for 'ConsensusMode'.
+--
+newtype NodeConsensusMode
+  = NodeConsensusMode { getConsensusMode :: ConsensusMode }
+  deriving newtype Show
+
+instance FromJSON NodeConsensusMode where
+    parseJSON (String str) =
+      case str of
+        "Genesis"
+          -> pure $ NodeConsensusMode GenesisMode
+        "Praos"
+          -> pure $ NodeConsensusMode PraosMode
+        _ -> fail "Parsing NodeConsensusMode failed: can be either 'Genesis' or 'Praos'"
+    parseJSON _ = fail "Parsing NodeConsensusMode failed"
+
+-- | Newtype wrapper which provides 'ToJSON' and 'FromJSON' instances for
+-- 'DiffusionMode'.
 --
 newtype NodeDiffusionMode
   = NodeDiffusionMode { getDiffusionMode :: DiffusionMode }
-  deriving newtype Show
+  deriving newtype (Eq, Show)
+
+instance ToJSON NodeDiffusionMode where
+    toJSON (NodeDiffusionMode InitiatorOnlyDiffusionMode)
+      = String "InitiatorOnly"
+    toJSON (NodeDiffusionMode InitiatorAndResponderDiffusionMode)
+      = String "InitiatorAndResponder"
 
 instance FromJSON NodeDiffusionMode where
     parseJSON (String str) =

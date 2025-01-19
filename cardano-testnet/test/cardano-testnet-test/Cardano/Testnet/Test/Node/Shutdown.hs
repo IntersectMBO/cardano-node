@@ -17,6 +17,7 @@ import qualified Cardano.Testnet as Testnet
 
 import           Prelude
 
+import           Control.Applicative (Alternative ((<|>)))
 import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types
@@ -91,13 +92,15 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
     . encode $ defaultByronProtocolParamsJsonValue
 
+  let byronGenesisOutputDir = tempAbsPath' </> "byron"
+
   startTime <- H.noteShowIO DTC.getCurrentTime
   createByronGenesis
     testnetMagic'
     startTime
     byronDefaultGenesisOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
-    (tempAbsPath' </> "byron")
+    byronGenesisOutputDir
 
   shelleyDir <- H.createDirectoryIfMissing $ tempAbsPath' </> "shelley"
 
@@ -118,8 +121,9 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
     , "--start-time", formatIso8601 startTime
     ]
 
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"
+  byronGenesisHash <- getByronGenesisHash $ byronGenesisOutputDir </> "genesis.json"
   -- Move the files to the paths expected by 'defaultYamlHardforkViaConfig' below
+  H.renameFile (byronGenesisOutputDir </> "genesis.json") (tempAbsPath' </> defaultGenesisFilepath ByronEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
   H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
@@ -224,10 +228,9 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
   mExitCodeRunning === Right ExitSuccess
 
   logs <- H.readFile (nodeStdout node)
-  slotTip <- case mapMaybe parseMsg $ reverse $ lines logs of
-    [] -> H.failMessage callStack "Could not find close DB message."
-    (Left err):_ -> H.failMessage callStack err
-    (Right s):_ -> return s
+  slotTip <- case findLastSlot . reverse $ lines logs of
+    Nothing -> H.failMessage callStack "Could not find close DB message."
+    Just s -> return s
 
   let epsilon = 50
   H.assertWithinTolerance slotTip maxSlot epsilon
@@ -261,22 +264,32 @@ hprop_shutdownOnSigint = integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tem
     other -> H.failMessage callStack $ "Unexpected exit status for the testnet process: " <> show other
 
   logs <- H.readFile nodeStdout
-  case mapMaybe parseMsg $ reverse $ lines logs of
-    [] -> H.failMessage callStack "Could not find close DB message."
-    (Left err):_ -> H.failMessage callStack err
-    (Right _):_ -> pure ()
+  case findLastSlot . reverse $ lines logs of
+    Nothing -> H.failMessage callStack "Could not find close DB message."
+    _ -> pure ()
 
 
-parseMsg :: String -> Maybe (Either String Integer)
-parseMsg line = case decode $ LBS.pack line of
-  Nothing -> Just $ Left $ "Expected JSON formated log message, but got: " ++ line
-  Just obj -> Right <$> parseMaybe parseTipSlot obj
+findLastSlot :: [String] -> Maybe Int
+findLastSlot = go (False, Nothing)
+  where
+    go (_, mSlot) [] = mSlot
+    go (True, mSlot@(Just _)) _ = mSlot
+    go r@(isDbClosed, mSlot) (line:ls) = do
+      let mLineVal = decode $ LBS.pack line
+      case mLineVal of
+        -- ignore non-json lines
+        Nothing -> go r ls
+        Just obj -> do
+          let isDbClosed' = isDbClosed || (parseMaybe parseDbClosed obj == Just True)
+              mSlot' = mSlot <|> parseMaybe parseSlot obj
+          go (isDbClosed', mSlot') ls
 
-parseTipSlot :: Object -> Parser Integer
-parseTipSlot obj = do
-  body <- obj .: "data"
-  tip <- body .: "tip"
-  kind <- body .: "kind"
-  if kind == ("TraceOpenEvent.ClosedDB" :: String)
-    then tip .: "slot"
-    else mzero
+    parseDbClosed obj = do
+      body <- obj .: "data"
+      kind <- body .: "kind"
+      pure $ kind == ("DBClosed" :: String)
+
+    parseSlot obj = do
+      body <- obj .: "data"
+      body .: "slot" :: Parser Int
+

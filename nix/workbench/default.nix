@@ -79,6 +79,13 @@ let
   # Helper functions.
   ##############################################################################
 
+  runCardanoProfile =
+    name: command: # Name of derivation and `cardano-profile` command to run.
+    pkgs.runCommand name {} ''
+      ${cardanoNodePackages.cardano-profile}/bin/cardano-profile ${command} > $out
+    ''
+  ;
+
   runJq =
     name: args: query:
     pkgs.runCommand name {} ''
@@ -100,7 +107,7 @@ in pkgs.lib.fix (self: {
 
   inherit cardanoNodePackages;
   inherit workbench' workbench runWorkbench;
-  inherit runJq;
+  inherit runCardanoProfile runJq;
   inherit profile-names-json profile-names;
 
   # Return a profile attr with a `materialise-profile` function.

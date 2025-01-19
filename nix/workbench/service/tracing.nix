@@ -13,6 +13,7 @@ let
   {
     UseTraceDispatcher   = true;
     TraceOptionResourceFrequency = 1000;
+    TraceOptionNodeName = nodeSpec.name;
 
   ## Please see the generated tracing configuration reference at:
   ##
@@ -47,6 +48,7 @@ let
       "Forge.Loop".severity = "Debug";
       "Forge.StateInfo".severity = "Debug";
       "Mempool".severity = "Debug";
+      "Mempool.Synced".severity = "Silence";
       "Net".severity = "Notice";
       "Net.AcceptPolicy".severity = "Debug";
       "Net.ConnectionManager.Local".severity = "Debug";
@@ -129,6 +131,10 @@ let
     TraceBlockFetchServer       = true;
     TraceChainSyncHeaderServer  = true;
     TraceChainSyncClient        = true;
+
+    ## needs to be explicit when new tracing is the node's default
+    UseTraceDispatcher          = false;
+
     options = {
       mapBackends = {
         "cardano.node.resources" = [ "KatipBK" ];

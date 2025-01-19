@@ -17,13 +17,13 @@ instance Arbitrary NumberOfTraceObjects where
     , pure $ NumberOfTraceObjects 100
     ]
 
-instance Arbitrary (AnyMessageAndAgency (TraceObjectForward TraceItem)) where
+instance Arbitrary (AnyMessage (TraceObjectForward TraceItem)) where
   arbitrary = oneof
-    [ AnyMessageAndAgency (ClientAgency TokIdle) . MsgTraceObjectsRequest TokBlocking <$> arbitrary
-    , AnyMessageAndAgency (ClientAgency TokIdle) . MsgTraceObjectsRequest TokNonBlocking <$> arbitrary
-    , AnyMessageAndAgency (ServerAgency (TokBusy TokBlocking)) . MsgTraceObjectsReply . BlockingReply <$> arbitrary
-    , AnyMessageAndAgency (ServerAgency (TokBusy TokNonBlocking)) . MsgTraceObjectsReply . NonBlockingReply <$> arbitrary
-    , pure  $ AnyMessageAndAgency (ClientAgency TokIdle) MsgDone
+    [ AnyMessage . MsgTraceObjectsRequest TokBlocking <$> arbitrary
+    , AnyMessage . MsgTraceObjectsRequest TokNonBlocking <$> arbitrary
+    , AnyMessage . MsgTraceObjectsReply . BlockingReply <$> arbitrary
+    , AnyMessage . MsgTraceObjectsReply . NonBlockingReply <$> arbitrary
+    , pure $ AnyMessage MsgDone
     ]
 
 instance Eq (AnyMessage (TraceObjectForward TraceItem)) where

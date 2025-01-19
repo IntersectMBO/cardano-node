@@ -22,8 +22,8 @@ let
   ;
 
   nodeSpecsJson =
-    workbenchNix.runWorkbench "node-specs-${profileName}.json"
-                 "profile node-specs ${profileName} ${topologyFiles}"
+    workbenchNix.runCardanoProfile "node-specs-${profileName}.json"
+                 "node-specs ${profileJson} ${topologyFiles}/topology.json"
   ;
 
   jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
@@ -54,6 +54,19 @@ let
           })
         generator-service;
 
+      workloads-service = builtins.map (workload: rec {
+        name = workload.name;
+        start = rec {
+          value = ''
+            ${import ../workload/${name}.nix
+                    {inherit pkgs profile nodeSpecs workload;}
+            }
+            ${workload.entrypoints.producers}
+          '';
+          JSON = pkgs.writeScript "startup-${name}.sh" value;
+        };
+      }) profile.workloads;
+
       inherit
         (pkgs.callPackage
           ../service/tracer.nix
@@ -70,12 +83,6 @@ let
             inherit backend profile nodeSpecs;
           })
         healthcheck-service;
-
-      inherit
-        (pkgs.callPackage
-          ../service/latency.nix
-          {})
-        latency-service;
     };
 
   materialise-profile =
@@ -95,9 +102,9 @@ let
             })
             node-services
             generator-service
+            workloads-service
             tracer-service
             healthcheck-service
-            latency-service
           ;
         in
           pkgs.runCommand "workbench-profile-${profileName}"
@@ -125,6 +132,11 @@ let
                   plutus-redeemer = plutus-redeemer.JSON;
                   plutus-datum    = plutus-datum.JSON;
                 };
+              workloadsService = __toJSON (builtins.map (workload: {
+                  name            = workload.name;
+                  start           = workload.start.JSON;
+                }
+              ) workloads-service);
               tracerService =
                 with tracer-service;
                 __toJSON
@@ -138,19 +150,13 @@ let
                 { name                 = "healthcheck";
                   start                = start.JSON;
                 };
-              latencyService =
-                with healthcheck-service;
-                __toJSON
-                { name                 = "latency";
-                  start                = start.JSON;
-                };
               passAsFile =
                 [
                   "nodeServices"
                   "generatorService"
+                  "workloadsService"
                   "tracerService"
                   "healthcheckService"
-                  "latencyService"
                   "topologyJson"
                   "topologyDot"
                 ];
@@ -163,9 +169,9 @@ let
             cp    $topologyDotPath              $out/topology.dot
             cp    $nodeServicesPath             $out/node-services.json
             cp    $generatorServicePath         $out/generator-service.json
+            cp    $workloadsServicePath         $out/workloads-service.json
             cp    $tracerServicePath            $out/tracer-service.json
             cp    $healthcheckServicePath       $out/healthcheck-service.json
-            cp    $latencyServicePath           $out/latency-service.json
             ''
           //
           (
@@ -180,7 +186,7 @@ let
                 value = (__fromJSON (__readFile "${topologyFiles}/topology.json"));
               };
               node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
-              inherit node-services generator-service tracer-service healthcheck-service latency-service;
+              inherit node-services generator-service tracer-service healthcheck-service workloads-service;
             }
           )
   ;

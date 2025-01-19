@@ -19,6 +19,8 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Types (PeerSnapshotFile)
+import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
@@ -34,9 +36,8 @@ import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig, WarmValency)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
@@ -106,9 +107,10 @@ data StartupTrace blk =
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint LocalRootConfig)]
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
+                  (Maybe PeerSnapshotFile)
 
   -- | Warn when 'DisabledP2P' is set.
   | NonP2PWarning
@@ -127,6 +129,7 @@ data StartupTrace blk =
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
+  | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
 
 data EnabledBlockForging = EnabledBlockForging
                          | DisabledBlockForging
@@ -244,13 +247,12 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
       Just aName -> return aName
       Nothing -> do
         -- The user didn't specify node's name in the configuration.
-        -- In this case we should form node's name as "host:port", where 'host' and 'port'
-        -- are taken from '--host-addr' and '--port' CLI-parameters correspondingly.
-        let SocketConfig hostIPv4 hostIPv6 port _ = ncSocketConfig nc
-        hostName <- case (show <$> hostIPv6) <> (show <$> hostIPv4) of
-          Last (Just addr) -> return addr
-          Last  Nothing    -> getHostName
-        return . pack $ hostName <> maybe "" ((":" ++) . show) (getLast port)
+        -- In this case we should form node's name as "host_port",
+        -- where 'host' is the machine's host name and 'port' is taken
+        -- from the '--port' CLI-parameter.
+        let SocketConfig{ncNodePortNumber = port} = ncSocketConfig nc
+        hostName <- getHostName
+        return . pack $ hostName <> "_" <> show (getLast port)
 
 -- | This information is taken from 'BasicInfoShelleyBased'. It is required for
 --   'cardano-tracer' service (particularly, for RTView).

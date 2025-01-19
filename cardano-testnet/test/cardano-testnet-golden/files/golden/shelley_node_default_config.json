@@ -1,6 +1,6 @@
 {
     "AlonzoGenesisFile": "alonzo-genesis.json",
-    "ByronGenesisFile": "byron/genesis.json",
+    "ByronGenesisFile": "byron-genesis.json",
     "ConwayGenesisFile": "conway-genesis.json",
     "EnableLogMetrics": false,
     "EnableLogging": true,
@@ -46,6 +46,7 @@
     "TraceLocalTxSubmissionServer": false,
     "TraceMempool": true,
     "TraceMux": false,
+    "TraceOptions": {},
     "TracePeerSelection": true,
     "TracePeerSelectionActions": true,
     "TracePublicRootPeers": true,

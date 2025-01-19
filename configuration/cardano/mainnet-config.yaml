@@ -12,7 +12,7 @@ ConwayGenesisHash: 15a199f895e461ec0ffc6dd4e4028af28a492ab4e806d39cb674c88f7643e
 ShelleyGenesisFile: mainnet-shelley-genesis.json
 ShelleyGenesisHash: 1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81
 
-EnableP2P: true
+EnableP2P: True
 
 ##### Core protocol parameters #####
 
@@ -36,7 +36,7 @@ MaxKnownMajorProtocolVersion: 2
 
 PeerSharing: True
 TargetNumberOfActivePeers: 20
-TargetNumberOfEstablishedPeers: 50
+TargetNumberOfEstablishedPeers: 40
 TargetNumberOfKnownPeers: 150
 TargetNumberOfRootPeers: 60
 
@@ -53,6 +53,9 @@ TurnOnLogging: True
 # These metrics are traced in the context name: 'cardano.node.metrics' and can
 # be directed to the logs or monitoring backends.
 TurnOnLogMetrics: True
+
+# Use legacy tracing
+UseTraceDispatcher: False
 
 # Global logging severity filter. Messages must have at least this severity to
 # pass. Typical values would be Warning, Notice, Info or Debug.

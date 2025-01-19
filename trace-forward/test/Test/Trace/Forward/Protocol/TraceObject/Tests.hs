@@ -43,7 +43,7 @@ tests = testGroup "Trace.Forward.Protocol.TraceObject"
   , testProperty "channel IO"     prop_channel_IO_TraceObjectForward
   ]
 
-prop_codec_TraceObjectForward :: AnyMessageAndAgency (TraceObjectForward TraceItem) -> Bool
+prop_codec_TraceObjectForward :: AnyMessage (TraceObjectForward TraceItem) -> Bool
 prop_codec_TraceObjectForward msg = runST $
   prop_codecM
     (codecTraceObjectForward CBOR.encode CBOR.decode
@@ -51,7 +51,7 @@ prop_codec_TraceObjectForward msg = runST $
     msg
 
 prop_codec_splits2_TraceObjectForward
-  :: AnyMessageAndAgency (TraceObjectForward TraceItem)
+  :: AnyMessage (TraceObjectForward TraceItem)
   -> Bool
 prop_codec_splits2_TraceObjectForward msg = runST $
   prop_codec_splitsM
@@ -61,7 +61,7 @@ prop_codec_splits2_TraceObjectForward msg = runST $
     msg
 
 prop_codec_splits3_TraceObjectForward
-  :: AnyMessageAndAgency (TraceObjectForward TraceItem)
+  :: AnyMessage (TraceObjectForward TraceItem)
   -> Bool
 prop_codec_splits3_TraceObjectForward msg = runST $
   prop_codec_splitsM
@@ -105,7 +105,7 @@ prop_connect f n = do
   forwarder <- traceObjectForwarderPeer <$> traceObjectForwarderCount
   result <- connect forwarder (traceObjectAcceptorPeer $ traceObjectAcceptorApply f 0 n)
   case result of
-    (s, c, TerminalStates TokDone TokDone) ->
+    (s, c, TerminalStates SingDone SingDone) ->
       pure $ (s, c) == (n, foldr ($) 0 (replicate n f))
 
 prop_channel

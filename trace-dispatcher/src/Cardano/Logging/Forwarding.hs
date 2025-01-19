@@ -12,17 +12,19 @@
 module Cardano.Logging.Forwarding
   (
     initForwarding
+  , initForwardingDelayed
   ) where
 
 import           Cardano.Logging.Types
 import           Cardano.Logging.Utils (runInLoop)
 import           Cardano.Logging.Version
+import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   MiniProtocolNum (..), OuroborosApplication (..),
                    RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
@@ -31,18 +33,19 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
                    makeLocalBearer)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), HandshakeCallbacks (..),
-                   SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
-                   newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
-                   withServerNode)
+import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectToArgs (..),
+                   HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
+                   connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
+                   nullNetworkServerTracers, withServerNode)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async, race_, wait)
 import           Control.Monad (void)
+import           Control.Exception (throwIO)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Void (Void)
+import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
 import           System.IO (hPutStrLn, stderr)
 import qualified System.Metrics as EKG
@@ -63,20 +66,35 @@ initForwarding :: forall m. (MonadIO m)
   -> Maybe EKG.Store
   -> Maybe (FilePath, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore)
-initForwarding iomgr config magic ekgStore tracerSocketMode = liftIO $ do
+initForwarding iomgr config magic ekgStore tracerSocketMode = do
+  (a, b, kickoffForwarder) <- initForwardingDelayed iomgr config magic ekgStore tracerSocketMode
+  liftIO kickoffForwarder
+  pure (a, b)
+
+-- We allow for delayed initialization of the forwarding connection by
+-- returning an IO action to do so.
+initForwardingDelayed :: forall m. (MonadIO m)
+  => IOManager
+  -> TraceOptionForwarder
+  -> NetworkMagic
+  -> Maybe EKG.Store
+  -> Maybe (FilePath, ForwarderMode)
+  -> m (ForwardSink TraceObject, DataPointStore, IO ())
+initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   forwardSink <- initForwardSink tfConfig handleOverflow
   dpStore <- initDataPointStore
-  launchForwarders
-    iomgr
-    magic
-    ekgConfig
-    tfConfig
-    dpfConfig
-    ekgStore
-    forwardSink
-    dpStore
-    tracerSocketMode
-  pure (forwardSink, dpStore)
+  let
+    kickoffForwarder = launchForwarders
+      iomgr
+      magic
+      ekgConfig
+      tfConfig
+      dpfConfig
+      ekgStore
+      forwardSink
+      dpStore
+      tracerSocketMode
+  pure (forwardSink, dpStore, kickoffForwarder)
  where
   p = maybe "" fst tracerSocketMode
   connSize = tofConnQueueSize config
@@ -196,15 +214,11 @@ doConnectToAcceptor
   -> IO ()
 doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
                     ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
-  connectToNode
+  done <- connectToNode
     snocket
     makeBearer
+    args
     configureSocket
-    (codecHandshake forwardingVersionCodec)
-    timeLimits
-    (cborTermVersionDataCodec forwardingCodecCBORTerm)
-    nullNetworkConnectTracers
-    (HandshakeCallbacks acceptableVersion queryVersion)
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
@@ -216,10 +230,21 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     )
     Nothing
     address
+  case done of
+    Left err -> throwIO err
+    Right choice -> case choice of
+      Left () -> return ()
+      Right v -> absurd v
  where
+  args = ConnectToArgs {
+    ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
+    ctaHandshakeTimeLimits = timeLimits,
+    ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+    ctaConnectTracers = nullNetworkConnectTracers,
+    ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
   forwarderApp
-    :: [(RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
-    -> OuroborosApplication 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
+    :: [(RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol
@@ -281,8 +306,8 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
               wait serverAsync -- Block until async exception.
  where
   forwarderApp
-    :: [(RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
-    -> OuroborosApplication 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
+    :: [(RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
+    -> OuroborosApplication 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
   forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol

@@ -10,5 +10,4 @@ Changelogs for components can be found as follows:
 - [cardano-tracer](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-tracer/CHANGELOG.md)  
 - [cardano-node-capi](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-node-capi/CHANGELOG.md) 
 - [bench/tx-generator](https://github.com/IntersectMBO/cardano-node/blob/master/bench/tx-generator/CHANGELOG.md) 
-- [bench/trace-analyzer](https://github.com/IntersectMBO/cardano-node/blob/master/bench/trace-analyzer/CHANGELOG.md) 
 

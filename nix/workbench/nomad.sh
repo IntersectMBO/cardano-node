@@ -386,6 +386,7 @@ EOL
               -i ~/.ssh/perf_cluster.key              \
               -o StrictHostKeyChecking=no             \
               -o VisualHostKey=no                     \
+              -o LogLevel=QUIET                       \
               root@"${key}".perf.aws.iohkdev.io "$@"
           ;;
 ####### clients -> ssh )########################################################

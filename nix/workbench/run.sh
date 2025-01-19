@@ -569,6 +569,8 @@ EOF
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
+        ## Add global_basedir Voltaire Plutus guardrails script
+        cp "$global_basedir"/genesis/guardrails-script.plutus "$dir"/genesis/
 
         ## 8. deploy genesis
         progress "run | genesis" "deploying.."

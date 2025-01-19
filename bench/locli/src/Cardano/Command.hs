@@ -21,6 +21,7 @@ import Options.Applicative              qualified as Opt
 
 import System.Directory                 (doesFileExist)
 import System.FilePath
+import System.Mem                       qualified as Mem (performGC)
 import System.Posix.Files               qualified as IO
 
 import Cardano.Analysis.API
@@ -29,6 +30,8 @@ import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Summary
 import Cardano.Render
 import Cardano.Report
+import Cardano.Unlog.BackendDB
+import Cardano.Unlog.BackendFile
 import Cardano.Unlog.LogObject
 import Cardano.Util             hiding (head)
 
@@ -47,15 +50,13 @@ newtype Command
   deriving Show
 
 data ChainCommand
-  = ListLogobjectKeys       TextOutputFile
-  | ListLogobjectKeysLegacy TextOutputFile
-
-  |        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
+  =        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
   |        WriteMetaGenesis TextOutputFile              TextOutputFile
 
-  |        Unlog            (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
+  |                 Unlog   (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
-
+  |             PrepareDB   String [TextInputFile] SqliteOutputFile
+  |               UnlogDB   (JsonInputFile (RunLogs ()))
   |    ValidateHashTimeline (JsonInputFile [LogObject])
 
   |        BuildMachViews
@@ -67,7 +68,7 @@ data ChainCommand
   |            ReadChain    (JsonInputFile [BlockEvents])
   |        TimelineChain    RenderConfig TextOutputFile [TimelineComments BlockEvents]
 
-  |         CollectSlots    [JsonLogfile]
+  |         CollectSlots    [LogObjectSource]
   |            DumpSlotsRaw
   |          FilterSlots    [JsonFilterFile] [ChainFilter]
   |            DumpSlots
@@ -104,12 +105,6 @@ data ChainCommand
 parseChainCommand :: Parser ChainCommand
 parseChainCommand =
   subparser (mconcat [ commandGroup "Common data:  logobject keys, run metafile & genesis"
-   , op "list-logobject-keys" "List logobject keys that analyses care about"
-     (ListLogobjectKeys
-       <$> optTextOutputFile  "keys"           "Text file to write logobject keys to")
-   , op "list-logobject-keys-legacy" "List legacy logobject keys that analyses care about"
-     (ListLogobjectKeysLegacy
-       <$> optTextOutputFile  "keys-legacy"     "Text file to write logobject keys to")
    , op "read-meta-genesis" "Read the run metadata:  meta.json and Shelley genesis"
      (ReadMetaGenesis
        <$> optJsonInputFile "run-metafile"    "The meta.json file from the benchmark run"
@@ -131,6 +126,15 @@ parseChainCommand =
             (some
              (optLOAnyType      "ok-loany"        "[MULTI] Allow a particular LOAnyType"))
      )
+   , op "unlog-db" "Read logs from DBs"
+     (UnlogDB
+       <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
+     )
+   , op "prepare-db" "Prepare an SQLite DB from a host's log output"
+     (PrepareDB
+       <$> optString                  "mach"            "host's machine name"
+       <*> some (optTextInputFile     "log"             "[MULTI] host log file(s)")
+       <*> optSqliteOutputFile        "db"              "DB output file")
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
    , op "hash-timeline" "Quickly validate timeline by hashes"
@@ -173,7 +177,7 @@ parseChainCommand =
    , op "collect-slots" "Collect per-slot performance stats"
      (CollectSlots
        <$> many
-           (optJsonLogfile    "ignore-log"   "Omit data from listed log files from perf statistics"))
+           (optLogObjectSource "ignore-log"   "Omit data from listed log sources from perf statistics"))
    , op "dump-slots-raw" "Dump unfiltered slot stats JSON streams, alongside input files"
      (DumpSlotsRaw & pure)
    , op "filter-slots" "Filter per-slot performance stats"
@@ -338,15 +342,15 @@ data State
   , sRunLogs          :: Maybe (RunLogs [LogObject])
   , sDomSlots         :: Maybe (DataDomain I SlotNo)
     -- propagation
-  , sMachViews        :: Maybe [(JsonLogfile, MachView)]
+  , sMachViews        :: Maybe [(LogObjectSource, MachView)]
   , sChain            :: Maybe Chain
   , sBlockProp        :: Maybe [BlockPropOne]
   , sMultiBlockProp   :: Maybe MultiBlockProp
     -- performance
-  , sSlotsRaw         :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
-  , sScalars          :: Maybe [(JsonLogfile, RunScalars)]
-  , sSlots            :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
-  , sMachPerf         :: Maybe [(JsonLogfile, MachPerfOne)]
+  , sSlotsRaw         :: Maybe [(LogObjectSource, [SlotStats NominalDiffTime])]
+  , sScalars          :: Maybe [(LogObjectSource, RunScalars)]
+  , sSlots            :: Maybe [(LogObjectSource, [SlotStats NominalDiffTime])]
+  , sMachPerf         :: Maybe [(LogObjectSource, MachPerfOne)]
   , sClusterPerf      :: Maybe [ClusterPerf]
   , sMultiClusterPerf :: Maybe MultiClusterPerf
     --
@@ -391,21 +395,8 @@ sAnchor State{sTags=[]} = error "sAnchor with no run or multi-summary."
 sAnchor s@State{sTags}
   = stateAnchor sTags s
 
-quote :: T.Text -> T.Text
-quote = (<> "\"") . ("\"" <>)
 
 runChainCommand :: State -> ChainCommand -> ExceptT CommandError IO State
-
-runChainCommand s
-  c@(ListLogobjectKeys f) = do
-  dumpText "logobject-keys" (quote . toText <$> logObjectStreamInterpreterKeys) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand s
-  c@(ListLogobjectKeysLegacy f) = do
-  dumpText "logobject-keys-legacy" (quote . toText <$> logObjectStreamInterpreterKeysLegacy) f
-    & firstExceptT (CommandError c)
-  pure s
 
 runChainCommand s
   c@(ReadMetaGenesis runMeta shelleyGenesis) = do
@@ -439,6 +430,19 @@ runChainCommand s
              & firstExceptT (CommandError c)
   pure s { sRunLogs = Just runLogs }
 
+runChainCommand s
+  c@(UnlogDB rlf) = do
+  progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
+  runLogsBare <- Aeson.eitherDecode @(RunLogs ())
+                 <$> LBS.readFile (unJsonInputFile rlf)
+                 & newExceptT
+                 & firstExceptT (CommandError c . pack)
+  progress "logs" (Q $ printf "loading logs from DBs for %d hosts" $
+                   Map.size $ rlHostLogs runLogsBare)
+  runLogs <- runLiftLogObjectsDB runLogsBare
+             & firstExceptT (CommandError c)
+  pure s { sRunLogs = Just runLogs }
+
 runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
   c@DumpLogObjects = do
   progress "logobjs" (Q $ printf "dumping %d logobject streams" $ length objs)
@@ -448,6 +452,13 @@ runChainCommand _ c@DumpLogObjects = missingCommandData c
   ["lifted log objects"]
 
 -- runChainCommand s c@(ReadMachViews _ _)    -- () -> [(JsonLogfile, MachView)]
+
+runChainCommand s
+  c@(PrepareDB machName inFiles outFile) = do
+    progress "prepare-db" (Q $ printf "preparing DB %s from '%s' logs" (unSqliteOutputFile outFile) machName)
+    prepareDB machName (map unTextInputFile inFiles) (unSqliteOutputFile outFile)
+      & firstExceptT (CommandError c)
+    pure s
 
 runChainCommand s
   c@(ValidateHashTimeline timelineJson) = do
@@ -468,6 +479,7 @@ runChainCommand s
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do
   progress "machviews" (Q $ printf "building %d machviews" $ length objs)
+  performGC
   mvs <- buildMachViews run objs & liftIO
   pure s { sMachViews = Just mvs }
 runChainCommand _ c@BuildMachViews = missingCommandData c
@@ -541,8 +553,9 @@ runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   c@(CollectSlots ignores) = do
   let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
   forM_ ignores $
-    progress "perf-ignored-log" . R . unJsonLogfile
-  progress "slots" (Q $ printf "building slot %d timelines" $ length objs)
+    progress "perf-ignored-log" . R . logObjectSourceFile
+  progress "slots" (Q $ printf "building %d slot timelines" $ length objs)
+  performGC
   (scalars, slotsRaw) <-
     fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
@@ -601,7 +614,7 @@ runChainCommand s@State{sRun=Just _run, sSlots=Just slots}
 runChainCommand _ c@TimelineSlots{} = missingCommandData c
   ["run metadata & genesis", "filtered slots"]
 
-runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}, sRunLogs}
+runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}}
   c@ComputePropagation = do
   progress "block-propagation" $ J (cDomBlocks, cDomSlots)
   prop <- pure (blockProp run chain)
@@ -615,9 +628,11 @@ runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}, sRunLogs}
        renderBlockPropError e
        <> maybe "" ((".\n\n  Missing traces in run logs (not all are fatal):\n\n    " <>)
                     . T.intercalate "\n    "
-                    . fmap toText
-                    . rlMissingTraces)
-                sRunLogs
+                    . const []
+                   )
+                Nothing
+                -- TODO: reactivate output once there's a proper evaluation of raw data
+
 runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 
@@ -668,6 +683,7 @@ runChainCommand _ c@RenderMultiPropagation{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@ComputeMachPerf = do
   progress "machperf" (Q $ printf "computing %d machine performances" $ length slots)
+  performGC
   perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
           & fmap sequence
           & newExceptT
@@ -852,6 +868,10 @@ _reportBanner fnames inputfp = mconcat
 fromAnalysisError :: ChainCommand -> AnalysisCmdError -> CommandError
 fromAnalysisError c (AnalysisCmdError t) = CommandError c t
 fromAnalysisError c o = CommandError c (show o)
+
+
+performGC :: ExceptT CommandError IO ()
+performGC = liftIO Mem.performGC
 
 runCommand :: Command -> ExceptT CommandError IO ()
 

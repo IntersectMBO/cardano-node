@@ -9,13 +9,17 @@ module Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Address (StakeCredential (..), toShelleyStakeCredential)
 
+import           Cardano.CLI.Types.Key (SomeSigningKey (AStakeSigningKey))
+import qualified Cardano.Ledger.UMap as L
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad
 import           Data.Default.Class
+import qualified Data.Map as M
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
@@ -30,12 +34,13 @@ import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/register deregister stake address in transaction build/"'@
 hprop_tx_register_deregister_stake_address :: Property
-hprop_tx_register_deregister_stake_address = integrationWorkspace "register-deregister-stake-address" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_tx_register_deregister_stake_address = integrationWorkspace "register-deregister-stake-addr" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -44,7 +49,7 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
       shelleyOptions = def { genesisEpochLength = 200 }
@@ -75,10 +80,19 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
       stakeKeys =  KeyPair { verificationKey = File $ work </> "stake.vkey"
                            , signingKey = File $ work </> "stake.skey"
                            }
+
   cliStakeAddressKeyGen stakeKeys
   keyDeposit <- getKeyDeposit epochStateView ceo
   createStakeKeyRegistrationCertificate
     tempAbsPath (AnyShelleyBasedEra sbe) (verificationKey stakeKeys) keyDeposit stakeCertFp
+
+  -- obtain stake key hash as ledger's Credential
+  AStakeSigningKey key <- H.leftFailM . H.evalIO $
+    readKeyFileAnyOf
+      [FromSomeType (AsSigningKey AsStakeKey) AStakeSigningKey]
+      [FromSomeType (AsSigningKey AsStakeKey) AStakeSigningKey]
+      (signingKey stakeKeys)
+  stakeKeyHash <- H.noteShow . toShelleyStakeCredential . StakeCredentialByKey . verificationKeyHash $ getVerificationKey key
 
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
@@ -105,12 +119,23 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
     , "--out-file", stakeCertTxSignedFp
     ]
 
+  H.note_ "Check that stake address isn't registered yet"
+  getDelegationState epochStateView >>=
+    flip H.assertWith
+      (M.notMember stakeKeyHash . L.scDeposits)
+
   void $ execCli' execConfig
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertTxSignedFp
     ]
 
-  H.noteShowM_ $ waitForBlocks epochStateView 1
+
+  _ <- waitForBlocks epochStateView 1
+
+  H.note_ "Check that stake address is registered"
+  getDelegationState epochStateView >>=
+    flip H.assertWith
+      (M.member stakeKeyHash . L.scDeposits)
 
   -- deregister stake address
   createStakeKeyDeregistrationCertificate
@@ -145,3 +170,11 @@ hprop_tx_register_deregister_stake_address = integrationWorkspace "register-dere
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertDeregTxSignedFp
     ]
+
+  _ <- waitForBlocks epochStateView 1
+
+  H.note_ "Check that stake address is deregistered"
+  getDelegationState epochStateView >>=
+    flip H.assertWith
+      (M.notMember stakeKeyHash . L.scDeposits)
+

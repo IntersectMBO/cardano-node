@@ -129,6 +129,43 @@ let
         value = ''
           #!${pkgs.stdenv.shell}
 
+          ###########################################
+          # Extra workloads start ###################
+          ###########################################
+          ${builtins.concatStringsSep "" (builtins.map (workload:
+              let workload_name = workload.name;
+                  entrypoint = workload.entrypoints.pre_generator;
+                  node_name = if profile.composition.with_explorer
+                              then "explorer"
+                              else "node-0"
+                  ;
+              in
+                  ''
+                  ###########################################
+                  ########## workload start: ${workload_name}
+                  ###########################################
+                  ${if entrypoint != null
+                    then
+                      ''
+                      ${import ../workload/${workload_name}.nix
+                        {inherit pkgs profile nodeSpecs workload;}
+                      }
+                      (cd ../workloads/${workload_name} && ${entrypoint} ${node_name})
+                      ''
+                    else
+                      ''
+                      ''
+                  }
+                  ###########################################
+                  ########## workload end:   ${workload_name}
+                  ###########################################
+                  ''
+            ) (profile.workloads or []))
+          }
+          #############################################
+          # Extra workloads end #######################
+          #############################################
+
           ${service.script}
           '';
         JSON = pkgs.writeScript "startup-generator.sh" value;

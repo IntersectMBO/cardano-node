@@ -4,6 +4,7 @@
 { haskell-nix
 , incl
 , CHaP
+, macOS-security
 }:
 let
 
@@ -127,6 +128,7 @@ let
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
             packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
+            packages.ouroboros-network.components.library.doHaddock = false; # Currently broken
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
@@ -194,6 +196,7 @@ let
               mainnetConfigFiles = [
                 "configuration/cardano/mainnet-config.yaml"
                 "configuration/cardano/mainnet-config.json"
+                "configuration/cardano/mainnet-config-new-tracing.json"
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
@@ -210,6 +213,7 @@ let
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.json.golden"
+                "cardano-testnet/test/cardano-testnet-test/files/input/sample-constitution.txt"
                 "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
                 "cardano-testnet/files/data/conway/genesis.conway.spec.json"
               ];
@@ -279,7 +283,11 @@ let
                   unset TMPDIR
                   export TMPDIR=$(mktemp -d)
                   export TMP=$TMPDIR
-                '';
+                '' + (if pkgs.stdenv.hostPlatform.isDarwin
+                     then ''
+                  export PATH=${macOS-security}/bin:$PATH
+                          ''
+                     else '''');
               packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:

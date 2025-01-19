@@ -276,6 +276,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["BlockFetch", "Server"]
     configureTracers configReflection trConfig [blockFetchServerTr]
 
+    !servedBlockLatestTr <- servedBlockLatest mbTrEKG
+
     !forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Forge", "StateInfo"]
@@ -333,6 +335,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "GSM"]
     configureTracers configReflection trConfig [consensusGsmTr]
 
+    !consensusCsjTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "CSJ"]
+    configureTracers configReflection trConfig [consensusCsjTr]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -350,6 +357,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            <> traceWith blockFetchClientMetricsTr
       , Consensus.blockFetchServerTracer = Tracer $
           traceWith blockFetchServerTr
+          <> traceWith servedBlockLatestTr
       , Consensus.forgeStateInfoTracer = Tracer $
           traceWith (traceAsKESInfo (Proxy @blk) forgeKESInfoTr)
       , Consensus.gddTracer = Tracer $
@@ -374,6 +382,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusStartupErrorTr . ConsensusStartupException
       , Consensus.gsmTracer = Tracer $
           traceWith consensusGsmTr
+      , Consensus.csjTracer = Tracer $
+          traceWith consensusCsjTr
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -458,6 +468,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["TxSubmission", "Remote"]
     configureTracers configReflection trConfig [txSubmission2Tracer]
 
+    !keepAliveTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["KeepAlive", "Remote"]
+    configureTracers configReflection trConfig [keepAliveTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -469,6 +484,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith blockFetchSerialisedTr
       , NtN.tTxSubmission2Tracer = Tracer $
           traceWith txSubmission2Tracer
+      , NtN.tKeepAliveTracer = Tracer $
+          traceWith keepAliveTracer
       }
 
 mkDiffusionTracers

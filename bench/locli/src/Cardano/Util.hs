@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{- HLINT ignore "Use list literal pattern" -}
 module Cardano.Util
   ( module Prelude
   , module Data.Aeson
@@ -24,36 +24,40 @@ module Cardano.Util
   )
 where
 
-import Prelude                          (String, error, head, last)
-import Text.Show qualified as Show      (Show(..))
-import Cardano.Prelude
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
+import           Cardano.Prelude
+import           Ouroboros.Consensus.Util.Time
 
-import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), (.!=), withObject, object)
-import Data.Aeson                       qualified as AE
-import Control.Arrow                    ((&&&), (***))
-import Control.Applicative              ((<|>))
-import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
-import Control.DeepSeq                  qualified as DS
-import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.IntervalMap.FingerTree      (Interval (..), low, high, point)
-import Data.List                        (span)
-import Data.List.Split                  (chunksOf)
-import Data.Text                        qualified as T
-import Data.SOP                         (I (..), unI)
-import Data.SOP.Strict
-import Data.Time.Clock                  (NominalDiffTime, UTCTime (..), diffUTCTime, addUTCTime)
-import Data.Time.Clock.POSIX
-import Data.Vector                      (Vector)
-import Data.Vector                      qualified as Vec
-import GHC.Base                         (build)
-import Text.Printf                      (printf)
+import           Prelude (String, error, head, last)
 
-import System.FilePath                  qualified as F
-
-import Ouroboros.Consensus.Util.Time
-
-import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
+import           Control.Applicative ((<|>))
+import           Control.Arrow ((&&&), (***))
+import           Control.Concurrent.Async (forConcurrently, forConcurrently_, mapConcurrently,
+                   mapConcurrently_)
+import           Control.Concurrent.Extra (Lock, newLock, withLock)
+import qualified Control.DeepSeq as DS
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), object, withObject,
+                   (.!=), (.:), (.:?))
+import qualified Data.Aeson as AE
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Data (Data)
+import           Data.IntervalMap.FingerTree (Interval (..), high, low, point)
+import           Data.List (span)
+import           Data.List.Split (chunksOf)
+import           Data.SOP (I (..), unI)
+import           Data.SOP.Strict
+import qualified Data.Text as T
+import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime, diffUTCTime)
+import           Data.Time.Clock.POSIX
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vec
+import           GHC.Base (build)
+import qualified GHC.Stats as RTS
+import qualified System.FilePath as F
+import           System.IO.Unsafe (unsafePerformIO)
+import           Text.Printf (printf)
+import qualified Text.Show as Show (Show (..))
 
 
 deriving newtype instance FromJSON a => (FromJSON (I a))
@@ -83,6 +87,8 @@ intvDurationSec = uncurry diffUTCTime . (high &&& low)
 -- * SMaybe
 --
 type SMaybe a = StrictMaybe a
+
+deriving instance Data a => Data (SMaybe a)
 
 smaybe :: b -> (a -> b) -> StrictMaybe a -> b
 smaybe x _  SNothing = x
@@ -146,7 +152,7 @@ mapLast :: (a -> a) -> [a] -> [a]
 mapLast _ [] = error "mapHead: partial"
 mapLast f xs' = reverse $ go [] xs'
  where go acc = \case
-                   x:[] ->     f x:acc
+                   [x]  ->     f x:acc
                    x:xs -> go (  x:acc) xs
 
 redistribute :: (a, (b, c)) -> ((a, b), (a, c))
@@ -160,23 +166,55 @@ toDouble :: forall a. Real a => a -> Double
 toDouble = fromRational . toRational
 
 data F
-  = R String
-  | Q String
-  | L [String]
+  = R     String
+  | RNoCR String
+  | Q     String
+  | L     [String]
   | forall a. ToJSON a => J a
 
+-- makes console output with `progress` thread-safe
+progressLock :: Lock
+progressLock = unsafePerformIO newLock
+{-# NOINLINE progressLock #-}
+
 progress :: MonadIO m => String -> F -> m ()
-progress key = putStr . T.pack . \case
-  R x  -> printf "{ \"%s\":  %s }\n"    key x
-  Q x  -> printf "{ \"%s\": \"%s\" }\n" key x
-  L xs -> printf "{ \"%s\": \"%s\" }\n" key (Cardano.Prelude.intercalate "\", \"" xs)
-  J x  -> printf "{ \"%s\": %s }\n" key (LBS.unpack $ AE.encode x)
+progress key format = liftIO $
+  withLock progressLock $
+    putStr $ T.pack $ case format of
+      R x      -> printf "{ \"%s\":  %s }\n"    key x
+      RNoCR x  -> printf "{ \"%s\":  %s } "     key x
+      Q x      -> printf "{ \"%s\": \"%s\" }\n" key x
+      L xs     -> printf "{ \"%s\": \"%s\" }\n" key (Cardano.Prelude.intercalate "\", \"" xs)
+      J x      -> printf "{ \"%s\": %s }\n"     key (LBS.unpack $ AE.encode x)
+
+withTimingInfo :: MonadIO m => String -> m a -> m a
+withTimingInfo name action = do
+  before <- liftIO getPOSIXTime
+  result <- action
+  after  <- liftIO getPOSIXTime
+  heap   <- liftIO $ RTS.gcdetails_mem_in_use_bytes . RTS.gc <$> RTS.getRTSStats
+  let
+    seconds   :: Int
+    seconds   = floor $ after - before
+    mibibytes = heap `div` 1024 `div` 1024
+  progress "timing" (R $ "time: " ++ show seconds ++ "s; heap: " ++ show mibibytes ++ "MiB; <" ++ name ++ ">")
+  pure result
 
 -- Dumping to files
 --
 replaceExtension :: FilePath -> String -> FilePath
 replaceExtension f new = F.dropExtension f <> "." <> new
 
+-- Run asyncs concurrently, but at most `n` at the same time.
+-- Two words of warning though - if careless, you can create deadlocks that way:
+-- 1. don't use looping actions (like `forever`) - they might block another async from getting kicked off
+-- 2. avoid using blocking synchronization between actions - you may be blocking the kick-off of an async you're actually waiting on
+-- 3. it's not guaranteed that _at least_ `n` asyncs run concurrently - a long running one may delay the kick-off of others
+sequenceConcurrentlyChunksOf :: Int -> [IO a] -> IO [a]
+sequenceConcurrentlyChunksOf n actions = do
+  locks <- cycle <$> replicateM n newLock
+  let withLockActions = zipWith ($) (map withLock locks) actions
+  runConcurrently $ traverse Concurrently withLockActions
 
 spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
 spans f = go []

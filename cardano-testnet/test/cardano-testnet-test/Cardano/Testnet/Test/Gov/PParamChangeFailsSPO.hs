@@ -58,7 +58,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
 
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
@@ -126,6 +126,8 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
     , "--tx-file", stakeCertTxSignedFp
     ]
 
+  -- make sure that stake registration cert gets into a block
+  _ <- waitForBlocks epochStateView 1
 
   let propVotes :: [(String, Int)]
       propVotes = mkVotes [(1, "yes")]
@@ -163,7 +165,7 @@ failToVoteChangeProposalWithSPOs ceo execConfig epochStateView work prefix
                                  governanceActionTxId governanceActionIndex votes wallet = withFrozenCallStack $ do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 

@@ -53,12 +53,14 @@ let
           active_slots="$(${jq}/bin/jq --null-input -r    \
             "''${epoch_length} * ''${active_slots_coeff}" \
           )"
+          with_explorer="$(${jq}/bin/jq      .composition.with_explorer  ../profile.json)"
           ${coreutils}/bin/echo "profile.json:"
           ${coreutils}/bin/echo "- network_magic:      ''${network_magic}"
           ${coreutils}/bin/echo "- slot_duration:      ''${slot_duration}"
           ${coreutils}/bin/echo "- epoch_length:       ''${epoch_length}"
           ${coreutils}/bin/echo "- active_slots_coeff: ''${active_slots_coeff}"
           ${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
+          ${coreutils}/bin/echo "- with_explorer:      ''${with_explorer}"
 
           # Fetch all defined node names (Including "explorer" nodes)
           ###########################################################
@@ -121,9 +123,6 @@ let
 
             for node in ''${nodes[*]}
             do
-
-              # TODO: A couple of simple pings
-              # latency_topology_producers "''${node}"
 
               # Cardano cluster connectivity (cardano-ping)
               connectivity_topology_producers "''${node}"
@@ -201,8 +200,6 @@ let
           ######################################################################
           # Network functions ##################################################
           ######################################################################
-
-          # TODO: latency_topology_producers "''${node}"
 
           function connectivity_topology_producers() {
             local node=$1
@@ -355,8 +352,8 @@ let
             else
               local tip block slot
               # Returns nothing/empty/"" when the node is exiting
-              tip=$(${cardano-cli}/bin/cardano-cli query tip \
-                --testnet-magic "''${network_magic}"         \
+              tip=$(${cardano-cli}/bin/cardano-cli conway query tip \
+                --testnet-magic "''${network_magic}"                \
                 --socket-path "../''${node}/node.socket"
               )
               block=$(${coreutils}/bin/echo "''${tip}" | ${jq}/bin/jq .block)

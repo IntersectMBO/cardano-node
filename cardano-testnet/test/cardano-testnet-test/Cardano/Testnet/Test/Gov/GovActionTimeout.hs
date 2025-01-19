@@ -51,7 +51,7 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
 
   -- Create default testnet
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       eraName = eraToString sbe
       asbe = AnyShelleyBasedEra sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
@@ -124,6 +124,9 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertTxSignedFp
     ]
+
+  -- make sure that stake registration cert gets into a block
+  _ <- waitForBlocks epochStateView 1
 
   -- Create a proposal
   (governanceActionTxId, _governanceActionIndex) <-

@@ -6,6 +6,8 @@ import "delta-blockbudget" as blockbudget;
 import "delta-blocksizes"  as blocksizes;
 import "delta-v8-preview"  as v8preview;
 import "delta-v9-preview"  as v9preview;
+import "delta-v10-preview"  as v10preview;
+import "delta-voting"      as voting;
 
 def filterMapPParams(flt; map):
     timeline::epochs
@@ -29,7 +31,9 @@ def overlays:
   , "stepshalf":    blockbudget::delta_stepshalf
   , "v8-preview":   v8preview::delta
   , "v9-preview":   v9preview::delta
+  , "v10-preview":  v10preview::delta
   , "blocksize64k": blocksizes::delta_64kblocks
+  , "voting":       voting::delta_voting
   };
 
 def pParamsWithOverlays(epoch; overlay_names):

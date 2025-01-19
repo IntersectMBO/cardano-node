@@ -74,11 +74,12 @@ profilesNoEraMiniature =
       ciBench02PlutusV3 = ciBench02 & V.genesisVariantVoltaire
       ciBench10Value    = ciBench10 & V.genesisVariant300
       ciBench10Plutus   = ciBench10 & V.genesisVariant300
-      loop     = V.plutusSaturation     . V.plutusTypeLoop
-      loop2024 = V.plutusSaturation     . V.plutusTypeLoop2024
-      ecdsa    = V.plutusSecpSaturation . V.plutusTypeECDSA
-      schnorr  = V.plutusSecpSaturation . V.plutusTypeSchnorr
-      blst     = V.plutusBlstSaturation . V.plutusTypeBLST
+      loop     = V.plutusSaturation           . V.plutusTypeLoop
+      loop2024 = V.plutusSaturation           . V.plutusTypeLoop2024
+      ecdsa    = V.plutusDoublePlusSaturation . V.plutusTypeECDSA
+      schnorr  = V.plutusDoublePlusSaturation . V.plutusTypeSchnorr
+      blst     = V.plutusDoublePlusSaturation . V.plutusTypeBLST
+      ripemd   = V.plutusDoublePlusSaturation . V.plutusTypeRIPEMD
   in [
   -- 2 nodes, local
     ciBench02Value    & P.name "ci-bench"                      . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
@@ -92,6 +93,7 @@ profilesNoEraMiniature =
   , ciBench02Plutus   & P.name "ci-bench-plutus-secp-ecdsa"    . ecdsa        . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
   , ciBench02Plutus   & P.name "ci-bench-plutus-secp-schnorr"  . schnorr      . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
   , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-blst"        . blst         . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
+  , ciBench02PlutusV3 & P.name "ci-bench-plutusv3-ripemd"      . ripemd        . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.v10Preview
   -- 10 nodes, local
   , ciBench10Value    & P.name "10"                            . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
   , ciBench10Value    & P.name "10-p2p"                        . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOn
@@ -106,7 +108,8 @@ profilesNoEraMiniature =
           P.empty & base
         . P.desc "Miniature dataset, dense topology on local cluster, 64k blocks"
         . P.torusDense . V.hosts 6 . P.loopback
-        . V.genesisVariantLatest . P.blocksize64k . P.v9Preview . P.v8Preview
+        -- Function `genesisVariantPreVoltaire` last to match `jq` order.
+        . P.blocksize64k . P.v9Preview . V.genesisVariantPreVoltaire
         . P.dreps 0
         . P.p2pOn
         . P.analysisSizeFull . P.analysisUnitary

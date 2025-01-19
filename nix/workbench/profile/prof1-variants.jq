@@ -392,7 +392,7 @@ def all_profile_variants:
      | .node.shutdown_on_slot_synced    = 1200
     ) as $for_1200slot
   ##
-  ### Definition vocabulary:  workload
+  ### Definition vocabulary:  generator workload
   ##
   | ({}|
      .generator.tps                   = 15
@@ -426,6 +426,13 @@ def all_profile_variants:
       { filters:                        ["size-small"]
       }
     }) as $plutus_base
+  |
+    ({ extra_desc: "with DRep voting workload"
+    , generator:
+      { inputs_per_tx:                  1
+      , outputs_per_tx:                 1
+      }
+    }) as $voting_base
   |
    ({ generator:
       { plutus:
@@ -517,7 +524,46 @@ def all_profile_variants:
       }
     }
     | .generator.tx_fee        = 940000
-    ) as $plutus_loop_blst    
+    ) as $plutus_loop_blst
+  |
+   ({ generator:
+      { plutus:
+          { type:                       "LimitTxPerBlock_8"
+          , script:                     "Ripemd160"
+          , redeemer:
+            { "constructor": 0
+            , "fields": [
+                { "int": 1000000 }
+              ## ByteString content is arbitrary, but should be of the same size as RIPEMD-160 output, i.e. 160 bits
+              , { bytes: "5a56da88e6fd8419181dec4d3dd6997bab953d2f" }
+              ]
+            }
+          }
+      }
+    }
+    | .generator.tx_fee        = 940000
+    ) as $plutus_loop_ripemd
+  ##
+  ### Definition vocabulary:  custom workloads
+  ##
+  |
+    ({  name: "latency"
+      , parameters: {}
+      , entrypoints: {
+          pre_generator: null
+        , producers:     "latency"
+      }
+      , wait_pools: false
+    }) as $latency_workload
+  |
+    ({  name: "voting"
+      , parameters: {}
+      , entrypoints: {
+          pre_generator: "workflow_generator"
+        , producers:     "workflow_producer"
+      }
+      , wait_pools: true
+    }) as $voting_workload
   ##
   ### Definition vocabulary:  genesis variants
   ##
@@ -548,6 +594,14 @@ def all_profile_variants:
       | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview", "doublebudget"]
     ) as $costmodel_v9_preview_doubleb
   |
+    ({}
+      | .genesis.pparamsOverlays      = ["stepshalf"]
+    ) as $costmodel_stepshalf
+  |
+    ({}
+      | .genesis.pparamsOverlays      = ["doublebudget"]
+    ) as $costmodel_doubleb
+  |
     ($costmodel_v9_preview
       | .genesis.pparamsOverlays      as $ovls
       | .genesis.pparamsOverlays      = $ovls + ["blocksize64k"]
@@ -556,6 +610,17 @@ def all_profile_variants:
     ({}
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
     ) as $genesis_voltaire
+  |
+    ({}
+      | .genesis.pparamsOverlays      = ["v10-preview"]
+    ) as $costmodel_v10_preview
+  |
+    ($genesis_voltaire
+      | .genesis.pparamsOverlays      as $ovls
+      | .genesis.pparamsOverlays      = $ovls + ["v10-preview", "voting"]
+      | .genesis.utxo_keys            = 2
+      | .genesis.funds_balance        = 40000000000000
+    ) as $genesis_voting
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -672,9 +737,6 @@ def all_profile_variants:
    ({ scenario:                        "tracer-only"
     }) as $scenario_tracer_only
   |
-   ({ scenario:                        "latency"
-    }) as $scenario_latency
-  |
   ##
   ### Definition vocabulary:  base variant
   ##
@@ -785,12 +847,14 @@ def all_profile_variants:
         }
     }) as $nomad_perf_plutussecp_base
   |
-   ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
+   ($compose_fiftytwo * $dataset_empty * $no_filtering *
     { desc: "AWS perf class cluster, stop when all latency services stop"
+    , workloads: [ $latency_workload ]
     }) as $nomad_perf_latency_base
   |
-   ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
+   ($compose_fiftytwo * $dataset_empty * $no_filtering *
     { desc: "AWS perf-ssd class cluster, stop when all latency services stop"
+    , workloads: [ $latency_workload ]
     }) as $nomad_perfssd_latency_base
   |
    ($scenario_nomad_perfssd_solo * $solo * $dataset_24m *
@@ -906,9 +970,19 @@ def all_profile_variants:
     ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $valuevolt_nomadperf_template
   |
+  # P&T Nomad cluster: 52 nodes, P2P by default - value+voting workload
+  # Extra splits, benchmarking from 5th epoch (skip 0,1,2,3 / 533 min / 8.88 hs)
+    ($nomad_perf_base * $nomad_perf_dense * $p2p * $genesis_voting *
+      {analysis: { filters: ["epoch5+", "size-full"] } }
+    ) as $valuevoting_nomadperf_template
+  |
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
     ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $genesis_voltaire
     ) as $plutusvolt_nomadperf_template
+  |
+  # P&T Nomad cluster: 52 nodes, P2P by default - plutus+voting workload
+    ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $genesis_voting
+    ) as $plutusvoting_nomadperf_template
   |
   # P&T Nomad cluster: 52 nodes, P2P by default - PlutusV3 BLST workload
     ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $genesis_voltaire
@@ -1125,6 +1199,11 @@ def all_profile_variants:
     , analysis:
       { filters:        ["size-moderate-2"] }
     }
+  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_ripemd *
+    { name: "ci-bench-plutusv3-ripemd"
+    , analysis:
+      { filters:        ["size-small"] }
+    }
   , $cibench_base * $without_tracer *
     { name: "ci-bench-notracer"
     }
@@ -1213,6 +1292,23 @@ def all_profile_variants:
     { name: "plutuscall-secp-schnorr-double"
     }
 
+## Conway / Voltaire era Plutus call variants
+  , $plutus_base * $plutuscall_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_ripemd *
+    { name: "plutuscall-volt-ripemd"
+    , analysis:
+      { filters:        ["size-small"] }
+    }
+  , $plutus_base * $plutuscall_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_blst *
+    { name: "plutuscall-volt-blst"
+    , analysis:
+      { filters:        ["size-moderate-2"] }
+    }
+  , $plutus_base * $plutuscall_base * $double_plus_tps_saturation_plutus * $genesis_voltaire * $costmodel_v10_preview * $plutus_loop_counter *
+    { name: "plutuscall-volt-loop"
+    , analysis:
+      { filters:        ["size-small"] }
+    }
+
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (incl. old tracing variant) and Plutus, P2P enabled by default
   , $value_nomadperf_template *
     { name: "value-nomadperf"
@@ -1244,14 +1340,82 @@ def all_profile_variants:
     { name: "plutus-volt-nomadperf"
     }
 
+## As "value" above with an extra voting workload
+  # Split creating 500k UTxO, create the transactions (build-raw) but no submit.
+  , $valuevoting_nomadperf_template * $dreps_large *
+    { name: "value-voting-utxo-volt-nomadperf"
+    , workloads:
+      [ $voting_workload * {parameters:
+        { outs_per_split_transaction: 193
+        , submit_vote: false
+        }
+      }]
+    }
+  # One vote per voting tx version.
+  , $valuevoting_nomadperf_template * $dreps_large *
+    { name: "value-voting-volt-nomadperf"
+    , workloads:
+      [ $voting_workload * {parameters:
+        { outs_per_split_transaction: 193
+        , submit_vote: true
+        , votes_per_tx: 1
+        }
+      }]
+    }
+  # Two votes per voting tx version.
+  , $valuevoting_nomadperf_template * $dreps_large *
+    { name: "value-voting-double-volt-nomadperf"
+    , workloads:
+      [ $voting_workload * {parameters:
+        { outs_per_split_transaction: 193
+        , submit_vote: true
+        , votes_per_tx: 2
+        }
+      }]
+    }
+
+## As "plutus" above with an extra voting workload
+  # Split creating 500k UTxO, create the transactions (build-raw) but no submit.
+  , $plutusvoting_nomadperf_template * $dreps_large *
+    { name: "plutus-voting-utxo-volt-nomadperf"
+    , workloads:
+      [ $voting_workload * {parameters:
+        { outs_per_split_transaction: 193
+        , submit_vote: false
+        }
+      }]
+    }
+  # One vote per voting tx version.
+  , $plutusvoting_nomadperf_template * $dreps_large *
+    { name: "plutus-voting-volt-nomadperf"
+    , workloads:
+      [ $voting_workload * {parameters:
+        { outs_per_split_transaction: 193
+        , submit_vote: true
+        , votes_per_tx: 1
+        }
+      }]
+    }
+  # Two votes per voting tx version.
+  , $plutusvoting_nomadperf_template * $dreps_large *
+    { name: "plutus-voting-double-volt-nomadperf"
+    , workloads:
+      [ $voting_workload * {parameters:
+        { outs_per_split_transaction: 193
+        , submit_vote: true
+        , votes_per_tx: 2
+        }
+      }]
+    }
+
 ## P&T Nomad cluster: 52 nodes, PlutusV3 BLST and Plutus SECP workloads
   , $plutusv3blst_nomadperf_template *
     { name: "plutusv3-blst-nomadperf"
     }
-  , $plutusv3blst_nomadperf_template * $costmodel_v9_preview_stepshalf *
+  , $plutusv3blst_nomadperf_template * $costmodel_stepshalf *
     { name: "plutusv3-blst-half-nomadperf"
     }
-  , $plutusv3blst_nomadperf_template * $costmodel_v9_preview_doubleb *
+  , $plutusv3blst_nomadperf_template * $costmodel_doubleb *
     { name: "plutusv3-blst-double-nomadperf"
     }
   , $plutussecp_nomadperf_template * $plutus_loop_secp_ecdsa *
@@ -1476,6 +1640,18 @@ def all_profile_variants:
     }
   , $scenario_chainsync * $chaindb_early_alonzo * $p2p *
     { name: "chainsync-early-alonzo-p2p"
+    }
+
+  ## development profile for voting workload: PV9, Conway costmodel, 1000 DReps injected
+  , $scenario_fixed_loaded * $doublet * $dataset_miniature * $for_3ep * $no_filtering * $voting_base * $double_plus_tps_saturation_plutus * $genesis_voting * $dreps_small *
+    { name: "development-voting"
+    , workloads:
+      [ $voting_workload * {parameters:
+        { outs_per_split_transaction: 193
+        , submit_vote: true
+        , votes_per_tx: 2
+        }
+      }]
     }
 
   ## Last, but not least, the profile used by "nix-shell -A devops":

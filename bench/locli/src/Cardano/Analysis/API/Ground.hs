@@ -1,6 +1,7 @@
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Analysis.API.Ground
   ( module Cardano.Analysis.API.Ground
@@ -10,47 +11,48 @@ module Cardano.Analysis.API.Ground
   )
 where
 
-import Prelude                          (show)
-import Cardano.Prelude                  hiding (head, toText)
-import Unsafe.Coerce                    qualified as Unsafe
+import           Cardano.Prelude hiding (head, toText)
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Cardano.Util
+import           Ouroboros.Network.Block (BlockNo (..))
 
-import Data.Aeson
-import Data.Aeson.Types                 (toJSONKeyText)
-import Data.Attoparsec.Text             qualified as Atto
-import Data.Attoparsec.Time             qualified as Iso8601
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.Map.Strict                  qualified as Map
-import Data.Text                        qualified as T
-import Data.Text.Short                  qualified as SText
-import Data.Text.Short                  (ShortText, fromText, toText)
-import Data.Time.Clock                  (UTCTime, NominalDiffTime)
-import Options.Applicative
-import Options.Applicative              qualified as Opt
-import Quiet                            (Quiet (..))
-import System.FilePath                  qualified as F
+import           Prelude as P (show)
 
-import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block          (BlockNo(..))
+import           Data.Aeson
+import           Data.Aeson.Types (toJSONKeyText)
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.CDF
+import           Data.Data (Data)
+import           Data.DataDomain
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import           Data.Text.Short (ShortText, fromText, toText)
+import qualified Data.Text.Short as SText
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
+import           Options.Applicative as Opt
+import qualified System.FilePath as F
 
-import Data.CDF
-import Data.DataDomain
-import Cardano.Util
+import qualified Unsafe.Coerce as Unsafe
 
 
 newtype FieldName = FieldName { unFieldName :: Text }
   deriving (Eq, Generic, Ord)
   deriving newtype (FromJSON, IsString, ToJSON)
   deriving anyclass NFData
-  deriving Show via Quiet FieldName
+
+instance Show FieldName where
+  show = ("FieldName " ++) . P.show . unFieldName
 
 newtype TId = TId { unTId :: ShortText }
   deriving (Eq, Generic, Ord)
   deriving newtype (FromJSON, ToJSON)
   deriving anyclass NFData
-  deriving Show via Quiet TId
+
+instance Show TId where
+  show = ("TId " ++) . P.show . unTId
 
 newtype Hash = Hash { unHash :: ShortText }
-  deriving (Eq, Generic, Ord)
+  deriving (Eq, Generic, Ord, Data)
   deriving newtype (FromJSON, ToJSON)
   deriving anyclass NFData
 
@@ -95,7 +97,9 @@ newtype Host = Host { unHost :: ShortText }
   deriving (Eq, Generic, Ord)
   deriving newtype (IsString, FromJSON, ToJSON)
   deriving anyclass NFData
-  deriving Show via Quiet Host
+
+instance Show Host where
+  show = ("Host " ++) . P.show . unHost
 
 newtype EpochSlot = EpochSlot { unEpochSlot :: Word64 }
   deriving stock (Eq, Generic, Ord, Show)
@@ -151,17 +155,50 @@ newtype CsvOutputFile
   = CsvOutputFile { unCsvOutputFile :: FilePath }
   deriving (Show, Eq)
 
+newtype SqliteOutputFile
+  = SqliteOutputFile { unSqliteOutputFile :: FilePath }
+  deriving (Show, Eq)
+
 newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
+
+data LogObjectSource =
+    LogObjectSourceJSON   JsonLogfile
+  | LogObjectSourceSQLite FilePath
+  | LogObjectSourceOther  FilePath
+  deriving (Show, Eq, Generic, NFData)
+
+logObjectSourceFile :: LogObjectSource -> FilePath
+logObjectSourceFile = \case
+  LogObjectSourceJSON j   -> unJsonLogfile j
+  LogObjectSourceSQLite f -> f
+  LogObjectSourceOther f  -> f
+
+toLogObjectSource :: FilePath -> LogObjectSource
+toLogObjectSource fp
+  | ext == ".sqlite" || ext == ".sqlite3" = LogObjectSourceSQLite fp
+  | ext == ".json"                        = LogObjectSourceJSON (JsonLogfile fp)
+  | otherwise                             = LogObjectSourceOther fp
+  where
+    ext = map toLower $ F.takeExtension fp
+
+instance FromJSON LogObjectSource where
+  parseJSON = withText "LogObjectSource" (pure . toLogObjectSource . T.unpack)
+
+instance ToJSON LogObjectSource where
+  toJSON = toJSON . logObjectSourceFile
 
 ---
 --- Orphans
 ---
 deriving newtype instance Real      BlockNo
 deriving newtype instance Divisible BlockNo
+deriving         instance Data      BlockNo
+
 deriving newtype instance Real      SlotNo
 deriving newtype instance Divisible SlotNo
+deriving         instance Data      SlotNo
 
 ---
 --- Readers
@@ -197,6 +234,14 @@ optJsonLogfile optname desc =
     Opt.option Opt.str
       $ long optname
       <> metavar "JSONLOGFILE"
+      <> help desc
+
+optLogObjectSource :: String -> String -> Parser LogObjectSource
+optLogObjectSource optname desc =
+  fmap toLogObjectSource $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "JSONLOGFILE|SQLITE3LOGFILE"
       <> help desc
 
 argJsonLogfile :: Parser JsonLogfile
@@ -252,6 +297,14 @@ optCsvOutputFile optname desc =
       <> metavar "CSV-OUTFILE"
       <> help desc
 
+optSqliteOutputFile :: String -> String -> Parser SqliteOutputFile
+optSqliteOutputFile optname desc =
+  fmap SqliteOutputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "SQLITE-OUTFILE"
+      <> help desc
+
 optOutputFile :: String -> String -> Parser OutputFile
 optOutputFile optname desc =
   fmap OutputFile $
@@ -269,26 +322,6 @@ pSlotNo name desc =
      <> Opt.help desc
      )
 
-optUTCTime :: String -> String -> Parser UTCTime
-optUTCTime optname desc =
-  Opt.option (readerFromAttoParser Iso8601.utcTime)
-    $ long optname
-    <> metavar "ISO8601-TIME"
-    <> help desc
- where
-   -- Stolen from: cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
-   readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
-   readerFromAttoParser p =
-     Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . T.pack)
-
-optDuration :: String -> String -> NominalDiffTime -> Parser NominalDiffTime
-optDuration optname desc def=
-  Opt.option ((realToFrac :: Double -> NominalDiffTime) <$> Opt.auto)
-    $ long optname
-    <> metavar "SEC"
-    <> help desc
-    <> value def
-
 optWord :: String -> String -> Word64 -> Parser Word64
 optWord optname desc def =
   Opt.option auto
@@ -296,6 +329,12 @@ optWord optname desc def =
     <> metavar "INT"
     <> help desc
     <> value def
+
+optString :: String -> String -> Parser String
+optString optname desc =
+  Opt.option Opt.str $
+    long optname <> metavar "STRING" <> Opt.help desc
+
 -- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
 hostFromLogfilename :: JsonLogfile -> Host
 hostFromLogfilename (JsonLogfile f) =
@@ -319,26 +358,26 @@ dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
   withFile f WriteMode $ \hnd -> do
     forM_ xs $ LBS.hPutStrLn hnd . encode
 
-dumpAssociatedObjects :: ToJSON a => String -> [(JsonLogfile, a)] -> ExceptT Text IO ()
+dumpAssociatedObjects :: ToJSON a => String -> [(LogObjectSource, a)] -> ExceptT Text IO ()
 dumpAssociatedObjects ident xs = liftIO $
   flip mapConcurrently_ xs $
-    \(JsonLogfile f, x) ->
+    \(logObjectSourceFile -> f, x) ->
       withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
         LBS.hPutStrLn hnd $ encode x
 
 readAssociatedObjects :: forall a.
-  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]
+  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(LogObjectSource, a)]
 readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap (mapM sequence) $
   flip mapConcurrently fs $
     \jf@(JsonLogfile f) -> do
         x <- eitherDecode @a <$> LBS.readFile (replaceExtension f $ ident <> ".json")
         progress ident (Q f)
-        pure (jf, x)
+        pure (LogObjectSourceJSON jf, x)
 
-dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> ExceptT Text IO ()
+dumpAssociatedObjectStreams :: ToJSON a => String -> [(LogObjectSource, [a])] -> ExceptT Text IO ()
 dumpAssociatedObjectStreams ident xss = liftIO $
   flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
+    \(logObjectSourceFile -> f, xs) -> do
       withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
         forM_ xs $ LBS.hPutStrLn hnd . encode
 
@@ -348,9 +387,9 @@ dumpText ident xs (TextOutputFile f) = liftIO $ do
   withFile f WriteMode $ \hnd -> do
     forM_ xs $ hPutStrLn hnd
 
-dumpAssociatedTextStreams :: String -> [(JsonLogfile, [Text])] -> ExceptT Text IO ()
+dumpAssociatedTextStreams :: String -> [(LogObjectSource, [Text])] -> ExceptT Text IO ()
 dumpAssociatedTextStreams ident xss = liftIO $
   flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
+    \(logObjectSourceFile -> f, xs) -> do
       withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
         forM_ xs $ hPutStrLn hnd

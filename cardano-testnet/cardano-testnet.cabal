@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 10.1
-                      , cardano-cli ^>= 10.1
+                      , cardano-api ^>= 10.6
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.3
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -49,7 +49,7 @@ library
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.5
+                      , cardano-ping ^>= 0.7
                       , contra-tracer
                       , containers
                       , data-default-class
@@ -62,15 +62,16 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.6.4
+                      , hedgehog-extras ^>= 0.7
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mono-traversable
                       , mtl
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.17
+                      , ouroboros-network ^>= 0.19
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -204,6 +205,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
                         Cardano.Testnet.Test.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.Gov.Transaction.HashMismatch
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
@@ -220,7 +222,7 @@ test-suite cardano-testnet-test
                       , base16-bytestring
                       , bytestring
                       , cardano-api:{cardano-api, internal}
-                      , cardano-cli
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib}
                       , cardano-crypto-class
                       , cardano-ledger-conway
                       , cardano-ledger-core
@@ -240,6 +242,7 @@ test-suite cardano-testnet-test
                       , lens
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mtl
                       , process
                       , regex-compat

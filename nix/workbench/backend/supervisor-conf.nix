@@ -184,14 +184,18 @@ let
         startsecs      = 5;
       };
     }
+
+
+
     //
-    {
-      "program:latency" = {
+    (builtins.listToAttrs (builtins.map (workload: {
+      name  = "program:${workload.name}";
+      value = {
         # "command" below assumes "directory" is set accordingly.
-        directory      = "${stateDir}/latency";
+        directory      = "${stateDir}/workloads/${workload.name}";
         command        = "${command}";
-        stdout_logfile = "${stateDir}/latency/stdout";
-        stderr_logfile = "${stateDir}/latency/stderr";
+        stdout_logfile = "${stateDir}/workloads/${workload.name}/stdout";
+        stderr_logfile = "${stateDir}/workloads/${workload.name}/stderr";
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
         stderr_logfile_maxbytes = 0;
@@ -204,7 +208,10 @@ let
         # Seconds it needs to stay running to consider the start successful
         startsecs      = 5;
       };
-    }
+    }) profileData.workloads))
+
+
+
     //
     lib.attrsets.optionalAttrs withSsh
     {

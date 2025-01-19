@@ -74,7 +74,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNumDReps = 3
@@ -186,7 +186,7 @@ desiredPoolNumberProposalTest
   -> m (String, Word16)
 desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
                               previousProposalInfo votes change minWait mExpected maxWait = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
@@ -229,7 +229,7 @@ makeDesiredPoolNumberChangeProposal
 makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
                                     prevGovActionInfo desiredPoolNumber wallet = do
 
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  let sbe = convert ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
@@ -244,7 +244,8 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
               }
 
   proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
-  H.writeFile proposalAnchorFile "dummy anchor data"
+  H.writeFile proposalAnchorFile $
+    unlines [ "These are the reasons:  " , "" , "1. First" , "2. Second " , "3. Third" ]
 
   proposalAnchorDataHash <- H.execCli' execConfig
     [ "hash", "anchor-data", "--file-text", proposalAnchorFile

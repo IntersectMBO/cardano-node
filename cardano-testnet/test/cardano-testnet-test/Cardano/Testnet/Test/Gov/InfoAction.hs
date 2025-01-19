@@ -31,13 +31,15 @@ import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
+import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
+import           Test.Cardano.CLI.Hash (serveFilesWhile)
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
-import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
@@ -58,7 +60,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      sbe = convert ceo
       asbe = AnyShelleyBasedEra sbe
       eraName = eraToString sbe
       fastTestnetOptions = def { cardanoNodeEra = asbe }
@@ -85,13 +87,14 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
+
+  let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
+  proposalAnchorFile <- H.noteM $ liftIO $ makeAbsolute $ "test" </> "cardano-testnet-test" </> "files" </> "sample-proposal-anchor"
+
   infoActionFp <- H.note $ work </> gov </> "info.action"
 
-  H.writeFile proposalAnchorFile "dummy anchor data"
-
   proposalAnchorDataHash <- execCli' execConfig
-    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-binary", proposalAnchorFile
     ]
 
   -- Register stake address
@@ -132,31 +135,47 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , "--tx-file", stakeCertTxSignedFp
     ]
 
-  -- Create info action proposal
+  -- make sure that stake registration cert gets into a block
+  _ <- waitForBlocks epochStateView 1
 
-  void $ execCli' execConfig
-    [ eraName, "governance", "action", "create-info"
-    , "--testnet"
-    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
-    , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
-    , "--anchor-data-hash", proposalAnchorDataHash
-    , "--out-file", infoActionFp
-    ]
+  let relativeUrl = ["ipfs", proposalAnchorDataIpfsHash]
 
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+  -- Create temporary HTTP server with files required by the call to `cardano-cli`
+  -- In this case, the server emulates an IPFS gateway
+  serveFilesWhile
+    [(relativeUrl, proposalAnchorFile)]
+    ( \port -> do
+        let execConfig' = addEnvVarsToConfig execConfig [("IPFS_GATEWAY_URI", "http://localhost:" ++ show port ++ "/")]
 
-  H.noteM_ $ execCli' execConfig
-    [ eraName, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-    , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
-    , "--proposal-file", infoActionFp
-    , "--out-file", txbodyFp
-    ]
+        void $
+          execCli'
+            execConfig'
+            [ eraName, "governance", "action", "create-info"
+            , "--testnet"
+            , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
+            , "--deposit-return-stake-verification-key-file", verificationKeyFp stakeKeys
+            , "--anchor-url", "ipfs://" ++ proposalAnchorDataIpfsHash
+            , "--anchor-data-hash", proposalAnchorDataHash
+            , "--check-anchor-data"
+            , "--out-file", infoActionFp
+            ]
+
+        txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+        void $
+          execCli'
+            execConfig'
+            [ eraName, "transaction", "build"
+            , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+            , "--tx-in", Text.unpack $ renderTxIn txin2
+            , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
+            , "--proposal-file", infoActionFp
+            , "--out-file", txbodyFp
+            ]
+    )
 
   void $ execCli' execConfig
     [ eraName, "transaction", "sign"

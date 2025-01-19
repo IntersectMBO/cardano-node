@@ -22,12 +22,13 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, e
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
+import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -40,7 +41,7 @@ instance ( ConvertTxId blk
          , HasTxs blk
          , LedgerSupportsMempool blk
          )
-      => LogFormatting (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
+      => LogFormatting (AnyMessage (BlockFetch blk (Point blk))) where
   forMachine DMinimal (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [  "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
@@ -84,7 +85,7 @@ instance ( ConvertTxId blk
 instance ToJSON SizeInBytes where
     toJSON (SizeInBytes s) = toJSON s
 
-instance MetaTrace (AnyMessageAndAgency (BlockFetch blk1 (Point blk2))) where
+instance MetaTrace (AnyMessage (BlockFetch blk1 (Point blk2))) where
     namespaceFor (AnyMessageAndAgency _stok MsgRequestRange{}) =
       Namespace [] ["RequestRange"]
     namespaceFor (AnyMessageAndAgency _stok MsgStartBatch{}) =
@@ -140,7 +141,7 @@ instance ( ConvertTxId blk
          , HasTxs blk
          , HasTxId (GenTx blk)
          )
-      => LogFormatting (AnyMessageAndAgency (BlockFetch (Serialised blk) (Point blk))) where
+      => LogFormatting (AnyMessage (BlockFetch (Serialised blk) (Point blk))) where
   forMachine _dtal (AnyMessageAndAgency stok (MsgBlock blk')) =
     mconcat  [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
@@ -175,7 +176,7 @@ instance ( ConvertTxId blk
 --------------------------------------------------------------------------------
 
 instance (Show txid, Show tx)
-      => LogFormatting (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
+      => LogFormatting (AnyMessage (STX.TxSubmission2 txid tx)) where
   forMachine _dtal (AnyMessageAndAgency stok STX.MsgInit) =
     mconcat
       [ "kind" .= String "MsgInit"
@@ -209,7 +210,7 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       ]
 
-instance MetaTrace (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
+instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
     namespaceFor (AnyMessageAndAgency _stok STX.MsgInit {}) =
       Namespace [] ["MsgInit"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =
@@ -326,5 +327,55 @@ instance MetaTrace (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
       , Namespace [] ["ReplyTxIds"]
       , Namespace [] ["RequestTxs"]
       , Namespace [] ["ReplyTxs"]
+      , Namespace [] ["Done"]
+      ]
+
+--------------------------------------------------------------------------------
+-- KeepAlive Tracer
+--------------------------------------------------------------------------------
+
+instance LogFormatting (AnyMessage KA.KeepAlive) where
+  forMachine _dtal (AnyMessageAndAgency stok KA.MsgKeepAlive {}) =
+    mconcat
+      [ "kind" .= String "KeepAlive"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok KA.MsgKeepAliveResponse {}) =
+    mconcat
+      [ "kind" .= String "KeepAliveResponse"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok KA.MsgDone) =
+    mconcat
+      [ "kind" .= String "Done"
+      , "agency" .= String (pack $ show stok)
+      ]
+
+instance MetaTrace (AnyMessage KA.KeepAlive) where
+    namespaceFor (AnyMessageAndAgency _stok KA.MsgKeepAlive {}) =
+      Namespace [] ["KeepAlive"]
+    namespaceFor (AnyMessageAndAgency _stok KA.MsgKeepAliveResponse {}) =
+      Namespace [] ["KeepAliveResponse"]
+    namespaceFor (AnyMessageAndAgency _stok KA.MsgDone) =
+      Namespace [] ["Done"]
+
+    severityFor (Namespace _ ["KeepAlive"]) _ = Just Info
+    severityFor (Namespace _ ["KeepAliveResponse"]) _ = Just Info
+    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["KeepAlive"]) = Just
+        "Client side message to keep the connection alive."
+    documentFor (Namespace _ ["KeepAliveResponse"]) = Just $ mconcat
+      [ "Server side response to a previous client KeepAlive message."
+      ]
+    documentFor (Namespace _ ["Done"]) = Just $ mconcat
+      [ "Termination message, initiated by the client."
+      ]
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["KeepAlive"]
+      , Namespace [] ["KeepAliveResponse"]
       , Namespace [] ["Done"]
       ]

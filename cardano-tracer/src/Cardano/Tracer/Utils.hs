@@ -45,8 +45,11 @@ import           Cardano.Node.Startup (NodeInfo (..))
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Utils
+import qualified Cardano.Logging as Tracer (traceWith)
+import           Cardano.Tracer.MetaTrace hiding (traceWith)
 import           Cardano.Tracer.Types
 import           Ouroboros.Network.Socket (ConnectionId (..))
+
 
 #if MIN_VERSION_base(4,18,0)
 -- Do not know why.
@@ -59,7 +62,7 @@ import           Control.Concurrent.Async (Concurrently(..))
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar_)
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
+import           Control.Concurrent.STM.TVar (modifyTVar', stateTVar, readTVarIO, newTVarIO)
 import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
                    try, tryJust)
 import           Control.Monad (forM_)
@@ -67,7 +70,8 @@ import           Control.Monad.Extra (whenJustM)
 import           "contra-tracer" Control.Tracer (stdoutTracer, traceWith)
 import           Data.Word (Word32)
 import qualified Data.Bimap as BM
-import           Data.Foldable (traverse_)
+import           Data.Bimap (Bimap)
+import           Data.Foldable (for_, traverse_)
 import           Data.Functor ((<&>), void)
 import           Data.List.Extra (dropPrefix, dropSuffix, replace)
 import qualified Data.Map.Strict as Map
@@ -167,16 +171,17 @@ askNodeName
   :: TracerEnv
   -> NodeId
   -> IO NodeName
-askNodeName TracerEnv{teConnectedNodesNames, teDPRequestors, teCurrentDPLock} =
-  askNodeNameRaw teConnectedNodesNames teDPRequestors teCurrentDPLock
+askNodeName TracerEnv{teTracer, teConnectedNodesNames, teDPRequestors, teCurrentDPLock} =
+  askNodeNameRaw teTracer teConnectedNodesNames teDPRequestors teCurrentDPLock
 
 askNodeNameRaw
-  :: ConnectedNodesNames
+  :: Trace IO TracerTrace
+  -> ConnectedNodesNames
   -> DataPointRequestors
   -> Lock
   -> NodeId
   -> IO NodeName
-askNodeNameRaw connectedNodesNames dpRequestors currentDPLock nodeId@(NodeId anId) = do
+askNodeNameRaw tracer connectedNodesNames dpRequestors currentDPLock nodeId@(NodeId anId) = do
   nodesNames <- readTVarIO connectedNodesNames
   case BM.lookup nodeId nodesNames of
     Just nodeName -> return nodeName
@@ -186,8 +191,32 @@ askNodeNameRaw connectedNodesNames dpRequestors currentDPLock nodeId@(NodeId anI
         askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
           Nothing -> return anId
           Just NodeInfo{niName} -> return $ if T.null niName then anId else niName
-      -- Store it in for the future using.
-      atomically . modifyTVar' connectedNodesNames $ BM.insert nodeId nodeName
+
+      -- Overlapping node names are considered a misconfiguration.
+      -- However using the unique node ID as a fallback still ensures no
+      -- trace messages or metrics get lost.
+      maybePair <- atomically do
+        stateTVar connectedNodesNames \oldBimap ->
+          let
+             maybePair :: Maybe (NodeId, T.Text)
+             maybePair
+               | BM.member nodeId oldBimap
+               = Nothing
+               | BM.memberR nodeName oldBimap
+               = Just (nodeId, anId)
+               | otherwise
+               = Just (nodeId, nodeName)
+
+             newBimap :: Bimap NodeId NodeName
+             newBimap = maybe oldBimap (\(k, v) -> BM.insert k v oldBimap) maybePair
+
+          in (maybePair, newBimap)
+
+      for_ @Maybe maybePair \pair ->
+        Tracer.traceWith tracer TracerAddNewNodeIdMapping
+          { ttBimapping = pair
+          }
+
       return nodeName
 
 askNodeId

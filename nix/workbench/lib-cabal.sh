@@ -63,11 +63,13 @@ function cardano-tracer() {
 }
 
 function locli() {
-    cabal -v0 build ${WB_FLAGS_CABAL} exe:locli
-    set-git-rev \
-        $(git rev-parse HEAD) \
-        $(cabal list-bin locli) || true
-                          cabal -v0 exec  ${WB_FLAGS_CABAL}     locli            -- ${WB_FLAGS_RTS} "$@"
+    #cabal -v0 build ${WB_FLAGS_CABAL} exe:locli
+    #set-git-rev \
+    #    $(git rev-parse HEAD) \
+    #    $(cabal list-bin locli) || true
+    #                     cabal -v0 exec  ${WB_FLAGS_CABAL}     locli            -- ${WB_FLAGS_RTS} "$@"
+
+                          cabal -v0 run   ${WB_FLAGS_CABAL} exe:locli            -- ${WB_FLAGS_RTS} "$@"
 }
 
 function tx-generator() {
