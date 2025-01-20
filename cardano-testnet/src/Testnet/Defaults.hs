@@ -502,7 +502,7 @@ defaultSpoKeysDir n = "pools-keys" </> defaultSpoName n
 -- | The relative path to SPO keys in directories created by cardano-testnet
 defaultSpoColdKeyPair
   :: Int
-  -> KeyPair SpoColdKey
+  -> KeyPair StakePoolKey
 defaultSpoColdKeyPair n =
   KeyPair
     { verificationKey = File $ defaultSpoKeysDir n </> "cold.vkey"
@@ -527,7 +527,7 @@ defaultSpoKeys n =
     }
 
 -- | The relative path to stake delegator key pairs in directories created by cardano-testnet
-defaultDelegatorStakeKeyPair :: Int -> KeyPair StakingKey
+defaultDelegatorStakeKeyPair :: Int -> KeyPair StakeKey
 defaultDelegatorStakeKeyPair n =
   KeyPair
     { verificationKey = File $ "stake-delegators" </> ("delegator" <> show n) </> "staking.vkey"
