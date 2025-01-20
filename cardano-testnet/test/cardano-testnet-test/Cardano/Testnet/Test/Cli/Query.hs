@@ -19,7 +19,7 @@ import           Cardano.Api.Internal.Genesis as Api
 import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), extractHash,
                    unboundRational)
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
+import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
 
 import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)

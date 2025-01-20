@@ -18,8 +18,7 @@ module Testnet.Process.Cli.Keys
   , cliByronSigningKeyAddress
   ) where
 
-import           Cardano.Api (ByronAddr, ByronKeyLegacy, File (..), FileDirection (..), StakeKey)
-import           Cardano.Api.Shelley (KesKey, StakePoolKey)
+import           Cardano.Api (ByronAddr, ByronKeyLegacy, File (..), FileDirection (..))
 
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
