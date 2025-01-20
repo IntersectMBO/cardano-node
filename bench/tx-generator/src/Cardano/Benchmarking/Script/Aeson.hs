@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -22,7 +23,7 @@ import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.Yaml as Yaml (encode)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
+import qualified Cardano.Ledger.Core as L
 
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Internal.Orphans ()
@@ -158,5 +159,9 @@ parseJSONFile parser filePath = do
 parseScriptFileAeson :: FilePath -> IO [Action]
 parseScriptFileAeson = parseJSONFile fromJSON
 
-readProtocolParametersFile :: FilePath -> IO ProtocolParameters
-readProtocolParametersFile = parseJSONFile fromJSON
+readProtocolParametersFile ::
+  ()
+  => L.EraPParams era
+  => FilePath
+  -> IO (L.PParams era)
+readProtocolParametersFile  = parseJSONFile fromJSON

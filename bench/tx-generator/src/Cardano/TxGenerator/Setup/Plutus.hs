@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-|
 Module      : Cardano.TxGenerator.Setup.Plutus
@@ -14,10 +15,10 @@ module Cardano.TxGenerator.Setup.Plutus
        )
        where
 
-import           Data.Bifunctor
+
 import           Data.ByteString.Short (ShortByteString)
-import           Data.Int (Int64)
-import           Data.Map.Strict as Map (lookup)
+import           Data.Map.Strict as Map (lookup, Map)
+import           Lens.Micro
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -26,8 +27,10 @@ import           Control.Monad.Writer (runWriter)
 import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..), fromAlonzoExUnits,
-                   protocolParamCostModels, toPlutusData)
+import           Cardano.Api.Shelley (PlutusScript (..), fromAlonzoExUnits, toAlonzoLanguage, toPlutusData)
+import qualified Cardano.Ledger.Alonzo.Core as L
+import           Cardano.Ledger.BaseTypes
+import qualified Cardano.Ledger.Plutus as LP
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 
 import qualified PlutusLedgerApi.V1 as PlutusV1
@@ -81,13 +84,15 @@ readPlutusScript (Right fp)
 -- the script's binary representation to count the number of execution
 -- units needed.
 preExecutePlutusScript ::
-     ProtocolParameters
+  ()
+  => L.AlonzoEraPParams era
+  => L.PParams era
   -> ScriptInAnyLang
   -> ScriptData
   -> ScriptRedeemer
   -> Either TxGenError ExecutionUnits
 preExecutePlutusScript
-  ProtocolParameters{protocolParamCostModels, protocolParamProtocolVersion}
+  pparams
   script@(ScriptInAnyLang scriptLang _)
   datum
   redeemer
@@ -95,7 +100,7 @@ preExecutePlutusScript
     costModel <- hoistMaybe (TxGenError $ "preExecutePlutusScript: cost model unavailable for: " ++ show scriptLang) $
       case script of
         ScriptInAnyLang _ (PlutusScript lang _) ->
-          AnyPlutusScriptVersion lang `Map.lookup` protocolParamCostModels
+          (toAlonzoLanguage (AnyPlutusScriptVersion lang)) `Map.lookup` langToCostModels
         _ ->
           Nothing
 
@@ -109,15 +114,17 @@ preExecutePlutusScript
       _ ->
         throwE $ TxGenError $ "preExecutePlutusScript: script not supported: " ++ show scriptLang
   where
-    protocolVersion :: ProtocolVersion
-    protocolVersion = bimap fromIntegral fromIntegral protocolParamProtocolVersion
+    protocolParamCostModels :: LP.CostModels = pparams ^. L.ppCostModelsL
+    langToCostModels :: Map.Map LP.Language LP.CostModel = LP.costModelsValid protocolParamCostModels
+    protocolVersion :: ProtocolVersion = (getVersion @Int pvMajor, fromIntegral pvMinor)
+    ProtVer pvMajor pvMinor = pparams ^. L.ppProtocolVersionL
 
 preExecutePlutusV1 ::
      ProtocolVersion
   -> Script PlutusScriptV1
   -> ScriptData
   -> ScriptRedeemer
-  -> CostModel
+  -> LP.CostModel
   -> Either TxGenError ExecutionUnits
 preExecutePlutusV1 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer costModel
   = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
@@ -126,7 +133,7 @@ preExecutePlutusV1 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised scri
     go
       = do
       evaluationContext <- firstExceptT PlutusError $
-        PlutusV1.mkEvaluationContext (flattenCostModel costModel)
+        PlutusV1.mkEvaluationContext (LP.getCostModelParams costModel)
 
       deserialisedScript <- firstExceptT PlutusError $ PlutusV1.deserialiseScript protocolVersion script
       exBudget <- firstExceptT PlutusError $
@@ -166,7 +173,7 @@ preExecutePlutusV2 ::
   -> Script PlutusScriptV2
   -> ScriptData
   -> ScriptRedeemer
-  -> CostModel
+  -> LP.CostModel
   -> Either TxGenError ExecutionUnits
 preExecutePlutusV2 (major, _minor) (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer costModel
   = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
@@ -175,7 +182,7 @@ preExecutePlutusV2 (major, _minor) (PlutusScript _ (PlutusScriptSerialised scrip
     go
       = do
       evaluationContext <- firstExceptT PlutusError $
-        PlutusV2.mkEvaluationContext (flattenCostModel costModel)
+        PlutusV2.mkEvaluationContext (LP.getCostModelParams costModel)
 
       deserialisedScript <- firstExceptT PlutusError $ PlutusV2.deserialiseScript protocolVersion script
 
@@ -218,7 +225,7 @@ preExecutePlutusV3 ::
   -> Script PlutusScriptV3
   -> ScriptData
   -> ScriptRedeemer
-  -> CostModel
+  -> LP.CostModel
   -> Either TxGenError ExecutionUnits
 preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (script :: ShortByteString {- a.k.a. SerialisedScript -}))) datum redeemer costModel
   = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
@@ -227,7 +234,7 @@ preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (scri
     go
       = do
       evaluationContext <- firstExceptT PlutusError $
-        PlutusV3.mkEvaluationContext (flattenCostModel costModel)
+        PlutusV3.mkEvaluationContext (LP.getCostModelParams costModel)
 
       scriptForEval <- withExceptT PlutusError $ PlutusV3.deserialiseScript protocolVersion script
       exBudget <- firstExceptT PlutusError $
@@ -273,6 +280,3 @@ preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (scri
       , PlutusV3.txInfoCurrentTreasuryAmount = Nothing
       , PlutusV3.txInfoTreasuryDonation = Nothing
       }
-
-flattenCostModel :: CostModel -> [Int64]
-flattenCostModel (CostModel cm) = cm

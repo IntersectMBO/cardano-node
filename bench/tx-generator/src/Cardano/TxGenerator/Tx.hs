@@ -7,9 +7,10 @@ module  Cardano.TxGenerator.Tx
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (LedgerProtocolParameters)
+import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as L
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO (ToUTxOList)
@@ -159,7 +160,7 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
 -- for a function type -- of two arguments.
 genTx :: ()
   => ShelleyBasedEra era
-  -> LedgerProtocolParameters era
+  -> L.PParams (ShelleyLedgerEra era)
   -> (TxInsCollateral era, [Fund])
   -> TxFee era
   -> TxMetadataInEra era
@@ -179,7 +180,7 @@ genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
     & setTxValidityLowerBound TxValidityNoLowerBound
     & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
     & setTxMetadata metadata
-    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
+    & setTxProtocolParams (BuildTxWith (Just $ LedgerProtocolParameters ledgerParameters))
 
 
 txSizeInBytes ::

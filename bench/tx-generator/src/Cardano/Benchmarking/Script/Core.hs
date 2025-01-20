@@ -18,9 +18,7 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
-                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
-                   protocolParamPrices)
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ShelleyLedgerEra (..), fromAlonzoExUnits, fromAlonzoPrices)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -38,6 +36,7 @@ import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
+import qualified Cardano.Ledger.Alonzo.Core as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Logging hiding (LocalSocket)
@@ -62,6 +61,7 @@ import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
+import           Lens.Micro
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -157,30 +157,31 @@ queryEra = do
     (return . AnyShelleyBasedEra)
     era
 
-queryRemoteProtocolParameters :: ActionM ProtocolParameters
-queryRemoteProtocolParameters = do
+-- | Protocol parameters for an era that is not statically known
+data AnyPParams where
+  AnyPParams :: Ledger.PParams (ShelleyLedgerEra era) -> AnyPParams
+
+queryRemoteProtocolParameters ::
+     ShelleyBasedEra era
+  -> ActionM AnyPParams
+queryRemoteProtocolParameters sbe = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  AnyShelleyBasedEra sbe <- queryEra
-  let
-    callQuery :: forall era.
-                 QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
-              -> ActionM ProtocolParameters
-    callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
-      pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
-          queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
-      let pp' = fromLedgerPParams shelleyEra pp
-          pparamsFile = "protocol-parameters-queried.json"
-      liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
-      traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
-      return pp'
-  callQuery $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+  let query = QueryInShelleyBasedEra sbe QueryProtocolParameters
+  pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
+      queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
+  let pparamsFile = "protocol-parameters-queried.json"
+  liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
+  traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
+  return pp
 
-getProtocolParameters :: ActionM ProtocolParameters
-getProtocolParameters = do
+getProtocolParameters ::
+     ShelleyBasedEra era
+  -> ActionM AnyPParams
+getProtocolParameters sbe = do
   getProtoParamMode  >>= \case
-    ProtocolParameterQuery -> queryRemoteProtocolParameters
-    ProtocolParameterLocal parameters -> return parameters
+    ProtocolParameterQuery -> queryRemoteProtocolParameters sbe
+    ProtocolParameterLocal parameters -> return $ AnyPParams parameters
 
 waitForEra :: AnyShelleyBasedEra -> ActionM ()
 waitForEra era = do
@@ -259,105 +260,100 @@ benchmarkTxStream sbe txStream targetNodes tps txCount = do
 evalGenerator :: ShelleyBasedEra era -> Generator -> TxGenTxParams -> ActionM (TxStream IO era)
 evalGenerator sbe generator txParams@TxGenTxParams{txParamFee = fee} = do
   networkId <- getEnvNetworkId
-  protocolParameters <- getProtocolParameters
-  case convertToLedgerProtocolParameters sbe protocolParameters of
-    Left err -> throwE (Env.TxGenError (ApiError err))
-    Right ledgerParameters ->
-      case generator of
-        SecureGenesis wallet genesisKeyName destKeyName -> do
-          genesis  <- getEnvGenesis
-          destKey  <- getEnvKeys destKeyName
-          destWallet  <- getEnvWallets wallet
-          genesisKey  <- getEnvKeys genesisKeyName
-          (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
-            shelleyBasedEraConstraints sbe $
-              Genesis.genesisSecureInitialFund sbe networkId genesis genesisKey destKey txParams
-          let
-            gen = do
-              walletRefInsertFund destWallet fund
-              return $ Right tx
-          return $ Streaming.effect (Streaming.yield <$> gen)
+  let ledgerParameters = getProtocolParameters
+  case generator of
+     SecureGenesis wallet genesisKeyName destKeyName -> do
+       genesis  <- getEnvGenesis
+       destKey  <- getEnvKeys destKeyName
+       destWallet  <- getEnvWallets wallet
+       genesisKey  <- getEnvKeys genesisKeyName
+       (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
+         shelleyBasedEraConstraints sbe $
+           Genesis.genesisSecureInitialFund sbe networkId genesis genesisKey destKey txParams
+       let
+         gen = do
+           walletRefInsertFund destWallet fund
+           return $ Right tx
+       return $ Streaming.effect (Streaming.yield <$> gen)
 
-        -- 'Split' combines regular payments and payments for change.
-        -- There are lists of payments buried in the 'PayWithChange'
-        -- type conditionally sent back by 'Utils.includeChange', to
-        -- then be used while partially applied as the @valueSplitter@
-        -- in 'sourceToStoreTransactionNew'.
-        Split walletName payMode payModeChange coins -> do
-          wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode sbe payMode
-          traceDebug $ "split output address : " ++ addressOut
-          (toUTxOChange, addressChange) <- interpretPayMode sbe payModeChange
-          traceDebug $ "split change address : " ++ addressChange
-          let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.includeChange fee coins
-            txGenerator = genTx sbe ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+     -- 'Split' combines regular payments and payments for change.
+     -- There are lists of payments buried in the 'PayWithChange'
+     -- type conditionally sent back by 'Utils.includeChange', to
+     -- then be used while partially applied as the @valueSplitter@
+     -- in 'sourceToStoreTransactionNew'.
+     Split walletName payMode payModeChange coins -> do
+       wallet <- getEnvWallets walletName
+       (toUTxO, addressOut) <- interpretPayMode sbe payMode
+       traceDebug $ "split output address : " ++ addressOut
+       (toUTxOChange, addressChange) <- interpretPayMode sbe payModeChange
+       traceDebug $ "split change address : " ++ addressChange
+       let
+         fundSource = walletSource wallet 1
+         inToOut = Utils.includeChange fee coins
+         txGenerator = genTx sbe ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
+       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-        -- The 'SplitN' case's call chain is somewhat elaborate.
-        -- The division is done in 'Utils.inputsToOutputsWithFee'
-        -- but things are threaded through
-        -- 'Cardano.Benchmarking.Wallet.mangle' and packed into
-        -- the transaction assembled by 'sourceToStoreTransactionNew'.
-        SplitN walletName payMode count -> do
-          wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode sbe payMode
-          traceDebug $ "SplitN output address : " ++ addressOut
-          let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.inputsToOutputsWithFee fee count
-            txGenerator = genTx sbe ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+     -- The 'SplitN' case's call chain is somewhat elaborate.
+     -- The division is done in 'Utils.inputsToOutputsWithFee'
+     -- but things are threaded through
+     -- 'Cardano.Benchmarking.Wallet.mangle' and packed into
+     -- the transaction assembled by 'sourceToStoreTransactionNew'.
+     SplitN walletName payMode count -> do
+       wallet <- getEnvWallets walletName
+       (toUTxO, addressOut) <- interpretPayMode sbe payMode
+       traceDebug $ "SplitN output address : " ++ addressOut
+       let
+         fundSource = walletSource wallet 1
+         inToOut = Utils.inputsToOutputsWithFee fee count
+         txGenerator = genTx sbe ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-        NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
-          wallet <- getEnvWallets walletName
-          collaterals <- selectCollateralFunds sbe collateralWallet
-          (toUTxO, addressOut) <- interpretPayMode sbe payMode
-          traceDebug $ "NtoM output address : " ++ addressOut
-          let
-            fundSource = walletSource wallet inputs
-            inToOut = Utils.inputsToOutputsWithFee fee outputs
-            txGenerator = genTx sbe ledgerParameters collaterals feeInEra (toMetadata sbe metadataSize)
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+     NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
+       wallet <- getEnvWallets walletName
+       collaterals <- selectCollateralFunds sbe collateralWallet
+       (toUTxO, addressOut) <- interpretPayMode sbe payMode
+       traceDebug $ "NtoM output address : " ++ addressOut
+       let
+         fundSource = walletSource wallet inputs
+         inToOut = Utils.inputsToOutputsWithFee fee outputs
+         txGenerator = genTx sbe ledgerParameters collaterals feeInEra (toMetadata sbe metadataSize)
+         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
 
-          fundPreview <- liftIO $ walletPreview wallet inputs
-          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
-            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
-            Right tx -> do
-              let
-                txSize = txSizeInBytes sbe tx
-                txFeeEstimate = case toLedgerPParams sbe protocolParameters of
-                  Left{}              -> Nothing
-                  Right ledgerPParams -> Just $
-                    evaluateTransactionFee sbe ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
-              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
-              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
-              -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
-              summary_ <- getEnvSummary
-              forM_ summary_ $ \summary -> do
-                let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
-                setEnvSummary summary'
-                traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
-              dumpBudgetSummaryIfExisting
+       fundPreview <- liftIO $ walletPreview wallet inputs
+       case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+         Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
+         Right tx -> do
+           let
+             txSize = txSizeInBytes sbe tx
+             txFeeEstimate = Just $
+                               evaluateTransactionFee sbe ledgerParameters (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
+           traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+           traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+           -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
+           summary_ <- getEnvSummary
+           forM_ summary_ $ \summary -> do
+             let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
+             setEnvSummary summary'
+             traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
+           dumpBudgetSummaryIfExisting
 
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-        Sequence l -> do
-          gList <- forM l $ \g -> evalGenerator sbe g txParams
-          return $ Streaming.for (Streaming.each gList) id
+     Sequence l -> do
+       gList <- forM l $ \g -> evalGenerator sbe g txParams
+       return $ Streaming.for (Streaming.each gList) id
 
-        Cycle g -> Streaming.cycle <$> evalGenerator sbe g txParams
+     Cycle g -> Streaming.cycle <$> evalGenerator sbe g txParams
 
-        Take count g -> Streaming.take count <$> evalGenerator sbe g txParams
+     Take count g -> Streaming.take count <$> evalGenerator sbe g txParams
 
-        RoundRobin l -> do
-          _gList <- forM l $ \g -> evalGenerator sbe g txParams
-          error "return $ foldr1 Streaming.interleaves gList"
+     RoundRobin l -> do
+       _gList <- forM l $ \g -> evalGenerator sbe g txParams
+       error "return $ foldr1 Streaming.interleaves gList"
 
-        OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+     OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
 
   where
     feeInEra = Utils.mkTxFee sbe fee
@@ -406,16 +402,11 @@ makePlutusContext :: ShelleyBasedEra era
   -> ScriptSpec
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
 makePlutusContext sbe ScriptSpec{..} = do
-  protocolParameters <- getProtocolParameters
+  protocolParameters <- getProtocolParameters sbe
   script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
-  executionUnitPrices <- case protocolParamPrices protocolParameters of
-    Just x -> return x
-    Nothing -> throwE $ WalletError "unexpected protocolParamPrices == Nothing in runPlutusBenchmark"
-
-  perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
-    Nothing -> liftTxGenError $ TxGenError "Cannot determine protocolParamMaxTxExUnits"
-    Just b -> return b
+  let executionUnitPrices = fromAlonzoPrices $ protocolParameters ^. L.ppPricesL
+      perTxBudget = fromAlonzoExUnits $ protocolParameters ^. L.ppMaxTxExUnitsL
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 
   (scriptData, scriptRedeemer, executionUnits) <- case scriptSpecBudget of
@@ -493,7 +484,7 @@ makePlutusContext sbe ScriptSpec{..} = do
       liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
 preExecuteScriptAction ::
-     ProtocolParameters
+     Ledger.PParams era
   -> ScriptInAnyLang
   -> ScriptData
   -> ScriptData
