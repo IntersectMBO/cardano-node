@@ -125,7 +125,7 @@ profilesNoEraEmpty = map baseNoDataset
   , fast2 & P.name "fast-p2p"        . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.p2pOn
   , fast2 & P.name "fast-oldtracing" . V.valueLocal . P.traceForwardingOn  . P.oldTracing . P.p2pOff
   , fast2 & P.name "fast-notracer"   . V.valueLocal . P.traceForwardingOff . P.newTracing . P.p2pOff
-  , fast2 & P.name "fast-plutus"     . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff
+  , fast2 & P.name "fast-plutus"     . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.analysisSizeSmall
   ]
   ++
   ------------------------------------------------------------------------------
@@ -142,7 +142,7 @@ profilesNoEraEmpty = map baseNoDataset
   , ciTest & P.name "ci-test-notracer" . V.valueLocal . P.traceForwardingOff . P.newTracing . P.p2pOff
   -- TODO: Remove and make `P.p2pOn` the default without adding a "-nop2p" profile.
   , ciTest & P.name "ci-test-p2p"      . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.p2pOn
-  , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff
+  , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.analysisSizeSmall
   , ciTest & P.name "ci-test-hydra"    . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff
   ]
   ++
@@ -152,6 +152,7 @@ profilesNoEraEmpty = map baseNoDataset
   let ciTestHydra =
           P.empty & V.datasetEmpty . V.genesisVariantPreVoltaire . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
+        . P.analysisSizeSmall
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     ciTestHydra & P.name "ci-test-hydra" . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOn
@@ -201,9 +202,9 @@ profilesNoEraEmpty = map baseNoDataset
     value  & P.name "default"             . V.valueCloud . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.analysisUnitary
   , value  & P.name "default-p2p"         . V.valueCloud . P.traceForwardingOn  . P.newTracing . P.p2pOn  . P.analysisUnitary
   , value  & P.name "oldtracing"          . V.valueCloud . P.traceForwardingOn  . P.oldTracing . P.p2pOff . P.analysisUnitary
-  , plutus & P.name "plutus"              . loop         . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , plutus & P.name "plutus-secp-ecdsa"   . ecdsa        . P.traceForwardingOn  . P.newTracing . P.p2pOff
-  , plutus & P.name "plutus-secp-schnorr" . schnorr      . P.traceForwardingOn  . P.newTracing . P.p2pOff
+  , plutus & P.name "plutus"              . loop         . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.analysisSizeSmall
+  , plutus & P.name "plutus-secp-ecdsa"   . ecdsa        . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.analysisSizeSmall
+  , plutus & P.name "plutus-secp-schnorr" . schnorr      . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.analysisSizeSmall
   ]
   ++
   ------------------------------------------------------------------------------

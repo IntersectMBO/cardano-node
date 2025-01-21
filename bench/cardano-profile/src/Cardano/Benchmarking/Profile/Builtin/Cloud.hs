@@ -116,13 +116,13 @@ profilesNoEraCloud =
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
       -- Loop.
-      loop     = plutus     & plutusLoopBase . V.plutusTypeLoop
-      loop2024 = plutus     & plutusLoopBase . V.plutusTypeLoop2024
-      loopVolt = plutusVolt & plutusLoopBase . V.plutusTypeLoop
+      loop     = plutus     & plutusLoopBase . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop2024 = plutus     & plutusLoopBase . V.plutusTypeLoop2024 . P.analysisSizeSmall
+      loopVolt = plutusVolt & plutusLoopBase . V.plutusTypeLoop     . P.analysisSizeSmall
       -- Secp.
-      ecdsa    = plutus     & plutusSecpBase . V.plutusTypeECDSA
-      schnorr  = plutus     & plutusSecpBase . V.plutusTypeSchnorr
-      blst     = plutusVolt & plutusBlstBase . V.plutusTypeBLST
+      ecdsa    = plutus     & plutusSecpBase . V.plutusTypeECDSA    . P.analysisSizeModerate
+      schnorr  = plutus     & plutusSecpBase . V.plutusTypeSchnorr  . P.analysisSizeModerate
+      blst     = plutusVolt & plutusBlstBase . V.plutusTypeBLST     . P.analysisSizeModerate2
   in [
   -- Value (pre-Voltaire profiles)
     value      & P.name "value-nomadperf"                                 . P.dreps      0 . P.newTracing . P.p2pOn
@@ -159,7 +159,7 @@ profilesNoEraCloud =
              . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
       plutusVoting = P.empty & baseVoting . V.plutusBase . V.datasetOct2021 . V.fundsVoting . plutusDuration      . nomadPerf
              . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
-      loopVoting   = plutusVoting & plutusLoopBase . V.plutusTypeLoop
+      loopVoting   = plutusVoting & plutusLoopBase . V.plutusTypeLoop . P.analysisSizeSmall
   in [
   -- Voting
     valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadUtxo

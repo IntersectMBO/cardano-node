@@ -74,12 +74,12 @@ profilesNoEraMiniature =
       ciBench02PlutusV3 = ciBench02 & V.genesisVariantVoltaire
       ciBench10Value    = ciBench10 & V.genesisVariant300
       ciBench10Plutus   = ciBench10 & V.genesisVariant300
-      loop     = V.plutusSaturation           . V.plutusTypeLoop
-      loop2024 = V.plutusSaturation           . V.plutusTypeLoop2024
-      ecdsa    = V.plutusDoublePlusSaturation . V.plutusTypeECDSA
-      schnorr  = V.plutusDoublePlusSaturation . V.plutusTypeSchnorr
-      blst     = V.plutusDoublePlusSaturation . V.plutusTypeBLST
-      ripemd   = V.plutusDoublePlusSaturation . V.plutusTypeRIPEMD
+      loop     = V.plutusSaturation           . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop2024 = V.plutusSaturation           . V.plutusTypeLoop2024 . P.analysisSizeSmall
+      ecdsa    = V.plutusDoublePlusSaturation . V.plutusTypeECDSA    . P.analysisSizeModerate
+      schnorr  = V.plutusDoublePlusSaturation . V.plutusTypeSchnorr  . P.analysisSizeModerate
+      blst     = V.plutusDoublePlusSaturation . V.plutusTypeBLST     . P.analysisSizeModerate2
+      ripemd   = V.plutusDoublePlusSaturation . V.plutusTypeRIPEMD   . P.analysisSizeSmall
   in [
   -- 2 nodes, local
     ciBench02Value    & P.name "ci-bench"                      . V.valueLocal . P.dreps  0 . P.traceForwardingOn  . P.newTracing . P.p2pOff
