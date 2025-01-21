@@ -31,7 +31,6 @@ import           Cardano.Api.Shelley (fromAlonzoExUnits, toAlonzoExUnits, execut
 import qualified Cardano.Ledger.Alonzo.Core as L
 import           Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as L
-import qualified Cardano.Ledger.Plutus as LP
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
 import           Cardano.TxGenerator.Types
 

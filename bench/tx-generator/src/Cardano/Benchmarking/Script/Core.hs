@@ -18,9 +18,7 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
-                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
-                   protocolParamPrices)
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ShelleyLedgerEra (..))
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -157,7 +155,11 @@ queryEra = do
     (return . AnyShelleyBasedEra)
     era
 
-queryRemoteProtocolParameters :: ActionM ProtocolParameters
+-- | Protocol parameters for an era that is not statically known
+data AnyPParams where
+  AnyPParams :: Ledger.PParams (ShelleyLedgerEra era) -> AnyPParams
+
+queryRemoteProtocolParameters :: ActionM AnyPParams
 queryRemoteProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
@@ -165,22 +167,21 @@ queryRemoteProtocolParameters = do
   let
     callQuery :: forall era.
                  QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
-              -> ActionM ProtocolParameters
+              -> ActionM (Ledger.PParams (ShelleyLedgerEra era))
     callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
       pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
           queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
-      let pp' = fromLedgerPParams shelleyEra pp
-          pparamsFile = "protocol-parameters-queried.json"
-      liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
+      let pparamsFile = "protocol-parameters-queried.json"
+      liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
       traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
       return pp'
   callQuery $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
-getProtocolParameters :: ActionM ProtocolParameters
+getProtocolParameters :: ActionM AnyPParams
 getProtocolParameters = do
   getProtoParamMode  >>= \case
     ProtocolParameterQuery -> queryRemoteProtocolParameters
-    ProtocolParameterLocal parameters -> return parameters
+    ProtocolParameterLocal parameters -> return $ AnyPParams parameters
 
 waitForEra :: AnyShelleyBasedEra -> ActionM ()
 waitForEra era = do
@@ -493,7 +494,7 @@ makePlutusContext sbe ScriptSpec{..} = do
       liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
 preExecuteScriptAction ::
-     ProtocolParameters
+     Ledger.PParams era
   -> ScriptInAnyLang
   -> ScriptData
   -> ScriptData
