@@ -59,6 +59,7 @@ library
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Idle
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly
                       , Cardano.Benchmarking.Profile.Extra.Scaling
+                      , Cardano.Benchmarking.Profile.Extra.Voting
                       , Cardano.Benchmarking.Profile.NodeSpecs
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary

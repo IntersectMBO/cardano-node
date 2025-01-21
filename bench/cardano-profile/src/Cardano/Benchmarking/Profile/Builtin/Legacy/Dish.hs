@@ -42,6 +42,6 @@ profilesNoEraDish =
   in [
     dish & P.name "dish"            . value        . P.utxo 30000000
   , dish & P.name "dish-10M"        . value        . P.utxo 10000000
-  , dish & P.name "dish-plutus"     . V.plutusLoop . P.utxo 30000000
-  , dish & P.name "dish-10M-plutus" . V.plutusLoop . P.utxo 10000000
+  , dish & P.name "dish-plutus"     . V.plutusLoop . P.utxo 30000000 . P.analysisSizeSmall
+  , dish & P.name "dish-10M-plutus" . V.plutusLoop . P.utxo 10000000 . P.analysisSizeSmall
   ]

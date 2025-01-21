@@ -44,6 +44,7 @@ import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profi
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Latency    (profilesNoEraLatency)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
+import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 
 --------------------------------------------------------------------------------
 
@@ -98,6 +99,7 @@ profilesNoEra obj = Map.fromList $ map
     -- Extra modules
     ++ profilesNoEraScalingLocal
     ++ profilesNoEraScalingCloud
+    ++ profilesNoEraVoting
   )
 
 -- | Adds the eras to `profilesNoEra`.

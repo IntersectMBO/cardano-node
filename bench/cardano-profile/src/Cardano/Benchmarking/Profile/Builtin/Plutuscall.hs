@@ -41,16 +41,17 @@ profilesNoEraPlutuscall =
         . V.fundsDefault
         . P.p2pOff
         . P.traceForwardingOn . P.newTracing
-        . P.analysisStandard . P.analysisEpoch3Plus
+        . P.analysisStandard
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . P.desc "Small dataset, honest 15 epochs duration"
-      loop            = plutusCall & V.plutusTypeLoop     . V.plutusDoubleSaturation
-      ecdsa           = plutusCall & V.plutusTypeECDSA    . V.plutusDoubleSaturation
-      schnorr         = plutusCall & V.plutusTypeSchnorr  . V.plutusDoubleSaturation
 
-      loopVolt        = plutusCall & V.plutusTypeLoop     . V.plutusDoublePlusSaturation
-      blstVolt        = plutusCall & V.plutusTypeBLST     . V.plutusDoublePlusSaturation
-      ripemdVolt      = plutusCall & V.plutusTypeRIPEMD   . V.plutusDoublePlusSaturation
+      loop            = plutusCall & V.plutusTypeLoop    . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
+      ecdsa           = plutusCall & V.plutusTypeECDSA   . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
+      schnorr         = plutusCall & V.plutusTypeSchnorr . V.plutusDoubleSaturation     . P.analysisSizeModerate . P.analysisEpoch3Plus
+
+      loopVolt        = plutusCall & V.plutusTypeLoop    . V.plutusDoublePlusSaturation . P.analysisSizeSmall
+      blstVolt        = plutusCall & V.plutusTypeBLST    . V.plutusDoublePlusSaturation . P.analysisSizeModerate2
+      ripemdVolt      = plutusCall & V.plutusTypeRIPEMD  . V.plutusDoublePlusSaturation . P.analysisSizeSmall
   in [
   -- TODO: after dropping jq profiles, bump all to genesisVariantVoltaire
     loop        & P.name "plutuscall-loop-plain"          . V.genesisVariantPreVoltaire
