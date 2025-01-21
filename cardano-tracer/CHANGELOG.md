@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.3.1 (January 22, 2025)
+
+* Fix race condition when querying `NodeInfo` data point, occasionally resulting in fallback `NodeName`s instead of proper ones.
+* Updated to `typed-protocols-0.3`.
+
 ## 0.3 (September 26, 2024)
 
 * Fix the creation of empty logs.
