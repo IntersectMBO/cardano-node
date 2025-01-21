@@ -74,19 +74,16 @@ plutusDuration =
 plutusLoopBase :: Types.Profile -> Types.Profile
 plutusLoopBase =
     P.tps 0.85
-  . P.analysisSizeSmall
 
 -- Replaces "nomad_perf_plutussecp_base".
 plutusSecpBase :: Types.Profile -> Types.Profile
 plutusSecpBase =
     P.tps 2
-  . P.analysisSizeModerate
 
 -- Replaces "nomad_perf_plutusv3blst_base".
 plutusBlstBase :: Types.Profile -> Types.Profile
 plutusBlstBase =
     P.tps 2
-  . P.analysisSizeModerate2
 
 --------------------------------------------------------------------------------
 
