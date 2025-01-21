@@ -831,25 +831,31 @@ analysisPerformance = analysis (\a -> a {Types.analysisType = Just "performance"
 -- Analysis filters:
 --------------------
 
-analysisFiltersAppend :: String -> Types.Profile -> Types.Profile
-analysisFiltersAppend str = analysis (\a -> a {Types.filters = Types.filters a ++ [str]})
+-- Ensures a specific filter is added only once to the list; redudancies point to ill-formed profile specification and thus error out
+analysisFiltersAppend :: HasCallStack => String -> Types.Profile -> Types.Profile
+analysisFiltersAppend str = analysis
+  (\a ->
+    if str `elem` Types.filters a
+    then error $ "analysis: `filters` already has \"" ++ str ++ "\"."
+    else a {Types.filters = Types.filters a ++ [str]}
+  )
 
-analysisSizeSmall :: Types.Profile -> Types.Profile
+analysisSizeSmall :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeSmall = analysisFiltersAppend "size-small"
 
-analysisSizeModerate :: Types.Profile -> Types.Profile
+analysisSizeModerate :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate = analysisFiltersAppend "size-moderate"
 
-analysisSizeModerate2 :: Types.Profile -> Types.Profile
+analysisSizeModerate2 :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeModerate2 = analysisFiltersAppend "size-moderate-2"
 
-analysisSizeFull :: Types.Profile -> Types.Profile
+analysisSizeFull :: HasCallStack => Types.Profile -> Types.Profile
 analysisSizeFull = analysisFiltersAppend "size-full"
 
-analysisUnitary :: Types.Profile -> Types.Profile
+analysisUnitary :: HasCallStack => Types.Profile -> Types.Profile
 analysisUnitary = analysisFiltersAppend "unitary"
 
-analysisEpoch3Plus :: Types.Profile -> Types.Profile
+analysisEpoch3Plus :: HasCallStack => Types.Profile -> Types.Profile
 analysisEpoch3Plus = analysisFiltersAppend "epoch3+"
 
 -- Analysis expressions:
