@@ -48,8 +48,8 @@ profilesNoEraScalingCloud =
   let utxoScale =
           P.empty & base
         . P.regions [Types.AWS Types.EU_CENTRAL_1]
-        . V.timescaleSmall . P.shutdownOnSlot 7200
-        . P.generatorEpochs 6
+        . V.timescaleSmall . P.maxBlockSize 88000
+        . P.shutdownOnSlot 7200 . P.generatorEpochs 6
         . V.valueCloud
         . P.p2pOn
         . clusterNomadSsdNoRegions

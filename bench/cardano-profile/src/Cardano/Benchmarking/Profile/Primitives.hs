@@ -54,6 +54,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   , extraFutureOffset
   -- Funds for the generator.
   , poolBalance, funds, utxoKeys
+  -- Others.
+  , maxBlockSize
 
   -- ChainDB
   , chaindb
@@ -161,6 +163,7 @@ empty = Types.Profile {
     , Types.pool_coin = 0
     , Types.delegator_coin = 0
     , Types.single_shot = False
+    , Types.max_block_size = Nothing
   }
   , Types.chaindb = Nothing
   , Types.node = Types.Node {
@@ -530,8 +533,8 @@ extraFutureOffset i = genesis
     else g {Types.extra_future_offset = i}
   )
 
--- Generator funds.
--------------------
+-- Genesis funds.
+-----------------
 
 poolBalance :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 poolBalance i = genesis
@@ -555,6 +558,17 @@ utxoKeys i = genesis
     if Types.utxo_keys g /= 0
     then error "funds: `utxo_keys` already set (not zero)."
     else g {Types.utxo_keys = i}
+  )
+
+-- Genesis others.
+------------------
+
+maxBlockSize :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+maxBlockSize i = genesis
+  (\g ->
+    if isJust (Types.max_block_size g)
+    then error "funds: `max_block_size` already set (not Nothing)."
+    else g {Types.max_block_size = Just i}
   )
 
 -- ChainDB.

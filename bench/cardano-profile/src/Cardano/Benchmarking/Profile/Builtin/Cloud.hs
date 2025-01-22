@@ -29,6 +29,7 @@ baseInternal :: Types.Profile -> Types.Profile
 baseInternal =
     P.fixedLoaded
   . composeFiftytwo
+  . P.maxBlockSize 88000
   -- All cloud profiles use trace forwarding.
   . P.traceForwardingOn
   . P.initCooldown 45
