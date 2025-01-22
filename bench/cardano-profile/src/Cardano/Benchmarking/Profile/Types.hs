@@ -295,8 +295,11 @@ data Genesis = Genesis
   -- TODO: These two are built like derived properties. Move there?
   , pool_coin :: Integer
   , delegator_coin :: Integer
+
   -- TODO: Not used ?
   , single_shot :: Bool
+  , max_block_size :: Maybe Integer
+  --, dense_pool_density :: Maybe Integer
 
   }
   deriving (Eq, Show, Generic)

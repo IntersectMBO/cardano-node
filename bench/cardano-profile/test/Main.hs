@@ -324,6 +324,7 @@ ciTestBage = Types.Profile {
     , Types.pool_coin = 1000000000000000
     , Types.delegator_coin = 0
     , Types.single_shot = True
+    , Types.max_block_size = Nothing
   }
   , Types.scenario = Types.FixedLoaded
   , Types.node = Types.Node {
