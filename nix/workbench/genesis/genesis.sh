@@ -477,7 +477,7 @@ Massage_the_key_file_layout_to_match_AWS() {
         mkdir -p "$dir"/node-keys/cold
 
         #### cold keys (do not copy to production system)
-        if   jqtest ".genesis.dense_pool_density > 1" "$profile_json" &&
+        if   jqtest ".composition.dense_pool_density > 1" "$profile_json" &&
              jqtest ".[\"$id\"]  > 1" <<<"$pool_density_map"
         then ## Dense/bulk pool
            info genesis "bulk pool $did -> node-$id"
