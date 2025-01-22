@@ -1014,11 +1014,6 @@ def all_profile_variants:
     ({}|
      .genesis.slot_duration           = 0.2 )
 
-  ## Dense pool:
-  , $dataset_current * $triplet *
-    ({}|
-     .genesis.dense_pool_density      = 10 )
-
   ## Sub-saturation TPS:
   , $dataset_current * $triplet *
     ({}|
