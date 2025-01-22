@@ -40,5 +40,4 @@ profilesNoEraK3 =
     k3 & P.name "k3-3ep-5kTx-10000kU-1300kD-64kbs-fixed-loaded"        . V.valueBase . P.slotDuration 0.2 . P.tps 12
   , k3 & P.name "k3-3ep-9kTx-10000kU-1300kD-64kbs-5tps-fixed-loaded"   . V.valueBase . P.slotDuration 1   . P.tps  5
   , k3 & P.name "k3-3ep-18kTx-10000kU-1300kD-64kbs-10tps-fixed-loaded" . V.valueBase . P.slotDuration 1   . P.tps 10
-  , k3 & P.name "k3-3ep-22kTx-10000kU-1300kD-64kbs-fixed-loaded"       . V.valueBase . P.slotDuration 1   . P.tps 12
   ]
