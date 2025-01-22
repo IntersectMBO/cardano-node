@@ -95,7 +95,7 @@ data Profile = Profile
   , derived :: Derived
   , cli_args :: CliArgs
 
-  -- TODO: USed? Remove?
+  -- TODO: Somehow merge these two!
   , preset :: Maybe String
   , overlay :: Maybe Aeson.Object
   }
@@ -103,7 +103,10 @@ data Profile = Profile
 
 instance Aeson.ToJSON Profile
 
-instance Aeson.FromJSON Profile
+instance Aeson.FromJSON Profile where
+  parseJSON = Aeson.genericParseJSON
+    -- TODO: Change to `True` after removing `jq` profiles.
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = False})
 
 --------------------------------------------------------------------------------
 
@@ -201,7 +204,9 @@ data Composition = Composition
 
 instance Aeson.ToJSON Composition
 
-instance Aeson.FromJSON Composition
+instance Aeson.FromJSON Composition where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 -- Scenario "line" is actually not being used.
 data Topology = Line | UniCircle | Torus | TorusDense
@@ -299,14 +304,15 @@ data Genesis = Genesis
   -- TODO: Not used ?
   , single_shot :: Bool
   , max_block_size :: Maybe Integer
-  --, dense_pool_density :: Maybe Integer
 
   }
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON Genesis
 
-instance Aeson.FromJSON Genesis
+instance Aeson.FromJSON Genesis where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -319,7 +325,9 @@ data ChainDB = ChainDB
 
 instance Aeson.ToJSON ChainDB
 
-instance Aeson.FromJSON ChainDB
+instance Aeson.FromJSON ChainDB where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data Chunks = Chunks
   { 
@@ -441,7 +449,9 @@ data Generator = Generator
 
 instance Aeson.ToJSON Generator
 
-instance Aeson.FromJSON Generator
+instance Aeson.FromJSON Generator where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data Plutus = Plutus
   { plutusType :: Maybe String -- TODO: Rename in workbench/bash to "plutus_type"
@@ -535,7 +545,9 @@ instance Aeson.FromJSON Workload where
 
 instance Aeson.ToJSON Entrypoints
 
-instance Aeson.FromJSON Entrypoints
+instance Aeson.FromJSON Entrypoints where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -548,7 +560,9 @@ data Tracer = Tracer
 
 instance Aeson.ToJSON Tracer
 
-instance Aeson.FromJSON Tracer
+instance Aeson.FromJSON Tracer where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -564,7 +578,9 @@ data Cluster = Cluster
 
 instance Aeson.ToJSON Cluster
 
-instance Aeson.FromJSON Cluster
+instance Aeson.FromJSON Cluster where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data ClusterNomad = ClusterNomad
   { namespace :: String
@@ -604,7 +620,9 @@ data HostVolume = HostVolume
 
 instance Aeson.ToJSON HostVolume
 
-instance Aeson.FromJSON HostVolume
+instance Aeson.FromJSON HostVolume where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data ClusterAWS = ClusterAWS
   { instance_type :: ByNodeType String
@@ -614,7 +632,9 @@ data ClusterAWS = ClusterAWS
 
 instance Aeson.ToJSON ClusterAWS
 
-instance Aeson.FromJSON ClusterAWS
+instance Aeson.FromJSON ClusterAWS where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data ByNodeType a = ByNodeType
   { producer :: a
@@ -635,7 +655,9 @@ data Resources = Resources
 
 instance Aeson.ToJSON Resources
 
-instance Aeson.FromJSON Resources
+instance Aeson.FromJSON Resources where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -694,7 +716,9 @@ data AnalysisFilterExpression = AnalysisFilterExpression
 
 instance Aeson.ToJSON AnalysisFilterExpression
 
-instance Aeson.FromJSON AnalysisFilterExpression
+instance Aeson.FromJSON AnalysisFilterExpression where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data AnalysisFilterExpressionContent = AnalysisFilterExpressionContent
   { innerTag :: String
@@ -751,7 +775,9 @@ data Derived = Derived
 
 instance Aeson.ToJSON Derived
 
-instance Aeson.FromJSON Derived
+instance Aeson.FromJSON Derived where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -764,4 +790,6 @@ data CliArgs = CliArgs
 
 instance Aeson.ToJSON CliArgs
 
-instance Aeson.FromJSON CliArgs
+instance Aeson.FromJSON CliArgs where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
