@@ -16,6 +16,7 @@
 
 
 - Use metric names of old-tracing in new-tracing as well, and fix some metrics in new tracing.
+- Increase minor protocol version to 10.3
 
 ## 8.2.1 -- August 2023
 
