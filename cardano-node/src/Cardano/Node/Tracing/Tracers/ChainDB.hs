@@ -633,8 +633,8 @@ instance ( LogFormatting (Header blk)
         , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         , PrometheusM "tipBlock" [("hash",tipBlockHash)
-                                 ,("parent hash",tipBlockParentHash)
-                                 ,("issuer verification key hash", tipBlockIssuerVkHashText)]
+                                 ,("parent_hash",tipBlockParentHash)
+                                 ,("issuer_verification_key_hash", tipBlockIssuerVkHashText)]
         ]
   asMetrics _ = []
 
