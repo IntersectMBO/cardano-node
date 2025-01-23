@@ -98,7 +98,7 @@ let
 
   profile-names = __fromJSON (__readFile profile-names-json);
 
-  profile-names-json = runWorkbench "profile-names.json" "profiles list";
+  profile-names-json = runCardanoProfile "profile-names.json" "names";
 
 # Output
 ################################################################################
