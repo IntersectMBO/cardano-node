@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
@@ -158,8 +157,7 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
 -- module are all partial applications of this to its first 5 arguments.
 -- The 7th argument comes from 'TxGenerator' being a being a type alias
 -- for a function type -- of two arguments.
-genTx :: forall era. ()
-  => IsShelleyBasedEra era
+genTx :: ()
   => ShelleyBasedEra era
   -> LedgerProtocolParameters era
   -> (TxInsCollateral era, [Fund])
@@ -169,11 +167,11 @@ genTx :: forall era. ()
 genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
-      (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+      (\b -> (signShelleyTransaction sbe b $ map WitnessPaymentKey allKeys, getTxId b))
+      (createAndValidateTransactionBody sbe txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = defaultTxBodyContent sbe
+  txBodyContent = shelleyBasedEraConstraints sbe $ defaultTxBodyContent sbe
     & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
     & setTxInsCollateral collateral
     & setTxOuts outputs
@@ -184,8 +182,9 @@ genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
     & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
 
 
-txSizeInBytes :: forall era. IsShelleyBasedEra era =>
-     Tx era
+txSizeInBytes ::
+     ShelleyBasedEra era
+  -> Tx era
   -> Int
-txSizeInBytes
-  = BS.length . serialiseToCBOR
+txSizeInBytes sbe tx =
+  shelleyBasedEraConstraints sbe $ BS.length $ serialiseToCBOR tx

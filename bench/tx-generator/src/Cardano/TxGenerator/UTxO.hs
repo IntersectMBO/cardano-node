@@ -26,22 +26,23 @@ makeToUTxOList fkts values
       = let (o, f ) = toUTxO value
          in  (o, f idx)
 
-mkUTxOVariant :: forall era. IsShelleyBasedEra era
-  => NetworkId
+mkUTxOVariant :: ()
+  => ShelleyBasedEra era
+  -> NetworkId
   -> SigningKey PaymentKey
   -> ToUTxO era
-mkUTxOVariant networkId key value
+mkUTxOVariant sbe networkId key value
   = ( mkTxOut value
     , mkNewFund value
     )
  where
-  mkTxOut v = TxOut (keyAddress @era networkId key) (lovelaceToTxOutValue (shelleyBasedEra @era) v) TxOutDatumNone ReferenceScriptNone
+  mkTxOut v = TxOut (keyAddress sbe networkId key) (lovelaceToTxOutValue sbe v) TxOutDatumNone ReferenceScriptNone
 
   mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
+  mkNewFund val txIx txId = shelleyBasedEraConstraints sbe $ Fund $ InAnyCardanoEra (toCardanoEra sbe) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = KeyWitness KeyWitnessForSpending
-    , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era ) val
+    , _fundVal = lovelaceToTxOutValue sbe val
     , _fundSigningKey = Just key
     }
 

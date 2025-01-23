@@ -86,16 +86,14 @@ type LocalState era = (TxSource era, UnAcked (Tx era), SubmissionThreadStats)
 type EndOfProtocolCallback m = SubmissionThreadStats -> m ()
 
 txSubmissionClient
-  :: forall m era.
-     ( MonadIO m, MonadFail m
-     , IsShelleyBasedEra era
-     )
-  => Trace m NodeToNodeSubmissionTrace
+  :: forall m era. ( MonadIO m, MonadFail m )
+  => ShelleyBasedEra era
+  -> Trace m NodeToNodeSubmissionTrace
   -> Trace m (TraceBenchTxSubmit TxId)
   -> TxSource era
   -> EndOfProtocolCallback m
   -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
-txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
+txSubmissionClient sbe tr bmtr initialTxSource endOfProtocolCallback =
   TxSubmissionClient $
     pure $ client (initialTxSource, UnAcked [], SubmissionThreadStats 0 0 0)
  where
@@ -181,11 +179,11 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   txToIdSize = (Mempool.txId . toGenTx) &&& (SizeInBytes . fromInteger . getTxSize)
     where
       getTxSize :: Tx era -> Integer
-      getTxSize (ShelleyTx sbe tx) =
+      getTxSize (ShelleyTx _ tx) =
         shelleyBasedEraConstraints sbe $ tx ^. Ledger.sizeTxF
 
   toGenTx :: Tx era -> GenTx CardanoBlock
-  toGenTx tx = toConsensusGenTx $ TxInMode shelleyBasedEra tx
+  toGenTx tx = toConsensusGenTx $ TxInMode sbe tx
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i
