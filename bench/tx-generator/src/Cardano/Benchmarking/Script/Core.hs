@@ -3,6 +3,7 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -18,7 +19,8 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ShelleyLedgerEra (..), fromAlonzoExUnits)
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ShelleyLedgerEra (..),
+                   fromAlonzoPrices, fromAlonzoExUnits)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -39,6 +41,7 @@ import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Alonzo.Core as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Plutus as LP
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -161,37 +164,37 @@ queryEra = do
 data AnyPParams where
   AnyPParams :: Ledger.PParams (ShelleyLedgerEra era) -> AnyPParams
 
-queryRemoteProtocolParameters :: ActionM AnyPParams
-queryRemoteProtocolParameters = do
+queryRemoteProtocolParameters :: ()
+  => L.AlonzoEraPParams era
+  => ShelleyBasedEra era
+  -> ActionM (Ledger.PParams (ShelleyLedgerEra era))
+queryRemoteProtocolParameters sbe = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  AnyShelleyBasedEra sbe <- queryEra
-  let
-    callQuery :: forall era.
-                 QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
-              -> ActionM (Ledger.PParams (ShelleyLedgerEra era))
-    callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
-      pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
-          queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
-      let pparamsFile = "protocol-parameters-queried.json"
-      liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
-      traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
-      return pp'
-  callQuery $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+  let query = QueryInShelleyBasedEra sbe QueryProtocolParameters
+  pp <- liftEither . first (Env.TxGenError . TxGenError . show) =<< mapExceptT liftIO (modifyError (Env.TxGenError . TxGenError . show) $
+      queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query))
+  let pparamsFile = "protocol-parameters-queried.json"
+  liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
+  traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
+  return pp
 
-getProtocolParameters :: ActionM AnyPParams
-getProtocolParameters = do
+getProtocolParameters :: ()
+  => L.AlonzoEraPParams era
+  => ShelleyBasedEra era
+  -> ActionM (Ledger.PParams (ShelleyLedgerEra era))
+getProtocolParameters sbe = do
   getProtoParamMode  >>= \case
-    ProtocolParameterQuery -> queryRemoteProtocolParameters
+    ProtocolParameterQuery -> queryRemoteProtocolParameters sbe
     ProtocolParameterLocal parameters -> return $ AnyPParams parameters
 
 waitForEra :: AnyShelleyBasedEra -> ActionM ()
 waitForEra era = do
-  currentEra <- queryEra
-  if currentEra == era
+  AnyShelleyBasedEra currentSbe <- queryEra
+  if AnyCardanoEra (toCardanoEra currentSbe) == era
     then return ()
     else do
-      traceError $ "Current era: " ++ show currentEra ++ " Waiting for: " ++ show era
+      traceError $ "Current era: " ++ show currentSbe ++ " Waiting for: " ++ show era
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
@@ -406,7 +409,7 @@ makePlutusContext sbe ScriptSpec{..} = do
   AnyPParams protocolParameters <- getProtocolParameters
   script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
-  let executionUnitPrices = protocolParameters ^. L.ppPricesL
+  let executionUnitPrices = fromAlonzoPrices $ protocolParameters ^. L.ppPricesL
       perTxBudget = fromAlonzoExUnits $ protocolParameters ^. L.ppMaxTxExUnitsL
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 
@@ -484,8 +487,9 @@ makePlutusContext sbe ScriptSpec{..} = do
     _ ->
       liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
-preExecuteScriptAction ::
-     Ledger.PParams era
+preExecuteScriptAction :: ()
+  => L.AlonzoEraPParams era
+  => Ledger.PParams era
   -> ScriptInAnyLang
   -> ScriptData
   -> ScriptData
