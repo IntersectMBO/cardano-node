@@ -117,7 +117,7 @@ data Action where
   -- with testing and quick fixes.
   Reserved           :: [String] -> Action
   -- 'WaitForEra' loops doing delays/sleeps until the current era matches.
-  WaitForEra         :: !AnyCardanoEra -> Action
+  WaitForEra         :: !AnyShelleyBasedEra -> Action
   -- | 'SetProtocolParameters' has one option to read from a file and
   -- another to pass directly and just sets a state variable for
   -- the @protoParams@ field of 'Cardano.Benchmarking.Script.Env.Env'.

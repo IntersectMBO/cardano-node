@@ -162,19 +162,23 @@ cancelBenchmark = do
 getLocalConnectInfo :: ActionM LocalNodeConnectInfo
 getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
 
-queryEra :: ActionM AnyCardanoEra
+queryEra :: ActionM AnyShelleyBasedEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- getLocalChainTip localNodeConnectInfo
-  mapExceptT liftIO .
+  AnyCardanoEra era <- mapExceptT liftIO .
     modifyError (Env.TxGenError . TxGenError . show) $
       queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
+  caseByronOrShelleyBasedEra
+    (liftTxGenError $ TxGenError "queryEra Byron not supported")
+    (return . AnyShelleyBasedEra)
+    era
 
 queryRemoteProtocolParameters :: ActionM ProtocolParameters
 queryRemoteProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  AnyCardanoEra era <- queryEra
+  AnyShelleyBasedEra sbe <- queryEra
   let
     callQuery :: forall era.
                  QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
@@ -187,10 +191,7 @@ queryRemoteProtocolParameters = do
       liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
       traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
       return pp'
-  caseByronOrShelleyBasedEra
-    (liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported")
-    (\sbe -> callQuery $ QueryInShelleyBasedEra sbe QueryProtocolParameters)
-    era
+  callQuery $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do
@@ -198,7 +199,7 @@ getProtocolParameters = do
     ProtocolParameterQuery -> queryRemoteProtocolParameters
     ProtocolParameterLocal parameters -> return parameters
 
-waitForEra :: AnyCardanoEra -> ActionM ()
+waitForEra :: AnyShelleyBasedEra -> ActionM ()
 waitForEra era = do
   currentEra <- queryEra
   if currentEra == era
