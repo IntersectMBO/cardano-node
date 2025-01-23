@@ -930,7 +930,7 @@ mkP2PArguments NodeConfiguration {
       , P2P.daMinBigLedgerPeersForTrustedState = ncMinBigLedgerPeersForTrustedState
       }
   where
-    deadlineTargets = Configuration.defaultDeadlineTargets {
+    deadlineTargets = PeerSelectionTargets {
         targetNumberOfRootPeers        = ncDeadlineTargetOfRootPeers,
         targetNumberOfKnownPeers       = ncDeadlineTargetOfKnownPeers,
         targetNumberOfEstablishedPeers = ncDeadlineTargetOfEstablishedPeers,
@@ -939,7 +939,10 @@ mkP2PArguments NodeConfiguration {
         targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers,
         targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers
     }
-    syncTargets = Configuration.defaultSyncTargets {
+    syncTargets = PeerSelectionTargets {
+      targetNumberOfRootPeers        = 0,
+      targetNumberOfKnownPeers       = 0,
+      targetNumberOfEstablishedPeers = 0,
       targetNumberOfActivePeers               = ncSyncTargetOfActivePeers,
       targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers,
       targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
