@@ -102,11 +102,13 @@ generateTx TxEnvironment{..}
   where
     TxFeeExplicit _ fee = txEnvFee
 
+    sbe = ShelleyBasedEraBabbage
+
     generator :: TxGenerator BabbageEra
     generator =
-        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+        case convertToLedgerProtocolParameters sbe txEnvProtocolParams of
           Right ledgerParameters ->
-            genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
+            genTx sbe ledgerParameters collateralFunds txEnvFee txEnvMetadata
           Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
@@ -127,7 +129,7 @@ generateTx TxEnvironment{..}
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
+    computeUTxO = mkUTxOVariant sbe txEnvNetworkId signingKey
 
 
 generateTxM ::
@@ -153,9 +155,11 @@ generateTxPure TxEnvironment{..} inQueue
     inputs = toList inQueue
     TxFeeExplicit _ fee = txEnvFee
 
+    sbe = ShelleyBasedEraBabbage
+
     generator :: TxGenerator BabbageEra
     generator =
-        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+        case convertToLedgerProtocolParameters sbe txEnvProtocolParams of
           Right ledgerParameters ->
             genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
           Left err -> \_ _ -> Left (ApiError err)
@@ -171,4 +175,4 @@ generateTxPure TxEnvironment{..} inQueue
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
+    computeUTxO = mkUTxOVariant sbe txEnvNetworkId signingKey

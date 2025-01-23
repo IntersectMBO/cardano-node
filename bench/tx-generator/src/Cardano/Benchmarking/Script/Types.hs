@@ -96,7 +96,7 @@ data Action where
   -- 'Cardano.Benchmarking.Wallet.walletRefInsertFund' which in turn
   -- is just 'Control.Concurrent.modifyMVar' around
   -- 'Cardano.TxGenerator.FundQueue.insert'.
-  AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !L.Coin -> !String -> Action
+  AddFund            :: !AnyShelleyBasedEra -> !String -> !TxIn -> !L.Coin -> !String -> Action
   -- | 'WaitBenchmark' signifies a 'Control.Concurrent.Async.waitCatch'
   -- on the 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl'
   -- for the environment and also folds tracers into the completion.
@@ -108,7 +108,7 @@ data Action where
   -- in turn wraps
   -- 'Cardano.Benchmarking.GeneratorTx.SubmissionClient.txSubmissionClient'
   -- and functions local to that like @requestTxs@.
-  Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
+  Submit             :: !AnyShelleyBasedEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
   -- | 'CancelBenchmark' wraps a callback from the
   -- 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl' type,
   -- which is a shutdown action.
