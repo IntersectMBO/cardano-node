@@ -16,15 +16,6 @@ usage_profile() {
 EOF
 }
 
-global_profile_eras=(
-    shelley
-    allegra
-    mary
-    alonzo
-    babbage
-    conway
-)
-
 profile_default_op='profile-json'
 
 profile() {
@@ -32,41 +23,20 @@ local op=${1:-$profile_default_op}; test $# -gt 0 && shift
 
 case "$op" in
     profile-names | names | list | lsp )
-        if test "${WB_CARDANO_PROFILE:-0}" != "0"
-        then
-            cardano-profile names
-        else
-            profile all-profiles | jq 'keys'
-        fi;;
+        cardano-profile names
+        ;;
 
     all-profiles | all )
-        if test "${WB_CARDANO_PROFILE:-0}" != "0"
-        then
-            cardano-profile all
-        else
-            with_era_profiles '
-              map (generate_all_era_profiles(.; null; null))
-              | add
-            '
-        fi;;
+        cardano-profile all
+        ;;
 
     has-profile )
         local usage="USAGE: wb profile $op NAME"
         local name=${1:?$usage}
 
-        if test "${WB_CARDANO_PROFILE:-0}" != "0"
-        then
-            profile profile-names | jq --exit-status --arg name "$name" 'map (. == $name) | any' >/dev/null
-        else
-            with_era_profiles '
-              map (generate_all_era_profiles(.; null; null)
-                   | map (.name == $name)
-                   | any)
-              | any
-            ' --exit-status --arg name "$name" >/dev/null
-        fi;;
+        profile profile-names | jq --exit-status --arg name "$name" 'map (. == $name) | any' >/dev/null
+        ;;
 
-    ## XXX:  does not respect overlays!!
     compose )
         local profile_names="$@"
 
@@ -99,11 +69,44 @@ case "$op" in
         local usage="USAGE: wb profile $op NAME"
         local name=${1:?$usage}
 
-        profile json $name |
-        jq 'include "prof3-derived";
-
-           profile_pretty_describe(.)
-           ' --raw-output -L "$global_basedir/profile" -L "$global_basedir";;
+          profile json $name \
+        | jq -r              \
+            '
+              [ "  - era:                \(.era)"
+              , "  - epoch slots:        \(.genesis.epoch_length)"
+              , "  - slot duration:      \(.genesis.slot_duration)"
+              , "  - k:                  \(.genesis.parameter_k)"
+              , "  - active slots coeff: \(.genesis.active_slots_coeff)"
+              , "  - hosts:              \(.composition.n_hosts)"
+              , "  - pools:              \(.composition.n_pools)"
+              , "    - normal:             \(.composition.n_singular_pools)"
+              , "    - dense:              \(.composition.n_dense_pools)"
+              , "  - UTxO:               \(.genesis.utxo), of which:"
+              , "    - delegated:          \(.derived.utxo_delegated)"
+              , "    - generated:          \(.derived.utxo_generated)"
+              , "    - stuffed:            \(.derived.utxo_stuffed)"
+              , "  - delegators:         \(.genesis.delegators)"
+              , "  - generator duration: \(.derived.generator_duration              | tostring)s"
+              , "    - requested epochs:   \(.generator.epochs                      | tostring)ep"
+              , "    - effective epochs:   \(.derived.effective_epochs              | tostring)ep"
+              , "    - transaction count:  \(.derived.generator_tx_count | . / 1000 | ceil | tostring)kTx"
+              , "    - full blocks:        \(.derived.generator_blocks_lower_bound  | tostring)"
+              , ""
+              ]
+              + if .node.shutdown_on_slot_synced == null then []
+                else [
+                     "  - terminate at slot:  \(.node.shutdown_on_slot_synced)"
+                     ]
+                end
+              + if .node.shutdown_on_block_synced == null then []
+                else [
+                     "  - terminate at block: \(.node.shutdown_on_block_synced)"
+                     ]
+                end
+              + [""]
+              | join("\n")
+            '
+        ;;
 
     has-preset )
         local usage="USAGE: wb profile $op NAME"
@@ -153,7 +156,6 @@ case "$op" in
             local start_tag=$(date --date=@$start --utc +'%Y'-'%m'-'%d'-'%H.%M')
         fi
         local args=(
-            -L "$global_basedir"
             --arg 'start'           "$start"
             --arg 'start_human'     "$(date --date=@$start --utc +"%Y-%m-%dT%H:%M:%SZ")"
             --arg 'start_tag'       "$start_tag"
@@ -161,39 +163,45 @@ case "$op" in
         )
 
         profile json "$profile" | jq '
-          include "profile/profile-run";
-
-          . as $prof
-          | profile_timing($prof;
-                           $start;
-                           $start_human;
-                           $start_tag;
-                           $systemStart)
+            .derived                                                           as $derived
+          | .genesis                                                           as $genesis
+          | ($systemStart | fromdateiso8601 | . + $derived.generator_duration) as $workload_end
+          | (   $systemStart | fromdateiso8601 | .
+              + ($derived.shutdown_time // $derived.generator_duration)
+            )                                                                  as $shutdown_end
+          | ( [$shutdown_end, $workload_end]
+            | map(select(. != null))
+            | min
+            )                                                                  as $earliest_end
+          |
+          { future_offset:         $derived.genesis_future_offset
+          , extra_future_offset:   $genesis.extra_future_offset
+          , start:                 $start
+          , shutdown_end:          $shutdown_end
+          , workload_end:          $workload_end
+          , earliest_end:          $earliest_end
+          , start_tag:             $start_tag
+          , start_human:           $start_human
+          , systemStart:           $systemStart
+          , shutdownTime:          ($shutdown_end | todateiso8601)
+          , workloadEndTime:       ($workload_end | todateiso8601)
+          , earliestEndTime:       ($earliest_end | todateiso8601)
+          }
         ' "${args[@]}";;
 
     describe-timing )
         local usage="USAGE: wb profile $op TIMING-JSONEXPR"
         local timing=${1:?$usage}
 
-        jq <<<$timing -L "$global_basedir" --raw-output '
-          include "profile/profile-run";
-
-          timing_pretty_describe(.)
+        jq <<<$timing --raw-output '
+          [ "  - future offset:         \(.future_offset) (of which \(.extra_future_offset) is extra)"
+          , "  - start time:            \(.systemStart)"
+          , "  - shutdown time:         \(.shutdownTime[:-1])"
+          , "  - workload end time:     \(.workloadEndTime[:-1])"
+          , "  - earliest end:          \(.earliestEndTime[:-1])"
+          , ""
+          ] | join("\n")
         ';;
 
     * ) set +x; usage_profile;; esac
-}
-
-with_era_profiles() {
-    local usage="USAGE: wb profile with-profiles JQEXP"
-    local jqexp=${1:?$usage}; shift
-
-    jq  -L "$global_basedir"                                            \
-        -L "$global_basedir"/profile                                    \
-        -L "$global_basedir"/profile/pparams                            \
-        --argjson eras "$(to_jsonlist ${global_profile_eras[*]})"       \
-        --null-input '
-       include "profiles";
-
-       $eras | '"$jqexp" "$@"
 }
