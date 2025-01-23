@@ -174,7 +174,7 @@ queryRemoteProtocolParameters :: ActionM ProtocolParameters
 queryRemoteProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  era <- queryEra
+  AnyCardanoEra era <- queryEra
   let
     callQuery :: forall era.
                  QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
@@ -187,14 +187,10 @@ queryRemoteProtocolParameters = do
       liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
       traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
       return pp'
-  case era of
-    AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
-    AnyCardanoEra ShelleyEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
-    AnyCardanoEra AllegraEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
-    AnyCardanoEra MaryEra    -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
-    AnyCardanoEra AlonzoEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
-    AnyCardanoEra BabbageEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
-    AnyCardanoEra ConwayEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
+  caseByronOrShelleyBasedEra
+    (liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported")
+    (\sbe -> callQuery $ QueryInShelleyBasedEra sbe QueryProtocolParameters)
+    era
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do
