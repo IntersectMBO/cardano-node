@@ -68,8 +68,8 @@ let
           targetNodes = __mapAttrs
             (name: { name, port, ...}@nodeSpec:
               { inherit name port;
-                ip = let ip = nodePublicIP nodeSpec; # getPublicIp resources nodes name
-                     in __trace "generator target:  ${name}/${ip}:${toString port}" ip;
+                # "generator target ${name}: ${ip}:${toString port}"
+                ip = nodePublicIP nodeSpec; # getPublicIp resources nodes name
               })
             (filterAttrs (_: spec: spec.isProducer) nodeSpecs);
 
