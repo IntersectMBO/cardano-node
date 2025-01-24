@@ -172,7 +172,7 @@ genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = shelleyBasedEraConstraints sbe $ defaultTxBodyContent sbe
-    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
+    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness sbe f)) inFunds)
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee
