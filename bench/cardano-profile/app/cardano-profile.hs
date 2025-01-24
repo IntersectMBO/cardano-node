@@ -23,6 +23,7 @@ import qualified Cardano.Benchmarking.Profile.Types as Types
 
 data Cli =
     Names
+  | NamesNoEra
   | NamesCloudNoEra
   | All
   | ByName PrettyPrint String
@@ -43,6 +44,8 @@ main = do
   case cli of
     -- Print all profile names.
     Names -> BSL8.putStrLn $ Aeson.encode Profiles.names
+    -- Print all profile names without the era suffix.
+    NamesNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesNoEra
     -- Print all cloud profile (-nomadperf) names.
     NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesCloudNoEra
     -- Print a map with all profiles, with an optional overlay.
@@ -112,10 +115,16 @@ cliParser = OA.hsubparser $
           (OA.fullDesc <> OA.header "names" <> OA.progDesc "All profiles names")
         )
   <>
+      OA.command "names-noera"
+        (OA.info
+          (pure NamesNoEra)
+          (OA.fullDesc <> OA.header "names-noera" <> OA.progDesc "All profiles names (no era suffix)")
+        )
+  <>
       OA.command "names-cloud-noera"
         (OA.info
           (pure NamesCloudNoEra)
-          (OA.fullDesc <> OA.header "names" <> OA.progDesc "All cloud profiles names (no era suffix)")
+          (OA.fullDesc <> OA.header "names-cloud-noera" <> OA.progDesc "All cloud profiles names (no era suffix)")
         )
   <>
       OA.command "all"
