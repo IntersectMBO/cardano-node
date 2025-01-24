@@ -1,7 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {-
 Module      : Cardano.TxGenerator.Utils
@@ -74,8 +72,3 @@ mkTxFee = TxFeeExplicit
 mkTxValidityUpperBound :: ShelleyBasedEra era -> SlotNo -> TxValidityUpperBound era
 mkTxValidityUpperBound sbe slotNo =
   TxValidityUpperBound (fromJust $ forShelleyBasedEraMaybeEon sbe) (Just slotNo)
-
--- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
--- because its type enforces it being a Shelley-based era.
-mkTxInModeCardano :: IsShelleyBasedEra era => Tx era -> TxInMode
-mkTxInModeCardano = TxInMode shelleyBasedEra

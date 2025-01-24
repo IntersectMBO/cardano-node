@@ -1,6 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module  Cardano.TxGenerator.UTxO
         (module Cardano.TxGenerator.UTxO)
@@ -47,39 +46,39 @@ mkUTxOVariant sbe networkId key value
     }
 
 -- to be merged with mkUTxOVariant
-mkUTxOScript :: forall era.
-     IsShelleyBasedEra era
-  => NetworkId
+mkUTxOScript ::
+     ShelleyBasedEra era
+  -> NetworkId
   -> (ScriptInAnyLang, ScriptData)
   -> Witness WitCtxTxIn era
   -> ToUTxO era
-mkUTxOScript networkId (script, txOutDatum) witness value
+mkUTxOScript sbe networkId (script, txOutDatum) witness value
   = ( mkTxOut value
     , mkNewFund value
     )
  where
   plutusScriptAddr = case script of
     ScriptInAnyLang lang script' ->
-      case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
+      case scriptLanguageSupportedInEra sbe lang of
         Nothing -> error "mkUtxOScript: scriptLanguageSupportedInEra==Nothing"
         Just{} -> makeShelleyAddressInEra
-                       (shelleyBasedEra @era)
+                       sbe
                        networkId
                        (PaymentCredentialByScript $ hashScript script')
                        NoStakeAddress
 
-  mkTxOut v = case forEraMaybeEon (cardanoEra @era) of
+  mkTxOut v = case forShelleyBasedEraMaybeEon sbe of
     Nothing -> error "mkUtxOScript: scriptDataSupportedInEra==Nothing"
     Just tag -> TxOut
                   plutusScriptAddr
-                  (lovelaceToTxOutValue (shelleyBasedEra @era) v)
+                  (lovelaceToTxOutValue sbe v)
                   (TxOutDatumHash tag $ hashScriptDataBytes $ unsafeHashableScriptData txOutDatum)
                   ReferenceScriptNone
 
   mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
+  mkNewFund val txIx txId = shelleyBasedEraConstraints sbe $ Fund $ InAnyCardanoEra (toCardanoEra sbe) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = witness
-    , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era) val
+    , _fundVal = lovelaceToTxOutValue sbe val
     , _fundSigningKey = Nothing
     }

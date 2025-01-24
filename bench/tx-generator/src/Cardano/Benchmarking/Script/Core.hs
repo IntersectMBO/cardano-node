@@ -12,7 +12,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Benchmarking.Script.Core
@@ -217,15 +216,12 @@ toMetadata sbe (Just payloadSize) = case mkMetadata sbe payloadSize of
   Left err -> error err
 
 submitAction :: ShelleyBasedEra sbe -> SubmitMode -> Generator -> TxGenTxParams -> ActionM ()
-submitAction sbe submitMode generator txParams = submitInEra sbe submitMode generator txParams
-
-submitInEra :: ShelleyBasedEra era -> SubmitMode -> Generator -> TxGenTxParams -> ActionM ()
-submitInEra sbe submitMode generator txParams = do
+submitAction sbe submitMode generator txParams = do
   txStream <- evalGenerator sbe generator txParams
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes tpsRate txCount -> benchmarkTxStream sbe txStream nodes tpsRate txCount
-    LocalSocket -> shelleyBasedEraConstraints sbe $ submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
+    LocalSocket -> shelleyBasedEraConstraints sbe $ submitAll (void . localSubmitTx . TxInMode sbe) txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
@@ -375,10 +371,10 @@ selectCollateralFunds sbe (Just walletName) = do
   cw <- getEnvWallets walletName
   collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
-    l -> return l
+    l -> pure l
   case forShelleyBasedEraMaybeEon sbe of
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show sbe
-      Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
+      Just p -> pure (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
 
 dumpToFile :: FilePath -> TxInMode -> ActionM ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
@@ -396,20 +392,20 @@ interpretPayMode sbe payMode = do
     PayToAddr keyName destWallet -> do
       fundKey <- getEnvKeys keyName
       walletRef <- getEnvWallets destWallet
-      return ( createAndStore (mkUTxOVariant sbe networkId fundKey) (mkWalletFundStore walletRef)
+      pure ( createAndStore (mkUTxOVariant sbe networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ Utils.keyAddress sbe networkId fundKey)
     PayToScript scriptSpec destWallet -> do
       walletRef <- getEnvWallets destWallet
-      (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
+      (witness, script, scriptData, _scriptFee) <- makePlutusContext sbe scriptSpec
       case script of
         ScriptInAnyLang _ script' ->
-          return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
+          pure ( createAndStore (mkUTxOScript sbe networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                  , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
 
-makePlutusContext :: forall era. IsShelleyBasedEra era
-  => ScriptSpec
+makePlutusContext :: ShelleyBasedEra era
+  -> ScriptSpec
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
-makePlutusContext ScriptSpec{..} = do
+makePlutusContext sbe ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
   script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
@@ -483,9 +479,8 @@ makePlutusContext ScriptSpec{..} = do
   case script of
     ScriptInAnyLang lang (PlutusScript version script') ->
       let
-        scriptWitness :: ScriptWitness WitCtxTxIn era
-        scriptWitness = case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
-          Nothing -> error $ "runPlutusBenchmark: " ++ show version ++ " not supported in era: " ++ show (cardanoEra @era)
+        scriptWitness = case scriptLanguageSupportedInEra sbe lang of
+          Nothing -> error $ "runPlutusBenchmark: " ++ show version ++ " not supported in era: " ++ show sbe
           Just scriptLang -> PlutusScriptWitness
                               scriptLang
                               version
