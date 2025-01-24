@@ -100,7 +100,7 @@ import qualified System.IO as IO (hPutStrLn, stderr)
 data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- wrapped by 'ProtocolParameterMode' which itself is
                  -- a sort of custom 'Maybe'.
-                 protoParams :: Maybe ProtocolParameterMode
+                 protoParams :: forall era. Maybe (ProtocolParameterMode era)
                , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
@@ -180,7 +180,7 @@ modifyEnv :: (Env -> Env) -> ActionM ()
 modifyEnv = lift . RWS.modify
 
 -- | Write accessor for `protoParams`.
-setProtoParamMode :: ProtocolParameterMode -> ActionM ()
+setProtoParamMode :: ProtocolParameterMode era -> ActionM ()
 setProtoParamMode val = modifyEnv (\e -> e { protoParams = Just val })
 
 -- | Write accessor for `benchTracers`.
@@ -239,7 +239,7 @@ getEnvMap acc key = do
     Nothing -> throwE . UserError $ "Lookup of " ++ key ++ " failed"
 
 -- | Read accessor for `protoParams`.
-getProtoParamMode :: ActionM ProtocolParameterMode
+getProtoParamMode :: ActionM (ProtocolParameterMode era)
 getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 
 -- | Read accessor for `benchTracers`.

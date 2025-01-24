@@ -212,6 +212,6 @@ deriving instance Generic ScriptSpec
 
 newtype TxList era = TxList [Tx era]
 
-data ProtocolParameterMode where
-  ProtocolParameterQuery :: ProtocolParameterMode
-  ProtocolParameterLocal :: L.PParams (ShelleyLedgerEra era) -> ProtocolParameterMode
+data ProtocolParameterMode era where
+  ProtocolParameterQuery :: ProtocolParameterMode era
+  ProtocolParameterLocal :: L.PParams (ShelleyLedgerEra era) -> ProtocolParameterMode era
