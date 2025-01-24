@@ -94,6 +94,7 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Paths_cardano_node (version)
+import GHC.Conc (labelThread, myThreadId)
 
 --------------------------------
 -- Layer
@@ -285,7 +286,9 @@ createLoggingLayer ver nodeConfig' p = do
       pure ()
 
    startCapturingMetrics _ tr = do
-     void . Async.async . forever $ do
+     void . Async.async $ do
+      myThreadId >>= flip labelThread "Metrics capturing (cardano-node)"
+      forever $ do
        readResourceStats
          >>= maybe (pure ())
                    (traceResourceStats

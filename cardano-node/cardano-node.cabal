@@ -223,6 +223,7 @@ executable cardano-node
   main-is:              cardano-node.hs
   ghc-options:          -threaded
                         -rtsopts
+                        -debug
 
   if arch(arm)
     ghc-options:        "-with-rtsopts=-T -I0 -A16m -N1 --disable-delayed-os-memory-return"
