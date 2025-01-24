@@ -1,0 +1,981 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns        #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE EmptyCase           #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs               #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns      #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds           #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies        #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | Actions for running 'Peer's with a 'Driver'</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.TypedProtocol.Driver</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Introduction</span></span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-comment">-- $intro</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-comment">-- * Driver interface</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier">Driver</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier">SomeMessage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Normal peers</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#runPeerWithDriver"><span class="hs-identifier">runPeerWithDriver</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Pipelined peers</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerWithDriver"><span class="hs-identifier">runPipelinedPeerWithDriver</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Void.html"><span class="hs-identifier">Data.Void</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier">Void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.TypedProtocol.Core.html"><span class="hs-identifier">Network.TypedProtocol.Core</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.TypedProtocol.Peer.html"><span class="hs-identifier">Network.TypedProtocol.Peer</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.TQueue</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadAsync</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadFork</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadSTM</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- $intro</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- A 'Peer' is a particular implementation of an agent that engages in a</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- typed protocol. To actually run one we need an untyped channel representing</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- one end of an untyped duplex message transport, which allows to send and</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- receive bytes.  One will also need a 'Codec' which handles conversion</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- between the typed protocol messages and the untyped channel.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Given the 'Peer', a compatible 'Network.TypedProtocol.Codec.Codec' and</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- an untyped channel we can run the peer in some appropriate monad (e.g. 'IO',</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- or a simulation monad for testing purposes). The peer and codec have to</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- agree on the same protocol. The codec and channel have to agree on the same</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- untyped medium, e.g. text or bytes. All three have to agree on the same</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- monad in which they will run.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- This module provides drivers for normal and pipelined peers. There is</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- very little policy involved here so typically it should be possible to</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- use these drivers, and customise things by adjusting the peer, or codec</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- or channel (together with an implementation of a 'Driver' based on it).</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- For implementing a 'Driver' based on some untyped channel, the</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- 'Network.TypedProtocol.Codec.runDecoder' function may be a helpful utility.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- For a possible definition of an untyped channel and how to construct</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- a `Driver` from it see @typed-protocols-examples@ package.  For production</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- grade examples see https://github.com/IntersectMBO/ouroboros-network</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- repository.</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- Driver interface</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">data</span><span> </span><span id="Driver"><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-var">Driver</span></a></span></span><span> </span><span id="local-6989586621679072578"><span class="annot"><a href="#local-6989586621679072578"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072579"><span class="annot"><a href="#local-6989586621679072579"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679072580"><span class="annot"><a href="#local-6989586621679072580"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span id="local-6989586621679072581"><span class="annot"><a href="#local-6989586621679072581"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>        </span><span id="Driver"><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-var">Driver</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-72"></span><span>          </span><span class="hs-comment">-- | Send a message; the message must transition from an active state.</span><span>
+</span><span id="line-73"></span><span>          </span><span class="hs-comment">-- One needs to supply agency evidence.</span><span>
+</span><span id="line-74"></span><span>          </span><span id="sendMessage"><span class="annot"><span class="annottext">forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m
+-&gt; forall (st :: ps) (st' :: ps).
+   (StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+   WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+</span><a href="Network.TypedProtocol.Driver.html#sendMessage"><span class="hs-identifier hs-var hs-var">sendMessage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072583"><span class="annot"><a href="#local-6989586621679072583"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072578"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072585"><span class="annot"><a href="#local-6989586621679072585"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072578"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-75"></span><span>                         </span><span class="annot"><a href="Network.TypedProtocol.Core.html#StateTokenI"><span class="hs-identifier hs-type">StateTokenI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072583"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-76"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#StateTokenI"><span class="hs-identifier hs-type">StateTokenI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072585"><span class="hs-identifier hs-type">st'</span></a></span><span>
+</span><span id="line-77"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#ActiveState"><span class="hs-identifier hs-type">ActiveState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072583"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-78"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#WeHaveAgencyProof"><span class="hs-identifier hs-type">WeHaveAgencyProof</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072579"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072583"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-79"></span><span>                      </span><span class="hs-comment">-- agency evidence</span><span>
+</span><span id="line-80"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072578"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072583"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072585"><span class="hs-identifier hs-type">st'</span></a></span><span>
+</span><span id="line-81"></span><span>                      </span><span class="hs-comment">-- message to send</span><span>
+</span><span id="line-82"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072581"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-comment">-- | Receive some message, since we don't know the final state of</span><span>
+</span><span id="line-85"></span><span>        </span><span class="hs-comment">-- the protocol it is wrapped in `SomeMessage` type; the message must</span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-comment">-- transition from an active state. One needs to supply agency</span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-comment">-- evidence.</span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="recvMessage"><span class="annot"><span class="annottext">forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m
+-&gt; forall (st :: ps).
+   (StateTokenI st, ActiveState st) =&gt;
+   TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#recvMessage"><span class="hs-identifier hs-var hs-var">recvMessage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072595"><span class="annot"><a href="#local-6989586621679072595"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072578"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-90"></span><span>                         </span><span class="annot"><a href="Network.TypedProtocol.Core.html#StateTokenI"><span class="hs-identifier hs-type">StateTokenI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072595"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-91"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#ActiveState"><span class="hs-identifier hs-type">ActiveState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072595"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-92"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#TheyHaveAgencyProof"><span class="hs-identifier hs-type">TheyHaveAgencyProof</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072579"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072595"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-93"></span><span>                      </span><span class="hs-comment">-- agency evidence</span><span>
+</span><span id="line-94"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072580"><span class="hs-identifier hs-type">dstate</span></a></span><span>
+</span><span id="line-95"></span><span>                      </span><span class="hs-comment">-- current driver state</span><span>
+</span><span id="line-96"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072581"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-type">SomeMessage</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072595"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072580"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>                      </span><span class="hs-comment">-- received message together with new driver state</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- | Initial state of the driver</span></span><span>
+</span><span id="line-100"></span><span>          </span><span id="initialDState"><span class="annot"><span class="annottext">forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m -&gt; dstate
+</span><a href="Network.TypedProtocol.Driver.html#initialDState"><span class="hs-identifier hs-var hs-var">initialDState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072580"><span class="hs-identifier hs-type">dstate</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- TODO: input-output-hk/typed-protocols#57</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- | When decoding a 'Message' we only know the expected \&quot;from\&quot; state. We</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- cannot know the \&quot;to\&quot; state as this depends on the message we decode. To</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- resolve this we use the 'SomeMessage' wrapper which uses an existential</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- type to hide the \&quot;to&quot;\ state.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-keyword">data</span><span> </span><span id="SomeMessage"><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-var">SomeMessage</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072778"><span id="local-6989586621679072779"><span class="annot"><a href="#local-6989586621679072779"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">ps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>     </span><span id="local-6989586621679072780"><span id="local-6989586621679072781"><span id="local-6989586621679072782"><span id="SomeMessage"><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-var">SomeMessage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#StateTokenI"><span class="hs-identifier hs-type">StateTokenI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072780"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-112"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#StateTokenI"><span class="hs-identifier hs-type">StateTokenI</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072781"><span class="hs-identifier hs-type">st'</span></a></span><span>
+</span><span id="line-113"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#ActiveState"><span class="hs-identifier hs-type">ActiveState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072780"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-114"></span><span>                    </span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072782"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072780"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072781"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-type">SomeMessage</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072780"><span class="hs-identifier hs-type">st</span></a></span></span></span></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- Running normal non-pipelined peers</span><span>
+</span><span id="line-120"></span><span class="hs-comment">--</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | Run a peer with the given driver.</span><span>
+</span><span id="line-123"></span><span class="hs-comment">--</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- This runs the peer to completion (if the protocol allows for termination).</span><span>
+</span><span id="line-125"></span><span class="hs-comment">--</span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Network.TypedProtocol.Driver.html#runPeerWithDriver"><span class="hs-identifier hs-type">runPeerWithDriver</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072607"><span class="annot"><a href="#local-6989586621679072607"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072612"><span class="annot"><a href="#local-6989586621679072612"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072607"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679072609"><span class="annot"><a href="#local-6989586621679072609"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span id="local-6989586621679072610"><span class="annot"><a href="#local-6989586621679072610"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span id="local-6989586621679072608"><span class="annot"><a href="#local-6989586621679072608"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679072613"><span class="annot"><a href="#local-6989586621679072613"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-128"></span><span>     </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072608"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072607"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072609"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072610"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072608"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072607"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072609"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#NonPipelined"><span class="hs-identifier hs-type">NonPipelined</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072612"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072608"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072613"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072608"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072613"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072610"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span id="runPeerWithDriver"><span class="annot"><span class="annottext">runPeerWithDriver :: forall ps (st :: ps) (pr :: PeerRole) dstate (m :: * -&gt; *) a.
+Monad m =&gt;
+Driver ps pr dstate m
+-&gt; Peer ps pr 'NonPipelined st m a -&gt; m (a, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#runPeerWithDriver"><span class="hs-identifier hs-var hs-var">runPeerWithDriver</span></a></span></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span class="hs-special">{</span><span id="local-6989586621679072784"><span class="annot"><span class="annottext">forall (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+sendMessage :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m
+-&gt; forall (st :: ps) (st' :: ps).
+   (StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+   WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+sendMessage :: forall (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+</span><a href="Network.TypedProtocol.Driver.html#sendMessage"><span class="hs-identifier hs-var hs-var">sendMessage</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679072785"><span class="annot"><span class="annottext">forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+recvMessage :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m
+-&gt; forall (st :: ps).
+   (StateTokenI st, ActiveState st) =&gt;
+   TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+recvMessage :: forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#recvMessage"><span class="hs-identifier hs-var hs-var">recvMessage</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679072786"><span class="annot"><span class="annottext">dstate
+initialDState :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m -&gt; dstate
+initialDState :: dstate
+</span><a href="Network.TypedProtocol.Driver.html#initialDState"><span class="hs-identifier hs-var hs-var">initialDState</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="annottext">dstate -&gt; Peer ps pr 'NonPipelined st m a -&gt; m (a, dstate)
+forall (st' :: ps).
+dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+</span><a href="#local-6989586621679072787"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072786"><span class="hs-identifier hs-var">initialDState</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><a href="#local-6989586621679072787"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072621"><span class="annot"><a href="#local-6989586621679072621"><span class="hs-identifier hs-type">st'</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-136"></span><span>          </span><span class="annot"><a href="#local-6989586621679072610"><span class="hs-identifier hs-type">dstate</span></a></span><span>
+</span><span id="line-137"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072607"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072609"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Network.TypedProtocol.Core.html#NonPipelined"><span class="hs-identifier hs-type">NonPipelined</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072621"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072608"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072613"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-138"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072608"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072613"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072610"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>    </span><span id="local-6989586621679072787"><span class="annot"><span class="annottext">go :: forall (st' :: ps).
+dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+</span><a href="#local-6989586621679072787"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679072789"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072789"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Effect"><span class="hs-identifier hs-type">Effect</span></a></span><span> </span><span id="local-6989586621679072791"><span class="annot"><span class="annottext">m (Peer ps pr 'NonPipelined st' m a)
+</span><a href="#local-6989586621679072791"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (Peer ps pr 'NonPipelined st' m a)
+</span><a href="#local-6989586621679072791"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">m (Peer ps pr 'NonPipelined st' m a)
+-&gt; (Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate))
+-&gt; m (a, dstate)
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+forall (st' :: ps).
+dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+</span><a href="#local-6989586621679072787"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072789"><span class="hs-identifier hs-var">dstate</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><a href="#local-6989586621679072787"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679072792"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072792"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Done"><span class="hs-identifier hs-type">Done</span></a></span><span> </span><span class="annot"><span class="annottext">NobodyHasAgencyProof pr st'
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679072798"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679072798"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, dstate) -&gt; m (a, dstate)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679072798"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072792"><span class="hs-identifier hs-var">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><a href="#local-6989586621679072787"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679072799"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072799"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Yield"><span class="hs-identifier hs-type">Yield</span></a></span><span> </span><span id="local-6989586621679072809"><span class="annot"><span class="annottext">WeHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072809"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679072810"><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072810"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span id="local-6989586621679072811"><span class="annot"><span class="annottext">Peer ps pr 'NonPipelined st' m a
+</span><a href="#local-6989586621679072811"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st' -&gt; Message ps st' st' -&gt; m ()
+forall (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+</span><a href="#local-6989586621679072784"><span class="hs-identifier hs-var">sendMessage</span></a></span><span> </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072809"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072810"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="annottext">dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+forall (st' :: ps).
+dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+</span><a href="#local-6989586621679072787"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072799"><span class="hs-identifier hs-var">dstate</span></a></span><span> </span><span class="annot"><span class="annottext">Peer ps pr 'NonPipelined st' m a
+</span><a href="#local-6989586621679072811"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><a href="#local-6989586621679072787"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679072812"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072812"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Await"><span class="hs-identifier hs-type">Await</span></a></span><span> </span><span id="local-6989586621679072821"><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072821"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679072822"><span class="annot"><span class="annottext">forall (st' :: ps).
+Message ps st' st' -&gt; Peer ps pr 'NonPipelined st' m a
+</span><a href="#local-6989586621679072822"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-147"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-type">SomeMessage</span></a></span><span> </span><span id="local-6989586621679072826"><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072826"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679072827"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072827"><span class="hs-identifier hs-var">dstate'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st' -&gt; dstate -&gt; m (SomeMessage st', dstate)
+forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+</span><a href="#local-6989586621679072785"><span class="hs-identifier hs-var">recvMessage</span></a></span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072821"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072812"><span class="hs-identifier hs-var">dstate</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+forall (st' :: ps).
+dstate -&gt; Peer ps pr 'NonPipelined st' m a -&gt; m (a, dstate)
+</span><a href="#local-6989586621679072787"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072827"><span class="hs-identifier hs-var">dstate'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Message ps st' st' -&gt; Peer ps pr 'NonPipelined st' m a
+forall (st' :: ps).
+Message ps st' st' -&gt; Peer ps pr 'NonPipelined st' m a
+</span><a href="#local-6989586621679072822"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072826"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-comment">-- Note that we do not complain about trailing data in any case, neither</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- the 'Await' nor 'Done' cases.</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-comment">-- We want to be able to use a non-pipelined peer in communication with</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-comment">-- a pipelined peer, and in that case the non-pipelined peer will in</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-comment">-- general see trailing data after an 'Await' which is the next incoming</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-comment">-- message.</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-comment">-- Likewise for 'Done', we want to allow for one protocols to be run after</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- another on the same channel. It would be legal for the opening message</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-comment">-- of the next protocol arrives in the same data chunk as the final</span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-comment">-- message of the previous protocol.</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-comment">--</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- Running pipelined peers</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- | Run a pipelined peer with the given driver.</span><span>
+</span><span id="line-169"></span><span class="hs-comment">--</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- This runs the peer to completion (if the protocol allows for termination).</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- Unlike normal peers, running pipelined peers rely on concurrency, hence the</span><span>
+</span><span id="line-173"></span><span class="hs-comment">-- 'MonadAsync' constraint.</span><span>
+</span><span id="line-174"></span><span class="hs-comment">--</span><span>
+</span><span id="line-175"></span><span class="annot"><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerWithDriver"><span class="hs-identifier hs-type">runPipelinedPeerWithDriver</span></a></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072637"><span class="annot"><a href="#local-6989586621679072637"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072642"><span class="annot"><a href="#local-6989586621679072642"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072637"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679072640"><span class="annot"><a href="#local-6989586621679072640"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span id="local-6989586621679072641"><span class="annot"><a href="#local-6989586621679072641"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span id="local-6989586621679072638"><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679072643"><span class="annot"><a href="#local-6989586621679072643"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-177"></span><span>     </span><span class="annot"><span class="hs-identifier hs-type">MonadAsync</span></span><span> </span><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072637"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072640"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072641"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#PeerPipelined"><span class="hs-identifier hs-type">PeerPipelined</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072637"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072640"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072642"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072643"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072643"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072641"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span id="runPipelinedPeerWithDriver"><span class="annot"><span class="annottext">runPipelinedPeerWithDriver :: forall ps (st :: ps) (pr :: PeerRole) dstate (m :: * -&gt; *) a.
+MonadAsync m =&gt;
+Driver ps pr dstate m
+-&gt; PeerPipelined ps pr st m a -&gt; m (a, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerWithDriver"><span class="hs-identifier hs-var hs-var">runPipelinedPeerWithDriver</span></a></span></span><span> </span><span id="local-6989586621679072835"><span class="annot"><span class="annottext">driver :: Driver ps pr dstate m
+</span><a href="#local-6989586621679072835"><span class="hs-identifier hs-var">driver</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span class="hs-special">{</span><span id="local-6989586621679072836"><span class="annot"><span class="annottext">dstate
+initialDState :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m -&gt; dstate
+initialDState :: dstate
+</span><a href="Network.TypedProtocol.Driver.html#initialDState"><span class="hs-identifier hs-var hs-var">initialDState</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#PeerPipelined"><span class="hs-identifier hs-type">PeerPipelined</span></a></span><span> </span><span id="local-6989586621679072854"><span class="annot"><span class="annottext">Peer ps pr ('Pipelined 'Z c) st m a
+</span><a href="#local-6989586621679072854"><span class="hs-identifier hs-var">peer</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-182"></span><span>    </span><span id="local-6989586621679072855"><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+</span><a href="#local-6989586621679072855"><span class="hs-identifier hs-var">receiveQueue</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m (TQueue m (ReceiveHandler dstate ps pr m c))
+-&gt; m (TQueue m (ReceiveHandler dstate ps pr m c))
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">STM m (TQueue m (ReceiveHandler dstate ps pr m c))
+forall a. STM m (TQueue m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m (TQueue m a)
+</span><span class="hs-identifier hs-var">newTQueue</span></span><span>
+</span><span id="line-183"></span><span>    </span><span id="local-6989586621679072858"><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679072858"><span class="hs-identifier hs-var">collectQueue</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m (TQueue m (c, dstate)) -&gt; m (TQueue m (c, dstate))
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">STM m (TQueue m (c, dstate))
+forall a. STM m (TQueue m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m (TQueue m a)
+</span><span class="hs-identifier hs-var">newTQueue</span></span><span>
+</span><span id="line-184"></span><span>    </span><span id="local-6989586621679072859"><span class="annot"><span class="annottext">(a, dstate)
+</span><a href="#local-6989586621679072859"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; TQueue m (c, dstate) -&gt; Driver ps pr dstate m -&gt; m Void
+forall ps (pr :: PeerRole) dstate (m :: * -&gt; *) c.
+(MonadSTM m, MonadThread m) =&gt;
+TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; TQueue m (c, dstate) -&gt; Driver ps pr dstate m -&gt; m Void
+</span><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerReceiverQueue"><span class="hs-identifier hs-var">runPipelinedPeerReceiverQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+</span><a href="#local-6989586621679072855"><span class="hs-identifier hs-var">receiveQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679072858"><span class="hs-identifier hs-var">collectQueue</span></a></span><span> </span><span class="annot"><span class="annottext">Driver ps pr dstate m
+</span><a href="#local-6989586621679072835"><span class="hs-identifier hs-var">driver</span></a></span><span>
+</span><span id="line-185"></span><span>           </span><span class="annot"><span class="annottext">m Void -&gt; m (a, dstate) -&gt; m (a, dstate)
+forall x. m Void -&gt; m x -&gt; m x
+</span><a href="#local-6989586621679072861"><span class="hs-operator hs-var">`withAsyncLoop`</span></a></span><span>
+</span><span id="line-186"></span><span>         </span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; TQueue m (c, dstate)
+-&gt; Driver ps pr dstate m
+-&gt; Peer ps pr ('Pipelined 'Z c) st m a
+-&gt; dstate
+-&gt; m (a, dstate)
+forall ps (st :: ps) (pr :: PeerRole) dstate c (m :: * -&gt; *) a.
+(MonadSTM m, MonadThread m) =&gt;
+TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; TQueue m (c, dstate)
+-&gt; Driver ps pr dstate m
+-&gt; Peer ps pr ('Pipelined 'Z c) st m a
+-&gt; dstate
+-&gt; m (a, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerSender"><span class="hs-identifier hs-var">runPipelinedPeerSender</span></a></span><span>        </span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+</span><a href="#local-6989586621679072855"><span class="hs-identifier hs-var">receiveQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679072858"><span class="hs-identifier hs-var">collectQueue</span></a></span><span> </span><span class="annot"><span class="annottext">Driver ps pr dstate m
+</span><a href="#local-6989586621679072835"><span class="hs-identifier hs-var">driver</span></a></span><span>
+</span><span id="line-187"></span><span>                                       </span><span class="annot"><span class="annottext">Peer ps pr ('Pipelined 'Z c) st m a
+</span><a href="#local-6989586621679072854"><span class="hs-identifier hs-var">peer</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072836"><span class="hs-identifier hs-var">initialDState</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><span class="annottext">(a, dstate) -&gt; m (a, dstate)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(a, dstate)
+</span><a href="#local-6989586621679072859"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-191"></span><span>    </span><span id="local-6989586621679072668"><span class="annot"><a href="#local-6989586621679072861"><span class="hs-identifier hs-type">withAsyncLoop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072668"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072638"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072668"><span class="hs-identifier hs-type">x</span></a></span></span><span>
+</span><span id="line-192"></span><span>    </span><span id="local-6989586621679072861"><span class="annot"><span class="annottext">withAsyncLoop :: forall x. m Void -&gt; m x -&gt; m x
+</span><a href="#local-6989586621679072861"><span class="hs-identifier hs-var hs-var">withAsyncLoop</span></a></span></span><span> </span><span id="local-6989586621679072866"><span class="annot"><span class="annottext">m Void
+</span><a href="#local-6989586621679072866"><span class="hs-identifier hs-var">left</span></a></span></span><span> </span><span id="local-6989586621679072867"><span class="annot"><span class="annottext">m x
+</span><a href="#local-6989586621679072867"><span class="hs-identifier hs-var">right</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-193"></span><span>      </span><span class="hs-comment">-- race will throw if either of the threads throw</span><span>
+</span><span id="line-194"></span><span>      </span><span id="local-6989586621679072868"><span class="annot"><span class="annottext">Either Void x
+</span><a href="#local-6989586621679072868"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Void -&gt; m x -&gt; m (Either Void x)
+forall a b. m a -&gt; m b -&gt; m (Either a b)
+forall (m :: * -&gt; *) a b.
+MonadAsync m =&gt;
+m a -&gt; m b -&gt; m (Either a b)
+</span><span class="hs-identifier hs-var">race</span></span><span> </span><span class="annot"><span class="annottext">m Void
+</span><a href="#local-6989586621679072866"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">m x
+</span><a href="#local-6989586621679072867"><span class="hs-identifier hs-var">right</span></a></span><span>
+</span><span id="line-195"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either Void x
+</span><a href="#local-6989586621679072868"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-196"></span><span>        </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679072870"><span class="annot"><span class="annottext">Void
+</span><a href="#local-6989586621679072870"><span class="hs-identifier hs-var">v</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Void
+</span><a href="#local-6989586621679072870"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>
+</span><span id="line-197"></span><span>        </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679072871"><span class="annot"><span class="annottext">x
+</span><a href="#local-6989586621679072871"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">x -&gt; m x
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">x
+</span><a href="#local-6989586621679072871"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span class="hs-keyword">data</span><span> </span><span id="ReceiveHandler"><span class="annot"><a href="Network.TypedProtocol.Driver.html#ReceiveHandler"><span class="hs-identifier hs-var">ReceiveHandler</span></a></span></span><span> </span><span id="local-6989586621679072872"><span class="annot"><a href="#local-6989586621679072872"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span id="local-6989586621679072873"><span class="annot"><a href="#local-6989586621679072873"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span id="local-6989586621679072874"><span class="annot"><a href="#local-6989586621679072874"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span id="local-6989586621679072875"><span class="annot"><a href="#local-6989586621679072875"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679072876"><span class="annot"><a href="#local-6989586621679072876"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-200"></span><span>     </span><span id="local-6989586621679072709"><span id="local-6989586621679072710"><span id="local-6989586621679072712"><span id="local-6989586621679072715"><span id="local-6989586621679072716"><span id="local-6989586621679072877"><span id="local-6989586621679072878"><span id="local-6989586621679072879"><span id="ReceiveHandler"><span class="annot"><a href="Network.TypedProtocol.Driver.html#ReceiveHandler"><span class="hs-identifier hs-var">ReceiveHandler</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#MaybeDState"><span class="hs-identifier hs-type">MaybeDState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072710"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072877"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-201"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Receiver"><span class="hs-identifier hs-type">Receiver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072709"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072712"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072878"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072709"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072879"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072709"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679072715"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072716"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-202"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#ReceiveHandler"><span class="hs-identifier hs-type">ReceiveHandler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072710"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072709"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072712"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072715"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072716"><span class="hs-identifier hs-type">c</span></a></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- | The handling of trailing data here is quite subtle. Trailing data is data</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- we have read from the channel but the decoder has told us that it comes</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- after the message we decoded. So it potentially belongs to the next message</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- to decode.</span><span>
+</span><span id="line-208"></span><span class="hs-comment">--</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- We read from the channel on both the 'runPipelinedPeerSender' and the</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- 'runPipelinedPeerReceiver', and we synchronise our use of trailing data</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- between the two. The scheme for the sender and receiver threads using the</span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- channel ensures that only one can use it at once:</span><span>
+</span><span id="line-213"></span><span class="hs-comment">--</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- * When there are zero outstanding pipelined receiver handlers then the</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--   sending side is allowed to access the channel directly (to do synchronous</span><span>
+</span><span id="line-216"></span><span class="hs-comment">--   yield\/awaits). Correspondingly the receiver side is idle and not</span><span>
+</span><span id="line-217"></span><span class="hs-comment">--   accessing the channel.</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- * When there are non-zero outstanding pipelined receiver handlers then</span><span>
+</span><span id="line-219"></span><span class="hs-comment">--   the receiver side can access the channel, but the sending side is not</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--   permitted to do operations that access the channel.</span><span>
+</span><span id="line-221"></span><span class="hs-comment">--</span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- So the only times we need to synchronise the trailing data are the times</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- when the right to access the channel passes from one side to the other.</span><span>
+</span><span id="line-224"></span><span class="hs-comment">--</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- The transitions are as follows:</span><span>
+</span><span id="line-226"></span><span class="hs-comment">--</span><span>
+</span><span id="line-227"></span><span class="hs-comment">-- * There having been Zero outstanding pipelined requests there is now a</span><span>
+</span><span id="line-228"></span><span class="hs-comment">--   new pipelined yield. In this case we must pass the trailing data from</span><span>
+</span><span id="line-229"></span><span class="hs-comment">--   the sender thread to the receiver thread. We pass it with the</span><span>
+</span><span id="line-230"></span><span class="hs-comment">--   'ReceiveHandler'.</span><span>
+</span><span id="line-231"></span><span class="hs-comment">--</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- * When the last pipelined request is collected. In this case we must pass</span><span>
+</span><span id="line-233"></span><span class="hs-comment">--   the trailing data from the receiver thread to the sender thread. We pass</span><span>
+</span><span id="line-234"></span><span class="hs-comment">--   it with the collected result.</span><span>
+</span><span id="line-235"></span><span class="hs-comment">--</span><span>
+</span><span id="line-236"></span><span class="hs-comment">-- Note that the receiver thread cannot know what the last pipelined request</span><span>
+</span><span id="line-237"></span><span class="hs-comment">-- is, that is tracked on the sender side. So the receiver thread always</span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- returns the trailing data with every collected result. It is for the sender</span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- thread to decide if it needs to use it. For the same reason, the receiver</span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- thread ends up retaining the last trailing data (as well as passing it to</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- the sender). So correspondingly when new trailing data is passed to the</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- receiver thread, it simply overrides any trailing data it already had, since</span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- we now know that copy to be stale.</span><span>
+</span><span id="line-244"></span><span class="hs-comment">--</span><span>
+</span><span id="line-245"></span><span class="hs-keyword">data</span><span> </span><span id="MaybeDState"><span class="annot"><a href="Network.TypedProtocol.Driver.html#MaybeDState"><span class="hs-identifier hs-var">MaybeDState</span></a></span></span><span> </span><span id="local-6989586621679072882"><span class="annot"><a href="#local-6989586621679072882"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072883"><span class="annot"><a href="#local-6989586621679072883"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#N"><span class="hs-identifier hs-type">N</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-246"></span><span>     </span><span id="local-6989586621679072696"><span id="HasDState"><span class="annot"><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-var">HasDState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072696"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#MaybeDState"><span class="hs-identifier hs-type">MaybeDState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072696"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Z"><span class="hs-identifier hs-type">Z</span></a></span></span><span>
+</span><span id="line-247"></span><span>     </span><span id="local-6989586621679072719"><span id="local-6989586621679072885"><span id="NoDState"><span class="annot"><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span>           </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#MaybeDState"><span class="hs-identifier hs-type">MaybeDState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072719"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072885"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-248"></span><span>
+</span><span id="line-249"></span><span>
+</span><span id="line-250"></span><span class="annot"><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerSender"><span class="hs-identifier hs-type">runPipelinedPeerSender</span></a></span><span>
+</span><span id="line-251"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072669"><span class="annot"><a href="#local-6989586621679072669"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072674"><span class="annot"><a href="#local-6989586621679072674"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072669"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679072672"><span class="annot"><a href="#local-6989586621679072672"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span id="local-6989586621679072671"><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span id="local-6989586621679072673"><span class="annot"><a href="#local-6989586621679072673"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span id="local-6989586621679072670"><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679072675"><span class="annot"><a href="#local-6989586621679072675"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-252"></span><span>     </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span>    </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-253"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThread</span></span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-254"></span><span>     </span><span class="hs-special">)</span><span>
+</span><span id="line-255"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TQueue</span></span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#ReceiveHandler"><span class="hs-identifier hs-type">ReceiveHandler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072669"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072672"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072673"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TQueue</span></span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072673"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-257"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072669"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072672"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-258"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072669"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072672"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Network.TypedProtocol.Core.html#Pipelined"><span class="hs-identifier hs-type">Pipelined</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Z"><span class="hs-identifier hs-type">Z</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072673"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679072674"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072675"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-259"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072675"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-261"></span><span id="runPipelinedPeerSender"><span class="annot"><span class="annottext">runPipelinedPeerSender :: forall ps (st :: ps) (pr :: PeerRole) dstate c (m :: * -&gt; *) a.
+(MonadSTM m, MonadThread m) =&gt;
+TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; TQueue m (c, dstate)
+-&gt; Driver ps pr dstate m
+-&gt; Peer ps pr ('Pipelined 'Z c) st m a
+-&gt; dstate
+-&gt; m (a, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerSender"><span class="hs-identifier hs-var hs-var">runPipelinedPeerSender</span></a></span></span><span> </span><span id="local-6989586621679072895"><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+</span><a href="#local-6989586621679072895"><span class="hs-identifier hs-var">receiveQueue</span></a></span></span><span> </span><span id="local-6989586621679072896"><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679072896"><span class="hs-identifier hs-var">collectQueue</span></a></span></span><span>
+</span><span id="line-262"></span><span>                       </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span class="hs-special">{</span><span id="local-6989586621679072897"><span class="annot"><span class="annottext">forall (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+sendMessage :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m
+-&gt; forall (st :: ps) (st' :: ps).
+   (StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+   WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+sendMessage :: forall (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+</span><a href="Network.TypedProtocol.Driver.html#sendMessage"><span class="hs-identifier hs-var hs-var">sendMessage</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679072898"><span class="annot"><span class="annottext">forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+recvMessage :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m
+-&gt; forall (st :: ps).
+   (StateTokenI st, ActiveState st) =&gt;
+   TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+recvMessage :: forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#recvMessage"><span class="hs-identifier hs-var hs-var">recvMessage</span></a></span></span><span class="hs-special">}</span><span>
+</span><span id="line-263"></span><span>                       </span><span id="local-6989586621679072899"><span class="annot"><span class="annottext">Peer ps pr ('Pipelined 'Z c) st m a
+</span><a href="#local-6989586621679072899"><span class="hs-identifier hs-var">peer</span></a></span></span><span> </span><span id="local-6989586621679072900"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072900"><span class="hs-identifier hs-var">dstate0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-264"></span><span>    </span><span id="local-6989586621679072901"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679072901"><span class="hs-identifier hs-var">threadId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (ThreadId m)
+forall (m :: * -&gt; *). MonadThread m =&gt; m (ThreadId m)
+</span><span class="hs-identifier hs-var">myThreadId</span></span><span>
+</span><span id="line-265"></span><span>    </span><span class="annot"><span class="annottext">ThreadId m -&gt; String -&gt; m ()
+forall (m :: * -&gt; *). MonadThread m =&gt; ThreadId m -&gt; String -&gt; m ()
+</span><span class="hs-identifier hs-var">labelThread</span></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679072901"><span class="hs-identifier hs-var">threadId</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pipelined-peer-sender&quot;</span></span><span>
+</span><span id="line-266"></span><span>    </span><span class="annot"><span class="annottext">Nat 'Z
+-&gt; MaybeDState dstate 'Z
+-&gt; Peer ps pr ('Pipelined 'Z c) st m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat 'Z
+forall (n :: N). ('Z ~ n) =&gt; Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">dstate -&gt; MaybeDState dstate 'Z
+forall dstate. dstate -&gt; MaybeDState dstate 'Z
+</span><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-var">HasDState</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072900"><span class="hs-identifier hs-var">dstate0</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Peer ps pr ('Pipelined 'Z c) st m a
+</span><a href="#local-6989586621679072899"><span class="hs-identifier hs-var">peer</span></a></span><span>
+</span><span id="line-267"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-268"></span><span>    </span><span class="annot"><a href="#local-6989586621679072904"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072694"><span class="annot"><a href="#local-6989586621679072694"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span id="local-6989586621679072693"><span class="annot"><a href="#local-6989586621679072693"><span class="hs-identifier hs-type">n</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-269"></span><span>          </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Nat"><span class="hs-identifier hs-type">Nat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072693"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-270"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#MaybeDState"><span class="hs-identifier hs-type">MaybeDState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072693"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-271"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072669"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072672"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Network.TypedProtocol.Core.html#Pipelined"><span class="hs-identifier hs-type">Pipelined</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072693"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072673"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679072694"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072675"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-272"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072670"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072675"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072671"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-273"></span><span>    </span><span id="local-6989586621679072904"><span class="annot"><span class="annottext">go :: forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679072907"><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679072907"><span class="hs-identifier hs-var">n</span></a></span></span><span>    </span><span id="local-6989586621679072908"><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679072908"><span class="hs-identifier hs-var">dstate</span></a></span></span><span>             </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Effect"><span class="hs-identifier hs-type">Effect</span></a></span><span> </span><span id="local-6989586621679072909"><span class="annot"><span class="annottext">m (Peer ps pr ('Pipelined n c) st' m a)
+</span><a href="#local-6989586621679072909"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (Peer ps pr ('Pipelined n c) st' m a)
+</span><a href="#local-6989586621679072909"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">m (Peer ps pr ('Pipelined n c) st' m a)
+-&gt; (Peer ps pr ('Pipelined n c) st' m a -&gt; m (a, dstate))
+-&gt; m (a, dstate)
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679072907"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679072908"><span class="hs-identifier hs-var">dstate</span></a></span><span>
+</span><span id="line-274"></span><span>    </span><span class="annot"><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-type">HasDState</span></a></span><span> </span><span id="local-6989586621679072912"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072912"><span class="hs-identifier hs-var">dstate</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Done"><span class="hs-identifier hs-type">Done</span></a></span><span> </span><span class="annot"><span class="annottext">NobodyHasAgencyProof pr st'
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679072917"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679072917"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, dstate) -&gt; m (a, dstate)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679072917"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072912"><span class="hs-identifier hs-var">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-275"></span><span>
+</span><span id="line-276"></span><span>    </span><span class="annot"><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span> </span><span id="local-6989586621679072922"><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679072922"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Yield"><span class="hs-identifier hs-type">Yield</span></a></span><span> </span><span id="local-6989586621679072932"><span class="annot"><span class="annottext">WeHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072932"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679072933"><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072933"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span id="local-6989586621679072934"><span class="annot"><span class="annottext">Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679072934"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-277"></span><span>      </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st' -&gt; Message ps st' st' -&gt; m ()
+forall (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+</span><a href="#local-6989586621679072897"><span class="hs-identifier hs-var">sendMessage</span></a></span><span> </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072932"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072933"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-278"></span><span>      </span><span class="annot"><span class="annottext">Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+forall (n :: N). ('Z ~ n) =&gt; Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span> </span><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679072922"><span class="hs-identifier hs-var">dstate</span></a></span><span> </span><span class="annot"><span class="annottext">Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679072934"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-279"></span><span>
+</span><span id="line-280"></span><span>    </span><span class="annot"><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-type">HasDState</span></a></span><span> </span><span id="local-6989586621679072940"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072940"><span class="hs-identifier hs-var">dstate</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Await"><span class="hs-identifier hs-type">Await</span></a></span><span> </span><span id="local-6989586621679072948"><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072948"><span class="hs-identifier hs-var">stok</span></a></span></span><span> </span><span id="local-6989586621679072949"><span class="annot"><span class="annottext">forall (st' :: ps).
+Message ps st' st' -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679072949"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-281"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-type">SomeMessage</span></a></span><span> </span><span id="local-6989586621679072954"><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072954"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679072955"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072955"><span class="hs-identifier hs-var">dstate'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st' -&gt; dstate -&gt; m (SomeMessage st', dstate)
+forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+</span><a href="#local-6989586621679072898"><span class="hs-identifier hs-var">recvMessage</span></a></span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072948"><span class="hs-identifier hs-var">stok</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072940"><span class="hs-identifier hs-var">dstate</span></a></span><span>
+</span><span id="line-282"></span><span>      </span><span class="annot"><span class="annottext">Nat 'Z
+-&gt; MaybeDState dstate 'Z
+-&gt; Peer ps pr ('Pipelined 'Z c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat 'Z
+forall (n :: N). ('Z ~ n) =&gt; Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">dstate -&gt; MaybeDState dstate 'Z
+forall dstate. dstate -&gt; MaybeDState dstate 'Z
+</span><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-var">HasDState</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679072955"><span class="hs-identifier hs-var">dstate'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Message ps st' st' -&gt; Peer ps pr ('Pipelined n c) st' m a
+forall (st' :: ps).
+Message ps st' st' -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679072949"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072954"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-283"></span><span>
+</span><span id="line-284"></span><span>    </span><span class="annot"><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679072956"><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679072956"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679072957"><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679072957"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#YieldPipelined"><span class="hs-identifier hs-type">YieldPipelined</span></a></span><span> </span><span id="local-6989586621679072978"><span class="annot"><span class="annottext">WeHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072978"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679072979"><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072979"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span id="local-6989586621679072980"><span class="annot"><span class="annottext">Receiver ps pr st' st'' m c
+</span><a href="#local-6989586621679072980"><span class="hs-identifier hs-var">receiver</span></a></span></span><span> </span><span id="local-6989586621679072981"><span class="annot"><span class="annottext">Peer ps pr ('Pipelined ('S n) c) st'' m a
+</span><a href="#local-6989586621679072981"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-285"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; ReceiveHandler dstate ps pr m c -&gt; STM m ()
+forall a. TQueue m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TQueue m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTQueue</span></span><span> </span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+TQueue m (ReceiveHandler dstate ps pr m c)
+</span><a href="#local-6989586621679072895"><span class="hs-identifier hs-var">receiveQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MaybeDState dstate n
+-&gt; Receiver ps pr st' st'' m c -&gt; ReceiveHandler dstate ps pr m c
+forall dstate (n :: N) ps (pr :: PeerRole) (st :: ps) (st' :: ps)
+       (m :: * -&gt; *) c.
+MaybeDState dstate n
+-&gt; Receiver ps pr st st' m c -&gt; ReceiveHandler dstate ps pr m c
+</span><a href="Network.TypedProtocol.Driver.html#ReceiveHandler"><span class="hs-identifier hs-var">ReceiveHandler</span></a></span><span> </span><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679072957"><span class="hs-identifier hs-var">dstate</span></a></span><span> </span><span class="annot"><span class="annottext">Receiver ps pr st' st'' m c
+</span><a href="#local-6989586621679072980"><span class="hs-identifier hs-var">receiver</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-286"></span><span>      </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st' -&gt; Message ps st' st' -&gt; m ()
+forall (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+WeHaveAgencyProof pr st -&gt; Message ps st st' -&gt; m ()
+</span><a href="#local-6989586621679072897"><span class="hs-identifier hs-var">sendMessage</span></a></span><span> </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st'
+</span><a href="#local-6989586621679072978"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679072979"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-287"></span><span>      </span><span class="annot"><span class="annottext">Nat ('S n)
+-&gt; MaybeDState dstate ('S n)
+-&gt; Peer ps pr ('Pipelined ('S n) c) st'' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Nat n -&gt; Nat ('S n)
+forall (m :: N) (n :: N). (m ~ 'S n) =&gt; Nat n -&gt; Nat m
+</span><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-var">Succ</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679072956"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MaybeDState dstate ('S n)
+forall dstate (n :: N). MaybeDState dstate ('S n)
+</span><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span><span> </span><span class="annot"><span class="annottext">Peer ps pr ('Pipelined ('S n) c) st'' m a
+Peer ps pr ('Pipelined ('S n) c) st'' m a
+</span><a href="#local-6989586621679072981"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-288"></span><span>
+</span><span id="line-289"></span><span>    </span><span class="annot"><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-type">Succ</span></a></span><span> </span><span id="local-6989586621679072986"><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679072986"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Collect"><span class="hs-identifier hs-type">Collect</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Peer ps pr ('Pipelined ('S n) c) st' m a)
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span id="local-6989586621679073003"><span class="annot"><span class="annottext">c -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679073003"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-290"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679073004"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679073004"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073005"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073005"><span class="hs-identifier hs-var">dstate</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m (c, dstate) -&gt; m (c, dstate)
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TQueue m (c, dstate) -&gt; STM m (c, dstate)
+forall a. TQueue m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TQueue m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTQueue</span></span><span> </span><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679072896"><span class="hs-identifier hs-var">collectQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-291"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679072986"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-292"></span><span>        </span><span class="annot"><span class="annottext">Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Nat 'Z
+-&gt; MaybeDState dstate 'Z
+-&gt; Peer ps pr ('Pipelined 'Z c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat 'Z
+forall (n :: N). ('Z ~ n) =&gt; Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">dstate -&gt; MaybeDState dstate 'Z
+forall dstate. dstate -&gt; MaybeDState dstate 'Z
+</span><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-var">HasDState</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073005"><span class="hs-identifier hs-var">dstate</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679073003"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">c
+c
+</span><a href="#local-6989586621679073004"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>        </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-type">Succ</span></a></span><span> </span><span id="local-6989586621679073015"><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679073015"><span class="hs-identifier hs-var">n'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Nat ('S n)
+-&gt; MaybeDState dstate ('S n)
+-&gt; Peer ps pr ('Pipelined ('S n) c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Nat n -&gt; Nat ('S n)
+forall (m :: N) (n :: N). (m ~ 'S n) =&gt; Nat n -&gt; Nat m
+</span><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-var">Succ</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679073015"><span class="hs-identifier hs-var">n'</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">MaybeDState dstate ('S n)
+forall dstate (n :: N). MaybeDState dstate ('S n)
+</span><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679073003"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">c
+c
+</span><a href="#local-6989586621679073004"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-294"></span><span>
+</span><span id="line-295"></span><span>    </span><span class="annot"><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-type">Succ</span></a></span><span> </span><span id="local-6989586621679073019"><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679073019"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Collect"><span class="hs-identifier hs-type">Collect</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679073036"><span class="annot"><span class="annottext">Peer ps pr ('Pipelined ('S n) c) st' m a
+</span><a href="#local-6989586621679073036"><span class="hs-identifier hs-var">k'</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679073037"><span class="annot"><span class="annottext">c -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679073037"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-296"></span><span>      </span><span id="local-6989586621679073038"><span class="annot"><span class="annottext">Maybe (c, dstate)
+</span><a href="#local-6989586621679073038"><span class="hs-identifier hs-var">mc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m (Maybe (c, dstate)) -&gt; m (Maybe (c, dstate))
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TQueue m (c, dstate) -&gt; STM m (Maybe (c, dstate))
+forall a. TQueue m a -&gt; STM m (Maybe a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TQueue m a -&gt; STM m (Maybe a)
+</span><span class="hs-identifier hs-var">tryReadTQueue</span></span><span> </span><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679072896"><span class="hs-identifier hs-var">collectQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-297"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (c, dstate)
+</span><a href="#local-6989586621679073038"><span class="hs-identifier hs-var">mc</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-298"></span><span>        </span><span class="annot"><span class="annottext">Maybe (c, dstate)
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Nat ('S n)
+-&gt; MaybeDState dstate ('S n)
+-&gt; Peer ps pr ('Pipelined ('S n) c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Nat n -&gt; Nat ('S n)
+forall (m :: N) (n :: N). (m ~ 'S n) =&gt; Nat n -&gt; Nat m
+</span><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-var">Succ</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679073019"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MaybeDState dstate ('S n)
+forall dstate (n :: N). MaybeDState dstate ('S n)
+</span><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span><span>  </span><span class="annot"><span class="annottext">Peer ps pr ('Pipelined ('S n) c) st' m a
+Peer ps pr ('Pipelined ('S n) c) st' m a
+</span><a href="#local-6989586621679073036"><span class="hs-identifier hs-var">k'</span></a></span><span>
+</span><span id="line-299"></span><span>        </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679073040"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679073040"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073041"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073041"><span class="hs-identifier hs-var">dstate</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-300"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679073019"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-301"></span><span>            </span><span class="annot"><span class="annottext">Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Nat 'Z
+-&gt; MaybeDState dstate 'Z
+-&gt; Peer ps pr ('Pipelined 'Z c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Nat 'Z
+forall (n :: N). ('Z ~ n) =&gt; Nat n
+</span><a href="Network.TypedProtocol.Core.html#Zero"><span class="hs-identifier hs-var">Zero</span></a></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">dstate -&gt; MaybeDState dstate 'Z
+forall dstate. dstate -&gt; MaybeDState dstate 'Z
+</span><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-var">HasDState</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073041"><span class="hs-identifier hs-var">dstate</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679073037"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">c
+c
+</span><a href="#local-6989586621679073040"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-302"></span><span>            </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-type">Succ</span></a></span><span> </span><span id="local-6989586621679073050"><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679073050"><span class="hs-identifier hs-var">n'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Nat ('S n)
+-&gt; MaybeDState dstate ('S n)
+-&gt; Peer ps pr ('Pipelined ('S n) c) st' m a
+-&gt; m (a, dstate)
+forall (st' :: ps) (n :: N).
+Nat n
+-&gt; MaybeDState dstate n
+-&gt; Peer ps pr ('Pipelined n c) st' m a
+-&gt; m (a, dstate)
+</span><a href="#local-6989586621679072904"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Nat n -&gt; Nat ('S n)
+forall (m :: N) (n :: N). (m ~ 'S n) =&gt; Nat n -&gt; Nat m
+</span><a href="Network.TypedProtocol.Core.html#Succ"><span class="hs-identifier hs-var">Succ</span></a></span><span> </span><span class="annot"><span class="annottext">Nat n
+</span><a href="#local-6989586621679073050"><span class="hs-identifier hs-var">n'</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">MaybeDState dstate ('S n)
+forall dstate (n :: N). MaybeDState dstate ('S n)
+</span><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c -&gt; Peer ps pr ('Pipelined n c) st' m a
+</span><a href="#local-6989586621679073037"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">c
+c
+</span><a href="#local-6989586621679073040"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-303"></span><span>
+</span><span id="line-304"></span><span>
+</span><span id="line-305"></span><span class="annot"><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerReceiverQueue"><span class="hs-identifier hs-type">runPipelinedPeerReceiverQueue</span></a></span><span>
+</span><span id="line-306"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072665"><span class="annot"><a href="#local-6989586621679072665"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span id="local-6989586621679072666"><span class="annot"><a href="#local-6989586621679072666"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span id="local-6989586621679072664"><span class="annot"><a href="#local-6989586621679072664"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span id="local-6989586621679072663"><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679072667"><span class="annot"><a href="#local-6989586621679072667"><span class="hs-identifier hs-type">c</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-307"></span><span>     </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span>    </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-308"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThread</span></span><span> </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-309"></span><span>     </span><span class="hs-special">)</span><span>
+</span><span id="line-310"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TQueue</span></span><span> </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#ReceiveHandler"><span class="hs-identifier hs-type">ReceiveHandler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072664"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072665"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072666"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072667"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-311"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TQueue</span></span><span> </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072667"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072664"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-312"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072665"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072666"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072664"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-313"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span>
+</span><span id="line-314"></span><span id="runPipelinedPeerReceiverQueue"><span class="annot"><span class="annottext">runPipelinedPeerReceiverQueue :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *) c.
+(MonadSTM m, MonadThread m) =&gt;
+TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; TQueue m (c, dstate) -&gt; Driver ps pr dstate m -&gt; m Void
+</span><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerReceiverQueue"><span class="hs-identifier hs-var hs-var">runPipelinedPeerReceiverQueue</span></a></span></span><span> </span><span id="local-6989586621679073063"><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+</span><a href="#local-6989586621679073063"><span class="hs-identifier hs-var">receiveQueue</span></a></span></span><span> </span><span id="local-6989586621679073064"><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679073064"><span class="hs-identifier hs-var">collectQueue</span></a></span></span><span>
+</span><span id="line-315"></span><span>                              </span><span id="local-6989586621679073065"><span class="annot"><span class="annottext">driver :: Driver ps pr dstate m
+</span><a href="#local-6989586621679073065"><span class="hs-identifier hs-var">driver</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span class="hs-special">{</span><span id="local-6989586621679073066"><span class="annot"><span class="annottext">dstate
+initialDState :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m -&gt; dstate
+initialDState :: dstate
+</span><a href="Network.TypedProtocol.Driver.html#initialDState"><span class="hs-identifier hs-var hs-var">initialDState</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-316"></span><span>    </span><span id="local-6989586621679073067"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679073067"><span class="hs-identifier hs-var">threadId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (ThreadId m)
+forall (m :: * -&gt; *). MonadThread m =&gt; m (ThreadId m)
+</span><span class="hs-identifier hs-var">myThreadId</span></span><span>
+</span><span id="line-317"></span><span>    </span><span class="annot"><span class="annottext">ThreadId m -&gt; String -&gt; m ()
+forall (m :: * -&gt; *). MonadThread m =&gt; ThreadId m -&gt; String -&gt; m ()
+</span><span class="hs-identifier hs-var">labelThread</span></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679073067"><span class="hs-identifier hs-var">threadId</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pipelined-receiver-queue&quot;</span></span><span>
+</span><span id="line-318"></span><span>    </span><span class="annot"><span class="annottext">dstate -&gt; m Void
+</span><a href="#local-6989586621679073068"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073066"><span class="hs-identifier hs-var">initialDState</span></a></span><span>
+</span><span id="line-319"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-320"></span><span>    </span><span class="annot"><a href="#local-6989586621679073068"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072664"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072663"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span>
+</span><span id="line-321"></span><span>    </span><span id="local-6989586621679073068"><span class="annot"><span class="annottext">go :: dstate -&gt; m Void
+</span><a href="#local-6989586621679073068"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679073069"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073069"><span class="hs-identifier hs-var">receiverDState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-322"></span><span>      </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#ReceiveHandler"><span class="hs-identifier hs-type">ReceiveHandler</span></a></span><span> </span><span id="local-6989586621679073077"><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679073077"><span class="hs-identifier hs-var">senderDState</span></a></span></span><span> </span><span id="local-6989586621679073078"><span class="annot"><span class="annottext">Receiver ps pr st st' m c
+</span><a href="#local-6989586621679073078"><span class="hs-identifier hs-var">receiver</span></a></span></span><span>
+</span><span id="line-323"></span><span>        </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m (ReceiveHandler dstate ps pr m c)
+-&gt; m (ReceiveHandler dstate ps pr m c)
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+-&gt; STM m (ReceiveHandler dstate ps pr m c)
+forall a. TQueue m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TQueue m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTQueue</span></span><span> </span><span class="annot"><span class="annottext">TQueue m (ReceiveHandler dstate ps pr m c)
+</span><a href="#local-6989586621679073063"><span class="hs-identifier hs-var">receiveQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-324"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679073079"><span class="annot"><span class="annottext">dstate :: dstate
+</span><a href="#local-6989586621679073079"><span class="hs-identifier hs-var hs-var">dstate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="#local-6989586621679073077"><span class="hs-identifier hs-var">senderDState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073069"><span class="hs-identifier hs-var">receiverDState</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-325"></span><span>                       </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#HasDState"><span class="hs-identifier hs-type">HasDState</span></a></span><span> </span><span id="local-6989586621679073081"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073081"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">dstate
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073081"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-326"></span><span>                       </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MaybeDState dstate n
+</span><a href="Network.TypedProtocol.Driver.html#NoDState"><span class="hs-identifier hs-var">NoDState</span></a></span><span class="hs-special">,</span><span>    </span><span id="local-6989586621679073083"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073083"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073083"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-327"></span><span>      </span><span id="local-6989586621679073084"><span class="annot"><span class="annottext">x :: (c, dstate)
+</span><a href="#local-6989586621679073084"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621679073085"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679073085"><span class="hs-identifier hs-var">_c</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679073086"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073086"><span class="hs-identifier hs-var">dstate'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Driver ps pr dstate m
+-&gt; dstate -&gt; Receiver ps pr st st' m c -&gt; m (c, dstate)
+forall ps (st :: ps) (stdone :: ps) (pr :: PeerRole) dstate
+       (m :: * -&gt; *) c.
+Monad m =&gt;
+Driver ps pr dstate m
+-&gt; dstate -&gt; Receiver ps pr st stdone m c -&gt; m (c, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerReceiver"><span class="hs-identifier hs-var">runPipelinedPeerReceiver</span></a></span><span> </span><span class="annot"><span class="annottext">Driver ps pr dstate m
+</span><a href="#local-6989586621679073065"><span class="hs-identifier hs-var">driver</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073079"><span class="hs-identifier hs-var">dstate</span></a></span><span> </span><span class="annot"><span class="annottext">Receiver ps pr st st' m c
+</span><a href="#local-6989586621679073078"><span class="hs-identifier hs-var">receiver</span></a></span><span>
+</span><span id="line-328"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TQueue m (c, dstate) -&gt; (c, dstate) -&gt; STM m ()
+forall a. TQueue m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TQueue m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTQueue</span></span><span> </span><span class="annot"><span class="annottext">TQueue m (c, dstate)
+</span><a href="#local-6989586621679073064"><span class="hs-identifier hs-var">collectQueue</span></a></span><span> </span><span class="annot"><span class="annottext">(c, dstate)
+</span><a href="#local-6989586621679073084"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-329"></span><span>      </span><span class="annot"><span class="annottext">dstate -&gt; m Void
+</span><a href="#local-6989586621679073068"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073086"><span class="hs-identifier hs-var">dstate'</span></a></span><span>
+</span><span id="line-330"></span><span>
+</span><span id="line-331"></span><span>
+</span><span id="line-332"></span><span class="annot"><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerReceiver"><span class="hs-identifier hs-type">runPipelinedPeerReceiver</span></a></span><span>
+</span><span id="line-333"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072741"><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072745"><span class="annot"><a href="#local-6989586621679072745"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679072746"><span class="annot"><a href="#local-6989586621679072746"><span class="hs-identifier hs-type">stdone</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679072743"><span class="annot"><a href="#local-6989586621679072743"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span id="local-6989586621679072744"><span class="annot"><a href="#local-6989586621679072744"><span class="hs-identifier hs-type">dstate</span></a></span></span><span> </span><span id="local-6989586621679072742"><span class="annot"><a href="#local-6989586621679072742"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679072747"><span class="annot"><a href="#local-6989586621679072747"><span class="hs-identifier hs-type">c</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-334"></span><span>     </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072742"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-335"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072743"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072744"><span class="hs-identifier hs-type">dstate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072742"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-336"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072744"><span class="hs-identifier hs-type">dstate</span></a></span><span>
+</span><span id="line-337"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Receiver"><span class="hs-identifier hs-type">Receiver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072743"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072745"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072746"><span class="hs-identifier hs-type">stdone</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679072742"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072747"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-338"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072742"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072747"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072744"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-339"></span><span id="runPipelinedPeerReceiver"><span class="annot"><span class="annottext">runPipelinedPeerReceiver :: forall ps (st :: ps) (stdone :: ps) (pr :: PeerRole) dstate
+       (m :: * -&gt; *) c.
+Monad m =&gt;
+Driver ps pr dstate m
+-&gt; dstate -&gt; Receiver ps pr st stdone m c -&gt; m (c, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#runPipelinedPeerReceiver"><span class="hs-identifier hs-var hs-var">runPipelinedPeerReceiver</span></a></span></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Driver.html#Driver"><span class="hs-identifier hs-type">Driver</span></a></span><span class="hs-special">{</span><span id="local-6989586621679073088"><span class="annot"><span class="annottext">forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+recvMessage :: forall ps (pr :: PeerRole) dstate (m :: * -&gt; *).
+Driver ps pr dstate m
+-&gt; forall (st :: ps).
+   (StateTokenI st, ActiveState st) =&gt;
+   TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+recvMessage :: forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+</span><a href="Network.TypedProtocol.Driver.html#recvMessage"><span class="hs-identifier hs-var hs-var">recvMessage</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">dstate -&gt; Receiver ps pr st stdone m c -&gt; m (c, dstate)
+forall (st' :: ps) (st'' :: ps).
+dstate -&gt; Receiver ps pr st' st'' m c -&gt; m (c, dstate)
+</span><a href="#local-6989586621679073089"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-340"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-341"></span><span>    </span><span class="annot"><a href="#local-6989586621679073089"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679072755"><span class="annot"><a href="#local-6989586621679072755"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span id="local-6989586621679072756"><span class="annot"><a href="#local-6989586621679072756"><span class="hs-identifier hs-type">st''</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-342"></span><span>          </span><span class="annot"><a href="#local-6989586621679072744"><span class="hs-identifier hs-type">dstate</span></a></span><span>
+</span><span id="line-343"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Peer.html#Receiver"><span class="hs-identifier hs-type">Receiver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072741"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072743"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072755"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072756"><span class="hs-identifier hs-type">st''</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072742"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072747"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-344"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072742"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072747"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679072744"><span class="hs-identifier hs-type">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-345"></span><span>    </span><span id="local-6989586621679073089"><span class="annot"><span class="annottext">go :: forall (st' :: ps) (st'' :: ps).
+dstate -&gt; Receiver ps pr st' st'' m c -&gt; m (c, dstate)
+</span><a href="#local-6989586621679073089"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679073091"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073091"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#ReceiverEffect"><span class="hs-identifier hs-type">ReceiverEffect</span></a></span><span> </span><span id="local-6989586621679073093"><span class="annot"><span class="annottext">m (Receiver ps pr st' st'' m c)
+</span><a href="#local-6989586621679073093"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (Receiver ps pr st' st'' m c)
+</span><a href="#local-6989586621679073093"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">m (Receiver ps pr st' st'' m c)
+-&gt; (Receiver ps pr st' st'' m c -&gt; m (c, dstate)) -&gt; m (c, dstate)
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">dstate -&gt; Receiver ps pr st' st'' m c -&gt; m (c, dstate)
+forall (st' :: ps) (st'' :: ps).
+dstate -&gt; Receiver ps pr st' st'' m c -&gt; m (c, dstate)
+</span><a href="#local-6989586621679073089"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073091"><span class="hs-identifier hs-var">dstate</span></a></span><span>
+</span><span id="line-346"></span><span>
+</span><span id="line-347"></span><span>    </span><span class="annot"><a href="#local-6989586621679073089"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679073094"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073094"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#ReceiverDone"><span class="hs-identifier hs-type">ReceiverDone</span></a></span><span> </span><span id="local-6989586621679073098"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679073098"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(c, dstate) -&gt; m (c, dstate)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679073098"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073094"><span class="hs-identifier hs-var">dstate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-348"></span><span>
+</span><span id="line-349"></span><span>    </span><span class="annot"><a href="#local-6989586621679073089"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679073099"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073099"><span class="hs-identifier hs-var">dstate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Peer.html#ReceiverAwait"><span class="hs-identifier hs-type">ReceiverAwait</span></a></span><span> </span><span id="local-6989586621679073107"><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st'
+</span><a href="#local-6989586621679073107"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679073108"><span class="annot"><span class="annottext">forall (st' :: ps).
+Message ps st' st' -&gt; Receiver ps pr st' st'' m c
+</span><a href="#local-6989586621679073108"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-350"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-type">SomeMessage</span></a></span><span> </span><span id="local-6989586621679073112"><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679073112"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073113"><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073113"><span class="hs-identifier hs-var">dstate'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st' -&gt; dstate -&gt; m (SomeMessage st', dstate)
+forall (st :: ps).
+(StateTokenI st, ActiveState st) =&gt;
+TheyHaveAgencyProof pr st -&gt; dstate -&gt; m (SomeMessage st, dstate)
+</span><a href="#local-6989586621679073088"><span class="hs-identifier hs-var">recvMessage</span></a></span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st'
+</span><a href="#local-6989586621679073107"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073099"><span class="hs-identifier hs-var">dstate</span></a></span><span>
+</span><span id="line-351"></span><span>      </span><span class="annot"><span class="annottext">dstate -&gt; Receiver ps pr st' st'' m c -&gt; m (c, dstate)
+forall (st' :: ps) (st'' :: ps).
+dstate -&gt; Receiver ps pr st' st'' m c -&gt; m (c, dstate)
+</span><a href="#local-6989586621679073089"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">dstate
+</span><a href="#local-6989586621679073113"><span class="hs-identifier hs-var">dstate'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Message ps st' st' -&gt; Receiver ps pr st' st'' m c
+forall (st' :: ps).
+Message ps st' st' -&gt; Receiver ps pr st' st'' m c
+</span><a href="#local-6989586621679073108"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st' st'
+</span><a href="#local-6989586621679073112"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-352"></span></pre></body></html>
