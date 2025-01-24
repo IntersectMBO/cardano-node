@@ -131,18 +131,18 @@ checkFund ::
   -> String
 checkFund nixService shelleyGenesis signingKey
   | AnyCardanoEra BabbageEra <- _nix_era nixService
-  = showBabbage $ checkFundCore shelleyGenesis signingKey
+  = showBabbage $ checkFundCore ShelleyBasedEraBabbage shelleyGenesis signingKey
   | AnyCardanoEra ConwayEra <- _nix_era nixService
-  = showConway $ checkFundCore shelleyGenesis signingKey
+  = showConway $ checkFundCore ShelleyBasedEraConway shelleyGenesis signingKey
   | otherwise
   = "ApiTest: unrecognized era"
 
 checkFundCore ::
-  IsShelleyBasedEra era
-  => ShelleyGenesis
+  ShelleyBasedEra era
+  -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> Maybe (AddressInEra era, Api.Coin)
-checkFundCore = genesisInitialFundForKey Mainnet
+checkFundCore sbe = genesisInitialFundForKey sbe Mainnet
 
 checkPlutusBuiltin :: FilePath -> IO ()
 #ifndef WITH_LIBRARY
