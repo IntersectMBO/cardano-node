@@ -15,8 +15,10 @@ module Cardano.Node.Types
   , DbFile(..)
   , GenesisFile(..)
   , PeerSnapshotFile (..)
+  , CheckpointsFile(..)
   , ProtocolFilepaths (..)
   , GenesisHash(..)
+  , CheckpointsHash(..)
   , MaxConcurrencyBulkSync(..)
   , MaxConcurrencyDeadline(..)
     -- * Networking
@@ -31,6 +33,7 @@ module Cardano.Node.Types
   , NodeShelleyProtocolConfiguration(..)
   , NodeAlonzoProtocolConfiguration(..)
   , NodeConwayProtocolConfiguration(..)
+  , NodeCheckpointsConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , renderVRFPrivateKeyFilePermissionError
   ) where
@@ -40,6 +43,7 @@ import           Cardano.Api
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
+import           Cardano.Node.Orphans ()
 import           Ouroboros.Network.ConsensusMode (ConsensusMode (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
@@ -94,6 +98,16 @@ newtype PeerSnapshotFile = PeerSnapshotFile { unPeerSnapshotFile :: FilePath }
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = fail $ "Parsing of GenesisFile failed due to type mismatch. "
+                          <> "Encountered: " <> show invalid
+
+newtype CheckpointsFile = CheckpointsFile
+  { unCheckpointsFile :: FilePath }
+  deriving stock (Eq, Ord)
+  deriving newtype (IsString, Show)
+
+instance FromJSON CheckpointsFile where
+  parseJSON (String genFp) = pure . CheckpointsFile $ Text.unpack genFp
+  parseJSON invalid = fail $ "Parsing of CheckpointsFile failed due to type mismatch. "
                           <> "Encountered: " <> show invalid
 
 newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
@@ -163,6 +177,9 @@ data ProtocolFilepaths =
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)
 
+newtype CheckpointsHash = CheckpointsHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
+  deriving newtype (Eq, Show, ToJSON, FromJSON)
+
 data NodeProtocolConfiguration =
   NodeProtocolConfigurationCardano
     NodeByronProtocolConfiguration
@@ -170,6 +187,7 @@ data NodeProtocolConfiguration =
     NodeAlonzoProtocolConfiguration
     NodeConwayProtocolConfiguration
     NodeHardForkProtocolConfiguration
+    NodeCheckpointsConfiguration
   deriving (Eq, Show)
 
 data NodeShelleyProtocolConfiguration =
@@ -321,6 +339,14 @@ data NodeHardForkProtocolConfiguration =
      }
   deriving (Eq, Show)
 
+-- | See 'Ouroboros.Consensus.Config.CheckpointsMap'.
+data NodeCheckpointsConfiguration =
+     NodeCheckpointsConfiguration {
+       npcCheckpointsFile     :: !(Maybe CheckpointsFile)
+     , npcCheckpointsFileHash :: !(Maybe CheckpointsHash)
+     }
+ deriving (Eq, Show)
+
 -- | Find the starting era for the test network, if it was configured.
 --
 -- Starting eras have zero defined as a forking epoch. So here we're taking the last zeroed configuration value.
@@ -378,13 +404,14 @@ newtype TopologyFile = TopologyFile
   deriving newtype (Show, Eq)
 
 instance AdjustFilePaths NodeProtocolConfiguration where
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pch) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pch pccp) =
     NodeProtocolConfigurationCardano
       (adjustFilePaths f pcb)
       (adjustFilePaths f pcs)
       (adjustFilePaths f pca)
       (adjustFilePaths f pcc)
       pch
+      (adjustFilePaths f pccp)
 
 instance AdjustFilePaths NodeByronProtocolConfiguration where
   adjustFilePaths f x@NodeByronProtocolConfiguration {
@@ -410,12 +437,21 @@ instance AdjustFilePaths NodeConwayProtocolConfiguration where
                       } =
     x { npcConwayGenesisFile = adjustFilePaths f npcConwayGenesisFile }
 
+instance AdjustFilePaths NodeCheckpointsConfiguration where
+  adjustFilePaths f x@NodeCheckpointsConfiguration {
+                        npcCheckpointsFile
+                      } =
+    x { npcCheckpointsFile = adjustFilePaths f npcCheckpointsFile }
+
 instance AdjustFilePaths SocketConfig where
   adjustFilePaths f x@SocketConfig{ncSocketPath} =
     x { ncSocketPath = fmap (mapFile f) ncSocketPath }
 
 instance AdjustFilePaths GenesisFile where
   adjustFilePaths f (GenesisFile p) = GenesisFile (f p)
+
+instance AdjustFilePaths CheckpointsFile where
+  adjustFilePaths f (CheckpointsFile p) = CheckpointsFile (f p)
 
 instance AdjustFilePaths a => AdjustFilePaths (Maybe a) where
   adjustFilePaths f = fmap (adjustFilePaths f)

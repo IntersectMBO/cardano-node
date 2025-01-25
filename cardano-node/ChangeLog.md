@@ -17,6 +17,29 @@
 
 - Use metric names of old-tracing in new-tracing as well, and fix some metrics in new tracing.
 
+- Optionally support lightweight checkpointing.
+
+  This PR adds optional support for *lightweight checkpointing*. Concretely, a file can contain a list of checkpoints (each consisting of a block number and a corresponding block hash). When validating a header/block with a block number with a corresponding checkpoint, we consider the header/block to be invalid if their actual hash does not coincide with the hash from the checkpoint.
+
+  This is only expected to be used in certain disaster recovery scenarios, so ideally never. See [CIP-0135](https://github.com/cardano-foundation/CIPs/blob/master/CIP-0135/README.md) for more details.
+
+  > ⚠️ Specifying a checkpoints file requires great care; incorrect entries can lead the node to be stuck on adversarial chains forever!
+
+  Concretely, the node configuration file has two new optional entries:
+  ```yaml
+  CheckpointsFile: "/path/to/checkpoints.json"
+  CheckpointsFileHash: "a71c47262163947daaefb6aa1112acf34cb5ded6841d51e27dd642eb2de355a3"
+  ```
+
+  The `checkpoints.json` file has the following format:
+  ```json
+  {
+    "checkpoints": [
+      {"blockNo": 3, "hash": "52b7912de176ab76c233d6e08ccdece53ac1863c08cc59d3c5dec8d924d9b536"}
+    ]
+  }
+  ```
+
 ## 8.2.1 -- August 2023
 
 - prevent SIGHUP from killing node during ledger replay
