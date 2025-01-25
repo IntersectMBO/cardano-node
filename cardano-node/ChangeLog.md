@@ -1,21 +1,58 @@
 # Changelog for cardano-node
 
-## Next version
+## 10.2 -- January 2025
 
 - Use p2p network stack by default, warn when using the legacy network stack.
+
 - Deprecate some CLI flags corresponding to low-level consensus options. They are
   still accepted but a warning is emitted on startup on stderr suggesting to set
   them in the configuration file instead:
   - `--mempool-capacity-override` and `--no-mempool-capacity-override` can be set in the configuration file via the key `MempoolCapacityBytesOverride`.
   - `--snapshot-interval` can be set in the configuration file via the key `SnapshotInterval`.
   - `--num-of-disk-snapshots` can be set in the configuration file via the key `NumOfDiskSnapshots`.
+
 - Ledger peer snapshot path entry added to topology JSON parser,
   which a new decoder function `readPeerSnapshotFile` processes
   at startup and SIGHUP. Data is available to the diffusion layer
   via TVar.
 
+- Configuration changes:
+  - Add `ConsensusMode` and `MinBigLedgerPeersForTrustedState`
+  - Add Genesis config
+  - Add `diffusionMode` to local root peers group configuration
+  - Add `DoDiskSnapshotChecksum`
+
+- Change fallback node name for trace forwarding from `host:port` to `host_port`
 
 - Use metric names of old-tracing in new-tracing as well, and fix some metrics in new tracing.
+
+- Tracing updates:
+  - Add support for `ChainSelStarvationEvent`, `ExtValidationError`
+  - Add support for `KeepAlive` protocol
+  - Add support for `LocalStateQuery` protocol
+  - Add support for `UsingBigLedgerPeerSnapshot`, `VerifyPeerSnapshot`
+  - Add support for `ConnectionError`
+  - Add support for `AddNewNodeIdMapping`
+  - Add support for `PeerFetch` and `PeerStarvedUs`
+  - Add support for `SnapshotMissingChecksum`
+  - Add support for stateful messages
+  - Add `maximumKesEvolutions` to `InvalidKesSignatureOCERT` event
+  - Rename kind field of all `MuxXxx` trace messages to be `Mux.Xxx`
+  - Rename fields in `RotatedDynamo` event to `oldPeer`, `newPeer`
+  - Rename `ConnectTo` to `Connect`
+  - Change format of `GenesisPoint`, `LabelPeer`, `DecisionEvent`
+  - Change format of `ConnectionManagerState`
+  - Change format of `AddedToCurrentChain`
+  - Drop support for `ClientAgency`, `ServerAgency`
+  - Drop support for `FetchDecision declined`, `FetchDecision results`
+  - Drop support for `StakeKeyInRewardsDELEG`
+  - Drop support for `ChainSelectionForFutureBlock`, `BlockInTheFuture`,
+    `CandidateContainsFutureBlocks`, `CandidateContainsFutureBlocksExceedingClockSkew`,
+    `InvalidBlockReason`
+
+- Drop NodeToClient versions 9 through 15, and add 19
+
+- Increase minor protocol version to `10.3`
 
 ## 8.2.1 -- August 2023
 

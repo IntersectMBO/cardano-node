@@ -1,12 +1,12 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                10.1.4
+version:                10.2
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
                         Validator,
-copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
+copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -207,8 +207,8 @@ library
                       , strict-sop-core
                       , strict-stm
                       , time
-                      , trace-dispatcher ^>= 2.7.0
-                      , trace-forward ^>= 2.2.8
+                      , trace-dispatcher ^>= 2.8.0
+                      , trace-forward ^>= 2.2.9
                       , trace-resources ^>= 0.2.3
                       , tracer-transformers
                       , transformers

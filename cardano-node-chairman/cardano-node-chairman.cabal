@@ -6,7 +6,7 @@ synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
                         Test,
-copyright:              2020-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
+copyright:              2020-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -44,7 +44,7 @@ executable cardano-node-chairman
   build-depends:        cardano-api
                       , cardano-crypto-class
                       , cardano-git-rev ^>= 0.2.2
-                      , cardano-node ^>= 10.1.1
+                      , cardano-node ^>= 10.2
                       , cardano-prelude
                       , containers
                       , contra-tracer

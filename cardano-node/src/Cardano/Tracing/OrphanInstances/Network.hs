@@ -465,7 +465,6 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
-      -- TraceVerifyPeerSnapshot    {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 

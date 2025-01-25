@@ -1,6 +1,6 @@
 # ChangeLog
 
-## NEXT
+## 2.2.9 - Jan 2025
 
 * Updated to `typed-protocols-0.3`.
 
