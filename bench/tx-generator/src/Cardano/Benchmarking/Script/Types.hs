@@ -39,8 +39,8 @@ module Cardano.Benchmarking.Script.Types (
 ) where
 
 import           Cardano.Api
-import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
+import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
@@ -214,4 +214,4 @@ newtype TxList era = TxList [Tx era]
 
 data ProtocolParameterMode where
   ProtocolParameterQuery :: ProtocolParameterMode
-  ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode
+  ProtocolParameterLocal :: L.PParams (ShelleyLedgerEra era) -> ProtocolParameterMode

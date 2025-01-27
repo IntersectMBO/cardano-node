@@ -26,9 +26,11 @@ module  Cardano.TxGenerator.PlutusContext
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters (..))
+import           Cardano.Api.Shelley (fromAlonzoExUnits, toAlonzoExUnits, executionSteps, executionMemory)
 
+import qualified Cardano.Ledger.Alonzo.Core as L
 import           Cardano.Ledger.Coin (Coin)
+import qualified Cardano.Ledger.Core as L
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
 import           Cardano.TxGenerator.Types
 
@@ -38,6 +40,7 @@ import           Data.List (maximumBy, minimumBy)
 import           Data.Ord (comparing)
 import           GHC.Generics (Generic)
 import           GHC.Natural (Natural)
+import           Lens.Micro
 
 
 -- | This collects information describing the budget. It's only
@@ -105,8 +108,9 @@ readScriptData jsonFilePath
 -- | Can find the optimal scaling factor for block expenditure, by aiming at highest
 -- loop count per block iff TargetBlockExpenditure Nothing is given;
 -- will calibrate loop for any fully specified fitting strategy otherwise
-plutusAutoScaleBlockfit ::
-     ProtocolParameters
+plutusAutoScaleBlockfit :: ()
+  => L.AlonzoEraPParams era
+  => L.PParams era
   -> FilePath
   -> ScriptInAnyLang
   -> PlutusAutoBudget
@@ -151,8 +155,9 @@ plutusAutoScaleBlockfit pparams fp script pab strategy txInputs
 --      termination value when counting down.
 --   2. In the redeemer's argument structure, this value is the first numerical value
 --      that's encountered during traversal.
-plutusAutoBudgetMaxOut ::
-     ProtocolParameters
+plutusAutoBudgetMaxOut :: ()
+  => L.AlonzoEraPParams era
+  => L.PParams era
   -> ScriptInAnyLang
   -> PlutusAutoBudget
   -> PlutusBudgetFittingStrategy
@@ -161,10 +166,7 @@ plutusAutoBudgetMaxOut ::
 plutusAutoBudgetMaxOut _ _ _ (TargetBlockExpenditure Nothing) _
   = Left $ TxGenError "plutusAutoBudgetMaxOut : a scaling factor is required for TargetBlockExpenditure"
 plutusAutoBudgetMaxOut
-  protocolParams@ProtocolParameters
-    { protocolParamMaxBlockExUnits  = Just budgetPerBlock
-    , protocolParamMaxTxExUnits     = Just budgetPerTx
-    }
+  pparams
   script
   pab@PlutusAutoBudget{..}
   target
@@ -174,6 +176,8 @@ plutusAutoBudgetMaxOut
     let pab' = pab {autoBudgetUnits = targetBudget, autoBudgetRedeemer = unsafeHashableScriptData $ toLoopArgument n}
     pure (pab', fromIntegral n, limitFactors)
   where
+    budgetPerBlock = fromAlonzoExUnits $ pparams ^. L.ppMaxBlockExUnitsL
+    budgetPerTx    = fromAlonzoExUnits $ pparams ^. L.ppMaxTxExUnitsL
     -- The highest loop counter that is tried - this is about 10 times the current mainnet limit.
     searchUpperBound  = 20000
 
@@ -195,7 +199,7 @@ plutusAutoBudgetMaxOut
     -- the execution is considered within limits when there's no limiting factor, i.e. the list is empty
     isInLimits :: Integer -> Either TxGenError [PlutusAutoLimitingFactor]
     isInLimits n = do
-      used <- preExecutePlutusScript protocolParams script autoBudgetDatum (unsafeHashableScriptData $ toLoopArgument n)
+      used <- preExecutePlutusScript pparams script autoBudgetDatum (unsafeHashableScriptData $ toLoopArgument n)
       pure $   [ExceededStepLimit   | executionSteps used > executionSteps targetBudget]
             ++ [ExceededMemoryLimit | executionMemory used > executionMemory targetBudget]
 
@@ -207,8 +211,9 @@ plutusAutoBudgetMaxOut _ _ _ _ _
 -- Some of the function arguments share names with the record fields
 -- mass imported with the @Constr{..}@ notation, setting the field
 -- of the final result to that argument.
-plutusBudgetSummary ::
-     ProtocolParameters
+plutusBudgetSummary :: ()
+  => L.AlonzoEraPParams era
+  => L.PParams era
   -> FilePath
   -> PlutusBudgetFittingStrategy
   -> (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
@@ -216,10 +221,7 @@ plutusBudgetSummary ::
   -> Int
   -> PlutusBudgetSummary
 plutusBudgetSummary
-  ProtocolParameters
-    { protocolParamMaxBlockExUnits  = Just budgetPerBlock
-    , protocolParamMaxTxExUnits     = Just budgetPerTx
-    }
+  pparams
   scriptId
   budgetStrategy
   (PlutusAutoBudget{..}, loopCounter, loopLimitingFactors)
@@ -227,6 +229,8 @@ plutusBudgetSummary
   txInputs
   = PlutusBudgetSummary{..}
   where
+    budgetPerBlock          = fromAlonzoExUnits $ pparams ^. L.ppMaxBlockExUnitsL
+    budgetPerTx             = fromAlonzoExUnits $ pparams ^. L.ppMaxTxExUnitsL
     projectedTxSize         = Nothing           -- we defer this value until after splitting phase
     projectedTxFee          = Nothing           -- we defer this value until after splitting phase
     strategyMessage         = Nothing
@@ -287,10 +291,10 @@ minus :: ExecutionUnits -> ExecutionUnits -> ExecutionUnits
 minus (ExecutionUnits a b) (ExecutionUnits a' b')
   = ExecutionUnits (a - a') (b - b')
 
-calc :: ExecutionUnits -> (Natural -> Natural -> Natural) -> Int -> ExecutionUnits
+calc :: ExecutionUnits -> (Natural -> Natural -> Natural) -> Int -> ExecutionUnits 
 calc (ExecutionUnits a b) op (fromIntegral -> n)
   = ExecutionUnits (a `op` n) (b `op` n)
 
-bmin :: ExecutionUnits -> ExecutionUnits -> ExecutionUnits
+bmin :: ExecutionUnits -> ExecutionUnits -> ExecutionUnits 
 bmin (ExecutionUnits a b) (ExecutionUnits a' b')
   = ExecutionUnits (min a a') (min b b')

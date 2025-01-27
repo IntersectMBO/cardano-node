@@ -7,7 +7,6 @@ module  Cardano.TxGenerator.PureExample
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (convertToLedgerProtocolParameters)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
@@ -105,11 +104,7 @@ generateTx TxEnvironment{..}
     sbe = ShelleyBasedEraBabbage
 
     generator :: TxGenerator BabbageEra
-    generator =
-        case convertToLedgerProtocolParameters sbe txEnvProtocolParams of
-          Right ledgerParameters ->
-            genTx sbe ledgerParameters collateralFunds txEnvFee txEnvMetadata
-          Left err -> \_ _ -> Left (ApiError err)
+    generator = genTx ShelleyBasedEraBabbage txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
@@ -158,11 +153,7 @@ generateTxPure TxEnvironment{..} inQueue
     sbe = ShelleyBasedEraBabbage
 
     generator :: TxGenerator BabbageEra
-    generator =
-        case convertToLedgerProtocolParameters sbe txEnvProtocolParams of
-          Right ledgerParameters ->
-            genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
-          Left err -> \_ _ -> Left (ApiError err)
+    generator = genTx ShelleyBasedEraBabbage txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])

@@ -14,9 +14,10 @@ module  Cardano.TxGenerator.Types
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
@@ -67,7 +68,7 @@ data TxEnvironment era = TxEnvironment
   { txEnvNetworkId        :: !NetworkId
   -- , txEnvGenesis          :: !ShelleyGenesis
   -- , txEnvProtocolInfo     :: !SomeConsensusProtocol
-  , txEnvProtocolParams   :: !ProtocolParameters
+  , txEnvProtocolParams   :: !(L.PParams (ShelleyLedgerEra era))
   , txEnvFee              :: TxFee era
   , txEnvMetadata         :: TxMetadataInEra era
   }

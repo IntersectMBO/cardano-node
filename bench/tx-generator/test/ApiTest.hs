@@ -14,7 +14,7 @@ module Main (module Main) where
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as Api
-import           Cardano.Api.Shelley (ProtocolParameters (..), fromPlutusData)
+import           Cardano.Api.Shelley (fromPlutusData)
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
