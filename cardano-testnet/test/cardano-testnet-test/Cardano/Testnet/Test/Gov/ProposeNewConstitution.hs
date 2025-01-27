@@ -108,8 +108,6 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
-  constitutionFile <- H.note $ gov </> "sample-constitution"
   constitutionActionFp <- H.note $ gov </> "constitution.action"
 
   let proposalAnchorDataIpfsHash = "QmexFJuEn5RtnHEqpxDcqrazdHPzAwe7zs2RxHLfMH5gBz"
@@ -179,7 +177,9 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       ]
 
   let relativeUrlProposal = ["ipfs", proposalAnchorDataIpfsHash]
+      proposalAnchorUrl = "ipfs://" ++ proposalAnchorDataIpfsHash
       relativeUrlConstitution = ["ipfs", constitutionAnchorDataIpfsHash]
+      constitutionAnchorUrl = "ipfs://" ++ constitutionAnchorDataIpfsHash
 
   txbodyFp <- H.note $ work </> "tx.body"
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo
