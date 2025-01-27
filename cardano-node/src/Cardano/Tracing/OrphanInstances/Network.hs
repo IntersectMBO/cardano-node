@@ -465,7 +465,6 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
-      -- TraceVerifyPeerSnapshot    {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -684,7 +683,7 @@ instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalTxSubmission (GenTx blk) applyTxErr))) where
   trTransformer = trStructured
 
-instance (LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
+instance (forall fp. LocalStateQuery.ShowQuery (BlockQuery blk fp), ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)))) where
   trTransformer = trStructured
 
@@ -695,7 +694,7 @@ instance (ToObject localPeer)
 instance
   ( HasPrivacyAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
   , HasSeverityAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
-  , LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
+  , forall fp. LocalStateQuery.ShowQuery (BlockQuery blk fp), ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)) where
   trTransformer = trStructured
 

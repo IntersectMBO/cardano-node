@@ -1,5 +1,9 @@
 # Revision history for trace-dispatcher
 
+## 2.8.0 -- Jan 2025
+* Change dependency `ekg` to `ekg-wai`, replacing `snap-server` based web stack with `warp / wai`.
+* Add `initForwardingDelayed` which allows for deferred start of forwarding after initialization, instead of tying both together.
+
 ## 2.7.0 -- Sep 2024
 * Add `docuResultsToMetricsHelptext` for JSON output of metrics docs; required
   by `cardano-node` command `trace-documentation --output-metric-help`

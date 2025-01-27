@@ -26,6 +26,8 @@ let
     bootstrapPeers = cfg.bootstrapPeers;
   } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
     useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
+  } // optionalAttrs (cfg.peerSnapshotFile i != null) {
+    peerSnapshotFile = cfg.peerSnapshotFile i;
   };
 
   oldTopology = i: {
@@ -716,6 +718,21 @@ in {
             else if cfg.profiling == "space-heap" then ["-hT"] ++ commonProfilingArgs
             else [];
         description = ''RTS profiling options'';
+      };
+
+      peerSnapshotFile = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        example = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";
+        apply = x: if builtins.isFunction x then x else _: x;
+        description = ''
+          If set, cardano-node will load a peer snapshot file from the declared absolute path.
+
+          The peer snapshot file contains a snapshot of big ledger peers taken at some arbitrary slot.
+          These are the largest pools that cumulatively hold 90% of total stake.
+
+          A peer snapshot file can be generated with a `cardano-cli query ledger-peer-snapshot` command.
+        '';
       };
     };
   };
