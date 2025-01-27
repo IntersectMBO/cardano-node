@@ -25,6 +25,7 @@ things one might do with the connexion.
  -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
+        , AnyPParams(..)
         , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
                 Sequence, Split, SplitN, Take)
         , PayMode(PayToAddr, PayToScript)
@@ -215,3 +216,7 @@ newtype TxList era = TxList [Tx era]
 data ProtocolParameterMode era where
   ProtocolParameterQuery :: ProtocolParameterMode era
   ProtocolParameterLocal :: L.PParams (ShelleyLedgerEra era) -> ProtocolParameterMode era
+
+-- | Protocol parameters for an era that is not statically known
+data AnyPParams where
+  AnyPParams :: L.PParams (ShelleyLedgerEra era) -> AnyPParams

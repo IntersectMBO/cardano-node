@@ -97,10 +97,10 @@ import qualified System.IO as IO (hPutStrLn, stderr)
 -- | The 'Env' type represents the state maintained while executing
 -- a series of actions. The 'Maybe' types are largely to represent
 -- as-of-yet unset values.
-data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
+data Env = forall era. Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- wrapped by 'ProtocolParameterMode' which itself is
                  -- a sort of custom 'Maybe'.
-                 protoParams :: forall era. Maybe (ProtocolParameterMode era)
+                 protoParams :: Maybe (ProtocolParameterMode era)
                , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
@@ -239,7 +239,7 @@ getEnvMap acc key = do
     Nothing -> throwE . UserError $ "Lookup of " ++ key ++ " failed"
 
 -- | Read accessor for `protoParams`.
-getProtoParamMode :: ActionM (ProtocolParameterMode era)
+getProtoParamMode :: forall era. ActionM (ProtocolParameterMode era)
 getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 
 -- | Read accessor for `benchTracers`.

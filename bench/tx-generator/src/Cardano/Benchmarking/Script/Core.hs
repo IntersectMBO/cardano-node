@@ -160,10 +160,6 @@ queryEra = do
     (return . AnyShelleyBasedEra)
     era
 
--- | Protocol parameters for an era that is not statically known
-data AnyPParams where
-  AnyPParams :: Ledger.PParams (ShelleyLedgerEra era) -> AnyPParams
-
 queryRemoteProtocolParameters :: ()
   => L.AlonzoEraPParams era
   => ShelleyBasedEra era
