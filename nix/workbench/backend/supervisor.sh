@@ -74,8 +74,16 @@ case "$op" in
         mkdir -p                                              "$gen_dir"
         cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
         cp $(jq '."config"'                        -r $gtor)  "$gen_dir"/run-script.json
-        cp $(jq '."plutus-redeemer"'               -r $gtor)  "$gen_dir"/plutus-redeemer.json
-        cp $(jq '."plutus-datum"'                  -r $gtor)  "$gen_dir"/plutus-datum.json
+        # Optional "plutus-redeemer" file!
+        if test "$(jq -r '."plutus-redeemer"' $gtor)" != "null"
+        then
+            cp $(jq '."plutus-redeemer"'           -r $gtor)  "$gen_dir"/plutus-redeemer.json
+        fi
+        # Optional "plutus-datum" file!
+        if test "$(jq -r '."plutus-datum"' $gtor)" != "null"
+        then
+            cp $(jq '."plutus-datum"'              -r $gtor)  "$gen_dir"/plutus-datum.json
+        fi
 
         local work_dir="$dir"/workloads
         mkdir -p                                              "$work_dir"
