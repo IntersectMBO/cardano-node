@@ -161,9 +161,18 @@ queryEra = do
 data AnyPParams where
   AnyPParams :: Ledger.PParams (ShelleyLedgerEra era) -> AnyPParams
 
-queryRemoteProtocolParameters ::
-     ShelleyBasedEra era
-  -> ActionM AnyPParams
+queryRemoteProtocolParameters :: ()
+  => ledgerera ~ (ShelleyLedgerEra era)
+  => L.AlonzoEraPParams ledgerera -- We need this constraint
+  -- to satisfy the ToJSON instance. But it's a bit meh, because
+  -- then we need the era to be alonzo onwards to bring the instance
+  -- into context (via API's alonzoEraOnwardsConstraints, see
+  -- https://github.com/IntersectMBO/cardano-api/blob/acc6d1fd427e024802cb74cbfa9a7fb4d669003c/cardano-api/internal/Cardano/Api/Eon/AlonzoEraOnwards.hs#L91).
+  --
+  -- Could we instead define the instances for pre-alonzo here? That would be nicer,
+  -- because then this code would be Shelley onwards compatible, not Alonzo onwards compatible.
+  => ShelleyBasedEra era
+  -> ActionM (Ledger.PParams ledgerera)
 queryRemoteProtocolParameters sbe = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
@@ -175,13 +184,35 @@ queryRemoteProtocolParameters sbe = do
   traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
   return pp
 
-getProtocolParameters ::
-     ShelleyBasedEra era
-  -> ActionM AnyPParams
+getProtocolParameters :: ()
+  => ledgerera ~ (ShelleyLedgerEra era)
+  => L.AlonzoEraPParams ledgerera
+  => ShelleyBasedEra era
+  -> ActionM (Ledger.PParams (ShelleyLedgerEra era))
 getProtocolParameters sbe = do
   getProtoParamMode  >>= \case
     ProtocolParameterQuery -> queryRemoteProtocolParameters sbe
-    ProtocolParameterLocal parameters -> return $ AnyPParams parameters
+    ProtocolParameterLocal parameters -> do
+      -- We can't do that:
+      --
+      -- return parameters
+      --
+      -- and that really is the gist of the problem of getting rid of ProtocolParameters.
+      -- We can't do that because ProtocolParameterMode is not parameterized by the era.
+      -- So when we "open" its ProtocolParameterLocal case, we get
+      -- an existentially quantified era, that doesn't unify with the one
+      -- we have from this function's prototype.
+      --
+      -- There are two solutions to this:
+      --
+      -- 1. We could make ProtocolParameterMode parameterized by the era.
+      --    but this propagates to 'Env', which can be OK;
+      --    because the era is not supposed to change (so far) during a run.
+      -- 2. We could reify the two eras and check for equality. I remember that
+      --    Mateusz has been doing that (in places I don't remember at the top of my head).
+      --    This wouldn't be contaminating the whole Env hierarchy. But could it cause
+      --    some failures at runtime?
+      undefined
 
 waitForEra :: AnyShelleyBasedEra -> ActionM ()
 waitForEra era = do
