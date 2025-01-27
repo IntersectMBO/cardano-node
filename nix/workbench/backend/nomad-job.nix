@@ -847,63 +847,71 @@ let
           ])
           ++
           # Generator
-          (lib.optionals (taskName == generatorTaskName) [
-            ## Generator start.sh script.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/start.sh";
-              data = escapeTemplate
-                profileData.generator-service.start.value;
-              change_mode = "noop";
-              error_on_missing_key = true;
-              perms = "744"; # Only for every "start.sh" script. Default: "644"
-            }
-            ## Generator configuration file.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/run-script.json";
-              data = escapeTemplate (
-                let runScript = profileData.generator-service.config;
-                in
-                   # Recreate the "run-script.json" with IPs and ports that are
-                   # nomad template variables.
-                   (runScriptToGoTemplate
-                     runScript.value
-                     # Just the node names.
-                     (lib.attrsets.mapAttrsToList
-                       (nodeSpecNodeName: nodeSpecNode: nodeSpecNodeName)
-                       # All the producer nodes. How the workbench creates it.
-                       (lib.attrsets.filterAttrs
-                         (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
-                         profileData.node-specs.value
+          (lib.optionals (taskName == generatorTaskName) (
+            [
+              ## Generator start.sh script.
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/start.sh";
+                data = escapeTemplate
+                  profileData.generator-service.start.value;
+                change_mode = "noop";
+                error_on_missing_key = true;
+                perms = "744"; # Only for every "start.sh" script. Default: "644"
+              }
+              ## Generator configuration file.
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/run-script.json";
+                data = escapeTemplate (
+                  let runScript = profileData.generator-service.config;
+                  in
+                     # Recreate the "run-script.json" with IPs and ports that are
+                     # nomad template variables.
+                     (runScriptToGoTemplate
+                       runScript.value
+                       # Just the node names.
+                       (lib.attrsets.mapAttrsToList
+                         (nodeSpecNodeName: nodeSpecNode: nodeSpecNodeName)
+                         # All the producer nodes. How the workbench creates it.
+                         (lib.attrsets.filterAttrs
+                           (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
+                           profileData.node-specs.value
+                         )
                        )
                      )
-                   )
-              );
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
+                );
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+            ]
+            ++
             ## Generator Plutus redeemer.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/plutus-redeemer.json";
-              data = escapeTemplate
-                (__readFile profileData.generator-service.plutus-redeemer.JSON)
-              ;
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
+            lib.optionals ((profileData.generator-service.plutus-redeemer.JSON or null) != null) [
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/plutus-redeemer.json";
+                data = escapeTemplate
+                  (__readFile profileData.generator-service.plutus-redeemer.JSON)
+                ;
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+            ]
+            ++
             ## Generator Plutus datum.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/plutus-datum.json";
-              data = escapeTemplate
-                (__readFile profileData.generator-service.plutus-datum.JSON)
-              ;
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
-          ])
+            lib.optionals ((profileData.generator-service.plutus-datum.JSON or null) != null) [
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/plutus-datum.json";
+                data = escapeTemplate
+                  (__readFile profileData.generator-service.plutus-datum.JSON)
+                ;
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+            ]
+          ))
           ++
           # workloads
           (builtins.map (workload:
