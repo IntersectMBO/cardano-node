@@ -49,6 +49,7 @@ module Cardano.Benchmarking.Profile.Types (
 --------------------------------------------------------------------------------
 
 import           Prelude
+import           Data.Maybe (isJust)
 import           GHC.Generics
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
@@ -97,11 +98,15 @@ data Profile = Profile
 
   -- TODO: Somehow merge these two!
   , preset :: Maybe String
-  , overlay :: Maybe Aeson.Object
+  , overlay :: Aeson.Object --TODO: Add `Maybe`, empty object for compatibility.
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Profile
+instance Aeson.ToJSON Profile where
+  toJSON = Aeson.genericToJSON
+    -- TODO: Remove after removing `jq` profiles.
+    -- To compare JSONs without "desc", "chaindb" and "preset" properties.
+    (Aeson.defaultOptions {Aeson.omitNothingFields = True})
 
 instance Aeson.FromJSON Profile where
   parseJSON = Aeson.genericParseJSON
@@ -202,7 +207,11 @@ data Composition = Composition
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Composition
+instance Aeson.ToJSON Composition where
+  toJSON = Aeson.genericToJSON
+    -- TODO: Remove after removing `jq` profiles.
+    -- To compare JSONs without the "with_chaindb_server" property.
+    (Aeson.defaultOptions {Aeson.omitNothingFields = True})
 
 instance Aeson.FromJSON Composition where
   parseJSON = Aeson.genericParseJSON
@@ -462,11 +471,13 @@ data Plutus = Plutus
 
 instance Aeson.ToJSON Plutus where
   toJSON p =
-    Aeson.object
+    Aeson.object $
       [ "type"     Aeson..= plutusType p
       , "script"   Aeson..= plutusScript p
-      , "redeemer" Aeson..= redeemer p
       ]
+      ++
+      -- TODO: Needed to replicate the old "jq" JSON output.
+      ["redeemer" Aeson..= redeemer p | isJust (redeemer p)]
 
 instance Aeson.FromJSON Plutus where
   parseJSON =
