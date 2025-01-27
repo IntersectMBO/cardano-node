@@ -452,7 +452,7 @@ ciTestBage = Types.Profile {
       ]
   }
   , Types.preset = mempty
-  , Types.overlay = Just mempty
+  , Types.overlay = mempty
 }
 
 --------------------------------------------------------------------------------
@@ -714,6 +714,6 @@ testGroupOverlay = Tasty.testGroup
             (Types.effective_epochs $ Types.derived profile)
           -- The overlay used is added to the profile.
           assertEqual "New overlay"
-            (Just overlay)
+            overlay
             (Types.overlay profile)
   ]

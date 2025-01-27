@@ -179,7 +179,7 @@ overlay overlaykeyMap profile =
       union = KeyMap.unionWithKey unionWithKey profileKeyMap overlaykeyMap
   in case Aeson.fromJSON (Aeson.Object union) of
     -- Add the overlay to the profile.
-    (Aeson.Success profile') -> profile' {Types.overlay = Just overlaykeyMap}
+    (Aeson.Success profile') -> profile' {Types.overlay = overlaykeyMap}
     (Aeson.Error str) -> error $ "Could not apply overlay: " ++ str
 
 -- Right-biased merge of both JSON objects at all depths.
