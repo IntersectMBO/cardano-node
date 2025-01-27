@@ -44,6 +44,7 @@ import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profi
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Latency    (profilesNoEraLatency)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
+import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 
 --------------------------------------------------------------------------------
 
@@ -98,6 +99,7 @@ profilesNoEra obj = Map.fromList $ map
     -- Extra modules
     ++ profilesNoEraScalingLocal
     ++ profilesNoEraScalingCloud
+    ++ profilesNoEraVoting
   )
 
 -- | Adds the eras to `profilesNoEra`.
@@ -177,7 +179,7 @@ overlay overlaykeyMap profile =
       union = KeyMap.unionWithKey unionWithKey profileKeyMap overlaykeyMap
   in case Aeson.fromJSON (Aeson.Object union) of
     -- Add the overlay to the profile.
-    (Aeson.Success profile') -> profile' {Types.overlay = Just overlaykeyMap}
+    (Aeson.Success profile') -> profile' {Types.overlay = overlaykeyMap}
     (Aeson.Error str) -> error $ "Could not apply overlay: " ++ str
 
 -- Right-biased merge of both JSON objects at all depths.
@@ -313,7 +315,7 @@ genesisOverlay overlayName epochParams = do
     _ -> error $ "Not an Aeson Object: \"" ++ fp ++ "\""
 
 derive :: Types.Profile -> Types.Profile
-derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ ana _ _ _ _) =
+derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ _ ana _ _ _ _) =
   let 
       -- Absolute/epoch durations:
       ----------------------------
@@ -487,7 +489,7 @@ derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ ana _ _ _ _) =
 --}
 
 cliArgs :: Types.Profile -> Types.Profile
-cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ dved _ _ _) =
+cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
   let --toJson = map (\(k,n) -> )
       fmtDecimal i =
            Scientific.formatScientific Scientific.Fixed (Just 0) (fromInteger i / 100000)
@@ -496,7 +498,7 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ dved _ _ _) =
         [
           Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
         , Aeson.String "--supply",           Aeson.String $ Text.pack $ fmtDecimal $ Types.funds_balance gsis
-        , Aeson.String "--gen-utxo-keys",    Aeson.Number 1
+        , Aeson.String "--gen-utxo-keys",    Aeson.Number $ fromInteger $ Types.utxo_keys gsis
         , Aeson.String "--gen-genesis-keys", Aeson.Number $ fromInteger $ Types.n_bft_hosts comp
         , Aeson.String "--supply-delegated", Aeson.String $ Text.pack $ fmtDecimal $ Types.supply_delegated dved
         , Aeson.String "--gen-pools",        Aeson.Number $ fromInteger $ Types.n_pools comp
@@ -515,7 +517,7 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ dved _ _ _) =
         [
           Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
         , Aeson.String "--total-supply",     Aeson.String $ Text.pack $ fmtDecimal $ Types.funds_balance gsis + Types.supply_delegated dved
-        , Aeson.String "--utxo-keys",        Aeson.Number 1
+        , Aeson.String "--utxo-keys",        Aeson.Number $ fromInteger $ Types.utxo_keys gsis
         , Aeson.String "--genesis-keys",     Aeson.Number $ fromInteger $ Types.n_bft_hosts comp
         , Aeson.String "--delegated-supply", Aeson.String $ Text.pack $ fmtDecimal $ Types.supply_delegated dved
         , Aeson.String "--pools",            Aeson.Number $ fromInteger $ Types.n_pools comp
