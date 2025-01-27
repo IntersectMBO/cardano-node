@@ -833,7 +833,10 @@ let
                   )
                   # The P2P flag.
                   (if profileData.value.node ? verbatim && profileData.value.node.verbatim ? EnableP2P
-                   then profileData.value.node.verbatim.EnableP2P
+                   then
+                     if profileData.value.node.verbatim.EnableP2P == null
+                     then false
+                     else profileData.value.node.verbatim.EnableP2P
                    else false
                   )
                 )
