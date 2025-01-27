@@ -393,13 +393,17 @@ instance Aeson.FromJSON Node where
         <*> o Aeson..: "shutdown_on_slot_synced"
         <*> o Aeson..: "shutdown_on_block_synced"
 
+-- Properties passed directly to the node(s) "config.json" file.
 newtype NodeVerbatim = NodeVerbatim
-  { enableP2P :: Maybe Bool -- TODO: Make it lower case in the workbench.
+  { enableP2P :: Maybe Bool
   }
   deriving (Eq, Show, Generic)
 
--- TODO: Switch to lower-case in workbench/bash
+-- `Nothing` properties are not in the final "config.json", not even "null".
 instance Aeson.ToJSON NodeVerbatim where
+  -- If the "EnableP2P" JSON property is present in a Cardano node version that
+  -- does not support P2P, the profile can fail to properly initiate a cluster.
+  toJSON   (NodeVerbatim Nothing) = Aeson.object []
   toJSON p@(NodeVerbatim _) =
     Aeson.object
       [ "EnableP2P"   Aeson..= enableP2P p
