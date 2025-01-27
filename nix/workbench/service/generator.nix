@@ -178,29 +178,29 @@ let
       };
 
       # The Plutus redeemer file is handled as an extra service file to deploy.
-      plutus-redeemer = rec {
+      plutus-redeemer =
         # Not present on every profile.
-        value = if serviceConfig.plutus == null
-                then null
-                else serviceConfig.plutus.redeemer or null
-        ;
-        # Always creates a file, even if it just contains "null".
-        # Easier to handle if always every service properties is not null.
-        JSON = jsonFilePretty "plutus-redeemer.json" (__toJSON value)
-        ;
-      };
+        # Don't create a derivation to a file containing "null" !!!
+        if serviceConfig.plutus == null || (serviceConfig.plutus.redeemer or null) == null
+        then {}
+        else rec {
+               value = serviceConfig.plutus.redeemer;
+               JSON = jsonFilePretty "plutus-redeemer.json" (__toJSON value);
+             }
+      ;
 
       # The Plutus datum file is handled as an extra service file to deploy.
-      plutus-datum = rec {
+      plutus-datum =
         # Not present on every profile.
-        value = if serviceConfig.plutus == null
-                then null
-                else serviceConfig.plutus.datum or null
-        ;
-        # Always creates a file, even if it just contains "null".
-        # Easier to handle if always every service properties is not null.
-        JSON = jsonFilePretty "plutus-datum.json" (__toJSON value);
-      };
+        # Don't create a derivation to a file containing "null" !!!
+        if serviceConfig.plutus == null || (serviceConfig.plutus.datum or null) == null
+        then {}
+        else rec {
+               value = serviceConfig.plutus.datum;
+               JSON = jsonFilePretty "plutus-datum.json" (__toJSON value);
+             }
+      ;
+
     })
     nodeSpecs;
 in
