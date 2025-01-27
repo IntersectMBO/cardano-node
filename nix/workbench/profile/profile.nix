@@ -129,8 +129,10 @@ let
                 { name            = "generator";
                   start           = start.JSON;
                   config          = config.JSON;
-                  plutus-redeemer = plutus-redeemer.JSON;
-                  plutus-datum    = plutus-datum.JSON;
+                  # Not present on every profile.
+                  plutus-redeemer = plutus-redeemer.JSON or null;
+                  # Not present on every profile.
+                  plutus-datum    = plutus-datum.JSON or null;
                 };
               workloadsService = __toJSON (builtins.map (workload: {
                   name            = workload.name;
