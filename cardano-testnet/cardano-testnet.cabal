@@ -191,6 +191,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.LeadershipSchedule
                         Cardano.Testnet.Test.Cli.Query
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
+                        Cardano.Testnet.Test.Cli.PlutusCostCalculation
                         Cardano.Testnet.Test.Cli.StakeSnapshot
                         Cardano.Testnet.Test.Cli.Transaction
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress

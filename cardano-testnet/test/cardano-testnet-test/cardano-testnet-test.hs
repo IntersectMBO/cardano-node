@@ -18,6 +18,7 @@ import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.GovActionTimeout as Gov
 import qualified Cardano.Testnet.Test.Gov.InfoAction as LedgerEvents
+import qualified Cardano.Testnet.Test.Cli.PlutusCostCalculation
 import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash
@@ -85,6 +86,7 @@ tests = do
           , ignoreOnWindows "stake snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
           , ignoreOnWindows "register deregister stake address in transaction build"  Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress.hprop_tx_register_deregister_stake_address
+          , ignoreOnWindows "plutus cost calc" Cardano.Testnet.Test.Cli.PlutusCostCalculation.hprop_plutus_cost_calculation
           -- FIXME
           -- , ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.LeadershipSchedule.hprop_leadershipSchedule
 
