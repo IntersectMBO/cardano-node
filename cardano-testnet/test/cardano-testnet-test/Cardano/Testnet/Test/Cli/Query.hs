@@ -24,7 +24,6 @@ import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
 import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput)
-import           Cardano.Crypto.Hash (hashToStringAsHex)
 import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Testnet
 
@@ -40,7 +39,6 @@ import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Data (type (:~:) (Refl))
 import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.String (IsString (fromString))
@@ -57,12 +55,11 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
-                   watchEpochStateUpdate)
+                   watchEpochStateUpdate, getTxIx)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSimpleSpendOutputsOnlyTx,
                    mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
-import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
@@ -497,17 +494,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   _verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
   _verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
     makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
-
-  getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
-  getTxIx sbe txId amount (AnyNewEpochState sbe' _ tbs, _, _) = do
-    Refl <- H.leftFail $ assertErasEqual sbe sbe'
-    shelleyBasedEraConstraints sbe' $ do
-      return $ Map.foldlWithKey (\acc (TxIn (TxId thisTxId) (TxIx thisTxIx)) (TxOut _ txOutValue _ _) ->
-        case acc of
-          Nothing | hashToStringAsHex thisTxId == txId &&
-                    txOutValueToLovelace txOutValue == amount -> Just $ fromIntegral thisTxIx
-                  | otherwise -> Nothing
-          x -> x) Nothing $ getLedgerTablesUTxOValues sbe' tbs
 
 -- | @redactJsonStringFieldInFile [(k0, v0), (k1, v1), ..] sourceFilePath targetFilePath@ reads the JSON at @sourceFilePath@, and then
 -- replaces the value associated to @k0@ by @v0@, replaces the value associated to @k1@ by @v1@, etc.

@@ -39,19 +39,23 @@ module Testnet.Components.Query
   , getGovActionLifetime
   , getKeyDeposit
   , getDelegationState
+  , getTxIx
   ) where
 
 import           Cardano.Api as Api
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import           Cardano.Api.Shelley (ShelleyLedgerEra)
+import qualified Cardano.Api.Ledger as L
 
+import           Cardano.Crypto.Hash (hashToStringAsHex)
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UMap as L
+
+import           Prelude
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
@@ -59,6 +63,7 @@ import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.IORef
 import           Data.List (sortOn)
+import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
@@ -74,10 +79,10 @@ import           Lens.Micro (Lens', to, (^.))
 import           Testnet.Property.Assert
 import           Testnet.Types
 
+import           Hedgehog
 import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion)
 import qualified Hedgehog.Extras as H
-import           Hedgehog.Internal.Property (MonadTest)
 
 -- | Block and wait for the desired epoch.
 waitUntilEpoch
@@ -592,3 +597,15 @@ getDelegationState epochStateView = do
                  . L.dsUnifiedL
 
   pure $ L.toStakeCredentials pools
+
+-- | Returns the transaction index of a transaction with a given amount and ID.
+getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> L.Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
+getTxIx sbe txId amount (AnyNewEpochState sbe' _ tbs, _, _) = do
+  Refl <- H.leftFail $ assertErasEqual sbe sbe'
+  shelleyBasedEraConstraints sbe' $ do
+    return $ Map.foldlWithKey (\acc (TxIn (TxId thisTxId) (TxIx thisTxIx)) (TxOut _ txOutValue _ _) ->
+      case acc of
+        Nothing | hashToStringAsHex thisTxId == txId &&
+                  txOutValueToLovelace txOutValue == amount -> Just $ fromIntegral thisTxIx
+                | otherwise -> Nothing
+        x -> x) Nothing $ getLedgerTablesUTxOValues sbe' tbs
