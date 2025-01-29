@@ -57,6 +57,11 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
+  <*> optional (OA.strOption
+      (   OA.long "output-dir"
+      <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
+      <>  OA.metavar "DIRECTORY"
+      ))
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =

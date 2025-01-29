@@ -25,6 +25,8 @@ makeSprocket
 makeSprocket tmpAbsPath node
   = Sprocket (makeTmpBaseAbsPath tmpAbsPath) (makeSocketDir tmpAbsPath </> node)
 
+-- TODO rename me: since the introduction of --output-dir in the cardano-testnet
+-- executable, this is a directory that can persist after the test ends.
 -- Temporary path used at runtime
 newtype TmpAbsolutePath = TmpAbsolutePath
   { unTmpAbsPath :: FilePath
