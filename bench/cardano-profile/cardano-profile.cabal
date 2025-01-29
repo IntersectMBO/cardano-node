@@ -17,6 +17,7 @@ data-files:             data/all-profiles.json
                         data/ci-test-bage.json
                         data/genesis/epoch-timeline.json
                         data/genesis/overlays/*.json
+                        data/presets/*.json
                         data/test/default-coay/*.json
                         data/test/chainsync-early-alonzo-coay/*.json
                         data/test/chainsync-early-byron-coay/*.json
