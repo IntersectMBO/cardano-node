@@ -294,7 +294,7 @@ data Genesis = Genesis
 
   -- Size:
   , utxo :: Integer
-  , delegators :: Maybe Integer
+  , delegators :: Integer
   , dreps :: Integer
   , extra_future_offset :: Time.NominalDiffTime -- Size dependent!
 

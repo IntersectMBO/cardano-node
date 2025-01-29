@@ -153,7 +153,7 @@ empty = Types.Profile {
     , Types.active_slots_coeff = 0
     , Types.parameter_k = 0
     , Types.utxo = 0
-    , Types.delegators = Nothing
+    , Types.delegators = 0
     , Types.dreps = 0
     , Types.extra_future_offset = 0
     , Types.per_pool_balance = 0
@@ -512,9 +512,9 @@ utxo i = genesis
 delegators :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 delegators i = genesis
   (\g ->
-    if isJust (Types.delegators g)
-    then error "delegators: `delegators` already set (not Nothing)."
-    else g {Types.delegators = Just i}
+    if Types.delegators g /= 0
+    then error "delegators: `delegators` already set (not zero)."
+    else g {Types.delegators = i}
   )
 
 dreps :: HasCallStack => Integer -> Types.Profile -> Types.Profile

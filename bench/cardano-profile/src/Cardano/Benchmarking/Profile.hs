@@ -213,7 +213,7 @@ finalize profile =
                     else Types.per_pool_balance genesis
                   -- TODO: Remove or move to derive ?
                 , Types.delegator_coin =
-                    if Types.delegators genesis == Just 0
+                    if Types.delegators genesis == 0
                     then 0
                     else Types.per_pool_balance genesis
                 }
@@ -372,9 +372,8 @@ derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ _ ana _ _ _ _) =
       -- UTxO:
       --------
       (effective_delegators, delegators_effective) =
-        case Types.delegators gsis of
-          (Just d) -> (d, max d (Types.n_pools comp))
-          Nothing -> (Types.n_pools comp, Types.n_pools comp)
+        let d = Types.delegators gsis
+        in (d, max d (Types.n_pools comp))
       utxo_generated = generator_tx_count * Types.inputs_per_tx gtor
       utxo_stuffed = max 0 (Types.utxo gsis)
 
@@ -383,9 +382,7 @@ derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ _ ana _ _ _ _) =
       dataset_measure =
         if Types.utxo gsis == 0
         then 0
-        else case Types.delegators gsis of
-               (Just d) -> Types.utxo gsis + d
-               Nothing -> Types.utxo gsis
+        else Types.utxo gsis + Types.delegators gsis
       -- NominalDiffTime.
       dataset_induced_startup_delay_optimistic =
         if dataset_measure < 10000
