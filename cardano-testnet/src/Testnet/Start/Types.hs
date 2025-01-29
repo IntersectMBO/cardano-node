@@ -74,6 +74,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
+  , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   } deriving (Eq, Show)
 
 cardanoNumPools :: CardanoTestnetOptions -> NumPools
@@ -105,6 +106,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
+    , cardanoOutputDir = Nothing
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
