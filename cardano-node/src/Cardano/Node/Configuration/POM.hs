@@ -430,15 +430,26 @@ instance FromJSON PartialNodeConfiguration where
       parseLedgerDbConfig v = do
         maybeString :: Maybe Value <- v .:? "LedgerDB"
         case maybeString of
-           Nothing -> return Nothing
+           Nothing -> do
+             -- This is here just to ensure that we also try to read the SnapshotInterval from the toplevel config. as it was the case before UTxO-HD
+             -- It is needed for the pre-emptive cluster runs
+             si <- (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> v .:? "SnapshotInterval") .!= DefaultSnapshotInterval
+             snapNum <- (fmap RequestedNumOfDiskSnapshots <$> v .:? "NumOfDiskSnapshots") .!= DefaultNumOfDiskSnapshots
+             doChecksum <- (fmap Flag <$> v .:? "DoDiskSnapshotChecksum") .!= DoDiskSnapshotChecksum
+             return $ Just $ LedgerDbConfiguration snapNum si DefaultQueryBatchSize V2InMemory doChecksum
            Just vv -> withObject "LedgerDB" (\o -> do
              snapNum <-
                    (fmap RequestedNumOfDiskSnapshots <$> o .:? "NumOfDiskSnapshots")
                .!= DefaultNumOfDiskSnapshots
              doChecksum <- (fmap Flag <$> o .:? "DoDiskSnapshotChecksum") .!= DoDiskSnapshotChecksum
-             snapInterval <-
-                   (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> o .:? "SnapshotInterval")
-               .!= DefaultSnapshotInterval
+             snapInterval <- do
+                   ov <- (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> o .:? "SnapshotInterval") .!= DefaultSnapshotInterval
+                   case ov of
+                      DefaultSnapshotInterval -> do
+                         -- This is here just to ensure that we also try to read the SnapshotInterval from the toplevel config. as it was the case before UTxO-HD
+                         -- It is needed for the pre-emptive cluster runs
+                         (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> v .:? "SnapshotInterval") .!= DefaultSnapshotInterval
+                      _ -> pure ov
              qsize <-
                    (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize")
                .!= DefaultQueryBatchSize
