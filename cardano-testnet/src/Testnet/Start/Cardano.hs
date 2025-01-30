@@ -100,7 +100,7 @@ cardanoTestnetDefault testnetOptions shelleyOptions conf = do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
   shelleyGenesis <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply shelleyOptions
-  cardanoTestnet testnetOptions conf UserNodeConfigNotSubmitted shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
+  cardanoTestnet testnetOptions UserNodeConfigNotSubmitted shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis conf
   where
     CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply} = testnetOptions
 
@@ -193,16 +193,16 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 cardanoTestnet :: ()
   => HasCallStack
   => CardanoTestnetOptions -- ^ The options to use
-  -> Conf
   -> UserNodeConfig -- ^ The node configuration file to use. If omitted it's generated.
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
                                    --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
   -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
+  -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnet
-  testnetOptions Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} mNodeConfigFile
-  shelleyGenesis alonzoGenesis conwayGenesis = do
+  testnetOptions mNodeConfigFile
+  shelleyGenesis alonzoGenesis conwayGenesis Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
   let CardanoTestnetOptions
         { cardanoNodeEra=asbe
         , cardanoMaxSupply=maxSupply
