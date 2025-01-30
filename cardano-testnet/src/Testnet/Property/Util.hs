@@ -37,7 +37,7 @@ import           Hedgehog.Internal.Property (MonadTest)
 
 
 disableRetries :: Bool
-disableRetries = IO.unsafePerformIO $ do
+disableRetries = const True . IO.unsafePerformIO $ do
   mValue <- IO.lookupEnv "DISABLE_RETRIES"
   return $ mValue == Just "1"
 {-# NOINLINE disableRetries #-}
