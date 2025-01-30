@@ -79,6 +79,7 @@ checkRootDir
   -> IO ()
 checkRootDir currentLogLock registry rotParams loggingParams@LoggingParams{logRoot} = do
   logRootAbs <- makeAbsolute logRoot
+  writeFile "/tmp/BALDUR_TEST" (logRoot ++ "\n" ++ logRootAbs)
   whenM (doesDirectoryExist logRootAbs) do
     logsSubDirs <- listDirectories logRootAbs
 
