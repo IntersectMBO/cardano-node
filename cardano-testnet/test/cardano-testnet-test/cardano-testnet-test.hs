@@ -86,7 +86,10 @@ tests = do
           , ignoreOnWindows "stake snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
           , ignoreOnWindows "register deregister stake address in transaction build"  Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress.hprop_tx_register_deregister_stake_address
-          , ignoreOnWindows "plutus cost calc" Cardano.Testnet.Test.Cli.PlutusCostCalculation.hprop_plutus_cost_calculation
+          , T.testGroup "plutus cost calc"
+              [ ignoreOnWindows "ref script" Cardano.Testnet.Test.Cli.PlutusCostCalculation.hprop_ref_plutus_cost_calculation
+              , ignoreOnWindows "normal script" Cardano.Testnet.Test.Cli.PlutusCostCalculation.hprop_included_plutus_cost_calculation
+              ]
           -- FIXME
           -- , ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.LeadershipSchedule.hprop_leadershipSchedule
 
