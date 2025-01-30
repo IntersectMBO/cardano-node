@@ -57,10 +57,20 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
+  <*> optional parseConfigFiles
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
       pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+    parseConfigFiles :: Parser InputConfigFiles
+    parseConfigFiles =
+      InputConfigFiles
+       <$> make "node-config" "Path to the node's configuration file"
+       <*> make "shelley-genesis" "Path to the Shelley genesis file"
+       <*> make "alonzo-genesis" "Path to the Alonzo genesis file"
+       <*> make "conway-genesis" "Path to the Conway genesis file"
+      where
+         make flagName helpName = strOption ( long flagName <> metavar "FILEPATH" <> help helpName)
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
