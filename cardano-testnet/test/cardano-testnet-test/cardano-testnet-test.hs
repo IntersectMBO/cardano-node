@@ -7,6 +7,7 @@ module Main
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
+import qualified Cardano.Testnet.Test.Cli.PlutusCostCalculation
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
@@ -18,7 +19,6 @@ import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.GovActionTimeout as Gov
 import qualified Cardano.Testnet.Test.Gov.InfoAction as LedgerEvents
-import qualified Cardano.Testnet.Test.Cli.PlutusCostCalculation
 import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.Transaction.HashMismatch as WrongHash

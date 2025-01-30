@@ -82,24 +82,17 @@ mkSpendOutputsOnlyTx
 mkSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutputs = do
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe srcWallet
   fixedTxOuts :: [String] <- computeTxOuts
-  void $
-    execCli' execConfig $
-      mconcat
-        [
-          [ anyEraToString cEra
-          , "transaction"
-          , "build"
-          , "--change-address"
-          , srcAddress
-          , "--tx-in"
-          , T.unpack $ renderTxIn txIn
-          ]
-        , fixedTxOuts
-        ,
-          [ "--out-file"
-          , unFile txBody
-          ]
-        ]
+  void $ execCli' execConfig $
+           mconcat
+             [ [ anyEraToString cEra
+               , "transaction", "build"
+               , "--change-address", srcAddress
+               , "--tx-in", T.unpack $ renderTxIn txIn
+               ]
+             , fixedTxOuts
+             , [ "--out-file", unFile txBody
+               ]
+             ]
   return txBody
  where
   era = toCardanoEra sbe
@@ -107,27 +100,24 @@ mkSpendOutputsOnlyTx execConfig epochStateView sbe work prefix srcWallet txOutpu
   txBody = File (work </> prefix <> ".txbody")
   srcAddress = T.unpack $ paymentKeyInfoAddr srcWallet
   computeTxOuts =
-    concat
-      <$> sequence
-        [ case txOut of
-            PubKeyAddress dstWallet ->
-              return ["--tx-out", T.unpack (paymentKeyInfoAddr dstWallet) <> "+" ++ show (unCoin amount)]
-            ScriptAddress (File referenceScriptJSON) -> do
-              scriptAddress <-
-                execCli'
-                  execConfig
-                  [ anyEraToString cEra
-                  , "address"
-                  , "build"
-                  , "--payment-script-file"
-                  , referenceScriptJSON
-                  ]
-              return
-                ( ["--tx-out", scriptAddress <> "+" ++ show (unCoin amount)]
-                    <> maybe [] (\(File newRefScript) -> ["--tx-out-reference-script-file", newRefScript]) mNewRefScript
-                )
-        | (txOut, amount, mNewRefScript) <- txOutputs
-        ]
+    concat <$> sequence
+      [ case txOut of
+          PubKeyAddress dstWallet ->
+            return ["--tx-out", T.unpack (paymentKeyInfoAddr dstWallet) <> "+" ++ show (unCoin amount)]
+          ScriptAddress (File referenceScriptJSON) -> do
+            scriptAddress <-
+              execCli'
+                execConfig
+                [ anyEraToString cEra
+                , "address", "build"
+                , "--payment-script-file", referenceScriptJSON
+                ]
+            return
+              ( ["--tx-out", scriptAddress <> "+" ++ show (unCoin amount)]
+                  <> maybe [] (\(File newRefScript) -> ["--tx-out-reference-script-file", newRefScript]) mNewRefScript
+              )
+      | (txOut, amount, mNewRefScript) <- txOutputs
+      ]
 
 -- | Calls @cardano-cli@ to build a simple ADA transfer transaction to
 -- transfer to the specified recipient the specified amount of ADA.
