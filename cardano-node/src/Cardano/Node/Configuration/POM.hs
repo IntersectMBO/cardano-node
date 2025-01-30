@@ -436,9 +436,14 @@ instance FromJSON PartialNodeConfiguration where
                    (fmap RequestedNumOfDiskSnapshots <$> o .:? "NumOfDiskSnapshots")
                .!= DefaultNumOfDiskSnapshots
              doChecksum <- (fmap Flag <$> o .:? "DoDiskSnapshotChecksum") .!= DoDiskSnapshotChecksum
-             snapInterval <-
-                   (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> o .:? "SnapshotInterval")
-               .!= DefaultSnapshotInterval
+             snapInterval <- do
+                   ov <- (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> o .:? "SnapshotInterval") .!= DefaultSnapshotInterval
+                   case ov of
+                      DefaultSnapshotInterval -> do
+                         -- This is here just to ensure that we also try to read the SnapshotInterval from the toplevel config. as it was the case before UTxO-HD
+                         -- It is needed for the pre-emptive cluster runs
+                         (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> v .:? "SnapshotInterval") .!= DefaultSnapshotInterval
+                      _ -> pure ov
              qsize <-
                    (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize")
                .!= DefaultQueryBatchSize
