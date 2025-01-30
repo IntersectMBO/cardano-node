@@ -275,6 +275,10 @@ cardanoTestnet
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
   H.evalIO $ LBS.writeFile (unFile configurationFile) config
+  execCli_
+    [ "debug", "check-node-configuration"
+    , "--node-configuration-file", unFile configurationFile
+    ]
 
   portNumbersWithNodeOptions <- forM cardanoNodes $ \nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address
   let portNumbers = snd <$> portNumbersWithNodeOptions
