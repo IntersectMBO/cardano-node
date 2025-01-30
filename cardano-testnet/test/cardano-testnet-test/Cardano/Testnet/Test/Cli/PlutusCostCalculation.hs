@@ -27,8 +27,8 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Query (findLargestUtxoForPaymentKey, getEpochStateView, getTxIx,
                    watchEpochStateUpdate)
-import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
-                   retrieveTransactionId, signTx, submitTx)
+import           Testnet.Process.Cli.Transaction (mkSpendOutputsOnlyTx,
+                   retrieveTransactionId, signTx, submitTx, TxOutAddress (..))
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
@@ -83,7 +83,7 @@ hprop_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus script" 
             refScriptSizeWork
             "tx-body"
             wallet0
-            [(ReferenceScriptAddress plutusV3Script, scriptPublishUTxOAmount)]
+            [(ScriptAddress plutusV3Script, scriptPublishUTxOAmount, Just plutusV3Script)]
     signedTxPublishRefScript <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBodyPublishRefScript [Some $ paymentKeyInfoPair wallet0]
     submitTx execConfig cEra signedTxPublishRefScript
 
@@ -104,7 +104,7 @@ hprop_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus script" 
             refScriptLock
             "tx-body"
             wallet0
-            [(ReferenceScriptAddress plutusV3Script, transferAmount)]
+            [(ScriptAddress plutusV3Script, transferAmount, Nothing)]
     signedTxLock <- signTx execConfig cEra refScriptLock "signed-tx" txBodyLock [Some $ paymentKeyInfoPair wallet0]
     submitTx execConfig cEra signedTxLock
 
