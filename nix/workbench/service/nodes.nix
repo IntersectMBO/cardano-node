@@ -104,6 +104,8 @@ let
                   SnapshotInterval             = 4230;
                   ChainSyncIdleTimeout         = 0;
 
+                  ConsensusMode                = "GenesisMode";
+
                   ByronGenesisFile             = "../genesis/byron/genesis.json";
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
