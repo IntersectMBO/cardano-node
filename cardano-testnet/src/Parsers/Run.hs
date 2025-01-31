@@ -53,4 +53,4 @@ runTestnetCmd = \case
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
 runCardanoOptions (CardanoTestnetCliOptions testnetOptions shelleyOptions) =
-  runTestnet $ cardanoTestnetDefault testnetOptions shelleyOptions
+  runTestnet testnetOptions $ cardanoTestnetDefault testnetOptions shelleyOptions
