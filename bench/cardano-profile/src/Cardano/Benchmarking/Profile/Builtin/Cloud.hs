@@ -18,10 +18,12 @@ import           Prelude
 import           Data.Function ((&))
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Builtin.Empty as E
+import qualified Cardano.Benchmarking.Profile.Builtin.Scenario.Base as B
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
 import qualified Cardano.Benchmarking.Profile.Workload.Voting as W
+import qualified Cardano.Benchmarking.Profile.Workload.Latency as L
 
 --------------------------------------------------------------------------------
 
@@ -170,10 +172,31 @@ profilesNoEraCloud =
   , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx1
   , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx2
   ]
+  -----------
+  -- Latency.
+  -----------
+  ++
+  let latency =
+          P.empty & B.base
+        . P.fixedLoaded
+        . composeFiftytwo
+        -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
+        . V.genesisVariantPreVoltaire
+        . V.timescaleCompressed
+         -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
+         --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
+        . P.delegators 0
+        . P.workloadAppend L.latencyWorkload
+        . P.analysisStandard
+  in (
+    latency & P.name "latency-nomadperf"
+            . P.desc "AWS perf class cluster, stop when all latency services stop"
+            . P.traceForwardingOn . P.newTracing . P.p2pOn . nomadPerf
+  )
   ----------------------
   -- Testing benchmarks.
   ----------------------
-  ++
+  :
   -- TODO: Inconsistency: "fast*" and "ci-test*" use `V.valueLocal` and "default*"/"oldtracing" use `V.valueCloud`.
   let valueCI  = P.empty & E.base . V.valueLocal . P.traceForwardingOn . nomadPerf
       fastNP = valueCI

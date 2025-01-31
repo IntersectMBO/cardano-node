@@ -41,7 +41,6 @@ import           Cardano.Benchmarking.Profile.Builtin.Model               (profi
 import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Latency    (profilesNoEraLatency)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
 import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
@@ -142,7 +141,6 @@ profilesNoEra obj = Map.fromList $ map
     -- Empty datasets not running `FixedLoaded`.
     ++ profilesNoEraChainsync        -- Scenario `Chainsync`
     ++ profilesNoEraIdle             -- Scenario `Idle`
-    ++ profilesNoEraLatency          -- Scenario `Latency`
     ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
     -- Extra modules
     ++ profilesNoEraScalingLocal
@@ -582,7 +580,6 @@ libMKLocations =
     , ("PROFILES_SCENARIOS"    ,
          profilesNoEraChainsync
       ++ profilesNoEraIdle
-      ++ profilesNoEraLatency
       ++ profilesNoEraTracerOnly
       )
     , ("PROFILES_LEGACY"       ,

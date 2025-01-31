@@ -56,7 +56,6 @@ library
                       , Cardano.Benchmarking.Profile.Builtin.Plutuscall
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Base
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync
-                      , Cardano.Benchmarking.Profile.Builtin.Scenario.Latency
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Idle
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly
                       , Cardano.Benchmarking.Profile.Extra.Scaling
