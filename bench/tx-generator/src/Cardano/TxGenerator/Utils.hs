@@ -1,7 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {-
 Module      : Cardano.TxGenerator.Utils
@@ -32,10 +30,10 @@ liftAnyEra f x = case x of
   InAnyCardanoEra ConwayEra a  ->   InAnyCardanoEra ConwayEra $ f a
 
 -- | `keyAddress` determines an address for the relevant era.
-keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
-keyAddress networkId k
+keyAddress :: ShelleyBasedEra era -> NetworkId -> SigningKey PaymentKey -> AddressInEra era
+keyAddress sbe networkId k
   = makeShelleyAddressInEra
-      (shelleyBasedEra @era)
+      sbe
       networkId
       (PaymentCredentialByKey $ verificationKeyHash $ getVerificationKey k)
       NoStakeAddress
@@ -66,16 +64,11 @@ includeChange fee spend have = case compare changeValue 0 of
 
 -- | `mkTxFee` reinterprets the `Either` returned by
 -- `txFeesExplicitInEra` with `TxFee` constructors.
-mkTxFee :: IsShelleyBasedEra era => L.Coin -> TxFee era
-mkTxFee = TxFeeExplicit shelleyBasedEra
+mkTxFee :: ShelleyBasedEra era -> L.Coin -> TxFee era
+mkTxFee = TxFeeExplicit
 
 -- | `mkTxValidityUpperBound` rules out needing the
--- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
-mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
-mkTxValidityUpperBound slotNo =
-  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (Just slotNo)
-
--- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
--- because its type enforces it being a Shelley-based era.
-mkTxInModeCardano :: IsShelleyBasedEra era => Tx era -> TxInMode
-mkTxInModeCardano = TxInMode shelleyBasedEra
+-- `TxValidityNoUpperBound` with the `ShelleyBasedEra` witness.
+mkTxValidityUpperBound :: ShelleyBasedEra era -> SlotNo -> TxValidityUpperBound era
+mkTxValidityUpperBound sbe slotNo =
+  TxValidityUpperBound (fromJust $ forShelleyBasedEraMaybeEon sbe) (Just slotNo)

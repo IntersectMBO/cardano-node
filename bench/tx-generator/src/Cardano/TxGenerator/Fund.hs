@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-|
 Module      : Cardano.TxGenerator.Fund
 Description : A type for funds to build transactions with.
@@ -76,15 +75,14 @@ getFundCoin (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
 -- TODO: facilitate casting KeyWitnesses between eras -- Note [Era transitions]
 -- | The `Fund` alternative is checked against `cardanoEra`, but
 -- `getFundWitness` otherwise wraps `_fundWitness`.
-getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> Witness WitCtxTxIn era
-getFundWitness fund = case (cardanoEra @era, fund) of
-  (ByronEra   , Fund (InAnyCardanoEra ByronEra   a)) -> _fundWitness a
-  (ShelleyEra , Fund (InAnyCardanoEra ShelleyEra a)) -> _fundWitness a
-  (AllegraEra , Fund (InAnyCardanoEra AllegraEra a)) -> _fundWitness a
-  (MaryEra    , Fund (InAnyCardanoEra MaryEra    a)) -> _fundWitness a
-  (AlonzoEra  , Fund (InAnyCardanoEra AlonzoEra  a)) -> _fundWitness a
-  (BabbageEra , Fund (InAnyCardanoEra BabbageEra a)) -> _fundWitness a
-  (ConwayEra  , Fund (InAnyCardanoEra ConwayEra  a)) -> _fundWitness a
+getFundWitness :: ShelleyBasedEra era -> Fund -> Witness WitCtxTxIn era
+getFundWitness sbe fund = case (sbe, fund) of
+  (ShelleyBasedEraShelley , Fund (InAnyCardanoEra ShelleyEra a)) -> _fundWitness a
+  (ShelleyBasedEraAllegra , Fund (InAnyCardanoEra AllegraEra a)) -> _fundWitness a
+  (ShelleyBasedEraMary    , Fund (InAnyCardanoEra MaryEra    a)) -> _fundWitness a
+  (ShelleyBasedEraAlonzo  , Fund (InAnyCardanoEra AlonzoEra  a)) -> _fundWitness a
+  (ShelleyBasedEraBabbage , Fund (InAnyCardanoEra BabbageEra a)) -> _fundWitness a
+  (ShelleyBasedEraConway  , Fund (InAnyCardanoEra ConwayEra  a)) -> _fundWitness a
   _                                                  -> error "getFundWitness: era mismatch"
 
 {-

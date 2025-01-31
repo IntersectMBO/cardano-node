@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TupleSections #-}
 
 {- HLINT ignore "Use map" -}
 
@@ -39,45 +39,46 @@ genesisValidate ::  ShelleyGenesis -> Either String ()
 genesisValidate
   = validateGenesis
 
-genesisSecureInitialFund :: forall era. IsShelleyBasedEra era =>
-     NetworkId
+genesisSecureInitialFund :: ()
+  => ShelleyBasedEra era
+  -> NetworkId
   -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> SigningKey PaymentKey
   -> TxGenTxParams
   -> Either TxGenError (Tx era, Fund)
-genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamFee, txParamTTL}
-  = case genesisInitialFundForKey @era networkId genesis srcKey of
+genesisSecureInitialFund sbe networkId genesis srcKey destKey TxGenTxParams{txParamFee, txParamTTL}
+  = case genesisInitialFundForKey sbe networkId genesis srcKey of
       Nothing             -> Left $ TxGenError "genesisSecureInitialFund: no fund found for given key in genesis"
       Just (_, lovelace)  ->
-        let
-          txOutValue :: TxOutValue era
-          txOutValue = lovelaceToTxOutValue (shelleyBasedEra @era) $ lovelace - txParamFee
-        in genesisExpenditure networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
+        let txOutValue = lovelaceToTxOutValue sbe $ lovelace - txParamFee
+        in genesisExpenditure sbe networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
   where
-    destAddr = keyAddress @era networkId destKey
+    destAddr = keyAddress sbe networkId destKey
 
-genesisInitialFunds :: forall era. IsShelleyBasedEra era
-  => NetworkId
+genesisInitialFunds :: ()
+  => ShelleyBasedEra era
+  -> NetworkId
   -> ShelleyGenesis
   -> [(AddressInEra era, L.Coin)]
-genesisInitialFunds networkId g
- = [ ( shelleyAddressInEra (shelleyBasedEra @era) $
+genesisInitialFunds sbe networkId g
+ = [ ( shelleyAddressInEra sbe $
           makeShelleyAddress networkId (fromShelleyPaymentCredential pcr) (fromShelleyStakeReference stref)
      , coin
      )
      | (Addr _ pcr stref, coin) <- ListMap.toList $ sgInitialFunds g
    ]
 
-genesisInitialFundForKey :: forall era. IsShelleyBasedEra era
-  => NetworkId
+genesisInitialFundForKey :: ()
+  => ShelleyBasedEra era
+  -> NetworkId
   -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> Maybe (AddressInEra era, L.Coin)
-genesisInitialFundForKey networkId genesis key
-  = find (isTxOutForKey . fst) (genesisInitialFunds networkId genesis)
+genesisInitialFundForKey sbe networkId genesis key
+  = find isTxOutForKey $ genesisInitialFunds sbe networkId genesis
  where
-  isTxOutForKey = (keyAddress networkId key ==)
+  isTxOutForKey = (keyAddress sbe networkId key ==) . fst
 
 genesisTxInput ::
      NetworkId
@@ -90,8 +91,8 @@ genesisTxInput networkId
     . castKey
 
 genesisExpenditure ::
-     IsShelleyBasedEra era
-  => NetworkId
+     ShelleyBasedEra era
+  -> NetworkId
   -> SigningKey PaymentKey
   -> AddressInEra era
   -> TxOutValue era
@@ -99,10 +100,10 @@ genesisExpenditure ::
   -> SlotNo
   -> SigningKey PaymentKey
   -> Either TxGenError (Tx era, Fund)
-genesisExpenditure networkId inputKey addr value fee ttl outputKey
-  = second (\tx -> (tx, Fund $ InAnyCardanoEra cardanoEra $ fund tx)) eTx
+genesisExpenditure sbe networkId inputKey addr value fee ttl outputKey
+  = second (\tx -> (tx, shelleyBasedEraConstraints sbe $ Fund $ InAnyCardanoEra (toCardanoEra sbe) $ fund tx)) eTx
  where
-  eTx         = mkGenesisTransaction (castKey inputKey) ttl fee [pseudoTxIn] [txout]
+  eTx         = mkGenesisTransaction sbe (castKey inputKey) ttl fee [pseudoTxIn] [txout]
   txout       = TxOut addr value TxOutDatumNone ReferenceScriptNone
   pseudoTxIn  = genesisTxInput networkId inputKey
 
@@ -113,26 +114,26 @@ genesisExpenditure networkId inputKey addr value fee ttl outputKey
   , _fundSigningKey = Just outputKey
   }
 
-mkGenesisTransaction :: forall era .
-     IsShelleyBasedEra era
-  => SigningKey GenesisUTxOKey
+mkGenesisTransaction ::
+     ShelleyBasedEra era
+  -> SigningKey GenesisUTxOKey
   -> SlotNo
   -> L.Coin
   -> [TxIn]
   -> [TxOut CtxTx era]
   -> Either TxGenError (Tx era)
-mkGenesisTransaction key ttl fee txins txouts
+mkGenesisTransaction sbe key ttl fee txins txouts
   = bimap
       ApiError
-      (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
-      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+      (\b -> signShelleyTransaction sbe b [WitnessGenesisUTxOKey key])
+      (createAndValidateTransactionBody sbe txBodyContent)
  where
-  txBodyContent = defaultTxBodyContent shelleyBasedEra
-    & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
+  txBodyContent = defaultTxBodyContent sbe
+    & setTxIns (map (, BuildTxWith $ KeyWitness KeyWitnessForSpending) txins)
     & setTxOuts txouts
-    & setTxFee (mkTxFee fee)
+    & setTxFee (mkTxFee sbe fee)
     & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (mkTxValidityUpperBound ttl)
+    & setTxValidityUpperBound (mkTxValidityUpperBound sbe ttl)
 
 castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
 castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey
