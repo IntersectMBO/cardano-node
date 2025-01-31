@@ -1,11 +1,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 
-module Cardano.Testnet.Test.Cli.PlutusCostCalculation
+module Cardano.Testnet.Test.Cli.Plutus.CostCalculation
   ( hprop_ref_plutus_cost_calculation
   , hprop_included_plutus_cost_calculation
     -- | Execute tests in this module with:
-    -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.CLI.plutus cost calc/"@
+    -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc/"@
   )
 where
 
@@ -43,6 +43,7 @@ import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
 import           Testnet.Types (PaymentKeyInfo (paymentKeyInfoAddr), paymentKeyInfoPair)
 
+-- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Ref Script/"@
 hprop_ref_plutus_cost_calculation :: Property
 hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
@@ -190,6 +191,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
 
   H.diffVsGoldenFile output "test/cardano-testnet-test/files/calculatePlutusScriptCost.json"
 
+-- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Normal Script/"@
 hprop_included_plutus_cost_calculation :: Property
 hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included plutus script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os

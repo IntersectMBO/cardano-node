@@ -5,11 +5,11 @@ module Main
   ) where
 
 import qualified Cardano.Crypto.Init as Crypto
-import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
-import qualified Cardano.Testnet.Test.Cli.PlutusCostCalculation
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
+import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
+import qualified Cardano.Testnet.Test.Cli.Plutus.CostCalculation
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
@@ -73,8 +73,12 @@ tests = do
                , ignoreOnWindows "Transaction Build Wrong Hash" WrongHash.hprop_transaction_build_wrong_hash
                ]
             , T.testGroup "Plutus"
-                [ ignoreOnWindows "PlutusV3" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3
-                , ignoreOnWindows "PlutusV2 transaction with two script certs" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_tx_two_script_certs_v2
+                [ ignoreOnWindows "PlutusV3 purposes" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_plutus_purposes_v3
+                , ignoreOnWindows "PlutusV2 transaction with two script certs" Cardano.Testnet.Test.Cli.Plutus.Scripts.hprop_tx_two_script_certs_v2
+                , T.testGroup "Cost Calc"
+                  [ ignoreOnWindows "Ref Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_ref_plutus_cost_calculation
+                  , ignoreOnWindows "Normal Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_included_plutus_cost_calculation
+                  ]
                 ]
            ]
         , T.testGroup "CLI"
@@ -86,10 +90,6 @@ tests = do
           , ignoreOnWindows "stake snapshot" Cardano.Testnet.Test.Cli.StakeSnapshot.hprop_stakeSnapshot
           , ignoreOnWindows "simple transaction build" Cardano.Testnet.Test.Cli.Transaction.hprop_transaction
           , ignoreOnWindows "register deregister stake address in transaction build"  Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress.hprop_tx_register_deregister_stake_address
-          , T.testGroup "plutus cost calc"
-              [ ignoreOnWindows "ref script" Cardano.Testnet.Test.Cli.PlutusCostCalculation.hprop_ref_plutus_cost_calculation
-              , ignoreOnWindows "normal script" Cardano.Testnet.Test.Cli.PlutusCostCalculation.hprop_included_plutus_cost_calculation
-              ]
           -- FIXME
           -- , ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.LeadershipSchedule.hprop_leadershipSchedule
 
