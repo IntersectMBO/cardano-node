@@ -17,7 +17,6 @@ module Testnet.Process.Run
   , mkExecConfig
   , mkExecConfigOffline
   , ProcessError(..)
-  , ExecutableError(..)
   , addEnvVarsToConfig
   ) where
 
@@ -31,19 +30,13 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Function
-import qualified Data.List as List
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.String (fromString)
-import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
-import qualified System.Directory as IO
 import qualified System.Environment as IO
 import           System.Exit (ExitCode)
-import           System.FilePath
 import           System.IO
 import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
@@ -51,9 +44,7 @@ import           System.Process
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
-import           Hedgehog.Extras.Internal.Plan (Component (..), Plan (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.OS as OS
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import qualified Hedgehog.Internal.Property as H
 
@@ -146,13 +137,12 @@ procCli = GHC.withFrozenCallStack $ H.procFlex "cardano-cli" "CARDANO_CLI"
 -- | Create a 'CreateProcess' describing how to start the cardano-node process
 -- and an argument list.
 procNode
-  :: HasCallStack
-  => MonadIO m
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => [String]
   -- ^ Arguments to the CLI command
-  -> ExceptT ExecutableError m CreateProcess
+  -> m CreateProcess
   -- ^ Captured stdout
-procNode = GHC.withFrozenCallStack $ procFlexNew "cardano-node" "CARDANO_NODE"
+procNode = GHC.withFrozenCallStack $ H.procFlex "cardano-node" "CARDANO_NODE"
 
 -- | Create a 'CreateProcess' describing how to start the cardano-submit-api process
 -- and an argument list.
@@ -248,119 +238,3 @@ resourceAndIOExceptionHandlers = [ Handler $ pure . ProcessIOException
                                  , Handler $ pure . ResourceException
                                  ]
 
-procFlexNew
-  :: MonadIO m
-  => String
-  -- ^ Cabal package name corresponding to the executable
-  -> String
-  -- ^ Environment variable pointing to the binary to run
-  -> [String]
-  -- ^ Arguments to the CLI command
-  -> ExceptT ExecutableError m CreateProcess
-  -- ^ Captured stdout
-procFlexNew = procFlexNew' H.defaultExecConfig
-
-procFlexNew'
-  :: MonadIO m
-  => H.ExecConfig
-  -> String
-  -- ^ Cabal package name corresponding to the executable
-  -> String
-  -- ^ Environment variable pointing to the binary to run
-  -> [String]
-  -- ^ Arguments to the CLI command
-  -> ExceptT ExecutableError m CreateProcess
-  -- ^ Captured stdout
-procFlexNew' execConfig pkg binaryEnv arguments = GHC.withFrozenCallStack $ do
-  bin <- binFlexNew pkg binaryEnv
-  pure (IO.proc bin arguments)
-    { IO.env = getLast $ H.execConfigEnv execConfig
-    , IO.cwd = getLast $ H.execConfigCwd execConfig
-    -- this allows sending signals to the created processes, without killing the test-suite process
-    , IO.create_group = True
-    }
-
--- | Compute the path to the binary given a package name or an environment variable override.
-binFlexNew
-  :: MonadIO m
-  => String
-  -- ^ Package name
-  -> String
-  -- ^ Environment variable pointing to the binary to run
-  -> ExceptT ExecutableError m FilePath
-  -- ^ Path to executable
-binFlexNew pkg binaryEnv = do
-  maybeEnvBin <- liftIO $ IO.lookupEnv binaryEnv
-  case maybeEnvBin of
-    Just envBin -> return envBin
-    Nothing -> binDist pkg
-
--- | Find the nearest plan.json going upwards from the current directory.
-findDefaultPlanJsonFile :: IO FilePath
-findDefaultPlanJsonFile = IO.getCurrentDirectory >>= go
-  where go :: FilePath -> IO FilePath
-        go d = do
-          let file = d </> "dist-newstyle/cache/plan.json"
-          exists <- IO.doesFileExist file
-          if exists
-            then return file
-            else do
-              let parent = takeDirectory d
-              if parent == d
-                then return "dist-newstyle/cache/plan.json"
-                else go parent
-
-
--- | Discover the location of the plan.json file.
-planJsonFile :: IO FilePath
-planJsonFile = do
-  maybeBuildDir <- liftIO $ IO.lookupEnv "CABAL_BUILDDIR"
-  case maybeBuildDir of
-    Just buildDir -> return $ ".." </> buildDir </> "cache/plan.json"
-    Nothing -> findDefaultPlanJsonFile
-{-# NOINLINE planJsonFile #-}
-
-data ExecutableError
-  = CannotDecodePlanJSON FilePath String
-  | RetrievePlanJsonFailure IOException
-  | ReadFileFailure IOException
-  | ExecutableMissingInComponent FilePath String
-    -- ^ Component with key @component-name@ is found, but it is missing
-    -- the @bin-file@ key.
-  | ExecutableNotFoundInPlan String
-    -- ^ Component with key @component-name@ cannot be found
-  deriving Show
-
-
--- | Consult the "plan.json" generated by cabal to get the path to the executable corresponding.
--- to a haskell package.  It is assumed that the project has already been configured and the
--- executable has been built.
-binDist
-  :: MonadIO m
-  => String
-  -- ^ Package name
-  -> ExceptT ExecutableError m FilePath
-  -- ^ Path to executable
-binDist pkg = do
-  pJsonFp <- handleIOExceptT RetrievePlanJsonFailure planJsonFile
-  contents <- handleIOExceptT ReadFileFailure $ LBS.readFile pJsonFp
-
-  case Aeson.eitherDecode contents of
-    Right plan -> case List.filter matching (plan & installPlan) of
-      (component:_) -> case component & binFile of
-        Just bin -> return $ addExeSuffix (Text.unpack bin)
-        Nothing -> left $ ExecutableMissingInComponent pJsonFp $ "missing \"bin-file\" key in plan component: " <> show component
-      [] -> left $ ExecutableNotFoundInPlan $ "Cannot find \"component-name\" key with value \"exe:" <> pkg <> "\""
-    Left message -> left $ CannotDecodePlanJSON pJsonFp $ "Cannot decode plan: " <> message
-  where matching :: Component -> Bool
-        matching component = case componentName component of
-          Just name -> name == Text.pack ("exe:" <> pkg)
-          Nothing -> False
-
-addExeSuffix :: String -> String
-addExeSuffix s = if ".exe" `List.isSuffixOf` s
-  then s
-  else s <> exeSuffix
-
-exeSuffix :: String
-exeSuffix = if OS.isWin32 then ".exe" else ""

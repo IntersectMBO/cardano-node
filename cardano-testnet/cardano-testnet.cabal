@@ -85,7 +85,6 @@ library
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , template-haskell
-                      , temporary
                       , text
                       , time
                       , transformers
