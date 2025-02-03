@@ -78,6 +78,7 @@ tests = do
                 , T.testGroup "Cost Calc"
                   [ ignoreOnWindows "Ref Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_ref_plutus_cost_calculation
                   , ignoreOnWindows "Normal Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_included_plutus_cost_calculation
+                  , ignoreOnWindows "Simple Script" Cardano.Testnet.Test.Cli.Plutus.CostCalculation.hprop_included_simple_script_cost_calculation
                   ]
                 ]
            ]

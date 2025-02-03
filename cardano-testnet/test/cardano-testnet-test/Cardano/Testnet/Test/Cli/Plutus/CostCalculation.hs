@@ -1,18 +1,22 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Testnet.Test.Cli.Plutus.CostCalculation
   ( hprop_ref_plutus_cost_calculation
   , hprop_included_plutus_cost_calculation
+  , hprop_included_simple_script_cost_calculation
     -- | Execute tests in this module with:
     -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc/"@
   )
 where
 
 import           Cardano.Api (AnyCardanoEra (AnyCardanoEra),
-                   AnyShelleyBasedEra (AnyShelleyBasedEra), File (File), MonadIO (liftIO),
-                   ShelleyBasedEra (ShelleyBasedEraConway), ToCardanoEra (toCardanoEra), renderTxIn,
-                   unFile)
+                   AnyShelleyBasedEra (AnyShelleyBasedEra), ExceptT, File (File), MonadIO (liftIO),
+                   ShelleyBasedEra (ShelleyBasedEraConway), ToCardanoEra (toCardanoEra),
+                   deserialiseAnyVerificationKey, liftEither, mapSomeAddressVerificationKey,
+                   renderTxIn, serialiseToRawBytesHex, unFile, verificationKeyHash)
 import           Cardano.Api.Experimental (Some (Some))
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval), unCoin)
 
@@ -21,8 +25,17 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Control.Monad.Except (runExceptT)
+import           Data.Aeson (Value, encodeFile)
+import qualified Data.Aeson.KeyMap as KeyMap
+import           Data.Aeson.Types (Value (..), object)
+import           Data.Bifunctor (first)
+import qualified Data.ByteString as BS
 import           Data.Default.Class (Default (def))
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Text.Encoding (decodeLatin1)
+import qualified Data.Vector as Vector
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
@@ -41,7 +54,8 @@ import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutp
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
-import           Testnet.Types (PaymentKeyInfo (paymentKeyInfoAddr), paymentKeyInfoPair)
+import           Testnet.Types (PaymentKeyInfo (paymentKeyInfoAddr), paymentKeyInfoPair,
+                   verificationKey)
 
 -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Ref Script/"@
 hprop_ref_plutus_cost_calculation :: Property
@@ -287,7 +301,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
   submitTx execConfig cEra signedIncludedScript
 
   -- Calculate cost of the transaction
-  let includedScriptCostOutput = File $ includedScriptUnlock </> "unsigned-tx.tx"
+  let includedScriptCostOutput = File $ includedScriptUnlock </> "scriptCost.json"
   H.noteM_ $
     execCli'
       execConfig
@@ -300,3 +314,142 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
   H.diffFileVsGoldenFile
     (unFile includedScriptCostOutput)
     "test/cardano-testnet-test/files/calculatePlutusScriptCost.json"
+
+-- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Simple Script/"@
+hprop_included_simple_script_cost_calculation :: Property
+hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "included simple script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+  H.note_ SYS.os
+  conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
+  let tempAbsPath' = unTmpAbsPath tempAbsPath
+  work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
+
+  let
+    sbe = ShelleyBasedEraConway
+    era = toCardanoEra sbe
+    cEra = AnyCardanoEra era
+    eraName = eraToString era
+    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
+    options = def{cardanoNodeEra = AnyShelleyBasedEra sbe}
+
+  TestnetRuntime
+    { configurationFile
+    , testnetMagic
+    , testnetNodes
+    , wallets = wallet0 : wallet1 : _
+    } <-
+    cardanoTestnetDefault options def conf
+
+  poolNode1 <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  epochStateView <- getEpochStateView configurationFile (nodeSocketPath poolNode1)
+
+  -- We write a simple script that allows any of the two payment keys to spend the money
+
+  addrHash1 <- H.evalEitherM $ liftIO $ runExceptT $ paymentKeyInfoHash wallet0
+  addrHash2 <- H.evalEitherM $ liftIO $ runExceptT $ paymentKeyInfoHash wallet1
+
+  simpleScriptLockWork <- H.createDirectoryIfMissing $ work </> "simple-script-lock"
+  let simpleScript = File $ simpleScriptLockWork </> "simple-script.json"
+  liftIO $ encodeFile (unFile simpleScript) $ generateSimpleAnyKeyScript [addrHash1, addrHash2]
+
+  -- We now submit a transaction to the script address
+  let lockedAmount = 10_000_000
+      enoughAmountForFees = 2_000_000 -- Needs to be more than min ada
+
+  txBodySimpleScriptLock <-
+    mkSpendOutputsOnlyTx
+      execConfig
+      epochStateView
+      sbe
+      simpleScriptLockWork
+      "tx-body"
+      wallet0
+      [(ScriptAddress simpleScript, lockedAmount, Nothing)]
+
+  signedTxSimpleScriptLock <-
+    signTx
+      execConfig
+      cEra
+      simpleScriptLockWork
+      "signed-tx"
+      txBodySimpleScriptLock
+      [Some $ paymentKeyInfoPair wallet0]
+  submitTx execConfig cEra signedTxSimpleScriptLock
+
+  -- Wait until transaction is on chain and obtain transaction identifier
+  txIdSimpleScriptLock <- retrieveTransactionId execConfig signedTxSimpleScriptLock
+  txIxSimpleScriptLock <-
+    H.evalMaybeM $
+      watchEpochStateUpdate
+        epochStateView
+        (EpochInterval 2)
+        (getTxIx sbe txIdSimpleScriptLock lockedAmount)
+
+  -- Create transaction that unlocks the simple script UTxO we just created
+  simpleScriptUnlockWork <- H.createDirectoryIfMissing $ work </> "simple-script-unlock"
+  let unsignedUnlockSimpleScript = File $ simpleScriptUnlockWork </> "unsigned-tx.tx"
+
+  void $
+    execCli'
+      execConfig
+      [ eraName
+      , "transaction", "build"
+      , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+      , "--tx-in", txIdSimpleScriptLock <> "#" <> show txIxSimpleScriptLock
+      , "--tx-in-script-file", unFile simpleScript
+      , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show (unCoin (lockedAmount - enoughAmountForFees))
+      , "--witness-override", "2"
+      , "--out-file", unFile unsignedUnlockSimpleScript
+      ]
+
+  signedScriptUnlock <-
+    signTx
+      execConfig
+      cEra
+      simpleScriptUnlockWork
+      "signed-tx"
+      unsignedUnlockSimpleScript
+      [Some $ paymentKeyInfoPair wallet1]
+
+  submitTx execConfig cEra signedScriptUnlock
+
+  -- Calculate cost of the transaction
+
+  output <-
+    H.noteM $
+      execCli'
+        execConfig
+        [ eraName
+        , "transaction", "calculate-plutus-script-cost"
+        , "--tx-file", unFile signedScriptUnlock
+        ]
+
+  H.diffVsGoldenFile output "test/cardano-testnet-test/files/calculateSimpleScriptCost.json"
+
+ where
+  generateSimpleAnyKeyScript :: [Text] -> Value
+  generateSimpleAnyKeyScript keyHashes =
+    object
+      [ ("type", "any")
+      ,
+        ( "scripts"
+        , Array $
+            Vector.fromList
+              [ Object $
+                  KeyMap.fromList
+                    [ ("type", "sig")
+                    , ("keyHash", String keyHash)
+                    ]
+              | keyHash <- keyHashes
+              ]
+        )
+      ]
+
+  paymentKeyInfoHash :: PaymentKeyInfo -> ExceptT String IO Text
+  paymentKeyInfoHash wallet = do
+    vkBs <- liftIO $ BS.readFile (unFile $ verificationKey $ paymentKeyInfoPair wallet)
+    svk <- liftEither $ first show $ deserialiseAnyVerificationKey vkBs
+    return $
+      decodeLatin1 $
+        mapSomeAddressVerificationKey (serialiseToRawBytesHex . verificationKeyHash) svk
