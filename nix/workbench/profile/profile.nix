@@ -26,10 +26,6 @@ let
                  "node-specs ${profileJson} ${topologyFiles}/topology.json"
   ;
 
-  jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
-                                         --argjson x '${x}'
-                                       '' "$x";
-
   mkServices = { profile, nodeSpecs, backend }:
     rec {
       inherit
@@ -39,7 +35,6 @@ let
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
             inherit workbenchNix;
-            inherit jsonFilePretty;
             baseNodeConfig = workbenchNix.cardanoNodePackages.cardanoLib.environments.testnet.nodeConfig;
           })
         node-services;
@@ -50,7 +45,6 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit node-services;
-            inherit jsonFilePretty;
           })
         generator-service;
 
@@ -70,10 +64,8 @@ let
       inherit
         (pkgs.callPackage
           ../service/tracer.nix
-          {
-            inherit backend profile nodeSpecs;
-            inherit jsonFilePretty;
-          })
+          {inherit backend profile nodeSpecs;}
+        )
         tracer-service;
 
       inherit
