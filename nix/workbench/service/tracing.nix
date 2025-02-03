@@ -45,6 +45,7 @@ let
       "ChainSync.Remote.Serialised".severity = "Notice";
       "ChainSync.ServerBlock".severity = "Notice";
       "ChainSync.ServerHeader".severity = "Debug";
+      "Consensus.GSM".severity = "Info";
       "Forge.Loop".severity = "Debug";
       "Forge.StateInfo".severity = "Debug";
       "Mempool".severity = "Debug";
@@ -131,6 +132,7 @@ let
     TraceBlockFetchServer       = true;
     TraceChainSyncHeaderServer  = true;
     TraceChainSyncClient        = true;
+    TraceGsm                    = true;
 
     ## needs to be explicit when new tracing is the node's default
     UseTraceDispatcher          = false;
