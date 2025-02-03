@@ -26,10 +26,6 @@ let
                  "node-specs ${profileJson} ${topologyFiles}/topology.json"
   ;
 
-  jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
-                                         --argjson x '${x}'
-                                       '' "$x";
-
   ## This ports the (very minimal) config of the deprecated iohk-nix testnet environment to workbench, removing the dependency on it.
   baseNodeConfigTestnet =
     {
@@ -51,7 +47,6 @@ let
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
             inherit workbenchNix;
-            inherit jsonFilePretty;
             baseNodeConfig = baseNodeConfigTestnet;
           })
         node-services;
@@ -62,7 +57,6 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit node-services;
-            inherit jsonFilePretty;
           })
         generator-service;
 
@@ -82,10 +76,8 @@ let
       inherit
         (pkgs.callPackage
           ../service/tracer.nix
-          {
-            inherit backend profile nodeSpecs;
-            inherit jsonFilePretty;
-          })
+          {inherit backend profile nodeSpecs;}
+        )
         tracer-service;
 
       inherit

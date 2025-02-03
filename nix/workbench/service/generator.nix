@@ -1,5 +1,4 @@
 { pkgs
-, jsonFilePretty
 
 , backend
 , profile
@@ -172,9 +171,11 @@ let
       };
 
       config = rec {
-        value = __fromJSON (__readFile JSON);
-        JSON  = jsonFilePretty "generator-run-script.json"
-          (service.decideRunScript service);
+        value = service.decideRunScript service;
+        JSON  = pkgs.writeScript
+                  "generator-run-script.json"
+                  (__toJSON value)
+                ;
       };
 
       # The Plutus redeemer file is handled as an extra service file to deploy.
@@ -186,7 +187,7 @@ let
         ;
         # Always creates a file, even if it just contains "null".
         # Easier to handle if always every service properties is not null.
-        JSON = jsonFilePretty "plutus-redeemer.json" (__toJSON value)
+        JSON = pkgs.writeScript "plutus-redeemer.json" (__toJSON value)
         ;
       };
 
@@ -199,7 +200,7 @@ let
         ;
         # Always creates a file, even if it just contains "null".
         # Easier to handle if always every service properties is not null.
-        JSON = jsonFilePretty "plutus-datum.json" (__toJSON value);
+        JSON = pkgs.writeScript "plutus-datum.json" (__toJSON value);
       };
     })
     nodeSpecs;

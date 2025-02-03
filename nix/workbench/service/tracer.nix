@@ -1,5 +1,4 @@
 { pkgs
-, jsonFilePretty
 
 , backend
 , profile
@@ -92,7 +91,7 @@ let
 
       config = rec {
         value = execConfig;
-        JSON  = jsonFilePretty "config.json" (__toJSON execConfig);
+        JSON  = pkgs.writeScript "config.json" (__toJSON value);
       };
     })
     nodeSpecs;
