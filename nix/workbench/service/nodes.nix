@@ -1,6 +1,5 @@
 { pkgs
 , workbenchNix
-, jsonFilePretty
 
 ## The cardano-node config used as baseline:
 , baseNodeConfig
@@ -233,11 +232,11 @@ let
         JSON = pkgs.writeScript "startup-${name}.sh" value;
       };
 
-      config = {
+      config = rec {
         value = service.nodeConfig;
-        JSON  = jsonFilePretty
+        JSON  = pkgs.writeScript
                   "node-config-${name + modeIdSuffix}.json"
-                  (__toJSON service.nodeConfig)
+                  (__toJSON value)
         ;
       };
 

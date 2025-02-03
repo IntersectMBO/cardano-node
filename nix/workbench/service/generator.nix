@@ -1,5 +1,4 @@
 { pkgs
-, jsonFilePretty
 
 , backend
 , profile
@@ -172,9 +171,11 @@ let
       };
 
       config = rec {
-        value = __fromJSON (__readFile JSON);
-        JSON  = jsonFilePretty "generator-run-script.json"
-          (service.decideRunScript service);
+        value = service.decideRunScript service;
+        JSON  = pkgs.writeScript
+                  "generator-run-script.json"
+                  (__toJSON value)
+                ;
       };
 
       # The Plutus redeemer file is handled as an extra service file to deploy.
@@ -185,11 +186,11 @@ let
         then {}
         else rec {
                value = serviceConfig.plutus.redeemer;
-               JSON = jsonFilePretty "plutus-redeemer.json" (__toJSON value);
+               JSON = pkgs.writeScript "plutus-redeemer.json" (__toJSON value);
              }
       ;
 
-      # The Plutus datum file is handled as an extra service file to deploy.
+       # The Plutus datum file is handled as an extra service file to deploy.
       plutus-datum =
         # Not present on every profile.
         # Don't create a derivation to a file containing "null" !!!
@@ -197,10 +198,9 @@ let
         then {}
         else rec {
                value = serviceConfig.plutus.datum;
-               JSON = jsonFilePretty "plutus-datum.json" (__toJSON value);
+               JSON = pkgs.writeScript "plutus-datum.json" (__toJSON value);
              }
       ;
-
     })
     nodeSpecs;
 in
