@@ -51,7 +51,7 @@ let
     let
       generatorNodeConfigDefault =
         (__fromJSON (__readFile ../../../bench/tx-generator-config-base.json))
-        // { inherit (exemplarNode.config.value)
+        // { inherit (exemplarNode.config)
                Protocol
                ByronGenesisFile
                ShelleyGenesisFile
@@ -124,70 +124,60 @@ let
       serviceConfig = generatorServiceConfig nodeSpecs;
       service       = generatorServiceConfigService serviceConfig;
     in {
-      start = rec {
-        value = ''
-          #!${pkgs.stdenv.shell}
+      start =
+        ''
+        #!${pkgs.stdenv.shell}
 
-          ###########################################
-          # Extra workloads start ###################
-          ###########################################
-          ${builtins.concatStringsSep "" (builtins.map (workload:
-              let workload_name = workload.name;
-                  entrypoint = workload.entrypoints.pre_generator;
-                  node_name = if profile.composition.with_explorer
-                              then "explorer"
-                              else "node-0"
-                  ;
-              in
-                  ''
-                  ###########################################
-                  ########## workload start: ${workload_name}
-                  ###########################################
-                  ${if entrypoint != null
-                    then
-                      ''
-                      ${import ../workload/${workload_name}.nix
-                        {inherit pkgs profile nodeSpecs workload;}
-                      }
-                      (cd ../workloads/${workload_name} && ${entrypoint} ${node_name})
-                      ''
-                    else
-                      ''
-                      ''
-                  }
-                  ###########################################
-                  ########## workload end:   ${workload_name}
-                  ###########################################
-                  ''
-            ) (profile.workloads or []))
-          }
-          #############################################
-          # Extra workloads end #######################
-          #############################################
-
-          ${service.script}
-          '';
-        JSON = pkgs.writeScript "startup-generator.sh" value;
-      };
-
-      config = rec {
-        value = service.decideRunScript service;
-        JSON  = pkgs.writeScript
-                  "generator-run-script.json"
-                  (__toJSON value)
+        ###########################################
+        # Extra workloads start ###################
+        ###########################################
+        ${builtins.concatStringsSep "" (builtins.map (workload:
+            let workload_name = workload.name;
+                entrypoint = workload.entrypoints.pre_generator;
+                node_name = if profile.composition.with_explorer
+                            then "explorer"
+                            else "node-0"
                 ;
-      };
+            in
+                ''
+                ###########################################
+                ########## workload start: ${workload_name}
+                ###########################################
+                ${if entrypoint != null
+                  then
+                    ''
+                    ${import ../workload/${workload_name}.nix
+                      {inherit pkgs profile nodeSpecs workload;}
+                    }
+                    (cd ../workloads/${workload_name} && ${entrypoint} ${node_name})
+                    ''
+                  else
+                    ''
+                    ''
+                }
+                ###########################################
+                ########## workload end:   ${workload_name}
+                ###########################################
+                ''
+          ) (profile.workloads or []))
+        }
+        #############################################
+        # Extra workloads end #######################
+        #############################################
+
+        ${service.script}
+        ''
+      ;
+
+      config = __fromJSON (service.decideRunScript service);
 
       # The Plutus redeemer file is handled as an extra service file to deploy.
       plutus-redeemer =
         # Not present on every profile.
         # Don't create a derivation to a file containing "null" !!!
         if serviceConfig.plutus == null || (serviceConfig.plutus.redeemer or null) == null
-        then {}
-        else rec {
-               value = serviceConfig.plutus.redeemer;
-               JSON = pkgs.writeScript "plutus-redeemer.json" (__toJSON value);
-             }
+        then null
+        else serviceConfig.plutus.redeemer
       ;
 
        # The Plutus datum file is handled as an extra service file to deploy.
@@ -195,11 +185,8 @@ let
         # Not present on every profile.
         # Don't create a derivation to a file containing "null" !!!
         if serviceConfig.plutus == null || (serviceConfig.plutus.datum or null) == null
-        then {}
-        else rec {
-               value = serviceConfig.plutus.datum;
-               JSON = pkgs.writeScript "plutus-datum.json" (__toJSON value);
-             }
+        then null
+        else serviceConfig.plutus.datum
       ;
     })
     nodeSpecs;
