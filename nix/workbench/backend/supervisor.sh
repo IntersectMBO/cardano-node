@@ -64,44 +64,49 @@ case "$op" in
 
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do local node_dir="$dir"/$node
-           mkdir -p                                          "$node_dir"
-           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
-           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
-           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
+           mkdir -p                                     "$node_dir"
+           jq ".[\"$node\"].start"           -r $svcs > "$node_dir"/start.sh
+           chmod +x                                     "$node_dir"/start.sh
+           jq ".[\"$node\"].config"             $svcs > "$node_dir"/config.json
+           cp $(jq '."'"$node"'"."topology"' -r $svcs)  "$node_dir"/topology.json
         done
 
         local gen_dir="$dir"/generator
-        mkdir -p                                              "$gen_dir"
-        cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
-        cp $(jq '."config"'                        -r $gtor)  "$gen_dir"/run-script.json
+        mkdir -p                                         "$gen_dir"
+        jq ".start"                          -r $gtor >  "$gen_dir"/start.sh
+        chmod +x                                         "$gen_dir"/start.sh
+        jq ".config"                            $gtor >  "$gen_dir"/run-script.json
         # Optional "plutus-redeemer" file!
-        if test "$(jq -r '."plutus-redeemer"' $gtor)" != "null"
+        if test "$(jq -r '."plutus-redeemer"'   $gtor)" != "null"
         then
-            cp $(jq '."plutus-redeemer"'           -r $gtor)  "$gen_dir"/plutus-redeemer.json
+            jq '."plutus-redeemer"'          -r $gtor > "$gen_dir"/plutus-redeemer.json
         fi
         # Optional "plutus-datum" file!
-        if test "$(jq -r '."plutus-datum"' $gtor)" != "null"
+        if test "$(jq -r '."plutus-datum"'      $gtor)" != "null"
         then
-            cp $(jq '."plutus-datum"'              -r $gtor)  "$gen_dir"/plutus-datum.json
+            jq '."plutus-datum"'             -r $gtor > "$gen_dir"/plutus-datum.json
         fi
 
         local work_dir="$dir"/workloads
-        mkdir -p                                              "$work_dir"
+        mkdir -p                                        "$work_dir"
         for workload in $(jq_tolist 'map(.name)' "$work")
         do
-            mkdir -p                                          "$work_dir"/"${workload}"
-            cp $(jq "map(select(.name == \"${workload}\"))[0] | .start" -r $work) \
-                                                              "$work_dir"/"${workload}"/start.sh
+            mkdir -p                      "$work_dir"/"${workload}"
+              jq "map(select(.name == \"${workload}\"))[0] | .start" -r $work \
+            >                             "$work_dir"/"${workload}"/start.sh
+            chmod +x                      "$work_dir"/"${workload}"/start.sh
         done
 
         local trac_dir="$dir"/tracer
-        mkdir -p                                    "$trac_dir"
-        cp $(jq '."start"'                        -r $trac) "$trac_dir"/start.sh
-        cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
+        mkdir -p                                        "$trac_dir"
+        jq ".start"                          -r $trac > "$trac_dir"/start.sh
+        chmod +x                                        "$trac_dir"/start.sh
+        jq ".config"                            $trac > "$trac_dir"/config.json
 
         local hche_dir="$dir"/healthcheck
-        mkdir -p                                    "$hche_dir"
-        cp $(jq '."start"'                        -r $hche) "$hche_dir"/start.sh
+        mkdir -p                                        "$hche_dir"
+        jq ".start"                          -r $hche > "$hche_dir"/start.sh
+        chmod +x                                        "$hche_dir"/start.sh
         ;;
 
     deploy-genesis )
