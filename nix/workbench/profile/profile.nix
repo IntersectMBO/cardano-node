@@ -50,15 +50,14 @@ let
 
       workloads-service = builtins.map (workload: rec {
         name = workload.name;
-        start = rec {
-          value = ''
-            ${import ../workload/${name}.nix
-                    {inherit pkgs profile nodeSpecs workload;}
-            }
-            ${workload.entrypoints.producers}
-          '';
-          JSON = pkgs.writeScript "startup-${name}.sh" value;
-        };
+        start =
+          ''
+          ${import ../workload/${name}.nix
+                  {inherit pkgs profile nodeSpecs workload;}
+          }
+          ${workload.entrypoints.producers}
+          ''
+        ;
       }) profile.workloads;
 
       inherit
@@ -105,45 +104,39 @@ let
               nodeSpecsJsonPath = nodeSpecsJson;
               topologyJsonPath = "${topologyFiles}/topology.json";
               topologyDotPath  = "${topologyFiles}/topology.dot";
-              nodeServices =
-                __toJSON
+              nodeServices = __toJSON
                 (lib.flip lib.mapAttrs node-services
                   (name: node-service:
-                    with node-service;
                     { inherit name;
-                      start          = start.JSON;
-                      config         = config.JSON;
-                      topology       = topology.JSON;
-                    }));
-              generatorService =
-                with generator-service;
-                __toJSON
+                      inherit (node-service) start config;
+                      topology = node-service.topology.JSON;
+                    }
+                  )
+                )
+              ;
+              generatorService = __toJSON
                 { name            = "generator";
-                  start           = start.JSON;
-                  config          = config.JSON;
-                  # Not present on every profile.
-                  plutus-redeemer = plutus-redeemer.JSON or null;
-                  # Not present on every profile.
-                  plutus-datum    = plutus-datum.JSON or null;
-                };
-              workloadsService = __toJSON (builtins.map (workload: {
-                  name            = workload.name;
-                  start           = workload.start.JSON;
+                  inherit (generator-service) start config;
+                  # Not present on every profile. Can be null.
+                  inherit (generator-service) plutus-redeemer;
+                  # Not present on every profile. Can be null.
+                  inherit (generator-service) plutus-datum;
+                }
+              ;
+              workloadsService = __toJSON (builtins.map (workload:
+                { inherit (workload) name start;
                 }
               ) workloads-service);
-              tracerService =
-                with tracer-service;
-                __toJSON
-                { name                 = "tracer";
-                  start                = start.JSON;
-                  config               = config.JSON;
-                };
-              healthcheckService =
-                with healthcheck-service;
-                __toJSON
-                { name                 = "healthcheck";
-                  start                = start.JSON;
-                };
+              tracerService = __toJSON
+                { name = "tracer";
+                  inherit (tracer-service) start config;
+                }
+              ;
+              healthcheckService = __toJSON
+                { name = "healthcheck";
+                  inherit (healthcheck-service) start;
+                }
+              ;
               passAsFile =
                 [
                   "nodeServices"

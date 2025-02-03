@@ -223,22 +223,15 @@ let
         in val;
 
     in {
-      start = rec {
-        value = ''
-          #!${pkgs.stdenv.shell}
+      start =
+        ''
+        #!${pkgs.stdenv.shell}
 
-          ${service.script}
-          '';
-        JSON = pkgs.writeScript "startup-${name}.sh" value;
-      };
+        ${service.script}
+        ''
+      ;
 
-      config = rec {
-        value = service.nodeConfig;
-        JSON  = pkgs.writeScript
-                  "node-config-${name + modeIdSuffix}.json"
-                  (__toJSON value)
-        ;
-      };
+      config = service.nodeConfig;
 
       inherit topology;
     };
