@@ -18,9 +18,12 @@ import           Prelude
 import           Data.Function ((&))
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Builtin.Empty as E
+import qualified Cardano.Benchmarking.Profile.Builtin.Scenario.Base as B
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
+import qualified Cardano.Benchmarking.Profile.Workload.Voting as W
+import qualified Cardano.Benchmarking.Profile.Workload.Latency as L
 
 --------------------------------------------------------------------------------
 
@@ -28,6 +31,7 @@ baseInternal :: Types.Profile -> Types.Profile
 baseInternal =
     P.fixedLoaded
   . composeFiftytwo
+  . P.maxBlockSize 88000
   -- All cloud profiles use trace forwarding.
   . P.traceForwardingOn
   . P.initCooldown 45
@@ -45,6 +49,11 @@ baseVoltaire =
     baseInternal
   . V.genesisVariantVoltaire
 
+baseVoting :: Types.Profile -> Types.Profile
+baseVoting =
+    baseVoltaire
+  . P.voting . P.v10Preview
+
 --------------------------------------------------------------------------------
 
 composeFiftytwo :: Types.Profile -> Types.Profile
@@ -53,12 +62,21 @@ composeFiftytwo = P.torusDense . V.hosts 52 . P.withExplorerNode
 --------------------------------------------------------------------------------
 
 -- Value / full blocks, 7 epochs.
-valueDuration :: Types.Profile -> Types.Profile
-valueDuration =
+valueDurationBase :: Types.Profile -> Types.Profile
+valueDurationBase =
     V.timescaleModel
     -- Eight epochs.
   . P.shutdownOnSlot 64000 . P.generatorEpochs 8
-  . P.analysisSizeFull . P.analysisEpoch3Plus
+  . P.analysisSizeFull
+
+valueDuration :: Types.Profile -> Types.Profile
+valueDuration =
+  valueDurationBase . P.analysisEpoch3Plus
+
+valueDurationVoting :: Types.Profile -> Types.Profile
+valueDurationVoting =
+  -- The extra splitting needs two more epochs before the benchmarking phase.
+  valueDurationBase . P.analysisEpoch5Plus
 
 -- Plutus / small blocks, 9 epochs.
 plutusDuration :: Types.Profile -> Types.Profile
@@ -74,19 +92,16 @@ plutusDuration =
 plutusLoopBase :: Types.Profile -> Types.Profile
 plutusLoopBase =
     P.tps 0.85
-  . P.analysisSizeSmall
 
 -- Replaces "nomad_perf_plutussecp_base".
 plutusSecpBase :: Types.Profile -> Types.Profile
 plutusSecpBase =
     P.tps 2
-  . P.analysisSizeModerate
 
 -- Replaces "nomad_perf_plutusv3blst_base".
 plutusBlstBase :: Types.Profile -> Types.Profile
 plutusBlstBase =
     P.tps 2
-  . P.analysisSizeModerate2
 
 --------------------------------------------------------------------------------
 
@@ -104,13 +119,13 @@ profilesNoEraCloud =
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
       -- Loop.
-      loop     = plutus     & plutusLoopBase . V.plutusTypeLoop
-      loop2024 = plutus     & plutusLoopBase . V.plutusTypeLoop2024
-      loopVolt = plutusVolt & plutusLoopBase . V.plutusTypeLoop
+      loop     = plutus     & plutusLoopBase . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop2024 = plutus     & plutusLoopBase . V.plutusTypeLoop2024 . P.analysisSizeSmall
+      loopVolt = plutusVolt & plutusLoopBase . V.plutusTypeLoop     . P.analysisSizeSmall
       -- Secp.
-      ecdsa    = plutus     & plutusSecpBase . V.plutusTypeECDSA
-      schnorr  = plutus     & plutusSecpBase . V.plutusTypeSchnorr
-      blst     = plutusVolt & plutusBlstBase . V.plutusTypeBLST
+      ecdsa    = plutus     & plutusSecpBase . V.plutusTypeECDSA    . P.analysisSizeModerate
+      schnorr  = plutus     & plutusSecpBase . V.plutusTypeSchnorr  . P.analysisSizeModerate
+      blst     = plutusVolt & plutusBlstBase . V.plutusTypeBLST     . P.analysisSizeModerate2
   in [
   -- Value (pre-Voltaire profiles)
     value      & P.name "value-nomadperf"                                 . P.dreps      0 . P.newTracing . P.p2pOn
@@ -139,10 +154,49 @@ profilesNoEraCloud =
   -- Plutus (post-Voltaire profiles)
   , loopVolt   & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
   ]
+  ----------
+  -- Voting.
+  ----------
+  ++
+  let valueVoting  = P.empty & baseVoting . V.valueCloud . V.datasetOct2021 . V.fundsVoting . valueDurationVoting . nomadPerf
+             . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
+      plutusVoting = P.empty & baseVoting . V.plutusBase . V.datasetOct2021 . V.fundsVoting . plutusDuration      . nomadPerf
+             . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
+      loopVoting   = plutusVoting & plutusLoopBase . V.plutusTypeLoop . P.analysisSizeSmall
+  in [
+  -- Voting
+    valueVoting & P.name "value-voting-utxo-volt-nomadperf"              . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadUtxo
+  , valueVoting & P.name "value-voting-volt-nomadperf"                   . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx1
+  , valueVoting & P.name "value-voting-double-volt-nomadperf"            . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx2
+  , loopVoting  & P.name "plutus-voting-utxo-volt-nomadperf"             . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadUtxo
+  , loopVoting  & P.name "plutus-voting-volt-nomadperf"                  . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx1
+  , loopVoting  & P.name "plutus-voting-double-volt-nomadperf"           . P.dreps  10000 . P.newTracing . P.p2pOn . P.workloadAppend W.votingWorkloadx2
+  ]
+  -----------
+  -- Latency.
+  -----------
+  ++
+  let latency =
+          P.empty & B.base
+        . P.fixedLoaded
+        . composeFiftytwo
+        -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
+        . V.genesisVariantPreVoltaire
+        . V.timescaleCompressed
+         -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
+         --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
+        . P.delegators 0
+        . P.workloadAppend L.latencyWorkload
+        . P.analysisStandard
+  in (
+    latency & P.name "latency-nomadperf"
+            . P.desc "AWS perf class cluster, stop when all latency services stop"
+            . P.traceForwardingOn . P.newTracing . P.p2pOn . nomadPerf
+  )
   ----------------------
   -- Testing benchmarks.
   ----------------------
-  ++
+  :
   -- TODO: Inconsistency: "fast*" and "ci-test*" use `V.valueLocal` and "default*"/"oldtracing" use `V.valueCloud`.
   let valueCI  = P.empty & E.base . V.valueLocal . P.traceForwardingOn . nomadPerf
       fastNP = valueCI

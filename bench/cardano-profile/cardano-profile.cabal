@@ -17,6 +17,7 @@ data-files:             data/all-profiles.json
                         data/ci-test-bage.json
                         data/genesis/epoch-timeline.json
                         data/genesis/overlays/*.json
+                        data/presets/*.json
                         data/test/default-coay/*.json
                         data/test/chainsync-early-alonzo-coay/*.json
                         data/test/chainsync-early-byron-coay/*.json
@@ -55,14 +56,16 @@ library
                       , Cardano.Benchmarking.Profile.Builtin.Plutuscall
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Base
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync
-                      , Cardano.Benchmarking.Profile.Builtin.Scenario.Latency
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Idle
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly
                       , Cardano.Benchmarking.Profile.Extra.Scaling
+                      , Cardano.Benchmarking.Profile.Extra.Voting
                       , Cardano.Benchmarking.Profile.NodeSpecs
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
+                      , Cardano.Benchmarking.Profile.Workload.Latency
+                      , Cardano.Benchmarking.Profile.Workload.Voting
   build-depends:        base >=4.12 && <5
                       , time
                       , aeson

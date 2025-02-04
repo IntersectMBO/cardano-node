@@ -42,7 +42,7 @@ profilesNoEraModel =
         . P.analysisStandard . P.analysisEpoch3Plus
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . P.desc "Status-quo dataset, 7 epochs"
-      secp  = V.plutusDoubleSaturation . V.plutusTypeECDSA
+      secp  = V.plutusDoubleSaturation . V.plutusTypeECDSA . P.analysisSizeModerate
       value = V.valueBase . P.tps 9 -- "value" with the Plutus `txFee`.
   in [
   -- TODO: after dropping jq profiles, bump all to genesisVariantVoltaire

@@ -314,15 +314,17 @@ ciTestBage = Types.Profile {
     , Types.active_slots_coeff = 0.05
     , Types.parameter_k = 3
     , Types.utxo = 0
-    , Types.delegators = Just 0
+    , Types.delegators = 0
     , Types.dreps = 0
     , Types.extra_future_offset = 0
     , Types.per_pool_balance = 1000000000000000
     , Types.funds_balance = 10000000000000
+    , Types.utxo_keys = 1
     , Types.network_magic = 42
     , Types.pool_coin = 1000000000000000
     , Types.delegator_coin = 0
     , Types.single_shot = True
+    , Types.max_block_size = Nothing
   }
   , Types.scenario = Types.FixedLoaded
   , Types.node = Types.Node {
@@ -350,6 +352,7 @@ ciTestBage = Types.Profile {
     , Types.tx_count = Just 9000
     , Types.add_tx_size = 100
   }
+  , Types.workloads = []
   , Types.tracer = Types.Tracer {
       Types.rtview = False
     , Types.ekg = False
@@ -449,7 +452,7 @@ ciTestBage = Types.Profile {
       ]
   }
   , Types.preset = mempty
-  , Types.overlay = Just mempty
+  , Types.overlay = mempty
 }
 
 --------------------------------------------------------------------------------
@@ -570,6 +573,18 @@ testGroupMap = Tasty.testGroup
             (zip
               (Map.assocs $ Map.map Types.generator allProfiles)
               (Map.assocs $ Map.map Types.generator profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show the first profile with differences in the Workloads list.
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - [Workload]")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map Types.workloads allProfiles)
+              (Map.assocs $ Map.map Types.workloads profiles)
             )
           ----------------------------------------------------------------------
           -- Show the first profile with differences in the Tracer type.
@@ -699,6 +714,6 @@ testGroupOverlay = Tasty.testGroup
             (Types.effective_epochs $ Types.derived profile)
           -- The overlay used is added to the profile.
           assertEqual "New overlay"
-            (Just overlay)
+            overlay
             (Types.overlay profile)
   ]

@@ -11,7 +11,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleMainnet, timescaleDevops
 
 , genesisVariant300, genesisVariantLatest, genesisVariantPreVoltaire, genesisVariantVoltaire
-, fundsDefault, fundsDouble
+, fundsDefault, fundsDouble, fundsVoting
 
 , hosts
 
@@ -118,11 +118,14 @@ genesisVariantVoltaire = genesisVariantLatest
 
 -- Defined in the "genesis" property and it's for the tx-generator.
 fundsDefault :: Types.Profile -> Types.Profile
-fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000
+fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000 . P.utxoKeys 1
 
 -- Some profiles have a higher `funds_balance` in `Genesis`. Needed? Fix it?
 fundsDouble :: Types.Profile -> Types.Profile
-fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000
+fundsDouble =  P.poolBalance 1000000000000000 . P.funds 20000000000000 . P.utxoKeys 1
+
+fundsVoting :: Types.Profile -> Types.Profile
+fundsVoting =  P.poolBalance 1000000000000000 . P.funds 40000000000000 . P.utxoKeys 2
 
 -- Definition vocabulary: composition.
 --------------------------------------
@@ -190,7 +193,6 @@ plutusTypeLoop =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop"
   . P.redeemerInt 1000000
   . P.txFee 1360000
-  . P.analysisSizeSmall
 
 -- Replaces jq's "plutus_loop2024_counter".
 plutusTypeLoop2024 :: Types.Profile -> Types.Profile
@@ -198,7 +200,6 @@ plutusTypeLoop2024 =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "Loop2024"
   . P.redeemerInt 1000000
   . P.txFee 1412000
-  . P.analysisSizeSmall
 
 -- Replaces jq's "plutus_loop_secp_ecdsa".
 plutusTypeECDSA :: Types.Profile -> Types.Profile
@@ -211,7 +212,6 @@ plutusTypeECDSA =
     , KeyMap.fromList [("bytes", Aeson.String "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295")]
     ]
   . P.txFee 1008000
-  . P.analysisSizeModerate
 
 -- Replaces jq's "plutus_loop_secp_schnorr".
 plutusTypeSchnorr :: Types.Profile -> Types.Profile
@@ -224,7 +224,6 @@ plutusTypeSchnorr =
     , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b")]
     ]
   . P.txFee 1004000
-  . P.analysisSizeModerate
 
 -- Replaces jq's "plutus_loop_blst".
 plutusTypeBLST :: Types.Profile -> Types.Profile
@@ -241,7 +240,6 @@ plutusTypeBLST =
       ]
     ]
   . P.txFee 940000
-  . P.analysisSizeModerate2
 
 -- the bytes content is arbitrary, but should be of the same size as RIPEMD-160 output, i.e. 160 bits
 plutusTypeRIPEMD :: Types.Profile -> Types.Profile
@@ -252,7 +250,6 @@ plutusTypeRIPEMD =
     , KeyMap.fromList [("bytes", Aeson.String "5a56da88e6fd8419181dec4d3dd6997bab953d2f")]
     ]
   . P.txFee 940000
-  . P.analysisSizeSmall
 
 -- Definition vocabulary: cluster.
 ----------------------------------

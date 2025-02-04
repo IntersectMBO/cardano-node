@@ -16,9 +16,11 @@ import           Data.Function ((&))
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Builtin.Cloud as C
 import qualified Cardano.Benchmarking.Profile.Builtin.Empty as E
+import qualified Cardano.Benchmarking.Profile.Builtin.Scenario.Base as B
 import qualified Cardano.Benchmarking.Profile.Primitives as P
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.Vocabulary as V
+import qualified Cardano.Benchmarking.Profile.Workload.Latency as L
 
 --------------------------------------------------------------------------------
 
@@ -48,8 +50,8 @@ profilesNoEraScalingCloud =
   let utxoScale =
           P.empty & base
         . P.regions [Types.AWS Types.EU_CENTRAL_1]
-        . V.timescaleSmall . P.shutdownOnSlot 7200
-        . P.generatorEpochs 6
+        . V.timescaleSmall . P.maxBlockSize 88000
+        . P.shutdownOnSlot 7200 . P.generatorEpochs 6
         . V.valueCloud
         . P.p2pOn
         . clusterNomadSsdNoRegions
@@ -62,6 +64,27 @@ profilesNoEraScalingCloud =
   , utxoScale   & P.name "utxoscale-solo-24M64G-nomadperfssd" . P.utxo 24000000 . V.fundsDouble  . V.genesisVariantPreVoltaire
   , fast        & P.name "fast-nomadperfssd"  . V.valueLocal . P.traceForwardingOn . P.newTracing . P.p2pOn
   , value       & P.name "value-nomadperfssd" . V.valueCloud . V.datasetOct2021    . P.dreps 0 . V.fundsDouble . P.newTracing . P.p2pOn
+  ]
+  -----------
+  -- Latency.
+  -----------
+  ++
+  let latency =
+          P.empty & B.base
+        . P.fixedLoaded
+        . C.composeFiftytwo
+        -- TODO: Use `genesisVariant300` like the others and to "Scenario.Base".
+        . V.genesisVariantPreVoltaire
+        . V.timescaleCompressed
+         -- TODO: "tracer-only" and "idle" have `P.delegators 6`.
+         --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
+        . P.delegators 0
+        . P.workloadAppend L.latencyWorkload
+        . P.analysisStandard
+  in [
+    latency & P.name "latency-nomadperfssd"
+            . P.desc "AWS perf-ssd class cluster, stop when all latency services stop"
+            . P.traceForwardingOn . P.newTracing . P.p2pOn . nomadSsd
   ]
 
 nomadSsd :: Types.Profile -> Types.Profile
