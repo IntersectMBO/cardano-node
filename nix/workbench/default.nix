@@ -86,13 +86,6 @@ let
     ''
   ;
 
-  runJq =
-    name: args: query:
-    pkgs.runCommand name {} ''
-      args=(${args})
-      ${pkgs.jq}/bin/jq '${query}' "''${args[@]}" > $out
-    '';
-
   # Auxiliary functions of `wb` commands.
   ##############################################################################
 
@@ -107,7 +100,7 @@ in pkgs.lib.fix (self: {
 
   inherit cardanoNodePackages;
   inherit workbench' workbench runWorkbench;
-  inherit runCardanoProfile runJq;
+  inherit runCardanoProfile;
   inherit profile-names-json profile-names;
 
   # Return a profile attr with a `materialise-profile` function.
