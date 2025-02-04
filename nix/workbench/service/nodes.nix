@@ -52,6 +52,14 @@ let
        then go {} (__head eras) (__tail eras)
        else throw "configHardforksIntoEra:  unknown era '${era}'";
 
+  valency = nodeSpec: 
+    let
+      srv = (nodeService nodeSpec).topology.value;
+      val = if hasAttr "localRoots" srv
+              then let lr = head srv.localRoots; in lr.valency
+              else length srv.Producers;
+    in __trace "node ${toString nodeSpec.name} has valency ${toString val}" val;
+
   ##
   ## nodeServiceConfig :: NodeSpec -> ServiceConfig
   ##
@@ -104,7 +112,10 @@ let
                   SnapshotInterval             = 4230;
                   ChainSyncIdleTimeout         = 0;
 
-                  ConsensusMode                = "GenesisMode";
+                  ConsensusMode                     = "GenesisMode";
+                  MinBigLedgerPeersForTrustedState  = 0;
+                  SyncTargetNumberOfActivePeers     = valency nodeSpec;
+
 
                   ByronGenesisFile             = "../genesis/byron/genesis.json";
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
