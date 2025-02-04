@@ -216,6 +216,7 @@ defaultYamlHardforkViaConfig sbe =
                 , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
                 , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
                 , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
+                , ("TestConwayHardForkAtEpoch", Aeson.Number 4)
                 ]
             ShelleyBasedEraConway ->
                 [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
