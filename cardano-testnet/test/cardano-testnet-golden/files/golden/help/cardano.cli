@@ -11,6 +11,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
+  [--output-dir DIRECTORY]
   --testnet-magic INT
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
@@ -44,6 +45,9 @@ Available options:
   --enable-new-epoch-state-logging
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log
+  --output-dir DIRECTORY   Directory where to store files, sockets, and so on.
+                           It is created if it doesn't exist. If unset, a
+                           temporary directory is used.
   --testnet-magic INT      Specify a testnet magic id.
   --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
   --slot-length SECONDS    Slot length (default: 0.1)
