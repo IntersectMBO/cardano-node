@@ -246,11 +246,6 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                  ["Consensus", "SanityCheck"]
     configureTracers configReflection trConfig [consensusSanityCheckTr]
 
-    !gddTr <- mkCardanoTracer
-                 trBase trForward mbTrEKG
-                 ["Consensus", "GDD"]
-    configureTracers configReflection trConfig [gddTr]
-
     !blockFetchDecisionTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockFetch", "Decision"]
@@ -330,6 +325,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "Startup"]
     configureTracers configReflection trConfig [consensusStartupErrorTr]
 
+    !consensusGddTr <- mkCardanoTracer
+                 trBase trForward mbTrEKG
+                 ["Consensus", "GDD"]
+    configureTracers configReflection trConfig [consensusGddTr]
+
     !consensusGsmTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "GSM"]
@@ -361,7 +361,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       , Consensus.forgeStateInfoTracer = Tracer $
           traceWith (traceAsKESInfo (Proxy @blk) forgeKESInfoTr)
       , Consensus.gddTracer = Tracer $
-          traceWith gddTr
+          traceWith consensusGddTr
       , Consensus.txInboundTracer = Tracer $
            traceWith txInboundTr
       , Consensus.txOutboundTracer = Tracer $
