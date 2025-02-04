@@ -939,10 +939,7 @@ mkP2PArguments NodeConfiguration {
         targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers,
         targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers
     }
-    syncTargets = PeerSelectionTargets {
-      targetNumberOfRootPeers        = 0,
-      targetNumberOfKnownPeers       = 0,
-      targetNumberOfEstablishedPeers = 0,
+    syncTargets = deadlineTargets {
       targetNumberOfActivePeers               = ncSyncTargetOfActivePeers,
       targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers,
       targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
