@@ -190,8 +190,9 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
 
   forwarderApp
     :: [(RunMiniProtocol 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
+    -> ForwardingVersionData
     -> OuroborosApplication 'Mux.InitiatorMode initCtx respCtx LBS.ByteString IO () Void
-  forwarderApp protocols =
+  forwarderApp protocols _ =
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
@@ -239,11 +240,11 @@ doListenToAcceptor TestSetup{..}
               (simpleSingletonVersions
                  ForwardingV_1
                  (ForwardingVersionData $ unI tsNetworkMagic) -- Taken from mainnet shelley genesis file.
-                 (SomeResponderApplication $
-                    forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
-                                 , (forwardTraceObjectsResp tfConfig sink,   2)
-                                 , (forwardDataPointsResp dpfConfig dpStore, 3)
-                                 ]
+                 ( SomeResponderApplication
+                 . forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
+                                , (forwardTraceObjectsResp tfConfig sink,   2)
+                                , (forwardDataPointsResp dpfConfig dpStore, 3)
+                                ]
                  )
               )
               nullErrorPolicies
@@ -251,8 +252,9 @@ doListenToAcceptor TestSetup{..}
  where
   forwarderApp
     :: [(RunMiniProtocol 'Mux.ResponderMode initCtx respCtx LBS.ByteString IO Void (), Word16)]
+    -> ForwardingVersionData
     -> OuroborosApplication 'Mux.ResponderMode initCtx respCtx LBS.ByteString IO Void ()
-  forwarderApp protocols =
+  forwarderApp protocols _ =
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
