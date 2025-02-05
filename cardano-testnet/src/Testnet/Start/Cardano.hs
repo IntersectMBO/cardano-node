@@ -100,7 +100,7 @@ cardanoTestnetDefault testnetOptions shelleyOptions conf = do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
   shelleyGenesis <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply shelleyOptions
-  cardanoTestnet testnetOptions conf shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
+  cardanoTestnet testnetOptions conf UserNodeConfigNotSubmitted shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
   where
     CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply} = testnetOptions
 
@@ -194,13 +194,14 @@ cardanoTestnet :: ()
   => HasCallStack
   => CardanoTestnetOptions -- ^ The options to use
   -> Conf
+  -> UserNodeConfig -- ^ The node configuration file to use. If omitted it's generated.
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
                                    --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
   -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> H.Integration TestnetRuntime
 cardanoTestnet
-  testnetOptions Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath}
+  testnetOptions Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} mNodeConfigFile
   shelleyGenesis alonzoGenesis conwayGenesis = do
   let CardanoTestnetOptions
         { cardanoNodeEra=asbe
@@ -231,8 +232,6 @@ cardanoTestnet
   -- as evidence of what was run, and as cache keys.
   writeGenesisSpecFile "alonzo" alonzoGenesis
   writeGenesisSpecFile "conway" conwayGenesis
-
-  configurationFile <- H.noteShow . File $ tmpAbsPath </> "configuration.yaml"
 
   _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
@@ -272,12 +271,18 @@ cardanoTestnet
         }
       }
 
-  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-  H.evalIO $ LBS.writeFile (unFile configurationFile) config
+  nodeConfigFile <- case mNodeConfigFile of
+    UserNodeConfigNotSubmitted -> do
+      configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
+      -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+      config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+      H.evalIO $ LBS.writeFile configurationFile config
+      return configurationFile
+    UserNodeConfig userSubmittedNodeConfigFile -> pure userSubmittedNodeConfigFile
+
   execCli_
     [ "debug", "check-node-configuration"
-    , "--node-configuration-file", unFile configurationFile
+    , "--node-configuration-file", nodeConfigFile
     ]
 
   portNumbersWithNodeOptions <- forM cardanoNodes $ \nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address
@@ -324,7 +329,7 @@ cardanoTestnet
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic $
         [ "run"
-        , "--config", unFile configurationFile
+        , "--config", nodeConfigFile
         , "--topology", nodeDataDir </> "topology.json"
         , "--database-path", nodeDataDir </> "db"
         ]
@@ -352,7 +357,7 @@ cardanoTestnet
     H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
   let runtime = TestnetRuntime
-        { configurationFile
+        { configurationFile = File nodeConfigFile
         , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
         , testnetMagic
         , testnetNodes=testnetNodes'

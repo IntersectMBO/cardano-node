@@ -10,6 +10,7 @@ module Testnet.Start.Types
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
+  , UserNodeConfig(..)
   , cardanoNumPools
   , cardanoNumRelays
 
@@ -132,6 +133,12 @@ data TestnetNodeOptions
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   deriving (Eq, Show)
+
+-- | Type used to track whether the user is using its own node configuration file,
+-- or whether it is programmatically generated.
+data UserNodeConfig =
+  UserNodeConfigNotSubmitted
+  | UserNodeConfig FilePath
 
 -- | Get extra CLI arguments passed to the node executable
 testnetNodeExtraCliArgs :: TestnetNodeOptions -> [String]

@@ -120,7 +120,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
     , configurationFile
     } <- cardanoTestnet
            fastTestnetOptions
-           conf shelleyGenesis'
+           conf UserNodeConfigNotSubmitted shelleyGenesis'
            alonzoGenesis conwayGenesisWithCommittee
 
   poolNode1 <- H.headM testnetNodes
