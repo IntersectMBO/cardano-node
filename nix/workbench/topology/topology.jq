@@ -26,6 +26,7 @@ def p2p_loopback_node_topology_from_nixops_topology($topo; $i):
               }
             ]
           , advertise: false
+          , trustable: true
           , valency: $valency
           })
       )
