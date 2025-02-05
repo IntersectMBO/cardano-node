@@ -1346,6 +1346,7 @@ let
         { "localRoots": [
             { "accessPoints": ${nodesReferencesStr}
             , "advertise": false
+            , "trustable": true
             , "valency": ${builtins.toString valency}
             }
           ]
