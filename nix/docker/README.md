@@ -27,8 +27,8 @@ docker run --rm -it --entrypoint=bash \
   ghcr.io/intersectmbo/cardano-node:dev
 
 cardano-node run \
-  --config /opt/cardano/config/mainnet-config.json \
-  --topology /opt/cardano/config/mainnet-topology.json \
+  --config /opt/cardano/config/mainnet/config.json \
+  --topology /opt/cardano/config/mainnet/topology.json \
   --socket-path /opt/cardano/ipc/socket \
   --database-path /opt/cardano/data \
   --host-addr 0.0.0.0 \
