@@ -105,34 +105,75 @@ let
   # The Docker context with static content
   context = ./context;
 
-  # Mainnet configuration used by the 'run' option
-  mainnetConfigFile = builtins.toFile "mainnet-config.json"
-    (builtins.toJSON commonLib.environments.mainnet.nodeConfig);
-  mainnetTopologyFile = commonLib.mkTopology commonLib.environments.mainnet;
+  genCfgs = let
+    environments = lib.getAttrs [ "mainnet" "preprod" "preview" "sanchonet" ] commonLib.environments;
+    cardano-deployment = commonLib.mkConfigHtml environments;
+  in
+    pkgs.runCommand "cardano-html" {} ''
+      mkdir "$out"
+      cp "${cardano-deployment}/index.html" "$out/"
+      cp "${cardano-deployment}/rest-config.json" "$out/"
+
+      ENVS=(${lib.escapeShellArgs (builtins.attrNames environments)})
+      for ENV in "''${ENVS[@]}"; do
+        # Migrate each env from a flat dir to an ENV subdir
+        mkdir -p "$out/config/$ENV"
+        for i in $(find ${cardano-deployment} -type f -name "$ENV-*" -printf "%f\n"); do
+          cp -v "${cardano-deployment}/$i" "$out/config/$ENV/''${i#"$ENV-"}"
+        done
+
+        # Adjust genesis file, config and config-bp refs
+        for i in config config-bp db-sync-config; do
+          if [ -f "$out/config/$ENV/$i.json" ]; then
+            sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
+          fi
+        done
+
+        # Adjust index.html file refs
+        sed -i "s|$ENV-|config/$ENV/|g" "$out/index.html"
+      done
+    '';
 
 in
   dockerTools.buildImage {
     name = "${repoName}";
     tag = "${gitrev}";
     fromImage = baseImage;
-    created = "now";   # Set creation date to build time. Breaks reproducibility
 
-    # May require system-features = kvm in /etc/nix/nix.conf
-    # https://discourse.nixos.org/t/cannot-build-docker-image/7445
-    # runAsRoot = '' ln -s ${cardano-node} bin/cardano-node '';
+    # Set creation date to build time. Breaks reproducibility
+    created = "now";
 
     extraCommands = ''
-      mkdir -p opt/cardano/config
+      # These directories serve as defaults when the node docker container uses the `run` arg.
+      # Alternatively, when the NETWORK environment variable is set the defaults are different.
+      # TODO: Reduce the confusion on this.
       mkdir -p opt/cardano/data
       mkdir -p opt/cardano/ipc
       mkdir -p opt/cardano/logs
       mkdir -p usr/local/bin
-      ln -s ${mainnetConfigFile} opt/cardano/config/mainnet-config.json
-      ln -s ${mainnetTopologyFile} opt/cardano/config/mainnet-topology.json
-      cp ${runNetwork}/bin/* usr/local/bin
-      cp ${context}/bin/* usr/local/bin
-      ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
-      ln -s ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+
+      cp -v ${runNetwork}/bin/* usr/local/bin
+      cp -v ${context}/bin/* usr/local/bin
+
+      ln -sv ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
+      ln -sv ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+
+      # Create iohk-nix network configs, organized by network directory.
+      SRC="${genCfgs}"
+      DST="opt/cardano"
+
+      # Make the directory structure with the iohk-nix configs mutable.
+      # This leaves the option to create merged entrypoint configs in the network directory.
+      find "$SRC" -mindepth 1 -type d -exec bash -c "DIR=\"{}\"; mkdir -v -p \"$DST/\''${DIR#${genCfgs}/}\"" \;
+
+      # Keep all base iohk-nix config files immutable via symlinks to nix store.
+      find "$SRC" -mindepth 1 -type f -exec bash -c "FILE=\"{}\"; TGT=\"$DST/\''${FILE#${genCfgs}/}\"; ln -sv \"\$FILE\" \"\$TGT\"" \;
+
+      # Preserve legacy oci config and topo path for backwards compatibility.
+      pushd opt/cardano/config
+      ln -sv mainnet/config.json mainnet-config.json
+      ln -sv mainnet/topology.json mainnet-topology.json
+      popd
     '';
 
     config = {
