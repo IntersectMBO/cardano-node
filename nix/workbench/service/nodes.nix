@@ -121,7 +121,13 @@ let
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
-                })
+                } //
+                (
+                  if name == "explorer"
+                  then {TargetNumberOfEstablishedPeers = valency nodeSpec;}
+                  else {}
+                )
+              )
               (if __hasAttr "preset" profile && profile.preset != null
                ## It's either an undisturbed preset,
                ## or a hardforked setup.
