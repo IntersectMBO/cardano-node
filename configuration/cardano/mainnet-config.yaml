@@ -42,7 +42,7 @@ TargetNumberOfRootPeers: 60
 
 ##### Version Information #####
 
-MinNodeVersion: 8.12.0
+MinNodeVersion: 10.1.4
 
 ##### Logging configuration #####
 
