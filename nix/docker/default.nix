@@ -144,17 +144,31 @@ in
     created = "now";
 
     extraCommands = ''
-      # These directories serve as defaults when the node docker container uses the `run` arg.
-      # Alternatively, when the NETWORK environment variable is set the defaults are different.
-      # TODO: Reduce the confusion on this.
-      mkdir -p opt/cardano/data
-      mkdir -p opt/cardano/ipc
-      mkdir -p opt/cardano/logs
-      mkdir -p usr/local/bin
+      # The "scripts" operation mode of this image, when the NETWORK env var is
+      # set to a valid network, will use the following default directories
+      # mounted at /:
+      mkdir -p data
+      mkdir -p ipc
 
+      # Similarly, make a root level dir for logs:
+      mkdir -p logs
+
+      # The "custom" operation mode of this image, when the NETWORK env is
+      # unset and `run` is provided as an entrypoint arg, will use the
+      # following default directories.  To reduce confusion caused by default
+      # directory paths varying by mode, symlink these directories to the
+      # "scripts" mode default directories at the root location.  This will
+      # permit use of volume mounts at the root directory location regardless
+      # of which mode the image is operating in.
+      mkdir -p opt/cardano
+      ln -sv /data opt/cardano/data
+      ln -sv /ipc opt/cardano/ipc
+      ln -sv /logs opt/cardano/logs
+
+      # Setup bins
+      mkdir -p usr/local/bin
       cp -v ${runNetwork}/bin/* usr/local/bin
       cp -v ${context}/bin/* usr/local/bin
-
       ln -sv ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -sv ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
 
