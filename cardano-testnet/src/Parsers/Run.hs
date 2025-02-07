@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Parsers.Run
   ( commands
@@ -8,14 +9,21 @@ module Parsers.Run
   , opts
   ) where
 
+import           Cardano.Api.Ledger (StandardCrypto)
+import           Cardano.Api.Shelley (ShelleyGenesis)
+
 import           Cardano.CLI.Environment
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import           Data.Foldable
+import           Data.Yaml (decodeFileThrow)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
 import           Testnet.Property.Run
 import           Testnet.Start.Cardano
+import           Testnet.Start.Types
 
 import           Parsers.Cardano
 import           Parsers.Help
@@ -53,4 +61,19 @@ runTestnetCmd = \case
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
 runCardanoOptions (CardanoTestnetCliOptions testnetOptions shelleyOptions) =
-  runTestnet testnetOptions $ cardanoTestnetDefault testnetOptions shelleyOptions
+    case cardanoInputConfigs testnetOptions of
+      Nothing -> runTestnet testnetOptions $ cardanoTestnetDefault testnetOptions shelleyOptions
+      Just inputConfigFiles -> do
+        let nodeConfigFile = UserNodeConfig $ icfNodeConfigFile inputConfigFiles
+        shelleyGenesisFile' :: ShelleyGenesis StandardCrypto <-
+          decodeFileThrow $ icfShelleyGenesisConfigFile inputConfigFiles
+        alonzoGenesisFile :: AlonzoGenesis <-
+          decodeFileThrow $ icfAlonzoGenesisConfigFile inputConfigFiles
+        conwayGenesisFile ::  ConwayGenesis StandardCrypto <-
+          decodeFileThrow $ icfConwayGenesisConfigFile inputConfigFiles
+        runTestnet testnetOptions $ cardanoTestnet
+          testnetOptions
+          nodeConfigFile
+          shelleyGenesisFile'
+          alonzoGenesisFile
+          conwayGenesisFile

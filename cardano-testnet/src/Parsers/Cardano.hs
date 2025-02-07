@@ -62,10 +62,20 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
       <>  OA.metavar "DIRECTORY"
       ))
+  <*> optional parseConfigFiles
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
       pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
+    parseConfigFiles :: Parser InputConfigFiles
+    parseConfigFiles =
+      InputConfigFiles
+       <$> make "node-config" "Path to the node's configuration file. Generated if omitted."
+       <*> make "shelley-genesis" "Path to the Shelley genesis file. Generated if omitted."
+       <*> make "alonzo-genesis" "Path to the Alonzo genesis file. Generated if omitted."
+       <*> make "conway-genesis" "Path to the Conway genesis file. Generated if omitted."
+      where
+         make flagName helpName = strOption ( long flagName <> metavar "FILEPATH" <> help helpName)
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =

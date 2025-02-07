@@ -7,6 +7,7 @@
 module Testnet.Start.Types
   ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
+  , InputConfigFiles(..)
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
@@ -76,7 +77,16 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
+  , cardanoInputConfigs :: Maybe InputConfigFiles -- ^ Paths to the (optional) configuration files
   } deriving (Eq, Show)
+
+data InputConfigFiles = InputConfigFiles
+  { icfNodeConfigFile :: FilePath -- ^ Path to the configuration file of the node
+  , icfShelleyGenesisConfigFile :: FilePath -- ^ Path to the Shelley genesis file
+  , icfAlonzoGenesisConfigFile :: FilePath -- ^ Path to the Alonzo genesis file
+  , icfConwayGenesisConfigFile :: FilePath -- ^ Path to the Conway genesis file
+  }
+  deriving (Eq, Show)
 
 cardanoNumPools :: CardanoTestnetOptions -> NumPools
 cardanoNumPools CardanoTestnetOptions{cardanoNodes} =
@@ -108,6 +118,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
     , cardanoOutputDir = Nothing
+    , cardanoInputConfigs = Nothing
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.

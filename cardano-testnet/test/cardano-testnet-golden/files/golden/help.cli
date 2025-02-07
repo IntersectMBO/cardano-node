@@ -14,6 +14,10 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
   [--output-dir DIRECTORY]
+  [--node-config FILEPATH
+    --shelley-genesis FILEPATH
+    --alonzo-genesis FILEPATH
+    --conway-genesis FILEPATH]
   --testnet-magic INT
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
