@@ -12,7 +12,7 @@ import Cardano.Analysis.API.Context
 import Cardano.Analysis.API.Ground
 
 
--- | A pretty obvious (and dangerously assumptious) interpretation of an absolute slot number.
+-- | A pretty obvious (and dangerously assumptions) interpretation of an absolute slot number.
 --   This is wrong, if you consider the reasons why epochLength can change.
 unsafeParseSlot :: Genesis -> SlotNo -> (EpochNo, EpochSlot)
 unsafeParseSlot Genesis{..} slot =  (EpochNo epoch, EpochSlot epochSlot)
