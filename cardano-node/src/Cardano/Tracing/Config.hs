@@ -71,6 +71,7 @@ module Cardano.Tracing.Config
   , TraceTxSubmissionProtocol
   , TraceTxSubmission2Protocol
   , TraceKeepAliveProtocol
+  , TracePeerSharingProtocol
   , proxyName
   ) where
 
@@ -177,6 +178,7 @@ type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
 type TraceTxSubmission2Protocol = ("TraceTxSubmission2Protocol" :: Symbol)
 type TraceKeepAliveProtocol = ("TraceKeepAliveProtocol" :: Symbol)
+type TracePeerSharingProtocol = ("TracePeerSharingProtocol" :: Symbol)
 type TraceGsm = ("TraceGsm" :: Symbol)
 type TraceCsj = ("TraceCsj" :: Symbol)
 
@@ -250,6 +252,7 @@ data TraceSelection
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
   , traceTxSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
   , traceKeepAliveProtocol :: OnOff TraceKeepAliveProtocol
+  , tracePeerSharingProtocol :: OnOff TracePeerSharingProtocol
   , traceGsm :: OnOff TraceGsm
   , traceCsj :: OnOff TraceCsj
   } deriving (Eq, Show)
@@ -317,6 +320,7 @@ data PartialTraceSelection
       , pTraceTxSubmissionProtocol :: Last (OnOff TraceTxSubmissionProtocol)
       , pTraceTxSubmission2Protocol :: Last (OnOff TraceTxSubmission2Protocol)
       , pTraceKeepAliveProtocol :: Last (OnOff TraceKeepAliveProtocol)
+      , pTracePeerSharingProtocol :: Last (OnOff TracePeerSharingProtocol)
       , pTraceGsm :: Last (OnOff TraceGsm)
       , pTraceCsj :: Last (OnOff TraceCsj)
       } deriving (Eq, Generic, Show)
@@ -385,6 +389,7 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceTxSubmissionProtocol) v
       <*> parseTracer (Proxy @TraceTxSubmission2Protocol) v
       <*> parseTracer (Proxy @TraceKeepAliveProtocol) v
+      <*> parseTracer (Proxy @TracePeerSharingProtocol) v
       <*> parseTracer (Proxy @TraceGsm) v
       <*> parseTracer (Proxy @TraceCsj) v
 
@@ -450,6 +455,7 @@ defaultPartialTraceConfiguration =
     , pTraceTxSubmissionProtocol = pure $ OnOff False
     , pTraceTxSubmission2Protocol = pure $ OnOff False
     , pTraceKeepAliveProtocol = pure $ OnOff False
+    , pTracePeerSharingProtocol = pure $ OnOff False
     , pTraceGsm = pure $ OnOff True
     , pTraceCsj = pure $ OnOff True
     }
@@ -517,6 +523,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
    traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
    traceKeepAliveProtocol <- proxyLastToEither (Proxy @TraceKeepAliveProtocol) pTraceKeepAliveProtocol
+   tracePeerSharingProtocol <- proxyLastToEither (Proxy @TracePeerSharingProtocol) pTracePeerSharingProtocol
    traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
    Right $ TraceDispatcher $ TraceSelection
@@ -577,6 +584,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceTxSubmissionProtocol = traceTxSubmissionProtocol
              , traceTxSubmission2Protocol = traceTxSubmission2Protocol
              , traceKeepAliveProtocol = traceKeepAliveProtocol
+             , tracePeerSharingProtocol = tracePeerSharingProtocol
              , traceGsm = traceGsm
              , traceCsj = traceCsj
              }
@@ -641,6 +649,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
   traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
   traceKeepAliveProtocol <- proxyLastToEither (Proxy @TraceKeepAliveProtocol) pTraceKeepAliveProtocol
+  tracePeerSharingProtocol <- proxyLastToEither (Proxy @TracePeerSharingProtocol) pTracePeerSharingProtocol
   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
   Right $ TracingOnLegacy $ TraceSelection
@@ -701,6 +710,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceTxSubmissionProtocol = traceTxSubmissionProtocol
             , traceTxSubmission2Protocol = traceTxSubmission2Protocol
             , traceKeepAliveProtocol = traceKeepAliveProtocol
+            , tracePeerSharingProtocol = tracePeerSharingProtocol
             , traceGsm = traceGsm
             , traceCsj = traceCsj
             }

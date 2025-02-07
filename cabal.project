@@ -126,11 +126,18 @@ source-repository-package
   tag: 588130b5f0494a42c19da3bd44211ff7607b5831
   --sha256: sha256-5/kbjSYdWpTrOZD/eCPrMQVu6Lo03KdeuAy3bhtTH0c=
   subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
     ouroboros-network
     ouroboros-network-api
-    ouroboros-network-protocols
     ouroboros-network-framework
-    cardano-ping
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    quickcheck-monoids
 
 source-repository-package
   type: git
@@ -142,6 +149,8 @@ source-repository-package
     ouroboros-consensus-cardano
     ouroboros-consensus-protocol
     ouroboros-consensus-diffusion
+    sop-extras
+    strict-sop-core
 
 source-repository-package
   type: git

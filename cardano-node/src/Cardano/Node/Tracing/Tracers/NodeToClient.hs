@@ -334,12 +334,12 @@ instance LogFormatting (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) w
              ]
   forMachine _dtal (Simple.AnyMessageAndAgency stok LTM.MsgGetMeasures {}) =
     mconcat [ "kind" .= String "MsgGetMeasures"
-             , "agency" .= String (pack $ show stok)
-             ]
+            , "agency" .= String (pack $ show stok)
+            ]
   forMachine _dtal (Simple.AnyMessageAndAgency stok LTM.MsgReplyGetMeasures {}) =
-    mconcat [ "kind" .= String "MsgReplyGetMeasures"
-             , "agency" .= String (pack $ show stok)
-             ]
+    mconcat [ "kind" .= String "MsgReplyMeasures"
+            , "agency" .= String (pack $ show stok)
+            ]
 
 instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
     namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgAcquire {}) =
