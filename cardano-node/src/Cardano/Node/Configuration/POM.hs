@@ -42,8 +42,9 @@ import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigF
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag, NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
+import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 
-import           Control.Monad (when)
+import           Control.Monad (when, unless)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
@@ -701,6 +702,32 @@ makeNodeConfiguration pnc = do
       $ lastToEither "Missing GenesisConfigFlags"
       $ pncGenesisConfigFlags pnc
   let ncGenesisConfig = mkGenesisConfig mGenesisConfigFlags
+
+  let deadlineTargets =
+        PeerSelectionTargets {
+          targetNumberOfRootPeers = ncDeadlineTargetOfRootPeers,
+          targetNumberOfKnownPeers = ncDeadlineTargetOfKnownPeers,
+          targetNumberOfEstablishedPeers = ncDeadlineTargetOfEstablishedPeers,
+          targetNumberOfActivePeers = ncDeadlineTargetOfActivePeers,
+          targetNumberOfKnownBigLedgerPeers = ncDeadlineTargetOfKnownBigLedgerPeers,
+          targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers,
+          targetNumberOfActiveBigLedgerPeers = ncDeadlineTargetOfActiveBigLedgerPeers }
+      syncTargets = deadlineTargets {
+        targetNumberOfActivePeers = ncSyncTargetOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers = ncSyncTargetOfKnownBigLedgerPeers,
+        targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers = ncSyncTargetOfActiveBigLedgerPeers  }
+
+  unless (PeerSelection.sanePeerSelectionTargets deadlineTargets
+          && PeerSelection.sanePeerSelectionTargets syncTargets) $
+    Left $ "Invalid peer selection targets. Ensure that targets satisfy the "
+           <> "inequalities of 0 >= known >= established >= active "
+           <> "for both deadline and sync target groups. The deadline groups start with "
+           <> "TargetNumber... while the sync group starts with SyncTarget... "
+           <> "Additionally, TargetNumberOfEstablishedPeers >= SyncTargetNumberOfActivePeers. "
+           <> "Within each group, the category of big ledger peers is treated independently, "
+           <> "but it too must satisfy the same inequality. Refer to cardano-node wiki page "
+           <> "'understanding config files' for details."
 
   -- TODO: This is not mandatory
   experimentalProtocols <-
