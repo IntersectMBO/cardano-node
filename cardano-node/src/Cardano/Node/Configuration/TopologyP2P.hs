@@ -24,18 +24,17 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
+import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Ouroboros.Network.ConsensusMode
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
-import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
                    UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
@@ -52,6 +51,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import Cardano.Network.ConsensusMode (ConsensusMode(..))
 
 data NodeSetup = NodeSetup
   { nodeId          :: !Word64
@@ -263,7 +263,7 @@ readTopologyFile nc tr = do
       , "in bootstrap mode. Make sure you provide at least one bootstrap peer "
       , "source. "
       ]
-    isGenesisCompatible GenesisMode (UseBootstrapPeers{}) = False
+    isGenesisCompatible GenesisMode UseBootstrapPeers{} = False
     isGenesisCompatible _ _ = True
 
 readTopologyFileOrError :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO NetworkTopology

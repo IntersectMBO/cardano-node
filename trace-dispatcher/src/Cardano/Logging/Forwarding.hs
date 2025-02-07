@@ -250,6 +250,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
@@ -314,6 +315,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }

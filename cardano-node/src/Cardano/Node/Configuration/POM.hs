@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
@@ -26,6 +26,7 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
+import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -35,12 +36,10 @@ import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags (..),
-                   defaultGenesisConfigFlags, mkGenesisConfig)
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag, NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
+import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..), pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..), Flag (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 
 import           Control.Monad (when)
@@ -59,6 +58,8 @@ import           System.FilePath (takeDirectory, (</>))
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
+import Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags, defaultGenesisConfigFlags, mkGenesisConfig)
+import Ouroboros.Cardano.Diffusion.Configuration (defaultNumberOfBigLedgerPeers, defaultSyncTargets)
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
@@ -172,7 +173,7 @@ data NodeConfiguration
 
          -- Minimum number of active big ledger peers we must be connected to
          -- in Genesis mode
-       , ncMinBigLedgerPeersForTrustedState :: MinBigLedgerPeersForTrustedState
+       , ncMinBigLedgerPeersForTrustedState :: NumberOfBigLedgerPeers
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
@@ -246,7 +247,7 @@ data PartialNodeConfiguration
        , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
          -- Minimum number of active big ledger peers we must be connected to
          -- in Genesis mode
-       , pncMinBigLedgerPeersForTrustedState :: !(Last MinBigLedgerPeersForTrustedState)
+       , pncMinBigLedgerPeersForTrustedState :: !(Last NumberOfBigLedgerPeers)
 
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
@@ -555,7 +556,7 @@ defaultPartialNodeConfiguration =
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncNumOfDiskSnapshots = Last $ Just DefaultNumOfDiskSnapshots
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
-    , pncDoDiskSnapshotChecksum = Last $ Just DoDiskSnapshotChecksum
+    , pncDoDiskSnapshotChecksum = Last $ Just Consensus.DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncProtocolFiles = mempty
@@ -591,7 +592,7 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
     , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
     , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
-    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
     , pncConsensusMode = Last (Just defaultConsensusMode)
     , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just defaultPeerSharing)

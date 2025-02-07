@@ -25,12 +25,12 @@ import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+import           Cardano.Network.PeerSelection.Bootstrap
+import           Cardano.Network.PeerSelection.PeerTrustable
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Exception.Safe (MonadCatch)

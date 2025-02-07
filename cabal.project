@@ -67,8 +67,38 @@ allow-newer:
 
 source-repository-package
   type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: f86d442fc9d91950d751538217269fb6f9e30e00
+  --sha256: sha256-9IywEDaH7kXRPDZRSZnAdikRF5eh3m/7AIoBZpnZnB4=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: eb5f6a57f31903c72e7a3155224d1903631aa4b0
+  --sha256: sha256-eKX9cC1nFYQC36RLZ972T4dkzSZPG0GbVYnawttBCFA=
+  subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    quickcheck-monoids
+
+source-repository-package
+  type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 43745203b6c0216125018e1b193c39df39e52ab2
-  --sha256: sha256-euCqVszcX8JDFSyogrtClNiG1AOSs1YuJ/M9wDNYT9M=
-  subdir: ouroboros-consensus-cardano
-          ouroboros-consensus-diffusion
+  tag: b5811edd83191c88b160a5fda9b232498495a15f
+  --sha256: sha256-gu9gwAiaXx6An8JSgqZMnfPyRcMRofc2/q5PdAuMkf8=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+    sop-extras
+    strict-sop-core
