@@ -1754,19 +1754,19 @@ instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Ord peerAddr, Show peerAddr
 
 instance ToJSON PeerSelectionTargets where
   toJSON (PeerSelectionTargets
-            nRootLedgerPeers
-            nKnownLedgerPeers
-            nEstablishedLedgerPeers
-            nActiveLedgerPeers
+            nRootPeers
+            nKnownPeers
+            nEstablishedPeers
+            nActivePeers
             nKnownBigLedgerPeers
             nEstablishedBigLedgerPeers
             nActiveBigLedgerPeers
          ) =
     Aeson.object [ "kind" .= String "PeerSelectionTargets"
-                 , "targetRootLedgerPeers" .= nRootLedgerPeers
-                 , "targetKnownLedgerPeers" .= nKnownLedgerPeers
-                 , "targetEstablishedLedgerPeers" .= nEstablishedLedgerPeers
-                 , "targetActiveLedgerPeers" .= nActiveLedgerPeers
+                 , "targetRootPeers" .= nRootPeers
+                 , "targetKnownPeers" .= nKnownPeers
+                 , "targetEstablishedPeers" .= nEstablishedPeers
+                 , "targetActivePeers" .= nActivePeers
 
                  , "targetKnownBigLedgerPeers" .= nKnownBigLedgerPeers
                  , "targetEstablishedBigLedgerPeers" .= nEstablishedBigLedgerPeers
