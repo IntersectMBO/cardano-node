@@ -25,7 +25,12 @@ let
     passthru = { inherit service; };
   };
 
-  scripts = forEnvironments (environment: recurseIntoAttrs {
+  # Until complete removal of some iohk-nix deprecated environments which have
+  # dangling dependencies such as shelley_qa, explicitly declare the
+  # environments we we want included.
+  environments' = pkgs.lib.getAttrs [ "mainnet" "preprod" "preview" "sanchonet" ] environments;
+
+  scripts = forEnvironmentsCustom (environment: recurseIntoAttrs {
     submit-api = mkScript environment;
-  });
+  }) environments';
 in scripts
