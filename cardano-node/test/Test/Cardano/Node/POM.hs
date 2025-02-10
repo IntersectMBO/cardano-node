@@ -7,6 +7,7 @@ module Test.Cardano.Node.POM
   ) where
 
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -16,14 +17,14 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..), pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.Diffusion.Configuration
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import           Data.Time.Clock (secondsToDiffTime)
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
@@ -117,9 +118,6 @@ testPartialYamlConfig =
     , pncShutdownConfig = Last Nothing
     , pncStartAsNonProducingNode = Last $ Just False
     , pncDiffusionMode = Last Nothing
-    , pncNumOfDiskSnapshots = Last Nothing
-    , pncSnapshotInterval = mempty
-    , pncDoDiskSnapshotChecksum = Last . Just $ DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
@@ -153,6 +151,7 @@ testPartialYamlConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
+    , pncLedgerDbConfig = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -167,9 +166,6 @@ testPartialCliConfig =
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncDiffusionMode = mempty
-    , pncNumOfDiskSnapshots = Last Nothing
-    , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
-    , pncDoDiskSnapshotChecksum = Last . Just $ DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
@@ -201,6 +197,7 @@ testPartialCliConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
+    , pncLedgerDbConfig = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -219,9 +216,6 @@ eExpectedConfig = do
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
-    , ncNumOfDiskSnapshots = DefaultNumOfDiskSnapshots
-    , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
-    , ncDoDiskSnapshotChecksum = DoDiskSnapshotChecksum
     , ncExperimentalProtocolsEnabled = True
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
@@ -255,6 +249,7 @@ eExpectedConfig = do
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
+    , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory DoDiskSnapshotChecksum
     }
 
 -- -----------------------------------------------------------------------------
