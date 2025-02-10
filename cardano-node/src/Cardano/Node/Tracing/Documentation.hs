@@ -18,6 +18,7 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
+
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
@@ -30,6 +31,7 @@ import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
@@ -41,18 +43,22 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
+import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Genesis.Governor (TraceGDDEvent (..))
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
 import           Ouroboros.Consensus.Mempool (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Jumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.GSM (TraceGsmEvent)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -375,6 +381,43 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [blockchainTimeTr]
     blockchainTimeTrDoc <- documentTracer (blockchainTimeTr ::
       Logging.Trace IO (TraceBlockchainTimeEvent RelativeTime))
+
+
+    consensusSanityCheckTr <- mkCardanoTracer
+                 trBase trForward mbTrEKG
+                 ["Consensus", "SanityCheck"]
+    configureTracers configReflection trConfig [consensusSanityCheckTr]
+    consensusSanityCheckTrDoc <- documentTracer (consensusSanityCheckTr ::
+      Logging.Trace IO SanityCheckIssue)
+
+    consensusStartupErrorTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "Startup"]
+    configureTracers configReflection trConfig [consensusStartupErrorTr]
+    consensusStartupErrorTrDoc <- documentTracer (consensusStartupErrorTr ::
+      Logging.Trace IO ConsensusStartupException)
+
+    consensusGddTr <- mkCardanoTracer
+                 trBase trForward mbTrEKG
+                 ["Consensus", "GDD"]
+    configureTracers configReflection trConfig [consensusGddTr]
+    consensusGddTrDoc <- documentTracer (consensusGddTr ::
+      Logging.Trace IO (TraceGDDEvent peer blk))
+
+    consensusGsmTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "GSM"]
+    configureTracers configReflection trConfig [consensusGsmTr]
+    consensusGsmTrDoc <- documentTracer (consensusGsmTr ::
+      Logging.Trace IO (TraceGsmEvent (Tip blk)))
+
+    consensusCsjTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "CSJ"]
+    configureTracers configReflection trConfig [consensusCsjTr]
+    consensusCsjTrDoc <- documentTracer (consensusCsjTr ::
+      Logging.Trace IO (Jumping.TraceEvent peer))
+
 
 -- Node to client
 
@@ -720,6 +763,11 @@ docTracersFirstPhase condConfigFileName = do
             <> forgeTrDoc
             <> forgeThreadStatsTrDoc
             <> blockchainTimeTrDoc
+            <> consensusSanityCheckTrDoc
+            <> consensusStartupErrorTrDoc
+            <> consensusGddTrDoc
+            <> consensusGsmTrDoc
+            <> consensusCsjTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc

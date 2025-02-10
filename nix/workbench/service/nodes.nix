@@ -56,7 +56,7 @@ let
   ## nodeServiceConfig :: NodeSpec -> ServiceConfig
   ##
   nodeServiceConfig =
-    { name, i, kind, port, isProducer, ... }@nodeSpec:
+    { name, i, kind, port, isProducer, ... }@nodeSpec: valency:
     {
       inherit isProducer port;
       inherit (profile.node) rts_flags_override;
@@ -103,6 +103,12 @@ let
                   TurnOnLogMetrics             = true;
                   SnapshotInterval             = 4230;
                   ChainSyncIdleTimeout         = 0;
+
+                  ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
+                  ## NB. the following inequality must hold: known >= established >= active >= 0
+                  SyncTargetNumberOfActivePeers   = max 15 valency;     # set to same value as TargetNumberOfActivePeers
+                  TargetNumberOfActivePeers       = max 15 valency;
+                  TargetNumberOfEstablishedPeers  = max 40 valency;
 
                   ByronGenesisFile             = "../genesis/byron/genesis.json";
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
@@ -198,8 +204,25 @@ let
     { name, i, mode ? null, ... }@nodeSpec:
     let
       modeIdSuffix  = if mode == null then "" else "." + mode;
-      serviceConfig = nodeServiceConfig nodeSpec;
+      serviceConfig = nodeServiceConfig nodeSpec valency;
       service       = evalServiceConfigToService serviceConfig;
+
+      topology =
+        rec {
+          JSON  = workbenchNix.runWorkbench
+                    "topology-${name}.json"
+                    "topology projection-for local-${nodeSpec.kind} ${toString i} ${profileName} ${topologyFiles} ${toString backend.basePort}";
+          value = __fromJSON (__readFile JSON);
+        };
+
+      valency =
+        let
+          topo = topology.value;
+          val  = if hasAttr "localRoots" topo
+                  then let lr = head topo.localRoots; in lr.valency
+                  else length topo.Producers;
+        in val;
+
     in {
       start = rec {
         value = ''
@@ -218,13 +241,7 @@ let
         ;
       };
 
-      topology =
-        rec {
-          JSON  = workbenchNix.runWorkbench
-                    "topology-${name}.json"
-                    "topology projection-for local-${nodeSpec.kind} ${toString i} ${profileName} ${topologyFiles} ${toString backend.basePort}";
-          value = __fromJSON (__readFile JSON);
-        };
+      inherit topology;
     };
 
   ##
