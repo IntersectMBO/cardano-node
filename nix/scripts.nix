@@ -33,6 +33,11 @@ let
     exePath = "${scriptBin}/bin/cardano-node-${service.environment}";
   };
 
-in forEnvironments (environment: recurseIntoAttrs rec {
+  # Until complete removal of some iohk-nix deprecated environments which have
+  # dangling dependencies such as shelley_qa, explicitly declare the
+  # environments we we want included.
+  environments' = pkgs.lib.getAttrs [ "mainnet" "preprod" "preview" "sanchonet" ] environments;
+
+in forEnvironmentsCustom (environment: recurseIntoAttrs rec {
   node = mkScript environment;
-})
+}) environments'
