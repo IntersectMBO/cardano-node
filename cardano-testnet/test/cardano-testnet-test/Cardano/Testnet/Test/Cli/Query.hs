@@ -9,27 +9,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module Cardano.Testnet.Test.Cli.Query
-  ( hprop_cli_queries
-  ) where
+module Cardano.Testnet.Test.Cli.Query (
+    hprop_cli_queries
+) where
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Genesis as Api
 import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), StandardCrypto,
-                   extractHash, unboundRational)
+                   unboundRational)
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
 
 import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
-import           Cardano.Crypto.Hash (hashToStringAsHex)
 import qualified Cardano.Ledger.BaseTypes as L
-import           Cardano.Ledger.Core (valueTxOutL)
-import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
-                   utxosUtxoL)
-import qualified Cardano.Ledger.UTxO as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -44,7 +39,6 @@ import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as Aeson
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Data (type (:~:) (Refl))
 import           Data.Default.Class
 import qualified Data.Map as Map
 import           Data.String (IsString (fromString))
@@ -56,18 +50,16 @@ import qualified Data.Vector as Vector
 import           GHC.Exts (IsList (..))
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import qualified GHC.Stack as GHC
-import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query (EpochStateView, checkDRepsNumber, getEpochStateView,
-                   watchEpochStateUpdate)
+                   getTxIx, watchEpochStateUpdate)
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSimpleSpendOutputsOnlyTx,
                    mkSpendOutputsOnlyTx, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
-import           Testnet.Property.Assert (assertErasEqual)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), NumPools (..), cardanoNumPools)
 import           Testnet.TestQueryCmds (TestQueryCmds (..), forallQueryCommands)
@@ -349,7 +341,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
         let transferAmount = Coin 10_000_000
         -- Submit a transaction to publish the reference script
         txBody <- mkSpendOutputsOnlyTx execConfig epochStateView sbe refScriptSizeWork "tx-body" wallet1
-                    [(ReferenceScriptAddress plutusV3Script, transferAmount)]
+                    [(ScriptAddress plutusV3Script, transferAmount, Just plutusV3Script)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [Some $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
         -- Wait until transaction is on chain and obtain transaction identifier
@@ -491,17 +483,6 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   _verificationStakeKeyToStakeAddress :: Int -> VerificationKey StakeKey -> StakeAddress
   _verificationStakeKeyToStakeAddress testnetMagic delegatorVKey =
     makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
-
-  getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
-  getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
-    Refl <- H.leftFail $ assertErasEqual sbe sbe'
-    shelleyBasedEraConstraints sbe' (do
-      return $ Map.foldlWithKey (\acc (L.TxIn (L.TxId thisTxId) (L.TxIx thisTxIx)) txOut ->
-        case acc of
-          Nothing | hashToStringAsHex (extractHash thisTxId) == txId &&
-                    valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just amount -> Just $ fromIntegral thisTxIx
-                  | otherwise -> Nothing
-          x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosUtxoL)
 
 -- | @redactJsonStringFieldInFile [(k0, v0), (k1, v1), ..] sourceFilePath targetFilePath@ reads the JSON at @sourceFilePath@, and then
 -- replaces the value associated to @k0@ by @v0@, replaces the value associated to @k1@ by @v1@, etc.
