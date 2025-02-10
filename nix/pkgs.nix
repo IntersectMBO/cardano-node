@@ -63,6 +63,7 @@ in with final;
       ghc947 = haskell-nix.sources."hls-2.5";
       ghc963 = haskell-nix.sources."hls-2.5";
       ghc964 = haskell-nix.sources."hls-2.6";
+      ghc965 = haskell-nix.sources."hls-2.6";
       ghc981 = haskell-nix.sources."hls-2.6";
     }.${compiler-nix-name} or haskell-nix.sources."hls-2.9";
     cabalProject = builtins.readFile (src + "/cabal.project");
