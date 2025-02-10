@@ -110,14 +110,14 @@ handleTxSubmissionClientError
       LogErrors   -> traceWith traceSubmit $
         TraceBenchTxSubError (pack errDesc)
 
-walletBenchmark :: forall era. IsShelleyBasedEra era
-  => Trace IO (TraceBenchTxSubmit TxId)
+walletBenchmark :: ()
+  => ShelleyBasedEra era
+  -> Trace IO (TraceBenchTxSubmit TxId)
   -> Trace IO NodeToNodeSubmissionTrace
   -> ConnectClient
   -> NonEmpty NodeDescription
   -> TPSRate
   -> SubmissionErrorPolicy
-  -> AsType era
 -- this is used in newTpsThrottle to limit the tx-count !
 -- This should not be needed, the stream should do it itself (but it does not!)
   -> NumberOfTxs
@@ -128,13 +128,13 @@ walletBenchmark :: forall era. IsShelleyBasedEra era
   -> TxStream IO era
   -> ExceptT TxGenError IO AsyncBenchmarkControl
 walletBenchmark
+  sbe
   traceSubmit
   traceN2N
   connectClient
   targets
   tpsRate
   errorPolicy
-  _era
   count
   txSource
   = liftIO $ do
@@ -157,6 +157,7 @@ walletBenchmark
   abcWorkers <- forM asyncList \(reportRef, remoteInfo@(remoteName, remoteAddrInfo)) -> do
     let errorHandler = handleTxSubmissionClientError traceSubmit remoteInfo reportRef errorPolicy
         client = txSubmissionClient
+                     sbe
                      traceN2N
                      traceSubmit
                      (txStreamSource txStreamRef tpsThrottle)
