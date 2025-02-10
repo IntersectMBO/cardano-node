@@ -46,7 +46,7 @@ import           Prelude
 import           Control.DeepSeq (NFData)
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Map.Strict (Map)
-import           Data.Monoid (Last (..), getLast)
+import           Data.Monoid (Last (..))
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import           Data.Version (showVersion)
@@ -250,9 +250,16 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
         -- In this case we should form node's name as "host_port",
         -- where 'host' is the machine's host name and 'port' is taken
         -- from the '--port' CLI-parameter.
-        let SocketConfig{ncNodePortNumber = port} = ncSocketConfig nc
+
+        let suffix :: String
+            suffix
+              | SocketConfig{ncNodePortNumber = Last (Just port)} <- ncSocketConfig nc
+              = "_" <> show port
+              | otherwise
+              = ""
+
         hostName <- getHostName
-        return . pack $ hostName <> "_" <> show (getLast port)
+        return (pack (hostName <> suffix))
 
 -- | This information is taken from 'BasicInfoShelleyBased'. It is required for
 --   'cardano-tracer' service (particularly, for RTView).

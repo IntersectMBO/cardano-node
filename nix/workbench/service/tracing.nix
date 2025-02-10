@@ -45,6 +45,7 @@ let
       "ChainSync.Remote.Serialised".severity = "Notice";
       "ChainSync.ServerBlock".severity = "Notice";
       "ChainSync.ServerHeader".severity = "Debug";
+      "Consensus.GSM".severity = "Info";
       "Forge.Loop".severity = "Debug";
       "Forge.StateInfo".severity = "Debug";
       "Mempool".severity = "Debug";
@@ -95,12 +96,12 @@ let
       ## This warning is expected, and can be safely ignored.
       ## Silencing the tracers below aims at having a comparable log line rates (msgs per second) on UTxO-HD and regular nodes.
       "ChainDB.LedgerEvent.Forker".severity = "Silence";
-      "Mempool.MempoolAttemptAdd".severity = "Silence";
-      "Mempool.MempoolAttemptingSync".severity = "Silence";
-      "Mempool.MempoolLedgerFound".severity = "Silence";
-      "Mempool.MempoolLedgerNotFound".severity = "Silence";
-      "Mempool.MempoolSyncDone".severity = "Silence";
-      "Mempool.MempoolSyncNotNeeded".severity = "Silence";
+      "Mempool.AttemptAdd".severity = "Silence";
+      "Mempool.AttemptingSync".severity = "Silence";
+      "Mempool.LedgerFound".severity = "Silence";
+      "Mempool.LedgerNotFound".severity = "Silence";
+      "Mempool.SyncDone".severity = "Silence";
+      "Mempool.SyncNotNeeded".severity = "Silence";
 
       ## enable this to investigate tx validation errors, e.g. fee to small for Plutus script txns
       ## comes with too much overhead to be the default for benchmarks
@@ -131,6 +132,7 @@ let
     TraceBlockFetchServer       = true;
     TraceChainSyncHeaderServer  = true;
     TraceChainSyncClient        = true;
+    TraceGsm                    = true;
 
     ## needs to be explicit when new tracing is the node's default
     UseTraceDispatcher          = false;
