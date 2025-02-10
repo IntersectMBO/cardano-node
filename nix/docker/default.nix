@@ -12,9 +12,12 @@
 # To launch cardano-node with pre-loaded configuration, "scripts" mode,
 # use the NETWORK env variable to declare an existing cardano network name.
 #
-# An example using a docker volume to persist state:
+# An example using a docker named volume to persist state:
 #
-#   docker run -v data:/data -e NETWORK=mainnet ghcr.io/intersectmbo/cardano-node
+#   docker run \
+#     -v data:/data \
+#     -e NETWORK=mainnet \
+#     ghcr.io/intersectmbo/cardano-node
 #
 # In "scripts" mode, default state directories include /{data,ipc,logs}, with
 # /data/db being the default database state location.
@@ -128,14 +131,16 @@ let
         utillinux         # System utilities for Linux
       ];
     };
-    # set up /tmp (override with TMPDIR variable)
+
+    # Set up /tmp (override with TMPDIR variable)
     extraCommands = ''
       mkdir -m 0777 tmp
     '';
   };
 
-  # Image with all iohk-nix network configs or utilizes a configuration volume mount
-  # To choose a network, use `-e NETWORK testnet`
+  # For "script" mode, generate scripts for iohk-nix networks which can be
+  # utilized by setting the environment NETWORK variable to the desired
+  # network in the docker command: `-e NETWORK <network>`
   clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
     scriptBin = scripts.${script};
     in ''
@@ -154,7 +159,7 @@ let
     fi
   '';
 
-  # The Docker context with static content
+  # The docker context with static content
   context = ./context;
 
   genCfgs = let
@@ -192,7 +197,7 @@ in
     tag = "${gitrev}";
     fromImage = baseImage;
 
-    # Set creation date to build time. Breaks reproducibility
+    # Set creation date to build time. Breaks reproducibility.
     created = "now";
 
     extraCommands = ''
