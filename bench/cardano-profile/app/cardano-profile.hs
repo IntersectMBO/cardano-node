@@ -38,24 +38,50 @@ data PrettyPrint =
 
 --------------------------------------------------------------------------------
 
+-- All profiles are created/defined in the Conway era.
+addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
+addEras = foldMap
+  (\profile -> Map.fromList $
+    let
+        -- TODO: Profiles properties other than the "name" and "era" of
+        --       type string are the only thing that change ??? Remove the
+        --       concept of eras from the profile definitions and make it a
+        --       workbench-level feature (???).
+        addEra p era suffix =
+          let name = Types.name p
+              newName = name ++ "-" ++ suffix
+          in  (newName, p {Types.name = newName, Types.era = era})
+    in 
+        [ addEra profile Types.Allegra "alra"
+        , addEra profile Types.Shelley "shey"
+        , addEra profile Types.Mary    "mary"
+        , addEra profile Types.Alonzo  "alzo"
+        , addEra profile Types.Babbage "bage"
+        , addEra profile Types.Conway  "coay"
+        ]
+  )
+
+--------------------------------------------------------------------------------
+
 main :: IO ()
 main = do
   cli <- getOpts
   case cli of
-    -- Print all profile names.
-    Names -> BSL8.putStrLn $ Aeson.encode Profiles.names
-    -- Print all profile names without the era suffix.
-    NamesNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesNoEra
+    -- Print all profile names (does not apply overlays).
+    Names -> BSL8.putStrLn $ Aeson.encode $ addEras $ Profiles.profilesNoEra mempty
+    -- Print all profile names without the era suffix (does not apply overlays).
+    NamesNoEra -> BSL8.putStrLn $ Map.keys $ Profiles.profilesNoEra mempty
     -- Print all cloud profile (-nomadperf) names.
     NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesCloudNoEra
     -- Print a map with all profiles, with an optional overlay.
     All -> do
       obj <- lookupOverlay
-      BSL8.putStrLn $ Aeson.encode $ Profiles.profiles obj
+      BSL8.putStrLn $ Aeson.encode $ Profiles.addEras $ Profiles.profilesNoEra obj
     -- Print a single profiles, with an optional overlay.
     (ByName prettyPrint profileName) -> do
       obj <- lookupOverlay
-      case Profiles.byName profileName obj of
+      let profiles = Profiles.addEras $ Profiles.profilesNoEra obj
+      case Map.lookup profileName profiles of
         Nothing -> error $ "No profile named \"" ++ profileName ++ "\""
         (Just profile) ->
           let

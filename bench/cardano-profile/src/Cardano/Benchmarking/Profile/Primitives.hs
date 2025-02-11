@@ -141,7 +141,7 @@ empty = Types.Profile {
     , Types.n_dense_pools = 0
     , Types.n_pool_hosts = 0
   }
-  , Types.era = Types.Allegra
+  , Types.era = Types.Conway
   , Types.genesis = Types.Genesis {
       Types.pparamsEpoch = 0
     , Types.pparamsOverlays = []

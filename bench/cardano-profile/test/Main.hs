@@ -43,7 +43,7 @@ testGroupTypes :: Tasty.TestTree
 testGroupTypes = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Types"
   [ testCase "Profile FromJson / ToJson" $ do
-      fp <- Paths.getDataFileName "data/ci-test-bage.json"
+      fp <- Paths.getDataFileName "data/test/ci-test-bage.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
@@ -459,7 +459,7 @@ ciTestBage = Types.Profile {
 
 -- All profiles without an overlay.
 profiles :: Map.Map String Types.Profile
-profiles = Profiles.profiles mempty
+profiles = Profiles.profilesNoEra mempty
 
 -- Check all builtin profiles (no overlay) with "data/all-profiles.json".
 -- `Profile` properties are checked independently for better error messages.
@@ -467,7 +467,7 @@ testGroupMap :: Tasty.TestTree
 testGroupMap = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (Without overlay)"
   [ testCase "Profiles (Builtin)" $ do
-      fp <- Paths.getDataFileName "data/all-profiles.json"
+      fp <- Paths.getDataFileName "data/all-profiles-coay.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
@@ -693,17 +693,17 @@ overlay =
 
 -- Lookup profile by name (after applying the overlay).
 profileWithOverlay :: String -> Maybe Types.Profile
-profileWithOverlay name = Profiles.byName name overlay
+profileWithOverlay name = Map.lookup name (Profiles.profilesNoEra overlay)
 
 testGroupOverlay :: Tasty.TestTree
 testGroupOverlay = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (With overlay)"
-  [ testCase "HOLA!-bage" $ do
-      case profileWithOverlay "HOLA!-bage" of
+  [ testCase "HOLA!" $ do
+      case profileWithOverlay "10" of
         Nothing -> error "No profile found!"
         (Just profile) -> do
           assertEqual "New name"
-            "HOLA!-bage"
+            "HOLA!"
             (Types.name profile)
           assertEqual "New genesis.network_magic"
             1327330847
