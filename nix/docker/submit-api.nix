@@ -42,9 +42,9 @@
 #
 # Bind Mounting Considerations:
 #
-# In the container a /node-ipc directory is symlinked to /ipc both align the
+# In the container a /node-ipc directory is symlinked to /ipc both to align the
 # default ipc socket state directory in both the cardano-node and
-# cardano-submit-api images and remain backward compatible.
+# cardano-submit-api images and remain backwards compatible.
 #
 ############################################################################
 { pkgs
@@ -136,6 +136,8 @@ let
       # set to a valid network, will use the following default directories
       # mounted at /:
       mkdir -p ipc
+
+      # Symlink /node-ipc -> /ipc for consistency and backwards compatability
       ln -sv ipc node-ipc
     '';
 
