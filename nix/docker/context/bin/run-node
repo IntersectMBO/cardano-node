@@ -3,6 +3,8 @@ set -eo pipefail
 
 echo "Running the cardano node ..."
 
+[[ -n $DEBUG ]] && set -x
+
 # Define a few defaults
 CARDANO_CONFIG_BASE="/opt/cardano/config"
 
@@ -107,7 +109,7 @@ CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
 
 # Breaking change from the historical default of:
 # $CARDANO_CONFIG_BASE/mainnet-shelley-genesis.json in order to align
-# use of the by network organized configuration files.
+# with network organized configuration files.
 GENESIS_JSON="$CARDANO_CONFIG_BASE/mainnet/shelley-genesis.json"
 
 TOPOLOGY="$CARDANO_TOPOLOGY"
@@ -121,17 +123,19 @@ EOF
 #
 runRelayNode () {
 
-  effopts=(--config $CARDANO_CONFIG \
-    --topology $CARDANO_TOPOLOGY \
-    --database-path $CARDANO_DATABASE_PATH \
-    --socket-path $CARDANO_SOCKET_PATH \
-    --host-addr $CARDANO_BIND_ADDR \
-    --port $CARDANO_PORT)
+  effopts=(
+    "--config" "$CARDANO_CONFIG" \
+    "--topology" "$CARDANO_TOPOLOGY" \
+    "--database-path" "$CARDANO_DATABASE_PATH" \
+    "--socket-path" "$CARDANO_SOCKET_PATH" \
+    "--host-addr" "$CARDANO_BIND_ADDR" \
+    "--port" "$CARDANO_PORT"
+  )
 
-  effopts+=(${options[@]})
+  effopts+=("${options[@]}")
 
-  echo "cardano-node run ${effopts[@]}"
-  exec /usr/local/bin/cardano-node run ${effopts[@]}
+  echo "cardano-node run ${effopts[*]}"
+  exec /usr/local/bin/cardano-node run "${effopts[@]}"
 }
 
 #####################################################################
@@ -140,20 +144,22 @@ runRelayNode () {
 #
 runBlockProducerNode () {
 
-  effopts=(--config $CARDANO_CONFIG \
-    --topology $CARDANO_TOPOLOGY \
-    --database-path $CARDANO_DATABASE_PATH \
-    --socket-path $CARDANO_SOCKET_PATH \
-    --host-addr $CARDANO_BIND_ADDR \
-    --port $CARDANO_PORT \
-    --shelley-kes-key $CARDANO_SHELLEY_KES_KEY \
-    --shelley-vrf-key $CARDANO_SHELLEY_VRF_KEY \
-    --shelley-operational-certificate $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE)
+  effopts=(
+    "--config" "$CARDANO_CONFIG" \
+    "--topology" "$CARDANO_TOPOLOGY" \
+    "--database-path" "$CARDANO_DATABASE_PATH" \
+    "--socket-path" "$CARDANO_SOCKET_PATH" \
+    "--host-addr" "$CARDANO_BIND_ADDR" \
+    "--port" "$CARDANO_PORT" \
+    "--shelley-kes-key" "$CARDANO_SHELLEY_KES_KEY" \
+    "--shelley-vrf-key" "$CARDANO_SHELLEY_VRF_KEY" \
+    "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
+  )
 
-  effopts+=(${options[@]})
+  effopts+=("${options[@]}")
 
-  echo "cardano-node run ${effopts[@]}"
-  exec /usr/local/bin/cardano-node run ${effopts[@]}
+  echo "cardano-node run ${effopts[*]}"
+  exec /usr/local/bin/cardano-node run "${effopts[@]}"
 }
 
 # Shift the first option by one index
@@ -161,7 +167,7 @@ shift
 
 # Override default values with explicit options
 
-options=($@)
+options=("$@")
 
 for i in "${!options[@]}"
 do
@@ -194,9 +200,9 @@ printRunEnv
 writeRootEnv
 
 # The IPC socket dir is not created on demand
-mkdir -p `dirname ${CARDANO_SOCKET_PATH}`
+mkdir -p "$(dirname "$CARDANO_SOCKET_PATH")"
 
-if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
+if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
   runBlockProducerNode
 else
   runRelayNode
