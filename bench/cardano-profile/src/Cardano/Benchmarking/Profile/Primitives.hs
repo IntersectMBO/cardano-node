@@ -42,7 +42,16 @@ module Cardano.Benchmarking.Profile.Primitives (
   , pparamsEpoch
   -- Overlays to use.
   , v8Preview, v9Preview, v10Preview
-  , stepHalf, doubleBudget, blocksize64k
+  -- Budget overlays:
+  -- -- Block:
+  -- -- -- Steps:
+  , stepHalf, doubleBudget
+  -- -- -- Memory:
+  , budgetBlockMemoryOneAndAHalf, budgetBlockMemoryDouble
+  -- -- TX:
+
+  -- Others
+  , blocksize64k
   , voting
  -- Customize the "shelley", "alonzo" or "conway" properties.
   , shelley, alonzo, conway
@@ -430,11 +439,25 @@ v9Preview = helper_addOverlayOrDie "v9-preview"
 v10Preview :: HasCallStack => Types.Profile -> Types.Profile
 v10Preview = helper_addOverlayOrDie "v10-preview"
 
-stepHalf :: HasCallStack => Types.Profile -> Types.Profile
-stepHalf = helper_addOverlayOrDie "stepshalf"
+-- Budget:
 
+-- Steps:
+
+-- budgetBlockStepsHalf
+stepHalf :: HasCallStack => Types.Profile -> Types.Profile
+stepHalf = helper_addOverlayOrDie "budget/block/steps/half"
+
+-- budgetBlockStepsDouble
 doubleBudget :: HasCallStack => Types.Profile -> Types.Profile
-doubleBudget = helper_addOverlayOrDie "doublebudget"
+doubleBudget = helper_addOverlayOrDie "budget/block/steps/double"
+
+-- Memory
+
+budgetBlockMemoryOneAndAHalf :: HasCallStack => Types.Profile -> Types.Profile
+budgetBlockMemoryOneAndAHalf = helper_addOverlayOrDie "budget/block/memory/oneandahalf"
+
+budgetBlockMemoryDouble :: HasCallStack => Types.Profile -> Types.Profile
+budgetBlockMemoryDouble = helper_addOverlayOrDie "budget/block/memory/double"
 
 -- used to manually reduce block size for e.g. Conway; has to be applied *AFTER* any v?-preview overlay.
 blocksize64k :: HasCallStack => Types.Profile -> Types.Profile

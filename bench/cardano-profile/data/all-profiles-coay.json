@@ -45215,7 +45215,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "doublebudget"
+        "budget/block/steps/double"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -45664,7 +45664,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "stepshalf"
+        "budget/block/steps/half"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -60436,7 +60436,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "doublebudget"
+        "budget/block/steps/double"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -60871,7 +60871,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "stepshalf"
+        "budget/block/steps/half"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -61937,7 +61937,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "doublebudget"
+        "budget/block/steps/double"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -62386,7 +62386,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "stepshalf"
+        "budget/block/steps/half"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -63466,7 +63466,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "doublebudget"
+        "budget/block/steps/double"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -63915,7 +63915,7 @@
       "pparamsEpoch": 300,
       "pparamsOverlays": [
         "v8-preview",
-        "stepshalf"
+        "budget/block/steps/half"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -68230,7 +68230,7 @@
       "pool_coin": 1000000000000000,
       "pparamsEpoch": 507,
       "pparamsOverlays": [
-        "doublebudget"
+        "budget/block/steps/double"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
@@ -69131,7 +69131,7 @@
       "pool_coin": 1000000000000000,
       "pparamsEpoch": 507,
       "pparamsOverlays": [
-        "stepshalf"
+        "budget/block/steps/half"
       ],
       "shelley": {
         "activeSlotsCoeff": 0.05,
