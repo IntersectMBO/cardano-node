@@ -15,8 +15,6 @@ import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Shelley (GenesisReadError (..), checkExpectedGenesisHash)
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.HardFork ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import qualified Data.ByteString.Lazy as LBS
 

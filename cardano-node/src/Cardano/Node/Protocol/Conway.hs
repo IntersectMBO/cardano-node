@@ -24,8 +24,6 @@ import qualified Cardano.Ledger.Plutus.Language as L
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.HardFork ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import qualified Data.ByteString.Lazy as LB

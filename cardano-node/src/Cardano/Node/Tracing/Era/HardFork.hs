@@ -17,7 +17,6 @@ module Cardano.Node.Tracing.Era.HardFork ()
 
 import           Cardano.Logging
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
                    ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)

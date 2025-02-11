@@ -33,7 +33,7 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Ledger
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe, Mismatch (..))
+import           Cardano.Ledger.BaseTypes (Mismatch (..), activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -57,7 +57,6 @@ import           Cardano.Protocol.TPraos.Rules.Prtcl
 import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Protocol.TPraos.Rules.Updn (UpdnPredicateFailure)
 import           Cardano.Slotting.Block (BlockNo (..))
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos

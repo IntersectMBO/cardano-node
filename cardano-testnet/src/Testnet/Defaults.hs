@@ -57,7 +57,6 @@ import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.Topology
-import           Cardano.Tracing.Config
 
 import           Prelude
 

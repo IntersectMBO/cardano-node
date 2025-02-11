@@ -94,7 +94,6 @@ library
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
                         Cardano.Node.Tracing.Consistency
-                        Cardano.Node.Tracing.Compat
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
                         Cardano.Node.Tracing.Era.Byron
@@ -123,20 +122,6 @@ library
                         Cardano.Node.Tracing.Tracers.StartLeadershipCheck
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
-                        Cardano.Tracing.Config
-                        Cardano.Tracing.HasIssuer
-                        Cardano.Tracing.Metrics
-                        Cardano.Tracing.OrphanInstances.Byron
-                        Cardano.Tracing.OrphanInstances.Common
-                        Cardano.Tracing.OrphanInstances.Consensus
-                        Cardano.Tracing.OrphanInstances.HardFork
-                        Cardano.Tracing.OrphanInstances.Network
-                        Cardano.Tracing.OrphanInstances.Shelley
-                        Cardano.Tracing.Peer
-                        Cardano.Tracing.Render
-                        Cardano.Tracing.Shutdown
-                        Cardano.Tracing.Startup
-                        Cardano.Tracing.Tracers
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
@@ -176,12 +161,7 @@ library
                       , generic-data
                       , hostname
                       , io-classes >= 1.4
-                      , iohk-monitoring ^>= 0.2
                       , iproute
-                      , lobemo-backend-aggregation
-                      , lobemo-backend-ekg ^>= 0.2
-                      , lobemo-backend-monitoring
-                      , lobemo-backend-trace-forwarder
                       , mtl
                       , network
                       , network-mux >= 0.5
@@ -214,7 +194,6 @@ library
                       , trace-dispatcher ^>= 2.8.0
                       , trace-forward ^>= 2.2.9
                       , trace-resources ^>= 0.2.3
-                      , tracer-transformers
                       , transformers
                       , transformers-except
                       , typed-protocols >= 0.3

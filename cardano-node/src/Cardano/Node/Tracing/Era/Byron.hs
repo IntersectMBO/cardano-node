@@ -21,7 +21,6 @@ import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)
 import           Cardano.Logging
-import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
