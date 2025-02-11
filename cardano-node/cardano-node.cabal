@@ -188,10 +188,10 @@ library
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus ^>= 0.22
                       , ouroboros-consensus-cardano ^>= 0.21
-                      , ouroboros-consensus-diffusion ^>= 0.19
+                      , ouroboros-consensus-diffusion ^>= 0.20
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.12
-                      , ouroboros-network ^>= 0.19
+                      , ouroboros-network ^>= 0.19.0.3
                       , ouroboros-network-framework
                       , ouroboros-network-protocols ^>= 0.13
                       , prettyprinter

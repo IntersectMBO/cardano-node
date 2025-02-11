@@ -123,7 +123,7 @@ doListenToForwarder snocket address netMagic timeLimits app = do
       (simpleSingletonVersions
         ForwardingV_1
         (ForwardingVersionData $ NetworkMagic netMagic)
-        (SomeResponderApplication app)
+        (\_ -> SomeResponderApplication app)
       )
       nullErrorPolicies
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
