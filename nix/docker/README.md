@@ -1,4 +1,4 @@
-# Building the Cardano Node and Cardano Submit API Docker Images
+# Building Node and Submit API Images
 To build and load the oci images into the Docker engine, the most
 basic commands are:
 ```
@@ -12,7 +12,7 @@ docker load -i result
 ```
 
 From a bash shell, the following command example for the cardano-node image
-offers a little more convenience by tagging the loaded image with "dev" and
+offers a little more convenience by tagging the loaded image with `dev` and
 also tagging with a git tag if one is present at the build git commit hash.
 ```
 nix build .#dockerImage/node \
@@ -106,13 +106,25 @@ merge config.
 Optional env variables and cardano-node args which can be used in custom mode
 can also be used in this mode.
 
+An example:
+```
+docker run \
+  -v $PWD/node-ipc:/ipc \
+  -v $(pwd)/mainnet-data:/data \
+  -e NETWORK=mainnet \
+  -e CARDANO_CONFIG_JSON_MERGE='{"MaxConcurrencyBulkSync": 2}' \
+  -e CARDANO_TOPOLOGY_JSON_MERGE='{"useLedgerAfterSlot": 147000000}' \
+  ghcr.io/intersectmbo/cardano-node:dev
+```
 
 ## CLI Mode
 To run cardano-cli, leave the `NETWORK` env variable unset and provide
 entrypoint args starting with `cli` followed by cardano-cli command args.
 The cardano-node ipc socket state will need to be provided in cli mode.
 
-An example using a docker named volume to share cardano-node ipc socket state:
+An example using a docker named volume to share cardano-node ipc socket state
+follows. In this example, another container running cardano-node and also
+sharing ipc socket state to the same named volume would already be running.
 ```
 docker run \
   -v node-ipc:/ipc \
@@ -121,6 +133,10 @@ docker run \
   query tip \
   --mainnet
 ```
+
+See the [Cardano-node socket sharing](#cardano-node-socket-sharing) section for
+more on sharing ipc state between containers.
+
 
 ## Bind Mounting Considerations
 For "custom" mode, the `/opt/cardano/{data,ipc,logs}` default state directories have been
@@ -150,6 +166,7 @@ docker run \
   -e NETWORK=mainnet \
   ghcr.io/intersectmbo/cardano-submit-api:dev
 ```
+
 In "scripts" mode, the `node.socket` file is expected at `/ipc`.
 
 
