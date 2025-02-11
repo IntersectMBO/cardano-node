@@ -244,8 +244,9 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
   forwarderApp
     :: [(RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
+    -> ForwardingVersionData
     -> OuroborosApplication 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
-  forwarderApp protocols =
+  forwarderApp protocols _ =
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
@@ -294,7 +295,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
             (simpleSingletonVersions
                ForwardingV_1
                (ForwardingVersionData magic)
-               (SomeResponderApplication $
+               (SomeResponderApplication .
                  forwarderApp [ (forwardEKGMetricsRespRun,                  1)
                               , (forwardTraceObjectsResp tfConfig  sink,    2)
                               , (forwardDataPointsResp   dpfConfig dpStore, 3)
@@ -307,8 +308,9 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
  where
   forwarderApp
     :: [(RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
+    -> ForwardingVersionData
     -> OuroborosApplication 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
-  forwarderApp protocols =
+  forwarderApp protocols _ =
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
