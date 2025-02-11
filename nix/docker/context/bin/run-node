@@ -18,16 +18,19 @@ fi
 
 # Breaking change from the historical default of: /opt/cardano/data
 # in order to align both the "scripts" and "custom" modes of image operation.
+# Prefer root mountpoints for consistency via symlink /opt/cardano/data -> /data
 if [[ -z $CARDANO_DATABASE_PATH ]]; then
-  CARDANO_DATABASE_PATH="/opt/cardano/data/db"
+  CARDANO_DATABASE_PATH="/data/db"
 fi
 
 # Breaking change from the historical default of: /opt/cardano/ipc/socket
 # in order to align both the "scripts" and "custom" modes of image operation.
+# Prefer root mountpoints for consistency via symlink /opt/cardano/ipc -> /ipc
 if [[ -z $CARDANO_SOCKET_PATH ]]; then
-  CARDANO_SOCKET_PATH="/opt/cardano/ipc/node.socket"
+  CARDANO_SOCKET_PATH="/ipc/node.socket"
 fi
 
+# Prefer root mountpoints for consistency via symlink /opt/cardano/ipc -> /ipc
 if [[ -z $CARDANO_LOG_DIR ]]; then
   CARDANO_LOG_DIR="/opt/cardano/logs"
 fi

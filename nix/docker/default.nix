@@ -26,10 +26,11 @@
 # Custom Mode:
 #
 # To launch cardano-node with a custom configuration, "custom" mode, provide
-# entrypoint args starting with `run` and:
-#   * Leave the NETWORK env variable unset,
-#   * Optionally include additional cardano-node args to the entrypoint afer "run",
+# entrypoint args starting with "run" and:
+#   * Leave the NETWORK env variable unset
+#   * Optionally include additional cardano-node args to the entrypoint afer "run"
 #   * Optionally include environment variables interpreted by nix/docker/context/bin/run-node
+#     from the cardano-node repo, or /usr/local/bin/run-node in the container
 #
 # For example, launch a custom cardano-node using cardano-node args and a
 # local configuration mapped into the container:
@@ -44,7 +45,7 @@
 #
 # Custom mode may also leverage standard mainnet or testnet network config
 # files found at /opt/cardano/config and organized under a subdirectory of the
-# network name.  For example, to utilize standard configs for preview network,
+# network name.  For example, to utilize standard configs for preprod network,
 # but modify the cardano-node listening port:
 #
 #   docker run \
@@ -56,9 +57,10 @@
 #     run
 #
 # In "custom" mode, default state directories include
-# /opt/cardano/{data,ipc,logs} and with /opt/cardano/data/db being the default
-# database state location.  Standard network config files can be found under
-# /opt/cardano/config.
+# /opt/cardano/{data,ipc,logs}, with /opt/cardano/data/db being the default
+# database state location.  These state directories are symlinked to root in the container:
+# /opt/cardano/{data,ipc,logs} -> /{data,ipc,logs} for more consistency between modes.
+# Standard network config files can be found under /opt/cardano/config.
 #
 #
 # Merge Mode:
@@ -70,6 +72,22 @@
 #
 # Optional env variables and cardano-node args which can be used in custom mode
 # can also be used in this mode.
+#
+#
+# CLI Mode:
+#
+# To run cardano-cli, leave the NETWORK env variable unset and provide
+# entrypoint args starting with "cli" followed by cardano-cli command args.
+# The cardano-node ipc socket state will need to be provided in cli mode.
+#
+# An example using a docker named volume to share cardano-node ipc socket state:
+#
+#   docker run \
+#     -v node-ipc:/ipc \
+#     ghcr.io/intersectmbo/cardano-node \
+#     cli \
+#     query tip \
+#     --mainnet
 #
 #
 # Bind Mounting Considerations:
@@ -224,7 +242,7 @@ in
       mkdir -p logs
 
       # The "custom" operation mode of this image, when the NETWORK env is
-      # unset and `run` is provided as an entrypoint arg, will use the
+      # unset and "run" is provided as an entrypoint arg, will use the
       # following default directories.  To reduce confusion caused by default
       # directory paths varying by mode, symlink these directories to the
       # "scripts" mode default directories at the root location.  This will
@@ -248,7 +266,7 @@ in
       DST="opt/cardano"
 
       # Make the directory structure with the iohk-nix configs mutable.
-      # This leaves the option to create merged entrypoint configs in the network directory.
+      # This allows the option to create merged entrypoint configs in the network directory.
       find "$SRC" -mindepth 1 -type d -exec bash -c "DIR=\"{}\"; mkdir -v -p \"$DST/\''${DIR#${genCfgs}/}\"" \;
 
       # Keep all base iohk-nix config files immutable via symlinks to nix store.
