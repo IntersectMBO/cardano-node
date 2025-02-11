@@ -9,7 +9,7 @@ if [[ -n $NETWORK ]]; then
   # If either CARDANO_<CONFIG|TOPOLOGY>_JSON_MERGE env vars are set, iohk-nix
   # pre-defined configuration will be used as a starting point and merged with
   # custom configuration provided as json in the environment variable(s).
-  if [[ -n $CARDANO_CONFIG_JSON_MERGE || -n $CARDANO_CONFIG_TOPOLOGY_MERGE ]]; then
+  if [[ -n $CARDANO_CONFIG_JSON_MERGE || -n $CARDANO_TOPOLOGY_JSON_MERGE ]]; then
 
     # Do a recursive deep merge of iohk-nix NETWORK config and/or topology with
     # the supplied json merge environment variable(s).
