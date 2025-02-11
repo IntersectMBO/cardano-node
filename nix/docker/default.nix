@@ -28,8 +28,8 @@
 # To launch cardano-node with a custom configuration, "custom" mode, provide
 # entrypoint args starting with `run` and:
 #   * Leave the NETWORK env variable unset,
-#   * Optionally include additional cardano-node args to the entrypoint afer `run`,
-#   * Optionally include environment variables interpreted by `nix/docker/context/bin/run-node`
+#   * Optionally include additional cardano-node args to the entrypoint afer "run",
+#   * Optionally include environment variables interpreted by nix/docker/context/bin/run-node
 #
 # For example, launch a custom cardano-node using cardano-node args and a
 # local configuration mapped into the container:
@@ -59,6 +59,17 @@
 # /opt/cardano/{data,ipc,logs} and with /opt/cardano/data/db being the default
 # database state location.  Standard network config files can be found under
 # /opt/cardano/config.
+#
+#
+# Merge Mode:
+#
+# With the NETWORK env variable set and one or both of
+# CARDANO_<CONFIG|TOPOLOGY>_JSON_MERGE env variables set and containing valid
+# json, cardano-node will run with deep merged base NETWORK config and json
+# merge config.
+#
+# Optional env variables and cardano-node args which can be used in custom mode
+# can also be used in this mode.
 #
 #
 # Bind Mounting Considerations:
@@ -101,6 +112,7 @@
 , iana-etc
 , iproute
 , iputils
+, jq
 , socat
 , utillinux
 , lib
@@ -127,6 +139,7 @@ let
         iana-etc          # IANA protocol and port number assignments
         iproute           # Utilities for controlling TCP/IP networking
         iputils           # Useful utilities for Linux networking
+        jq                # Lightweight and flexible command-line JSON processor
         socat             # Utility for bidirectional data transfer
         utillinux         # System utilities for Linux
       ];
@@ -228,6 +241,7 @@ in
       cp -v ${context}/bin/* usr/local/bin
       ln -sv ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -sv ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+      ln -sv ${jq}/bin/jq usr/local/bin/jq
 
       # Create iohk-nix network configs, organized by network directory.
       SRC="${genCfgs}"

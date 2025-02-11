@@ -1,20 +1,90 @@
 #!/bin/env bash
 
+[[ -n $DEBUG ]] && set -x
+
+# If the NETWORK env var is set to a valid cardano network, pre-defined
+# configuration will be utilized.
 if [[ -n $NETWORK ]]; then
 
-  exec /usr/local/bin/run-network "$@"
+  # If either CARDANO_<CONFIG|TOPOLOGY>_JSON_MERGE env vars are set, iohk-nix
+  # pre-defined configuration will be used as a starting point and merged with
+  # custom configuration provided as json in the environment variable(s).
+  if [[ -n $CARDANO_CONFIG_JSON_MERGE || -n $CARDANO_CONFIG_TOPOLOGY_MERGE ]]; then
+
+    # Do a recursive deep merge of iohk-nix NETWORK config and/or topology with
+    # the supplied json merge environment variable(s).
+    #
+    # In a jq deep merge, arrays are replaced, primitive values in the second
+    # object override the first, different types for the same key result in
+    # full replacement and null values persist.
+    CFG="/opt/cardano/config"
+    if [[ -n $CARDANO_CONFIG_JSON_MERGE ]]; then
+      jq -S \
+        --argjson deepMerge "$CARDANO_CONFIG_JSON_MERGE" \
+        '. * $deepMerge' \
+        < "$CFG/$NETWORK/config.json" \
+        > "$CFG/$NETWORK/config-merged.json"
+      export CARDANO_CONFIG="$CFG/$NETWORK/config-merged.json"
+    else
+      export CARDANO_CONFIG="$CFG/$NETWORK/config.json"
+    fi
+
+    if [[ -n $CARDANO_TOPOLOGY_JSON_MERGE ]]; then
+      jq -S \
+        --argjson deepMerge "$CARDANO_TOPOLOGY_JSON_MERGE" \
+        '. * $deepMerge' \
+        < "$CFG/$NETWORK/topology.json" \
+        > "$CFG/$NETWORK/topology-merged.json"
+      export CARDANO_TOPOLOGY="$CFG/$NETWORK/topology-merged.json"
+    else
+      export CARDANO_TOPOLOGY="$CFG/$NETWORK/topology.json"
+    fi
+
+    if [[ -n $DEBUG ]]; then
+      echo "Cardano config is:"
+      cat "$CARDANO_CONFIG"
+      echo
+      echo "Cardano topology is:"
+      cat "$CARDANO_TOPOLOGY"
+      echo
+    fi
+
+    # Run cardano-node using iohk-nix base config merged with provided custom
+    # config for the requested NETWORK.
+    unset NETWORK
+    if [[ $1 == "run" ]]; then
+      exec /usr/local/bin/run-node "$@"
+    else
+      exec /usr/local/bin/run-node run "$@"
+    fi
+
+  else
+    # Run cardano-node using "scripts" mode for the requested NETWORK.
+    exec /usr/local/bin/run-network "$@"
+  fi
 
 elif [[ $1 == "run" ]]; then
-
+  # Run cardano-node using "custom" mode.
   exec /usr/local/bin/run-node "$@"
 
 elif [[ $1 == "cli" ]]; then
-
+  # Run cardano-cli with the provided entrypoint args
   exec /usr/local/bin/run-client "$@"
 
 else
 
-  echo "Nothing to do! Perhaps try [run|cli], or set NETWORK environment variable."
+  echo "Nothing to do! Perhaps try one of:"
+  echo
+  echo "  * Setting the NETWORK env var to a valid cardano network, such as mainnet."
+  echo "    * Optionally provide CARDANO_CONFIG_JSON_MERGE and/or CARDANO_TOPOLOGY_JSON_MERGE"
+  echo "      to run cardano-node with custom config deep merged to the base NETWORK config."
+  echo
+  echo "  * Leave the NETWORK env var unset and provide entrypoint args starting with \"run\" and:"
+  echo "    * Optionally include environment variables interpreted by nix/docker/context/bin/run-node."
+  echo "    * Optionally include additional cardano-node args to the entrypoint afer \"run\"."
+  echo
+  echo "  * Leave the NETWORK env var unset and provide entrypoint args"
+  echo "    starting with \"cli\" following by cardano-cli command args."
   exit 1
 
 fi
