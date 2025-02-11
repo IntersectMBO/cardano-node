@@ -16,6 +16,8 @@ build-type:             Simple
 data-files:             data/all-profiles-coay.json
                         data/genesis/epoch-timeline.json
                         data/genesis/overlays/*.json
+                        data/genesis/overlays/budget/block/memory/*.json
+                        data/genesis/overlays/budget/block/steps/*.json
                         data/presets/*.json
                         data/test/ci-test-bage.json
                         data/test/default-coay/*.json
@@ -61,6 +63,7 @@ library
                       , Cardano.Benchmarking.Profile.Extra.Scaling
                       , Cardano.Benchmarking.Profile.Extra.Voting
                       , Cardano.Benchmarking.Profile.NodeSpecs
+                      , Cardano.Benchmarking.Profile.Playground
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
