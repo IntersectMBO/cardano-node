@@ -1,112 +1,14 @@
 ############################################################################
-# Docker image builder
+# Docker image builder for cardano-node
 #
 # To build and load into the Docker engine:
 #
 #   nix build .#dockerImage/node
 #   docker load -i result
 #
+# Include `-L` in the nix build command args to see build logs.
 #
-# Scripts Mode:
-#
-# To launch cardano-node with pre-loaded configuration, "scripts" mode,
-# use the NETWORK env variable to declare an existing cardano network name.
-#
-# An example using a docker named volume to persist state:
-#
-#   docker run \
-#     -v data:/data \
-#     -e NETWORK=mainnet \
-#     ghcr.io/intersectmbo/cardano-node
-#
-# In "scripts" mode, default state directories include /{data,ipc,logs}, with
-# /data/db being the default database state location.
-#
-#
-# Custom Mode:
-#
-# To launch cardano-node with a custom configuration, "custom" mode, provide
-# entrypoint args starting with "run" and:
-#   * Leave the NETWORK env variable unset
-#   * Optionally include additional cardano-node args to the entrypoint afer "run"
-#   * Optionally include environment variables interpreted by nix/docker/context/bin/run-node
-#     from the cardano-node repo, or /usr/local/bin/run-node in the container
-#
-# For example, launch a custom cardano-node using cardano-node args and a
-# local configuration mapped into the container:
-#
-#   docker run \
-#     -v "$PWD/config/cardano:/config" \
-#     ghcr.io/intersectmbo/cardano-node \
-#     run \
-#     --config /config/mainnet/config.json \
-#     --topology /config/mainnet/topology.json \
-#     --database-path /data/db
-#
-# Custom mode may also leverage standard mainnet or testnet network config
-# files found at /opt/cardano/config and organized under a subdirectory of the
-# network name.  For example, to utilize standard configs for preprod network,
-# but modify the cardano-node listening port:
-#
-#   docker run \
-#     -v "$PWD/preprod-data:/data" \
-#     -e CARDANO_CONFIG="/opt/cardano/config/preprod/config.json" \
-#     -e CARDANO_TOPOLOGY="/opt/cardano/config/preprod/topology.json" \
-#     -e CARDANO_PORT="6001" \
-#     ghcr.io/intersectmbo/cardano-node \
-#     run
-#
-# In "custom" mode, default state directories include
-# /opt/cardano/{data,ipc,logs}, with /opt/cardano/data/db being the default
-# database state location.  These state directories are symlinked to root in the container:
-# /opt/cardano/{data,ipc,logs} -> /{data,ipc,logs} for more consistency between modes.
-# Standard network config files can be found under /opt/cardano/config.
-#
-#
-# Merge Mode:
-#
-# With the NETWORK env variable set and one or both of
-# CARDANO_<CONFIG|TOPOLOGY>_JSON_MERGE env variables set and containing valid
-# json, cardano-node will run with deep merged base NETWORK config and json
-# merge config.
-#
-# Optional env variables and cardano-node args which can be used in custom mode
-# can also be used in this mode.
-#
-#
-# CLI Mode:
-#
-# To run cardano-cli, leave the NETWORK env variable unset and provide
-# entrypoint args starting with "cli" followed by cardano-cli command args.
-# The cardano-node ipc socket state will need to be provided in cli mode.
-#
-# An example using a docker named volume to share cardano-node ipc socket state:
-#
-#   docker run \
-#     -v node-ipc:/ipc \
-#     ghcr.io/intersectmbo/cardano-node \
-#     cli \
-#     query tip \
-#     --mainnet
-#
-#
-# Bind Mounting Considerations:
-#
-# For "custom" mode, the /opt/cardano/{data,ipc,logs} default state directories have been
-# symlinked to the "scripts" mode default state directories of /{data,ipc,logs}
-# respectively.  This makes bind mounting easier when switching between
-# "scripts" and "custom" container modes as bind mounting any of the root
-# default state directory locations, /{data,ipc,logs}, will work for both modes.
-#
-#
-# Cardano-node socket sharing:
-#
-# To share a cardano-node socket with a different container, a volume can be made
-# for establishing cross-container communication:
-#
-#   docker run -v node-ipc:/ipc -e NETWORK=mainnet ghcr.io/intersectmbo/cardano-node
-#   docker run -v node-ipc:/ipc -e NETWORK=mainnet ghcr.io/intersectmbo/some-node-client
-#
+# See the nix/docker/README.md file for details on modes of operation.
 ############################################################################
 
 { pkgs

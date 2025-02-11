@@ -1,51 +1,14 @@
 ############################################################################
-# Docker image builder
+# Docker image builder for cardano-submit-api
 #
 # To build and load into the Docker engine:
 #
-#   nix run .#dockerImage/submit-api
+#   nix build -L .#dockerImage/submit-api
 #   docker load -i result
 #
-# Scripts Mode:
+# Include `-L` in the nix build command args to see build logs.
 #
-# To launch cardano-submit-api with pre-loaded configuration, "scripts" mode,
-# use the NETWORK env variable to declare an existing cardano network name.
-#
-# An example using a docker named volume to share ipc socket state:
-#
-#   docker run \
-#     -v node-ipc:/ipc \
-#     -e NETWORK=mainnet \
-#     ghcr.io/intersectmbo/cardano-submit-api
-#
-# In "scripts" mode, the node.socket file is expected at /ipc.
-#
-#
-# Custom Mode:
-#
-# To launch cardano-submit-api with a custom configuration, "custom" mode,
-# leave the NETWORK env variable unset and provide a complete set of
-# cardano-submit-api args to the entrypoint.
-#
-# For example:
-#
-#   docker run \
-#     -v $PWD/config.json:/config.json \
-#     ghcr.io/intersectmbo/cardano-submit-api \
-#     --config /config.json \
-#     --mainnet \
-#     --socket-path /ipc/node.socket
-#
-# See the docker-compose.yml for a demonstration of cardano-node and
-# cardano-submit-api together.
-#
-#
-# Bind Mounting Considerations:
-#
-# In the container a /node-ipc directory is symlinked to /ipc both to align the
-# default ipc socket state directory in both the cardano-node and
-# cardano-submit-api images and remain backwards compatible.
-#
+# See the nix/docker/README.md file for details on modes of operation.
 ############################################################################
 { pkgs
 , dockerTools
