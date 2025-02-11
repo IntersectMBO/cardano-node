@@ -4,9 +4,8 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile (
-  names, namesNoEra, namesCloudNoEra
-, byName
-, profiles
+  namesCloudNoEra
+, profilesNoEra
 , libMk
 ) where
 
@@ -47,49 +46,11 @@ import           Cardano.Benchmarking.Profile.Extra.Voting                (profi
 
 --------------------------------------------------------------------------------
 
-names :: [String]
--- Overlay not supported here, using an empty overlay.
-names = Map.keys (profiles mempty)
-
-namesNoEra :: [String]
--- Overlay not supported here, using an empty overlay.
-namesNoEra = Map.keys (profilesNoEra mempty)
-
 namesCloudNoEra :: [String]
 -- Overlay not supported here, using an empty overlay.
 namesCloudNoEra = map Types.name profilesNoEraCloud
 
-byName :: String -> Aeson.Object -> Maybe Types.Profile
-byName name obj =
-  case Map.lookup name (profiles obj) of
-    Nothing -> Nothing
-    (Just profile) -> Just profile
-
 --------------------------------------------------------------------------------
-
--- | Adds the Cardano era to `profilesNoEra`.
-profiles :: Aeson.Object -> Map.Map String Types.Profile
-profiles obj = foldMap
-  (\profile -> Map.fromList $
-    let
-        -- TODO: Profiles properties other than the "name" and "era" of
-        --       type string are the only thing that change ??? Remove the
-        --       concept of eras from the profile definitions and make it a
-        --       workbench-level feature (???).
-        addEra p era suffix =
-          let name = Types.name p
-              newName = name ++ "-" ++ suffix
-          in  (newName, p {Types.name = newName, Types.era = era})
-    in 
-        [ addEra profile Types.Allegra "alra"
-        , addEra profile Types.Shelley "shey"
-        , addEra profile Types.Mary    "mary"
-        , addEra profile Types.Alonzo  "alzo"
-        , addEra profile Types.Babbage "bage"
-        , addEra profile Types.Conway  "coay"
-        ]
-  )
-  (profilesNoEra obj)
 
 -- | Construct Map with profile name as key, without eras (in name and object).
 profilesNoEra :: HasCallStack => Aeson.Object -> Map.Map String Types.Profile
