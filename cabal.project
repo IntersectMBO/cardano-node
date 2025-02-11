@@ -71,7 +71,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: 6f344d5ebabb34c334076032e4c76bf725e6692e
+  tag: ed8161c73c4ad9eb4d263c9225a235e54d864af2
   subdir:
     network-mux
+    ouroboros-network-framework
   --sha256: sha256-rGQmEjOHXhRdfvpSx3YYkRKR0wj0HFngIpSCuS2AXAM=
