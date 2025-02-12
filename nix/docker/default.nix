@@ -96,7 +96,7 @@ let
   context = ./context;
 
   genCfgs = let
-    environments' = lib.getAttrs [ "mainnet" "preprod" "preview" "sanchonet" ] commonLib.environments;
+    environments' = lib.getAttrs [ "mainnet" "preprod" "preview" ] commonLib.environments;
     cardano-deployment = commonLib.mkConfigHtml environments';
   in
     pkgs.runCommand "cardano-html" {} ''
