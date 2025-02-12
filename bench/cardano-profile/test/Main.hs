@@ -477,7 +477,7 @@ profiles :: Map.Map String Types.Profile
 profiles = Map.fromList $ map
   (\p ->
     ( Types.name p
-    , Profile.realize mempty p
+    , Profile.realize p -- No overlay added!
     )
   )
   (
@@ -740,7 +740,7 @@ testGroupOverlay = Tasty.testGroup
       case eitherAns of
         (Left err) -> fail err
         (Right profile) -> do
-          let profileWithOverlay = Profile.realize overlay profile
+          let profileWithOverlay = Profile.realize (profile {Types.overlay = overlay})
           assertEqual "New name"
             "HOLA!"
             (Types.name profileWithOverlay)
