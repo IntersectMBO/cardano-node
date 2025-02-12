@@ -79,9 +79,9 @@ playgroundProfiles = profilesNoEraPlayground
 --------------------------------------------------------------------------------
 
 data Cli =
-    Names
-  | NamesNoEra
+    NamesNoEra
   | NamesCloudNoEra
+  | Names
   | All
   | ByName PrettyPrint String
   | LibMK
@@ -96,11 +96,14 @@ data PrettyPrint =
 --------------------------------------------------------------------------------
 
 -- | Construct Map with profile name as key, without eras (in name and object).
-toMap :: HasCallStack => Aeson.Object -> [Types.Profile] -> Map.Map String Types.Profile
-toMap obj ps = Map.fromList $ map
+toMap :: HasCallStack => Maybe Aeson.Object -> [Types.Profile] -> Map.Map String Types.Profile
+toMap maybeObj ps = Map.fromList $ map
   (\p ->
     ( Types.name p
-    , Profile.realize obj p 
+    , Profile.realize $
+        case maybeObj of
+          Nothing    ->  p
+          (Just obj) -> (p {Types.overlay = obj})
     )
   )
   ps
@@ -134,20 +137,22 @@ main :: IO ()
 main = do
   cli <- getOpts
   case cli of
-    -- Print all profile names (does not apply overlays).
-    Names -> BSL8.putStrLn $ Aeson.encode $ Map.keys $ addEras $ toMap mempty allProfiles
     -- Print all profile names without the era suffix (does not apply overlays).
     NamesNoEra -> BSL8.putStrLn $ Aeson.encode $ map Types.name allProfiles
-    -- Print all cloud profile (-nomadperf) names.
+    -- Print all cloud profile (-nomadperf) names (does not apply overlays).
     NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode $ map Types.name cloudProfiles
+    -- Print all profile names (applies overlays!!!!!).
+    Names -> do
+      maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
+      BSL8.putStrLn $ Aeson.encode $ Map.keys $ addEras $ toMap maybeObj allProfiles
     -- Print a map with all profiles, with an optional overlay.
     All -> do
-      obj <- lookupOverlay
-      BSL8.putStrLn $ Aeson.encode $ addEras $ toMap obj allProfiles
+      maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
+      BSL8.putStrLn $ Aeson.encode $ addEras $ toMap maybeObj allProfiles
     -- Print a single profiles, with an optional overlay.
     (ByName prettyPrint profileName) -> do
-      obj <- lookupOverlay
-      let profiles = addEras $ toMap obj allProfiles
+      maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
+      let profiles = addEras $ toMap maybeObj allProfiles
       case Map.lookup profileName profiles of
         Nothing -> error $ "No profile named \"" ++ profileName ++ "\""
         (Just profile) ->
@@ -183,13 +188,13 @@ main = do
         (Left errorMsg) -> fail errorMsg
         (Right profile) -> print (profile :: Types.Profile)
 
-lookupOverlay :: IO Aeson.Object
+lookupOverlay :: IO (Maybe Aeson.Object)
 lookupOverlay = do
   maybeOverlay <- lookupEnv "WB_PROFILE_OVERLAY"
-  case maybeOverlay of
-    Nothing -> mempty
+  return $ case maybeOverlay of
+    Nothing -> Nothing
     (Just str) -> case Aeson.decode (BSL8.pack str) of
-                    (Just (Aeson.Object keyMap)) -> return keyMap
+                    (Just (Aeson.Object keyMap)) -> (Just keyMap)
                     _ -> error ""
 
 getOpts :: IO Cli
@@ -202,12 +207,6 @@ getOpts = OA.execParser $
 
 cliParser :: OA.Parser Cli
 cliParser = OA.hsubparser $
-      OA.command "names"
-        (OA.info
-          (pure Names)
-          (OA.fullDesc <> OA.header "names" <> OA.progDesc "All profiles names")
-        )
-  <>
       OA.command "names-noera"
         (OA.info
           (pure NamesNoEra)
@@ -218,6 +217,12 @@ cliParser = OA.hsubparser $
         (OA.info
           (pure NamesCloudNoEra)
           (OA.fullDesc <> OA.header "names-cloud-noera" <> OA.progDesc "All cloud profiles names (no era suffix)")
+        )
+  <>
+      OA.command "names"
+        (OA.info
+          (pure Names)
+          (OA.fullDesc <> OA.header "names" <> OA.progDesc "All profiles names")
         )
   <>
       OA.command "all"

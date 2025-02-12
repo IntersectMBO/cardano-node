@@ -25,22 +25,22 @@ import qualified Paths_cardano_profile as Paths
 
 --------------------------------------------------------------------------------
 
-realize :: HasCallStack => Aeson.Object -> Types.Profile -> Types.Profile
-realize obj profile =
+realize :: HasCallStack => Types.Profile -> Types.Profile
+realize profile =
     -- Compose the profile in the same order as the `jq` profile machinery!
     -- 1) `addUnusedDefaults`: Adds all properties that are the same for all
     --                         profiles. This are all candidates to be removed
     --                         when we finally switch from `jq` to this.
-    -- 2) `overlay`: Applies an optional JSON object as an "overlay". The
-    --               object is read from an envar ("WB_PROFILE_OVERLAY") in
-    --               the `main` function and can override anything (some may
-    --               overridden by later steps) as long as the result is a
-    --               valid `Profile`.
-    -- 3) `shelleyAlonzoConway`: Given an epoch number ("pparamsEpoch"
+    -- 2) `shelleyAlonzoConway`: Given an epoch number ("pparamsEpoch"
     --                           property) creates the "genesis" property
     --                           using "epoch-timeline.json" and applying the
     --                           genesis specific overlays ("pparamsOverlays"
     --                           property).
+    -- 3) `overlay`: Applies an optional JSON object as an "overlay". The
+    --               object is read from an envar ("WB_PROFILE_OVERLAY") in
+    --               the `main` function and can override anything (some may
+    --               overridden by later steps) as long as the result is a
+    --               valid `Profile`.
     -- 4)  `derive`: Fills the "derive" property.
     -- 5)  `finalize`: Applies fixes (porting infelicities) needed to fill
     --                 the "cli_args" property that is also filled here.
@@ -50,8 +50,8 @@ realize obj profile =
     preset
   . finalize
   . derive
+  . overlay
   . shelleyAlonzoConway
-  . overlay obj
   . addUnusedDefaults
   $ profile
 
@@ -104,15 +104,6 @@ addUnusedDefaults p =
     }
 
 -- Step 2.
---------------------------------------------------------------------------------
-
--- Merges the profile with a JSON file and stores the overlay contents in the
--- profile.
-overlay :: HasCallStack => Aeson.Object -> Types.Profile -> Types.Profile
-overlay overlaykeyMap profile =
-  (applyOverlay overlaykeyMap profile) {Types.overlay = overlaykeyMap}
-
--- Step 3.
 --------------------------------------------------------------------------------
 
 -- | Fill the "genesis" object "shelley", "alonzo" and "conway" properties
@@ -193,6 +184,17 @@ genesisOverlay overlayName epochParams = do
       -- Right-biased merge of both JSON objects at all depths.
       KeyMap.unionWithKey unionWithKey epochParams keyMap
     _ -> error $ "Not an Aeson Object: \"" ++ fp ++ "\""
+
+-- Step 3.
+--------------------------------------------------------------------------------
+
+-- Merges the profile with a JSON object stored in the "overlay" property.
+overlay :: HasCallStack => Types.Profile -> Types.Profile
+overlay profile =
+  let overlaykeyMap = Types.overlay profile -- An `Aeson.Object`.
+  in if overlaykeyMap /= mempty
+     then applyOverlay overlaykeyMap profile
+     else profile
 
 -- Step 4.
 --------------------------------------------------------------------------------
