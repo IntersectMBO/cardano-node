@@ -99,6 +99,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , cBlockMinimumAdoptions
 
   , preset
+  , overlay
 
 ) where
 
@@ -914,8 +915,14 @@ cBlockMinimumAdoptions i = analysisExpressionAppend
 
 --------------------------------------------------------------------------------
 
-preset :: String -> Types.Profile -> Types.Profile
+preset :: HasCallStack => String -> Types.Profile -> Types.Profile
 preset str p =
   if isJust (Types.preset p)
   then error "preset: `preset` already set (not Nothing)."
   else p {Types.preset = Just str}
+
+overlay :: HasCallStack => Aeson.Object -> Types.Profile -> Types.Profile
+overlay obj p =
+  if Types.overlay p /= mempty
+  then error "overlay: `overlay` already set (not an empty JSON object)."
+  else p {Types.overlay = obj}
