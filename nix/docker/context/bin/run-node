@@ -73,6 +73,10 @@ printRunEnv () {
     echo "CARDANO_SHELLEY_VRF_KEY=$CARDANO_SHELLEY_VRF_KEY"
     echo "CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
   fi
+
+  if [ "${CARDANO_NODE_RTS_OPTIONS}" != "" ]; then
+    echo "CARDANO_NODE_RTS_OPTIONS=${CARDANO_NODE_RTS_OPTIONS}"
+  fi
 }
 
 #####################################################################
@@ -123,6 +127,10 @@ runRelayNode () {
 
   effopts+=(${options[@]})
 
+  if [ "${CARDANO_NODE_RTS_OPTIONS}" != "" ]; then
+    effopts+=(+RTS ${CARDANO_NODE_RTS_OPTIONS} -RTS)
+  fi
+
   echo "cardano-node run ${effopts[@]}"
   exec /usr/local/bin/cardano-node run ${effopts[@]}
 }
@@ -144,6 +152,10 @@ runBlockProducerNode () {
     --shelley-operational-certificate $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE)
 
   effopts+=(${options[@]})
+
+  if [ "${CARDANO_NODE_RTS_OPTIONS}" != "" ]; then
+    effopts+=(+RTS ${CARDANO_NODE_RTS_OPTIONS} -RTS)
+  fi
 
   echo "cardano-node run ${effopts[@]}"
   exec /usr/local/bin/cardano-node run ${effopts[@]}
