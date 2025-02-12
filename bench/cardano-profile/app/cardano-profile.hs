@@ -6,18 +6,75 @@ import           Prelude
 
 import           Data.Function ((&))
 import           System.Environment (lookupEnv)
+import           GHC.Stack (HasCallStack)
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
 -- Package: aeson-pretty
 import           Data.Aeson.Encode.Pretty as Aeson
 -- Package: bytestring.
 import qualified Data.ByteString.Lazy.Char8 as BSL8
+-- Package: containers.
+import qualified Data.Map.Strict as Map
 -- Package: optparse-applicative-fork.
 import qualified Options.Applicative as OA
 -- Package: self.
-import qualified Cardano.Benchmarking.Profile as Profiles
+import qualified Cardano.Benchmarking.Profile as Profile
 import qualified Cardano.Benchmarking.Profile.NodeSpecs as NodeSpecs
 import qualified Cardano.Benchmarking.Profile.Types as Types
+-- Profiles to export!
+-- Static / built-in / profiles part of the test-suite.
+import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesNoEraCloud)
+import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesNoEraEmpty)
+import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesNoEraForgeStress)
+import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesNoEraK3)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesNoEraDense)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesNoEraDish)
+import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesNoEraMiniature)
+import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesNoEraModel)
+import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
+import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
+import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
+-- Dynamic profiles.
+import           Cardano.Benchmarking.Profile.Playground                  (profilesNoEraPlayground)
+
+--------------------------------------------------------------------------------
+
+allProfiles :: [Types.Profile]
+allProfiles = performanceAndTracingProfiles ++ playgroundProfiles
+
+cloudProfiles :: [Types.Profile]
+cloudProfiles = profilesNoEraCloud
+
+-- "families" of profiles. Grouped by common properties or intentions.
+performanceAndTracingProfiles :: [Types.Profile]
+performanceAndTracingProfiles =
+  (
+       cloudProfiles
+    ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
+    ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
+    ++ profilesNoEraK3               -- K3
+    -- Legacy.
+    ++ profilesNoEraDense
+    ++ profilesNoEraDish
+    ++ profilesNoEraMiniature
+    ++ profilesNoEraModel            --
+    ++ profilesNoEraPlutuscall       --
+    -- Empty datasets not running `FixedLoaded`.
+    ++ profilesNoEraChainsync        -- Scenario `Chainsync`
+    ++ profilesNoEraIdle             -- Scenario `Idle`
+    ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
+    -- Extra modules
+    ++ profilesNoEraScalingLocal
+    ++ profilesNoEraScalingCloud
+    ++ profilesNoEraVoting
+  )
+
+-- Have fun!
+playgroundProfiles :: [Types.Profile]
+playgroundProfiles = profilesNoEraPlayground
 
 --------------------------------------------------------------------------------
 
@@ -37,6 +94,16 @@ data PrettyPrint =
   | SingleLine
 
 --------------------------------------------------------------------------------
+
+-- | Construct Map with profile name as key, without eras (in name and object).
+toMap :: HasCallStack => Aeson.Object -> [Types.Profile] -> Map.Map String Types.Profile
+toMap obj ps = Map.fromList $ map
+  (\p ->
+    ( Types.name p
+    , Profile.realize obj p 
+    )
+  )
+  ps
 
 -- All profiles are created/defined in the Conway era.
 addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
@@ -68,19 +135,19 @@ main = do
   cli <- getOpts
   case cli of
     -- Print all profile names (does not apply overlays).
-    Names -> BSL8.putStrLn $ Aeson.encode $ addEras $ Profiles.profilesNoEra mempty
+    Names -> BSL8.putStrLn $ Aeson.encode $ Map.keys $ addEras $ toMap mempty allProfiles
     -- Print all profile names without the era suffix (does not apply overlays).
-    NamesNoEra -> BSL8.putStrLn $ Map.keys $ Profiles.profilesNoEra mempty
+    NamesNoEra -> BSL8.putStrLn $ Aeson.encode $ map Types.name allProfiles
     -- Print all cloud profile (-nomadperf) names.
-    NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesCloudNoEra
+    NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode $ map Types.name cloudProfiles
     -- Print a map with all profiles, with an optional overlay.
     All -> do
       obj <- lookupOverlay
-      BSL8.putStrLn $ Aeson.encode $ Profiles.addEras $ Profiles.profilesNoEra obj
+      BSL8.putStrLn $ Aeson.encode $ addEras $ toMap obj allProfiles
     -- Print a single profiles, with an optional overlay.
     (ByName prettyPrint profileName) -> do
       obj <- lookupOverlay
-      let profiles = Profiles.addEras $ Profiles.profilesNoEra obj
+      let profiles = addEras $ toMap obj allProfiles
       case Map.lookup profileName profiles of
         Nothing -> error $ "No profile named \"" ++ profileName ++ "\""
         (Just profile) ->
@@ -91,7 +158,7 @@ main = do
               SingleLine  -> Aeson.encode
           in BSL8.putStrLn aeson
     LibMK -> do
-      mapM_ putStrLn Profiles.libMk
+      mapM_ putStrLn libMk
     (NodeSpecs profilePath topologyPath) -> do
       eitherProfile <- Aeson.eitherDecodeFileStrict profilePath
       let profile = case eitherProfile of
@@ -197,6 +264,73 @@ cliParser = OA.hsubparser $
           (FromJson <$> OA.argument OA.str (OA.metavar "FILE"))
           (OA.fullDesc <> OA.header "from-json" <> OA.progDesc "JSON to data type")
         )
+
+-- Makefile utils.
+--------------------------------------------------------------------------------
+
+libMKLocations :: [ (String, [ (String, [Types.Profile]) ] ) ]
+libMKLocations =
+  [
+    -- Local profiles.
+    ("LOCAL_PROFILES", [
+      -- Families of local profiles.
+      ("PROFILES_EMPTY"        , profilesNoEraEmpty)
+    , ("PROFILES_MINIATURE"    , profilesNoEraMiniature)
+    , ("PROFILES_FORGE_STRESS" , profilesNoEraForgeStress)
+    , ("PROFILES_PLUTUSCALL"   , profilesNoEraPlutuscall)
+    , ("PROFILES_MODEL"        , profilesNoEraModel)
+    , ("PROFILES_K3"           , profilesNoEraK3)
+    , ("PROFILES_SCENARIOS"    ,
+         profilesNoEraChainsync
+      ++ profilesNoEraIdle
+      ++ profilesNoEraTracerOnly
+      )
+    , ("PROFILES_LEGACY"       ,
+         profilesNoEraDense
+      ++ profilesNoEraDish
+      )
+    , ("PROFILES_SCALING"      , profilesNoEraScalingLocal)
+    ])
+  -- Cloud profiles.
+  , ("CLOUD_PROFILES", [
+      -- Families of cloud profiles.
+      ("PROFILES_NOMAD_PERF"   , profilesNoEraCloud)
+    , ("PROFILES_NOMAD_PERFSSD", profilesNoEraScalingCloud)
+    ])
+  ]
+
+libMk :: [String]
+libMk =
+    foldMap
+      (\(_, families) ->
+        map
+          (\(familyName, ps) ->
+            let profileNames = map Types.name ps
+            in
+              -- For example:
+              -- PROFILES_EMPTY := fast fast-solo ...
+              -- PROFILES_MINIATURE := ci-bench ...
+              familyName ++ " := " ++ unwords profileNames
+          )
+          families
+      )
+      libMKLocations
+  ++
+    [""] -- Empty line.
+  ++
+    foldMap
+      (\(locationName, families) ->
+        map
+          (\(familyName, _) ->
+            -- LOCAL_PROFILES += $(PROFILES_VENDOR)
+            -- ...
+            -- CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
+            -- ...
+            locationName ++ " += $(" ++ familyName ++ ")"
+          )
+          families
+      )
+      libMKLocations
 
 --------------------------------------------------------------------------------
 
