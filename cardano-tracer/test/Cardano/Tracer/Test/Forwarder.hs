@@ -167,10 +167,10 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       (simpleSingletonVersions
          ForwardingV_1
          (ForwardingVersionData $ unI tsNetworkMagic)
-         (forwarderApp [ (forwardEKGMetrics ekgConfig store,       1)
-                       , (forwardTraceObjectsInit tfConfig sink,   2)
-                       , (forwardDataPointsInit dpfConfig dpStore, 3)
-                       ]
+         (const $ forwarderApp [ (forwardEKGMetrics ekgConfig store,       1)
+                               , (forwardTraceObjectsInit tfConfig sink,   2)
+                               , (forwardDataPointsInit dpfConfig dpStore, 3)
+                               ]
          )
       )
       Nothing
@@ -238,8 +238,8 @@ doListenToAcceptor TestSetup{..}
               (HandshakeCallbacks acceptableVersion queryVersion)
               (simpleSingletonVersions
                  ForwardingV_1
-                 (ForwardingVersionData $ unI tsNetworkMagic) -- Taken from mainnet shelley genesis file.
-                 (SomeResponderApplication $
+                 (ForwardingVersionData $ unI tsNetworkMagic)
+                 (const $ SomeResponderApplication $
                     forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
                                  , (forwardTraceObjectsResp tfConfig sink,   2)
                                  , (forwardDataPointsResp dpfConfig dpStore, 3)

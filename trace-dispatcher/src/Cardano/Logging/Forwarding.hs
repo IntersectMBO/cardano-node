@@ -222,10 +222,10 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
-       (forwarderApp [ (forwardEKGMetricsRun,                      1)
-                     , (forwardTraceObjectsInit tfConfig  sink,    2)
-                     , (forwardDataPointsInit   dpfConfig dpStore, 3)
-                     ]
+       (const $ forwarderApp [ (forwardEKGMetricsRun,                      1)
+                             , (forwardTraceObjectsInit tfConfig  sink,    2)
+                             , (forwardDataPointsInit   dpfConfig dpStore, 3)
+                             ]
        )
     )
     Nothing
@@ -294,7 +294,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
             (simpleSingletonVersions
                ForwardingV_1
                (ForwardingVersionData magic)
-               (SomeResponderApplication $
+               (const $ SomeResponderApplication $
                  forwarderApp [ (forwardEKGMetricsRespRun,                  1)
                               , (forwardTraceObjectsResp tfConfig  sink,    2)
                               , (forwardDataPointsResp   dpfConfig dpStore, 3)

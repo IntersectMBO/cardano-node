@@ -67,7 +67,7 @@ library
                       , network-mux
                       , ouroboros-network-api
                       , singletons ^>= 3.0
-                      , ouroboros-network-framework ^>= 0.15
+                      , ouroboros-network-framework ^>= 0.16
                       , serialise
                       , stm
                       , text

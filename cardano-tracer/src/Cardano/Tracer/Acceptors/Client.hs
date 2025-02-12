@@ -109,7 +109,7 @@ doConnectToForwarder snocket address netMagic timeLimits app = do
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData $ NetworkMagic netMagic)
-       app
+       (const app)
     )
     Nothing
     address
