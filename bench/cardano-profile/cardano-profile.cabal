@@ -84,6 +84,7 @@ executable cardano-profile
                       , aeson-pretty
                       , vector
                       , bytestring
+                      , containers
                       , optparse-applicative-fork
                       , text
                       , cardano-profile
