@@ -82,7 +82,7 @@ network's name.  For example, to utilize standard configs for preprod network,
 but modify the cardano-node listening port:
 ```
   docker run \
-    -v "$PWD/preprod-data:/data" \
+    -v preprod-data:/data \
     -e CARDANO_CONFIG="/opt/cardano/config/preprod/config.json" \
     -e CARDANO_TOPOLOGY="/opt/cardano/config/preprod/topology.json" \
     -e CARDANO_PORT="6001" \
@@ -104,13 +104,14 @@ json, cardano-node will run with deep merged base `NETWORK` config and json
 merge config.
 
 Optional env variables and cardano-node args which can be used in custom mode
-can also be used in this mode.
+can also be used in this mode.  Merge mode uses the same default state
+directories as custom mode.
 
 An example:
 ```
 docker run \
-  -v $PWD/node-ipc:/ipc \
-  -v $(pwd)/mainnet-data:/data \
+  -v node-ipc:/ipc \
+  -v mainnet-data:/data \
   -e NETWORK=mainnet \
   -e CARDANO_CONFIG_JSON_MERGE='{"MaxConcurrencyBulkSync": 2}' \
   -e CARDANO_TOPOLOGY_JSON_MERGE='{"useLedgerAfterSlot": 147000000}' \
@@ -146,13 +147,36 @@ respectively.  This makes bind mounting easier when switching between
 default state directory locations, `/{data,ipc,logs}`, will work for both modes.
 
 
-## Cardano-node socket sharing
+## Cardano-node Socket Sharing
 To share a cardano-node socket with a different container, a volume can be made
 for establishing cross-container communication:
 ```
 docker run -v node-ipc:/ipc -e NETWORK=mainnet ghcr.io/intersectmbo/cardano-node:dev
 docker run -v node-ipc:/ipc -e NETWORK=mainnet ghcr.io/intersectmbo/some-node-client
 ```
+
+
+## Pre-existing State Mounting
+If pre-existing cardano-node database state for a network of interest is
+available on the host, but not yet available in the container, the state can be
+mapped into the container with a local volume driver bind mount.
+
+An example using preprod state from a `$PWD/preprod-data` path follows.  Recall
+from above that scripts, custom and merge modes use a default database state
+location of `/data/db` either directly or indirectly by symlink, so the host
+`$PWD/preprod-data` directory should contain the database state under a `db`
+subdir.
+```
+docker run \
+  -v "$PWD/preprod-data:/data" \
+  -e NETWORK=preprod \
+  ghcr.io/intersectmbo/cardano-node:dev
+```
+
+Pre-existing host state may be obtained by any number of means such as host
+cardano-node service, rsync'd known good state from a remote, [Mithril
+snapshot](https://mithril.network/doc/) or other out-of-band methods.
+
 
 # Cardano Submit API Image Operation
 ## Scripts Mode
