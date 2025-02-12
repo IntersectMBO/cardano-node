@@ -16,6 +16,9 @@ module Cardano.Benchmarking.Profile.Builtin.Cloud (
 
 import           Prelude
 import           Data.Function ((&))
+-- Package: aeson.
+import qualified Data.Aeson        as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Builtin.Empty as E
 import qualified Cardano.Benchmarking.Profile.Builtin.Scenario.Base as B
@@ -105,6 +108,23 @@ plutusBlstBase =
 
 --------------------------------------------------------------------------------
 
+-- Corrections to fill the block memory budget with 4 txs per block.
+calibrate15x :: Aeson.Object
+calibrate15x =
+  KeyMap.fromList [
+    ("genesis", Aeson.Object $ KeyMap.fromList [
+      ("alonzo", Aeson.Object $ KeyMap.fromList [
+        ("maxTxExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsMem", Aeson.Number 23250000)
+        ])
+      ])
+    ])
+  , ("generator", Aeson.Object $ KeyMap.fromList [
+      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":1892175}
+      ("tx_fee", Aeson.Number 1892175)
+    ])
+  ]
+
 profilesNoEraCloud :: [Types.Profile]
 profilesNoEraCloud =
   ----------------------
@@ -153,6 +173,7 @@ profilesNoEraCloud =
   , blst       & P.name "plutusv3-blst-half-nomadperf"   . P.stepHalf     . P.dreps      0 . P.newTracing . P.p2pOn
   -- Plutus (post-Voltaire profiles)
   , loopVolt   & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopVolt   & P.name "plutus-volt-mem15-nomadperf"                     . P.dreps  10000 . P.newTracing . P.p2pOn . P.budgetBlockMemoryOneAndAHalf . P.overlay calibrate15x
   ]
   ----------
   -- Voting.
