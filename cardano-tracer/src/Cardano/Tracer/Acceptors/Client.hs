@@ -74,7 +74,7 @@ runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) 
       , (runDataPointsAcceptorInit   tracerEnv dpfConfig errorHandler, 3)
       ]
  where
-  appInitiator protocolsWithNums _ =
+  appInitiator protocolsWithNums =
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
@@ -95,12 +95,10 @@ doConnectToForwarder
   -> LocalAddress
   -> Word32
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
-  -> (    ForwardingVersionData
-       -> OuroborosApplication 'Mux.InitiatorMode
+  -> OuroborosApplication 'Mux.InitiatorMode
                           (MinimalInitiatorContext LocalAddress)
                           (ResponderContext LocalAddress)
                           LBS.ByteString IO () Void
-     )
   -> IO ()
 doConnectToForwarder snocket address netMagic timeLimits app = do
   done <- connectToNode
@@ -111,7 +109,7 @@ doConnectToForwarder snocket address netMagic timeLimits app = do
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData $ NetworkMagic netMagic)
-       app
+       (const app)
     )
     Nothing
     address

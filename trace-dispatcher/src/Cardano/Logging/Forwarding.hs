@@ -222,10 +222,10 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
-       (forwarderApp [ (forwardEKGMetricsRun,                      1)
-                     , (forwardTraceObjectsInit tfConfig  sink,    2)
-                     , (forwardDataPointsInit   dpfConfig dpStore, 3)
-                     ]
+       (const $ forwarderApp [ (forwardEKGMetricsRun,                      1)
+                             , (forwardTraceObjectsInit tfConfig  sink,    2)
+                             , (forwardDataPointsInit   dpfConfig dpStore, 3)
+                             ]
        )
     )
     Nothing
@@ -244,9 +244,8 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
   forwarderApp
     :: [(RunMiniProtocol 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
-    -> ForwardingVersionData
     -> OuroborosApplication 'Mux.InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
-  forwarderApp protocols _ =
+  forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
@@ -295,7 +294,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
             (simpleSingletonVersions
                ForwardingV_1
                (ForwardingVersionData magic)
-               (SomeResponderApplication .
+               (const $ SomeResponderApplication $
                  forwarderApp [ (forwardEKGMetricsRespRun,                  1)
                               , (forwardTraceObjectsResp tfConfig  sink,    2)
                               , (forwardDataPointsResp   dpfConfig dpStore, 3)
@@ -308,9 +307,8 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
  where
   forwarderApp
     :: [(RunMiniProtocol 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
-    -> ForwardingVersionData
     -> OuroborosApplication 'Mux.ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
-  forwarderApp protocols _ =
+  forwarderApp protocols =
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
