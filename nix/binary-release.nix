@@ -18,7 +18,7 @@ let
   name = "cardano-node-${version}-${platform}";
 
   environments = lib.getAttrs
-    [ "mainnet" "preprod" "preview" "sanchonet" ]
+    [ "mainnet" "preprod" "preview" ]
     pkgs.cardanoLib.environments;
 
 

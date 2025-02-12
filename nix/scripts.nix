@@ -36,7 +36,7 @@ let
   # Until complete removal of some iohk-nix deprecated environments which have
   # dangling dependencies such as shelley_qa, explicitly declare the
   # environments we we want included.
-  environments' = pkgs.lib.getAttrs [ "mainnet" "preprod" "preview" "sanchonet" ] environments;
+  environments' = pkgs.lib.getAttrs [ "mainnet" "preprod" "preview" ] environments;
 
 in forEnvironmentsCustom (environment: recurseIntoAttrs rec {
   node = mkScript environment;
