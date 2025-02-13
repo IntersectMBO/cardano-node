@@ -51,26 +51,24 @@ cloudProfiles = profilesNoEraCloud
 -- "families" of profiles. Grouped by common properties or intentions.
 performanceAndTracingProfiles :: [Types.Profile]
 performanceAndTracingProfiles =
-  (
-       cloudProfiles
-    ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
-    ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
-    ++ profilesNoEraK3               -- K3
-    -- Legacy.
-    ++ profilesNoEraDense
-    ++ profilesNoEraDish
-    ++ profilesNoEraMiniature
-    ++ profilesNoEraModel            --
-    ++ profilesNoEraPlutuscall       --
-    -- Empty datasets not running `FixedLoaded`.
-    ++ profilesNoEraChainsync        -- Scenario `Chainsync`
-    ++ profilesNoEraIdle             -- Scenario `Idle`
-    ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
-    -- Extra modules
-    ++ profilesNoEraScalingLocal
-    ++ profilesNoEraScalingCloud
-    ++ profilesNoEraVoting
-  )
+     cloudProfiles
+  ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
+  ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
+  ++ profilesNoEraK3               -- K3
+  -- Legacy.
+  ++ profilesNoEraDense
+  ++ profilesNoEraDish
+  ++ profilesNoEraMiniature
+  ++ profilesNoEraModel            --
+  ++ profilesNoEraPlutuscall       --
+  -- Empty datasets not running `FixedLoaded`.
+  ++ profilesNoEraChainsync        -- Scenario `Chainsync`
+  ++ profilesNoEraIdle             -- Scenario `Idle`
+  ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
+  -- Extra modules
+  ++ profilesNoEraScalingLocal
+  ++ profilesNoEraScalingCloud
+  ++ profilesNoEraVoting
 
 -- Have fun!
 playgroundProfiles :: [Types.Profile]
