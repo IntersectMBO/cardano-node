@@ -125,6 +125,23 @@ calibrate15x =
     ])
   ]
 
+-- Corrections to fill the block memory budget with 4 txs per block.
+calibrate2x :: Aeson.Object
+calibrate2x =
+  KeyMap.fromList [
+    ("genesis", Aeson.Object $ KeyMap.fromList [
+      ("alonzo", Aeson.Object $ KeyMap.fromList [
+        ("maxTxExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsMem", Aeson.Number 31000000)
+        ])
+      ])
+    ])
+  , ("generator", Aeson.Object $ KeyMap.fromList [
+      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":2463202,"kind":"FeeTooSmallUTxO","minimum":2463246}
+      ("tx_fee", Aeson.Number 2463246)
+    ])
+  ]
+
 profilesNoEraCloud :: [Types.Profile]
 profilesNoEraCloud =
   ----------------------
@@ -174,6 +191,7 @@ profilesNoEraCloud =
   -- Plutus (post-Voltaire profiles)
   , loopVolt   & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
   , loopVolt   & P.name "plutus-volt-mem15-nomadperf"                     . P.dreps  10000 . P.newTracing . P.p2pOn . P.budgetBlockMemoryOneAndAHalf . P.overlay calibrate15x
+  , loopVolt   & P.name "plutus-volt-mem2-nomadperf"                      . P.dreps  10000 . P.newTracing . P.p2pOn . P.budgetBlockMemoryDouble      . P.overlay calibrate2x
   ]
   ----------
   -- Voting.
