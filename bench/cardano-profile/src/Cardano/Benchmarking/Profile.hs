@@ -26,7 +26,7 @@ import qualified Paths_cardano_profile as Paths
 --------------------------------------------------------------------------------
 
 realize :: HasCallStack => Types.Profile -> Types.Profile
-realize profile =
+realize =
     -- Compose the profile in the same order as the `jq` profile machinery!
     -- 1) `addUnusedDefaults`: Adds all properties that are the same for all
     --                         profiles. This are all candidates to be removed
@@ -53,7 +53,6 @@ realize profile =
   . overlay
   . shelleyAlonzoConway
   . addUnusedDefaults
-  $ profile
 
 {-
 
