@@ -167,12 +167,13 @@ in
       SRC="${genCfgs}"
       DST="opt/cardano"
 
-      # Make the directory structure with the iohk-nix configs mutable.
-      # This allows the option to create merged entrypoint configs in the network directory.
-      find "$SRC" -mindepth 1 -type d -exec bash -c "DIR=\"{}\"; mkdir -v -p \"$DST/\''${DIR#${genCfgs}/}\"" \;
-
-      # Keep all base iohk-nix config files immutable via symlinks to nix store.
-      find "$SRC" -mindepth 1 -type f -exec bash -c "FILE=\"{}\"; TGT=\"$DST/\''${FILE#${genCfgs}/}\"; ln -sv \"\$FILE\" \"\$TGT\"" \;
+      # Make the directory structure with the iohk-nix configs mutable. This
+      # enables creation of merge mode entrypoint configs in the respective
+      # NETWORK directory. Keep config files as read-only copies from the nix
+      # store instead of direct symlinks.  This avoids volume mount failures
+      # caused by broken symlinks as seen from the host.
+      cp -R "$SRC"/* "$DST"
+      find "$DST" -mindepth 1 -type d -exec bash -c "chmod 0755 {}" \;
 
       # Preserve legacy oci config and topo path for backwards compatibility.
       pushd opt/cardano/config

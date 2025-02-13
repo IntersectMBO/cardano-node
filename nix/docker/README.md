@@ -178,6 +178,36 @@ cardano-node service, rsync'd known good state from a remote, [Mithril
 snapshot](https://mithril.network/doc/) or other out-of-band methods.
 
 
+## Host Mount Image Network Configs
+To host mount and explore the image configuration files found under
+`/opt/cardano` a new named docker volume can be created.  Docker will
+initialize the new named volume with the contents of the container.
+
+An example would be:
+```
+docker run \
+  -v opt-cardano:/opt/cardano \
+  ghcr.io/intersectmbo/cardano-node:dev
+```
+
+The above command will create a new named volume of `opt-cardano` with the
+container contents of `/opt/cardano` and print some image mode information
+before exiting.  If there is already a named volume of `opt-cardano`, simply
+select a different name, or allow a random name assignment by dropping the
+`$NAME:` suffix of the `-v` option.
+
+Exploring the configuration contents from the host after creating the named
+volume can be done with commands such as:
+```
+docker volume ls
+
+# Use the "Mountpoint" value in this command below
+docker volume inspect opt-cardano
+
+sudo tree /var/lib/docker/volumes/opt-cardano/_data
+```
+
+
 # Cardano Submit API Image Operation
 ## Scripts Mode
 To launch cardano-submit-api with pre-loaded configuration, "scripts" mode,
