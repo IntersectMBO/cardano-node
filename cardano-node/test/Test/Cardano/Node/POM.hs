@@ -14,6 +14,7 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
+import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
@@ -32,7 +33,6 @@ import           Data.Time.Clock (secondsToDiffTime)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
-import Ouroboros.Cardano.Diffusion.Configuration (defaultMinBigLedgerPeersForTrustedState)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -201,7 +201,7 @@ testPartialCliConfig =
     , pncSyncTargetOfKnownBigLedgerPeers = mempty
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
-    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
@@ -255,7 +255,7 @@ eExpectedConfig = do
     , ncSyncTargetOfKnownBigLedgerPeers = 100
     , ncSyncTargetOfEstablishedBigLedgerPeers = 50
     , ncSyncTargetOfActiveBigLedgerPeers = 30
-    , ncMinBigLedgerPeersForTrustedState = defaultMinBigLedgerPeersForTrustedState
+    , ncMinBigLedgerPeersForTrustedState = defaultNumberOfBigLedgerPeers
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode

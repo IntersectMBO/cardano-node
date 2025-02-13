@@ -125,7 +125,6 @@ import           System.Win32.File
 #endif
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
-import           Ouroboros.Cardano.Diffusion.Handlers (sigUSR1Handler)
 import qualified Ouroboros.Cardano.Network.ArgumentsExtra as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionActions as Cardano.PeerSelection
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano.PeerSelection
@@ -149,7 +148,8 @@ import Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers (TracePublic
 import Ouroboros.Network.BlockFetch (FetchMode)
 import qualified Ouroboros.Cardano.PeerSelection.PeerSelectionActions as Cardano
 import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
-import qualified Ouroboros.Cardano.Diffusion.Configuration as Configuration
+import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
+import Ouroboros.Cardano.Network.Diffusion.Handlers (sigUSR1Handler)
 
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -974,36 +974,31 @@ mkP2PArguments NodeConfiguration {
                (Diffusion.P2PDecision tracer)
                (Diffusion.P2PDecision getFetchMode)
                (Diffusion.P2PDecision ledgerPeersConsensusInterface) =
-    Diffusion.P2PArguments Common.ArgumentsExtra
-      { Common.daReadLocalRootPeers
-      , Common.daReadPublicRootPeers
-      , Common.daReadUseLedgerPeers
-      , Common.daReadLedgerPeerSnapshot
-      , Common.daPeerSelectionTargets  = peerSelectionTargets
-      , Common.daProtocolIdleTimeout   = ncProtocolIdleTimeout
-      , Common.daTimeWaitTimeout       = ncTimeWaitTimeout
-      , Common.daDeadlineChurnInterval = Configuration.defaultDeadlineChurnInterval
-      , Common.daBulkChurnInterval     = Configuration.defaultBulkChurnInterval
-      , Common.daEmptyExtraState       = CPST.empty ncConsensusMode ncMinBigLedgerPeersForTrustedState
-      , Common.daEmptyExtraCounters    = CPSV.empty
-      , Common.daExtraPeersAPI         = Cardano.PublicRoots.cardanoPublicRootPeersAPI
-      , Common.daPeerChurnGovernor     = peerChurnGovernor
-      , Common.daExtraChurnArgs        = cardanoPeerChurnArgs
-      , Common.daOwnPeerSharing        = ncPeerSharing
-      , Common.daPeerSelectionStateToExtraCounters = CPSV.cardanoPeerSelectionStatetoCounters
-      , Common.daPeerSelectionGovernorArgs         = Cardano.cardanoPeerSelectionGovernorArgs
-                                                       extraActions
-                                                       daReadUseLedgerPeers
-                                                       ncPeerSharing
-                                                       (Cardano.updateOutboundConnectionsState
-                                                         ledgerPeersConsensusInterface)
-      , Common.daRequestPublicRootPeers            = Just $ Cardano.requestPublicRootPeers
+    Diffusion.P2PArguments P2P.ArgumentsExtra
+      { P2P.daReadLocalRootPeers
+      , P2P.daReadPublicRootPeers
+      , P2P.daReadUseLedgerPeers
+      , P2P.daReadLedgerPeerSnapshot
+      , P2P.daPeerSelectionTargets  = peerSelectionTargets
+      , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
+      , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
+      , P2P.daDeadlineChurnInterval = Configuration.defaultDeadlineChurnInterval
+      , P2P.daBulkChurnInterval     = Configuration.defaultBulkChurnInterval
+      , P2P.daEmptyExtraState       = CPST.empty ncConsensusMode ncMinBigLedgerPeersForTrustedState
+      , P2P.daEmptyExtraCounters    = CPSV.empty
+      , P2P.daExtraPeersAPI         = Cardano.PublicRoots.cardanoPublicRootPeersAPI
+      , P2P.daPeerChurnGovernor     = peerChurnGovernor
+      , P2P.daExtraChurnArgs        = cardanoPeerChurnArgs
+      , P2P.daOwnPeerSharing        = ncPeerSharing
+      , P2P.daPeerSelectionStateToExtraCounters = CPSV.cardanoPeerSelectionStatetoCounters
+      , P2P.daPeerSelectionGovernorArgs         = Cardano.cardanoPeerSelectionGovernorArgs extraActions
+      , P2P.daRequestPublicRootPeers            = Just $ Cardano.requestPublicRootPeers
                                                        tracer
                                                        daReadUseBootstrapPeers
                                                        (Cardano.getLedgerStateJudgement
                                                          ledgerPeersConsensusInterface)
                                                        daReadPublicRootPeers
-      , Common.daToExtraPeers =
+      , P2P.daToExtraPeers =
           \publicRoots -> Cardano.PublicRoots.ExtraPeers {
               Cardano.PublicRoots.getPublicConfigPeers = publicRoots,
               Cardano.PublicRoots.getBootstrapPeers = Set.empty
@@ -1020,7 +1015,7 @@ mkP2PArguments NodeConfiguration {
       targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers
     }
 
-    genesisSelectionTargets = Configuration.defaultSyncTargets {
+    genesisSelectionTargets = Cardano.defaultSyncTargets {
       targetNumberOfActivePeers               = ncSyncTargetOfActivePeers,
       targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers,
       targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,

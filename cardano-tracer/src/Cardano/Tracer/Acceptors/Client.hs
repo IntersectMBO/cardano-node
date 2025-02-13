@@ -80,6 +80,7 @@ runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) 
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = protocol
+         , miniProtocolStart  = Mux.StartEagerly
          }
       | (protocol, num) <- protocolsWithNums
       ]
@@ -109,7 +110,7 @@ doConnectToForwarder snocket address netMagic timeLimits app = do
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData $ NetworkMagic netMagic)
-       (\_ -> app)
+       (const app)
     )
     Nothing
     address

@@ -62,6 +62,7 @@ import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.Common as Common
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
+import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
@@ -659,40 +660,40 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
       ["Net", "Peers", "Ledger"]
     configureTracers configReflection trConfig [dtLedgerPeersTr]
 
-    pure $ Diffusion.P2PTracers Common.TracersExtra
-             { Common.dtTraceLocalRootPeersTracer = Tracer $
+    pure $ Diffusion.P2PTracers P2P.TracersExtra
+             { P2P.dtTraceLocalRootPeersTracer = Tracer $
                  traceWith localRootPeersTr
-             , Common.dtTracePublicRootPeersTracer = Tracer $
+             , P2P.dtTracePublicRootPeersTracer = Tracer $
                  traceWith publicRootPeersTr
-             , Common.dtTracePeerSelectionTracer = Tracer $
+             , P2P.dtTracePeerSelectionTracer = Tracer $
                  traceWith peerSelectionTr
-             , Common.dtDebugPeerSelectionInitiatorTracer = Tracer $
+             , P2P.dtDebugPeerSelectionInitiatorTracer = Tracer $
                  traceWith debugPeerSelectionTr
-             , Common.dtDebugPeerSelectionInitiatorResponderTracer = Tracer $
+             , P2P.dtDebugPeerSelectionInitiatorResponderTracer = Tracer $
                  traceWith debugPeerSelectionResponderTr
-             , Common.dtTracePeerSelectionCounters = Tracer $
+             , P2P.dtTracePeerSelectionCounters = Tracer $
                  traceWith peerSelectionCountersTr
-             , Common.dtTraceChurnCounters = Tracer $
+             , P2P.dtTraceChurnCounters = Tracer $
                  traceWith churnCountersTr
-             , Common.dtPeerSelectionActionsTracer = Tracer $
+             , P2P.dtPeerSelectionActionsTracer = Tracer $
                  traceWith peerSelectionActionsTr
-             , Common.dtConnectionManagerTracer = Tracer $
+             , P2P.dtConnectionManagerTracer = Tracer $
                  traceWith connectionManagerTr
-             , Common.dtConnectionManagerTransitionTracer = Tracer $
+             , P2P.dtConnectionManagerTransitionTracer = Tracer $
                  traceWith connectionManagerTransitionsTr
-             , Common.dtServerTracer = Tracer $
+             , P2P.dtServerTracer = Tracer $
                  traceWith serverTr
-             , Common.dtInboundGovernorTracer = Tracer $
+             , P2P.dtInboundGovernorTracer = Tracer $
                  traceWith inboundGovernorTr
-             , Common.dtLocalInboundGovernorTracer = Tracer $
+             , P2P.dtLocalInboundGovernorTracer = Tracer $
                  traceWith localInboundGovernorTr
-             , Common.dtInboundGovernorTransitionTracer = Tracer $
+             , P2P.dtInboundGovernorTransitionTracer = Tracer $
                  traceWith inboundGovernorTransitionsTr
-             , Common.dtLocalConnectionManagerTracer =  Tracer $
+             , P2P.dtLocalConnectionManagerTracer =  Tracer $
                  traceWith localConnectionManagerTr
-             , Common.dtLocalServerTracer = Tracer $
+             , P2P.dtLocalServerTracer = Tracer $
                  traceWith localServerTr
-             , Common.dtTraceLedgerPeersTracer = Tracer $
+             , P2P.dtTraceLedgerPeersTracer = Tracer $
                  traceWith dtLedgerPeersTr
              }
 

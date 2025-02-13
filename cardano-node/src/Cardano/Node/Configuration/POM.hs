@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
@@ -34,12 +34,17 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
+import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers,
+                   defaultSyncTargets)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..), pattern DoDiskSnapshotChecksum)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..), Flag (..))
+import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..),
+                   pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
+                   defaultGenesisConfigFlags, mkGenesisConfig)
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag (..),
+                   NumOfDiskSnapshots (..), SnapshotInterval (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 
 import           Control.Monad (when)
@@ -58,8 +63,6 @@ import           System.FilePath (takeDirectory, (</>))
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
-import Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags, defaultGenesisConfigFlags, mkGenesisConfig)
-import Ouroboros.Cardano.Diffusion.Configuration (defaultNumberOfBigLedgerPeers, defaultSyncTargets)
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
