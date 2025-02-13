@@ -192,7 +192,7 @@ lookupOverlay = do
   return $ case maybeOverlay of
     Nothing -> Nothing
     (Just str) -> case Aeson.decode (BSL8.pack str) of
-                    (Just (Aeson.Object keyMap)) -> (Just keyMap)
+                    (Just (Aeson.Object keyMap)) -> Just keyMap
                     _ -> error ""
 
 getOpts :: IO Cli
