@@ -64,3 +64,12 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-network.git
+  tag: 4abc9fa553dc696301d7bbfc6d956336f2f29198
+  subdir:
+    ouroboros-network
+    ouroboros-network-framework
+    network-mux
+  --sha256: sha256-KlIGP4XFuDigbB0I0oPhseaWRCnrA8x/elNMaCjqhx4=
