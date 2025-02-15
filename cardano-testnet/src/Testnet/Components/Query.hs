@@ -39,21 +39,29 @@ module Testnet.Components.Query
   , getGovActionLifetime
   , getKeyDeposit
   , getDelegationState
+  , getTxIx
   ) where
 
 import           Cardano.Api as Api
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole),
-                   StandardCrypto)
+                   StandardCrypto, extractHash)
+import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
+import           Cardano.Crypto.Hash (hashToStringAsHex)
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
+import           Cardano.Ledger.Core (valueTxOutL)
+import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
+                   utxosUtxoL)
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UMap as L
 import qualified Cardano.Ledger.UTxO as L
+
+import           Prelude
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
@@ -62,9 +70,9 @@ import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (bimap)
 import           Data.IORef
 import           Data.List (sortOn)
+import qualified Data.Map as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Ord (Down (..))
 import           Data.Text (Text)
@@ -78,10 +86,10 @@ import           Lens.Micro (Lens', to, (^.))
 import           Testnet.Property.Assert
 import           Testnet.Types
 
+import           Hedgehog
 import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion)
 import qualified Hedgehog.Extras as H
-import           Hedgehog.Internal.Property (MonadTest)
 
 -- | Block and wait for the desired epoch.
 waitUntilEpoch
@@ -608,3 +616,24 @@ getDelegationState epochStateView = do
 
   pure $ L.toStakeCredentials pools
 
+-- | Returns the transaction index of a transaction with a given amount and ID.
+getTxIx :: forall m era. (HasCallStack, MonadTest m) => ShelleyBasedEra era -> String -> L.Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
+getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
+    Refl <- H.leftFail $ assertErasEqual sbe sbe'
+    shelleyBasedEraConstraints
+        sbe'
+        ( return
+            $ Map.foldlWithKey
+                ( \acc (L.TxIn (L.TxId thisTxId) (L.TxIx thisTxIx)) txOut ->
+                    case acc of
+                        Nothing
+                            | hashToStringAsHex (extractHash thisTxId) == txId
+                                && valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just amount ->
+                                Just $ fromIntegral thisTxIx
+                            | otherwise -> Nothing
+                        x -> x
+                )
+                Nothing
+            $ L.unUTxO
+            $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosUtxoL
+        )
