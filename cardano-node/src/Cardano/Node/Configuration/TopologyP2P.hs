@@ -29,7 +29,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.ConsensusMode
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))

@@ -59,8 +59,6 @@ import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
-import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
-import           Cardano.Tracing.Tracers
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),

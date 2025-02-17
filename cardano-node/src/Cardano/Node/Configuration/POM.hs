@@ -25,7 +25,7 @@ module Cardano.Node.Configuration.POM
 where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
-import           Cardano.Logging.Types
+import           Cardano.Logging
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))

@@ -17,6 +17,7 @@ import           Cardano.Logging
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.HasIssuer
 import           Cardano.Node.Tracing.Render
 import           Cardano.Prelude (maximumDef)
 import           Ouroboros.Consensus.Block
@@ -42,7 +43,7 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 
-import           Data.Aeson (Value (String), object, toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (String), object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
 import           Data.Int (Int64)
 import           Data.Text (Text)
@@ -82,6 +83,7 @@ instance (  LogFormatting (Header blk)
           , ConvertRawHash (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
+          , ToJSON EnclosingTimed
           , HasIssuer blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
   forHuman ChainDB.TraceLastShutdownUnclean        =
@@ -1053,7 +1055,7 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 -- -- TraceInitChainSelEvent
 -- --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, ConvertRawHash (Header blk), LedgerSupportsProtocol blk)
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHumanOrMachine v
     forHuman ChainDB.InitialChainSelected{} =
@@ -1518,7 +1520,8 @@ instance MetaTrace (ChainDB.UnknownRange blk) where
 -- --------------------------------------------------------------------------------
 
 instance ( StandardHash blk
-         , ConvertRawHash blk)
+         , ConvertRawHash blk
+         , ToJSON EnclosingTimed)
          => LogFormatting (LedgerDB.TraceEvent blk) where
 
   forMachine dtals (LedgerDB.LedgerDBSnapshotEvent ev) = forMachine dtals ev
@@ -1581,7 +1584,8 @@ instance MetaTrace (LedgerDB.TraceEvent blk) where
          (allNamespaces :: [Namespace (LedgerDB.FlavorImplSpecificTrace)])
 
 instance ( StandardHash blk
-         , ConvertRawHash blk)
+         , ConvertRawHash blk
+         , ToJSON EnclosingTimed)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
   forHuman (LedgerDB.TookSnapshot snap pt RisingEdge) =
     Text.unwords [ "Taking ledger snapshot"
@@ -2714,8 +2718,8 @@ data ChainInformation = ChainInformation
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
-  => HasIssuer blk
   => ConvertRawHash blk
+  => HasIssuer blk
   => ChainDB.SelectionChangedInfo blk
   -> AF.AnchoredFragment (Header blk)
   -> AF.AnchoredFragment (Header blk) -- ^ New fragment.

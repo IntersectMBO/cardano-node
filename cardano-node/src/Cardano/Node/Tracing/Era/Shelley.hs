@@ -45,7 +45,8 @@ import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Logging
 import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
-                   renderScriptIntegrityHash)
+                   renderScriptIntegrityHash, renderTxId)
+import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
@@ -75,10 +76,23 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
+import           Data.Text (Text, take)
 import qualified Data.Text.Encoding as Text
 
 {- HLINT ignore "Use :" -}
+
+instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era))) where
+  toJSON = String . Data.Text.take 8 . renderTxId
+
+
+instance ToJSON ShelleyNodeToNodeVersion where
+  toJSON ShelleyNodeToNodeVersion1 = String "ShelleyNodeToNodeVersion1"
+
+instance ToJSON ShelleyNodeToClientVersion where
+  toJSON ShelleyNodeToClientVersion8 = String "ShelleyNodeToClientVersion8"
+  toJSON ShelleyNodeToClientVersion9 = String "ShelleyNodeToClientVersion9"
+  toJSON ShelleyNodeToClientVersion10 = String "ShelleyNodeToClientVersion10"
+  toJSON ShelleyNodeToClientVersion11 = String "ShelleyNodeToClientVersion11"
 
 --
 -- | instances of @LogFormatting@

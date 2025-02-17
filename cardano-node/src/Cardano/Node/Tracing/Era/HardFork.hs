@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -5,10 +7,13 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -28,13 +33,19 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
                    OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraSelectView (..),
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
+                   (EraNodeToClientVersion (..), HardForkNodeToClientVersion (..),
+                   HardForkNodeToNodeVersion (..), HardForkSpecificNodeToClientVersion (..),
+                   HardForkSpecificNodeToNodeVersion (..))
 import           Ouroboros.Consensus.HardFork.History
-                   (EraParams (eraEpochSize, eraSafeZone, eraSlotLength))
+                   (EraParams (eraEpochSize, eraSafeZone, eraSlotLength), SafeZone)
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (EraParams))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion (..),
+                   BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
@@ -43,6 +54,78 @@ import           Data.Aeson
 import           Data.Proxy (Proxy (..))
 import           Data.SOP (All, Compose, K (K))
 import           Data.SOP.Strict
+
+
+
+instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBlock xs))) where
+    toJSON =
+          hcollapse
+        . hcmap (Proxy @(ToJSON `Compose` WrapGenTxId)) (K . toJSON)
+        . getOneEraGenTxId
+        . getHardForkGenTxId
+
+instance ToJSON (TxId (GenTx blk)) => ToJSON (WrapGenTxId blk) where
+    toJSON = toJSON . unwrapGenTxId
+
+deriving instance ToJSON SafeZone
+
+
+
+--
+-- Instances for HardForkNodeToClientVersion
+--
+
+instance ( ToJSON (BlockNodeToClientVersion x)
+         , All (ToJSON `Compose` EraNodeToClientVersion) (x ': xs)
+         ) => ToJSON (HardForkNodeToClientVersion (x ': xs)) where
+  toJSON (HardForkNodeToClientDisabled blockNodeToClientVersion) =
+      object [ "tag"      .= String "HardForkNodeToClientDisabled"
+             , "contents" .= toJSON blockNodeToClientVersion
+             ]
+  toJSON (HardForkNodeToClientEnabled hfNodeToClientVersion eraNodeToClientVersions) =
+      object [ "tag"                                 .= String "HardForkNodeToClientEnabled"
+             , "hardForkSpecificNodeToClientVersion" .= toJSON hfNodeToClientVersion
+             , "eraNodeToClientVersions"             .= hcollapse eraNodeToClientVersionsAsJSON
+             ]
+    where
+      eraNodeToClientVersionsAsJSON :: NP (K Value) (x ': xs)
+      eraNodeToClientVersionsAsJSON = hcmap (Proxy @(ToJSON `Compose` EraNodeToClientVersion))
+                                            (K . toJSON)
+                                            eraNodeToClientVersions
+
+instance ToJSON HardForkSpecificNodeToClientVersion where
+    toJSON HardForkSpecificNodeToClientVersion3 = String "HardForkSpecificNodeToClientVersion3"
+
+instance (ToJSON (BlockNodeToClientVersion blk)) => ToJSON (EraNodeToClientVersion blk) where
+    toJSON EraNodeToClientDisabled = String "EraNodeToClientDisabled"
+    toJSON (EraNodeToClientEnabled blockNodeToClientVersion) = toJSON blockNodeToClientVersion
+
+--
+-- Instances for HardForkNodeToNodeVersion
+--
+instance ( ToJSON (BlockNodeToNodeVersion x)
+         , All (ToJSON `Compose` WrapNodeToNodeVersion) (x ': xs)
+         ) => ToJSON (HardForkNodeToNodeVersion (x ': xs)) where
+    toJSON (HardForkNodeToNodeDisabled blockNodeToNodeVersion) =
+        object [ "tag" .= String "HardForkNodeToNodeDisabled"
+               , "contents" .= toJSON blockNodeToNodeVersion
+               ]
+    toJSON (HardForkNodeToNodeEnabled hfNodeToNodeVersion eraNodeToNodeVersions) =
+        object [ "tag"                               .= String "HardForkNodeToNodeEnabled"
+               , "hardForkSpecificNodeToNodeVersion" .= toJSON hfNodeToNodeVersion
+               , "eraNodeToNodeVersions"             .= hcollapse eraNodeToNodeVersionsAsJSON
+               ]
+      where
+        eraNodeToNodeVersionsAsJSON :: NP (K Value) (x ': xs)
+        eraNodeToNodeVersionsAsJSON = hcmap (Proxy @(ToJSON `Compose` WrapNodeToNodeVersion))
+                                            (K . toJSON)
+                                            eraNodeToNodeVersions
+
+instance ToJSON HardForkSpecificNodeToNodeVersion where
+    toJSON HardForkSpecificNodeToNodeVersion1 = "HardForkSpecificNodeToNodeVersion1"
+
+instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion blk) where
+    toJSON (WrapNodeToNodeVersion blockNodeToNodeVersion) = toJSON blockNodeToNodeVersion
 
 
 --

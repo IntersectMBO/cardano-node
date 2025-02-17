@@ -23,7 +23,6 @@ import           Cardano.Logging
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
-import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))

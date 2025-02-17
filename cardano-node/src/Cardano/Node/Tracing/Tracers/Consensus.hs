@@ -32,7 +32,6 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
-import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block
@@ -165,7 +164,7 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
 -- ChainSyncClient Tracer
 --------------------------------------------------------------------------------
 
-instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, LedgerSupportsProtocol blk, ConvertRawHash (Header blk))
       => LogFormatting (TraceChainSyncClientEvent blk) where
   forHuman = \case
     TraceDownloadedHeader pt ->
@@ -693,14 +692,19 @@ instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   allNamespaces =
     [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
 
-instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk)
-      => LogFormatting (TraceDecisionEvent peer (Header blk)) where
+instance (
+     Show peer
+  ,  ToJSON peer
+  ,  ConvertRawHash (Header blk)
+  ,  HasHeader blk
+  ,  ToJSON (TraceLabelPeer peer (FetchDecision [Point (Header blk)])))
+  => LogFormatting (TraceDecisionEvent peer (Header blk)) where
   forHuman = Text.pack . show
 
   forMachine dtal (PeersFetch xs) =
     mconcat [ "kind" .= String "PeerFetch"
             , "decisions" .= if dtal >= DMaximum
-                               then toJSON (Verbose <$> xs)
+                               then toJSON xs  -- TODO YUP (P.Verbose <$> xs)
                                else toJSON xs
             ]
   forMachine _dtal (PeerStarvedUs peer) =
@@ -1273,6 +1277,7 @@ instance
   , ToJSON (GenTxId blk)
   , LedgerSupportsMempool blk
   , ConvertRawHash blk
+  , ToJSON EnclosingTimed
   ) => LogFormatting (TraceEventMempool blk) where
   forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mconcat

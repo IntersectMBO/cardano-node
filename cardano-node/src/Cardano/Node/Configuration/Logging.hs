@@ -91,8 +91,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Cardano.Tracing.Config (TraceOptions (..))
-import           Cardano.Tracing.OrphanInstances.Common ()
 import           Paths_cardano_node (version)
 
 --------------------------------
