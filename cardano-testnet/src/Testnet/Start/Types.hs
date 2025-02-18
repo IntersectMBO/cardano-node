@@ -19,7 +19,6 @@ module Testnet.Start.Types
   , eraToString
 
   , TestnetNodeOptions(..)
-  , testnetNodeCfgFile
   , testnetNodeExtraCliArgs
   , isSpoNodeOptions
   , isRelayNodeOptions
@@ -128,8 +127,8 @@ instance Default GenesisOptions where
 
 -- | Specify a SPO (Shelley era onwards only) or a Relay node
 data TestnetNodeOptions
-  = SpoNodeOptions (Maybe NodeConfigurationYaml) [String]
-  | RelayNodeOptions (Maybe NodeConfigurationYaml) [String]
+  = SpoNodeOptions [String]
+  | RelayNodeOptions [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   deriving (Eq, Show)
@@ -142,13 +141,8 @@ data UserNodeConfig =
 
 -- | Get extra CLI arguments passed to the node executable
 testnetNodeExtraCliArgs :: TestnetNodeOptions -> [String]
-testnetNodeExtraCliArgs (SpoNodeOptions _ args) = args
-testnetNodeExtraCliArgs (RelayNodeOptions _ args) = args
-
--- | Get node-specific configuration file path
-testnetNodeCfgFile :: TestnetNodeOptions -> Maybe NodeConfigurationYaml
-testnetNodeCfgFile (SpoNodeOptions mFp _) = mFp
-testnetNodeCfgFile (RelayNodeOptions mFp _) = mFp
+testnetNodeExtraCliArgs (SpoNodeOptions args) = args
+testnetNodeExtraCliArgs (RelayNodeOptions args) = args
 
 isSpoNodeOptions :: TestnetNodeOptions -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True
@@ -160,9 +154,9 @@ isRelayNodeOptions RelayNodeOptions{} = True
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =
-  [ SpoNodeOptions Nothing []
-  , RelayNodeOptions Nothing []
-  , RelayNodeOptions Nothing []
+  [ SpoNodeOptions []
+  , RelayNodeOptions []
+  , RelayNodeOptions []
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
