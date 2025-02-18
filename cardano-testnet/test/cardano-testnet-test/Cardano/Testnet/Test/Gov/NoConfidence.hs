@@ -114,9 +114,9 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
     } <- cardanoTestnet
            fastTestnetOptions
            genesisOptions
-           conf
-           NoUserProvidedData NoUserProvidedData NoUserProvidedData
+           NoUserProvidedData NoUserProvidedData
            (UserProvidedData conwayGenesisWithCommittee)
+           conf
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
