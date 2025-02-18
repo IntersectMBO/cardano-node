@@ -316,16 +316,15 @@ cardanoTestnet
     H.note_ $ "Node name: " <> nodeName
     let (mKeys, spoNodeCliArgs) =
           case nodeOptions of
-            Nothing -> (Nothing, [])
             Just RelayNodeOptions{} -> (Nothing, [])
-            Just SpoNodeOptions{} -> do
+            _ -> do
               let keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
                   -- provide keys' locations for SPO nodes
                   cliArgs =
                     [ "--shelley-kes-key", nodePoolKeysDir </> "kes.skey"
                     , "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
-                    , "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
-                    , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
+                    -- , "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
+                    -- , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
                     , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
                     ]
               (Just keys, cliArgs)
