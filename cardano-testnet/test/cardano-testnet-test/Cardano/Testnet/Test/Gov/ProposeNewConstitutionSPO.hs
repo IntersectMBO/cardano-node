@@ -58,10 +58,10 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNodes =
-          [ SpoNodeOptions Nothing []
-          , SpoNodeOptions Nothing []
-          , SpoNodeOptions Nothing []
-          ]
+          AutomaticNodeOptions [ SpoNodeOptions []
+                               , SpoNodeOptions []
+                               , SpoNodeOptions []
+                               ]
         }
       shelleyOptions = def { genesisEpochLength = 100 }
 
