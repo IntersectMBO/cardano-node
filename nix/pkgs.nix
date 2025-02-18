@@ -113,7 +113,7 @@ in with final;
   submitApiDockerImage =
     let
       defaultConfig = {
-        socketPath = "/node-ipc/node.socket";
+        socketPath = "/ipc/node.socket";
         listenAddress = "0.0.0.0";
       };
     in
