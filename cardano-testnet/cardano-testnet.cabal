@@ -90,6 +90,7 @@ library
                       , transformers
                       , transformers-except
                       , vector
+                      , yaml
 
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
