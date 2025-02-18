@@ -1,4 +1,4 @@
-Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
+Usage: cardano-testnet cardano [--num-pool-nodes COUNT | --node-config FILEPATH]
   [ --shelley-era
   | --allegra-era
   | --mary-era
@@ -22,6 +22,8 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
 Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
                            configuration for all nodes. (default: 1)
+  --node-config FILEPATH   Path to the node's configuration file. Generated if
+                           omitted.
   --shelley-era            Specify the Shelley era - DEPRECATED - will be
                            removed in the future
   --allegra-era            Specify the Allegra era - DEPRECATED - will be
