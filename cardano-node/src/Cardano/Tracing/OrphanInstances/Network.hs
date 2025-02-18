@@ -394,6 +394,7 @@ instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
   getSeverityAnnotation (Mux.WithBearer _ ev) = case ev of
     Mux.TraceRecvHeaderStart -> Debug
     Mux.TraceRecvHeaderEnd {} -> Debug
+    Mux.TraceRecvRaw {} -> Debug
     Mux.TraceRecvStart {} -> Debug
     Mux.TraceRecvEnd {} -> Debug
     Mux.TraceSendStart {} -> Debug
