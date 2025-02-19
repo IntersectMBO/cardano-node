@@ -151,6 +151,7 @@ data TracerConfig = TracerConfig
   , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
   , metricsHelp    :: !(Maybe FileOrMap)            -- ^ JSON file or object containing a key-value map "metric name -> help text" for Prometheus "# HELP " annotations
   , resourceFreq   :: !(Maybe Int)                  -- ^ Frequency (1/millisecond) for gathering resource data.
+  , tracerConfigDebug :: !(Maybe Bool)              -- ^ Optional debug flag.
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
