@@ -33,10 +33,10 @@ TXID2=$(cardano-cli transaction txid --tx-file tx3.tx)
 
 cardano-cli governance create-update-proposal \
             --out-file update-proposal-alonzo \
-            --epoch ${EPOCH} \
+            --epoch "${EPOCH}" \
             --genesis-verification-key-file shelley/genesis-keys/genesis1.vkey \
             --genesis-verification-key-file shelley/genesis-keys/genesis2.vkey \
-            --protocol-major-version ${VERSION} \
+            --protocol-major-version "${VERSION}" \
             --protocol-minor-version 0
 
 # Create a transaction body containing the update proposal.
@@ -44,12 +44,12 @@ cardano-cli governance create-update-proposal \
 cardano-cli transaction build-raw \
             --mary-era \
             --fee 186181 \
-            --tx-in $TXID2#0\
-            --tx-in $TXID2#1\
-            --tx-in $TXID2#2\
-            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
-            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
-            --tx-out $(cat addresses/user1.addr)+9017396137 \
+            --tx-in "$TXID2#0" \
+            --tx-in "$TXID2#1" \
+            --tx-in "$TXID2#2" \
+            --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+9017396137" \
             --update-proposal-file update-proposal-alonzo \
             --out-file tx4.txbody
 

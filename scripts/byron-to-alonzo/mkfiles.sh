@@ -6,7 +6,6 @@ set -e
 set -u
 set -o pipefail
 
-
 # This script sets up a cluster that starts out in Byron, and can transition to Mary.
 #
 # The script generates all the files needed for the setup, and prints commands
@@ -51,8 +50,8 @@ POOL_NODES="node-pool1"
 ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 
 INIT_SUPPLY=10020000000
-FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
-FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} - 1000000))
+FUNDS_PER_GENESIS_ADDRESS=$((INIT_SUPPLY / NUM_BFT_NODES))
+FUNDS_PER_BYRON_ADDRESS=$((FUNDS_PER_GENESIS_ADDRESS - 1000000))
 # We need to allow for a fee to transfer the funds out of the genesis.
 # We don't care too much, 1 ada is more than enough.
 
@@ -77,8 +76,9 @@ sprocket() {
   if [ "$UNAME" == "Windows_NT" ]; then
     # Named pipes names on Windows must have the structure: "\\.\pipe\PipeName"
     # See https://docs.microsoft.com/en-us/windows/win32/ipc/pipe-names
-    echo -n '\\.\pipe\'
-    echo "$1" | sed 's|/|\\|g'
+    # shellcheck disable=SC1003
+    printf "%s" '\\.\pipe\'
+    echo "${1//\//\\}"
   else
     echo "$1"
   fi
@@ -222,8 +222,8 @@ pwd
 
 # Symlink the BFT operator keys from the genesis delegates, for uniformity
 for N in ${BFT_NODES_N}; do
-  ln -s "../../byron/delegate-keys.00$((${N} - 1)).key"     "${ROOT}/node-bft${N}/byron/delegate.key"
-  ln -s "../../byron/delegation-cert.00$((${N} - 1)).json"  "${ROOT}/node-bft${N}/byron/delegate.cert"
+  ln -s "../../byron/delegate-keys.00$((N - 1)).key"     "${ROOT}/node-bft${N}/byron/delegate.key"
+  ln -s "../../byron/delegation-cert.00$((N - 1)).json"  "${ROOT}/node-bft${N}/byron/delegate.cert"
 done
 
 # Create keys, addresses and transactions to withdraw the initial UTxO into
@@ -231,23 +231,23 @@ done
 for N in ${BFT_NODES_N}; do
 
   cardano-cli byron key keygen \
-    --secret "${ROOT}/byron/payment-keys.00$((${N} - 1)).key"
+    --secret "${ROOT}/byron/payment-keys.00$((N - 1)).key"
 
   cardano-cli byron key signing-key-address \
     --testnet-magic ${NETWORK_MAGIC} \
-    --secret "${ROOT}/byron/payment-keys.00$((${N} - 1)).key" > "${ROOT}/byron/address-00$((${N} - 1))"
+    --secret "${ROOT}/byron/payment-keys.00$((N - 1)).key" > "${ROOT}/byron/address-00$((N - 1))"
 
   cardano-cli byron key signing-key-address \
     --testnet-magic ${NETWORK_MAGIC} \
-    --secret "${ROOT}/byron/genesis-keys.00$((${N} - 1)).key" > "${ROOT}/byron/genesis-address-00$((${N} - 1))"
+    --secret "${ROOT}/byron/genesis-keys.00$((N - 1)).key" > "${ROOT}/byron/genesis-address-00$((N - 1))"
 
   cardano-cli byron transaction issue-genesis-utxo-expenditure \
     --genesis-json "${ROOT}/byron/genesis.json" \
     --testnet-magic ${NETWORK_MAGIC} \
-    --tx "${ROOT}/tx$((${N} - 1)).tx" \
-    --wallet-key "${ROOT}/byron/delegate-keys.00$((${N} - 1)).key" \
-    --rich-addr-from "$(head -n 1 "${ROOT}/byron/genesis-address-00$((${N} - 1))")" \
-    --txout "(\"$(head -n 1 "${ROOT}/byron/address-00$((${N} - 1))")\", $FUNDS_PER_BYRON_ADDRESS)"
+    --tx "${ROOT}/tx$((N - 1)).tx" \
+    --wallet-key "${ROOT}/byron/delegate-keys.00$((N - 1)).key" \
+    --rich-addr-from "$(head -n 1 "${ROOT}/byron/genesis-address-00$((N - 1))")" \
+    --txout "(\"$(head -n 1 "${ROOT}/byron/address-00$((N - 1))")\", $FUNDS_PER_BYRON_ADDRESS)"
 done
 
 # Update Proposal and votes
@@ -267,9 +267,9 @@ for N in ${BFT_NODES_N}; do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath "${ROOT}/update-proposal" \
                 --testnet-magic ${NETWORK_MAGIC} \
-                --signing-key "${ROOT}/byron/delegate-keys.00$((${N} - 1)).key" \
+                --signing-key "${ROOT}/byron/delegate-keys.00$((N - 1)).key" \
                 --vote-yes \
-                --output-filepath "${ROOT}/update-vote.00$((${N} - 1))"
+                --output-filepath "${ROOT}/update-vote.00$((N - 1))"
 done
 
 cardano-cli byron governance create-update-proposal \
@@ -288,9 +288,9 @@ for N in ${BFT_NODES_N}; do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath "${ROOT}/update-proposal-1" \
                 --testnet-magic ${NETWORK_MAGIC} \
-                --signing-key "${ROOT}/byron/delegate-keys.00$((${N} - 1)).key" \
+                --signing-key "${ROOT}/byron/delegate-keys.00$((N - 1)).key" \
                 --vote-yes \
-                --output-filepath "${ROOT}/update-vote-1.00$((${N} - 1))"
+                --output-filepath "${ROOT}/update-vote-1.00$((N - 1))"
 done
 
 echo "====================================================================="
@@ -320,7 +320,7 @@ cardano-cli genesis create \
     --gen-utxo-keys 1
 
 echo "What is in shelley"
-echo "$(ls ${ROOT}/shelley)"
+ls ${ROOT}/shelley
 
 cp "${ROOT}/shelley/genesis.json" "${ROOT}/shelley/copy-genesis.json"
 
@@ -360,22 +360,22 @@ cardano-cli address key-gen \
   --verification-key-file "${ROOT}/shelley/utxo-keys/utxo2.vkey" \
   --signing-key-file "${ROOT}/shelley/utxo-keys/utxo2.skey"
 
-cardano-cli stake-address key-gen \
+cardano-cli shelley stake-address key-gen \
   --verification-key-file "${ROOT}/shelley/utxo-keys/utxo2-stake.vkey" \
   --signing-key-file "${ROOT}/shelley/utxo-keys/utxo2-stake.skey"
 
 # Create a symlink to all the payment keys in utxo-keys directory
 mkdir -p "${ROOT}/utxo-keys"
 
-for x in $(find "${ROOT}/shelley/utxo-keys" -type f); do
-  if cat "$x" | jq -e 'select(
+find "${ROOT}/shelley/utxo-keys" -type f | while IFS= read -r FILE; do
+  if jq -e 'select(
       false
       or .type == "GenesisUTxOVerificationKey_ed25519"
       or .type == "GenesisUTxOSigningKey_ed25519"
       or .type == "PaymentSigningKeyShelley_ed25519"
       or .type == "PaymentVerificationKeyShelley_ed25519"
-      )' > /dev/null; then
-    ln -sf "../$x" "${ROOT}/utxo-keys/$(basename "$x")"
+      )' < "$FILE" > /dev/null; then
+    ln -sf "../$FILE" "${ROOT}/utxo-keys/$(basename "$FILE")"
   fi
 done
 
@@ -408,11 +408,11 @@ done
 # Symlink the BFT operator keys from the genesis delegates, for uniformity
 
 for N in ${BFT_NODES_N}; do
-  ln -s ../../shelley/delegate-keys/delegate${N}.skey "${ROOT}/node-bft${N}/shelley/operator.skey"
-  ln -s ../../shelley/delegate-keys/delegate${N}.vkey "${ROOT}/node-bft${N}/shelley/operator.vkey"
-  ln -s ../../shelley/delegate-keys/delegate${N}.counter "${ROOT}/node-bft${N}/shelley/operator.counter"
-  ln -s ../../shelley/delegate-keys/delegate${N}.vrf.vkey "${ROOT}/node-bft${N}/shelley/vrf.vkey"
-  ln -s ../../shelley/delegate-keys/delegate${N}.vrf.skey "${ROOT}/node-bft${N}/shelley/vrf.skey"
+  ln -s "../../shelley/delegate-keys/delegate${N}.skey" "${ROOT}/node-bft${N}/shelley/operator.skey"
+  ln -s "../../shelley/delegate-keys/delegate${N}.vkey" "${ROOT}/node-bft${N}/shelley/operator.vkey"
+  ln -s "../../shelley/delegate-keys/delegate${N}.counter" "${ROOT}/node-bft${N}/shelley/operator.counter"
+  ln -s "../../shelley/delegate-keys/delegate${N}.vrf.vkey" "${ROOT}/node-bft${N}/shelley/vrf.vkey"
+  ln -s "../../shelley/delegate-keys/delegate${N}.vrf.skey" "${ROOT}/node-bft${N}/shelley/vrf.skey"
 done
 
 
@@ -664,13 +664,15 @@ echo "EnableLogMetrics: False" >> "${ROOT}/configuration.yaml"
 echo "EnableLogging: True" >> "${ROOT}/configuration.yaml"
 
 if [ "$1" = "babbage" ]; then
-  echo "TestShelleyHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestAllegraHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestBabbageHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "ExperimentalHardForksEnabled: True" >> "${ROOT}/configuration.yaml"
-  echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
+  {
+    echo "TestShelleyHardForkAtEpoch: 0"
+    echo "TestAllegraHardForkAtEpoch: 0"
+    echo "TestMaryHardForkAtEpoch: 0"
+    echo "TestAlonzoHardForkAtEpoch: 0"
+    echo "TestBabbageHardForkAtEpoch: 0"
+    echo "ExperimentalHardForksEnabled: True"
+    echo "ExperimentalProtocolsEnabled: True"
+  } >> "${ROOT}/configuration.yaml"
 
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 7/'
@@ -679,12 +681,14 @@ if [ "$1" = "babbage" ]; then
   echo "Nodes will start in Alonzo era from epoch 0"
 
 elif [ "$1" = "alonzo" ]; then
-  echo "TestShelleyHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestAllegraHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "ExperimentalHardForksEnabled: True" >> "${ROOT}/configuration.yaml"
-  echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
+  {
+    echo "TestShelleyHardForkAtEpoch: 0"
+    echo "TestAllegraHardForkAtEpoch: 0"
+    echo "TestMaryHardForkAtEpoch: 0"
+    echo "TestAlonzoHardForkAtEpoch: 0"
+    echo "ExperimentalHardForksEnabled: True"
+    echo "ExperimentalProtocolsEnabled: True"
+  } >> "${ROOT}/configuration.yaml"
 
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
@@ -693,9 +697,12 @@ elif [ "$1" = "alonzo" ]; then
   echo "Nodes will start in Alonzo era from epoch 0"
 
 elif [ "$1" = "mary" ]; then
-  echo "TestShelleyHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
-  echo "TestAllegraHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
-  echo "TestMaryHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
+  {
+    echo "TestShelleyHardForkAtEpoch: 0"
+    echo "TestAllegraHardForkAtEpoch: 0"
+    echo "TestMaryHardForkAtEpoch: 0"
+  } >> "${ROOT}/configuration.yaml"
+
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 4/'
   echo "Nodes will start in Mary era from epoch 0"
@@ -703,12 +710,14 @@ elif [ "$1" = "mary" ]; then
 elif [ "$1" = "allegra" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
   echo "TestAllegraHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
+
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 3/'
   echo "Nodes will start in Allegra era from epoch 0"
 
 elif [ "$1" = "shelley" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
+
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 2/'
   echo "Nodes will start in Shelley era from epoch 0"
