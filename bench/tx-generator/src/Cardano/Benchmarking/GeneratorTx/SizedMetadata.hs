@@ -1,8 +1,6 @@
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Use uncurry" -}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 module Cardano.Benchmarking.GeneratorTx.SizedMetadata
 where
 
@@ -46,15 +44,15 @@ prop_mapCostsMary    :: Bool
 prop_mapCostsAlonzo  :: Bool
 prop_mapCostsBabbage :: Bool
 prop_mapCostsConway  :: Bool
-prop_mapCostsShelley = measureMapCosts AsShelleyEra   == assumeMapCosts AsShelleyEra
-prop_mapCostsAllegra = measureMapCosts AsAllegraEra   == assumeMapCosts AsAllegraEra
-prop_mapCostsMary    = measureMapCosts AsMaryEra      == assumeMapCosts AsMaryEra
-prop_mapCostsAlonzo  = measureMapCosts AsAlonzoEra    == assumeMapCosts AsAlonzoEra
-prop_mapCostsBabbage = measureMapCosts AsBabbageEra   == assumeMapCosts AsBabbageEra
-prop_mapCostsConway  = measureMapCosts AsConwayEra    == assumeMapCosts AsConwayEra
+prop_mapCostsShelley = measureMapCosts ShelleyBasedEraShelley == assumeMapCosts ShelleyBasedEraShelley
+prop_mapCostsAllegra = measureMapCosts ShelleyBasedEraAllegra == assumeMapCosts ShelleyBasedEraAllegra
+prop_mapCostsMary    = measureMapCosts ShelleyBasedEraMary    == assumeMapCosts ShelleyBasedEraMary
+prop_mapCostsAlonzo  = measureMapCosts ShelleyBasedEraAlonzo  == assumeMapCosts ShelleyBasedEraAlonzo
+prop_mapCostsBabbage = measureMapCosts ShelleyBasedEraBabbage == assumeMapCosts ShelleyBasedEraBabbage
+prop_mapCostsConway  = measureMapCosts ShelleyBasedEraConway  == assumeMapCosts ShelleyBasedEraConway
 
-assumeMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
-assumeMapCosts _proxy = stepFunction [
+assumeMapCosts :: ShelleyBasedEra era -> [Int]
+assumeMapCosts sbe = stepFunction [
       (   1 , 0)          -- An empty map of metadata has the same cost as TxMetadataNone.
     , (   1 , firstEntry) -- Using Metadata costs 37 or 39 bytes  (first map entry).
     , (  22 , 2)          -- The next 22 entries cost 2 bytes each.
@@ -62,7 +60,7 @@ assumeMapCosts _proxy = stepFunction [
     , ( 744 , 4)          -- 744 entries at 4 bytes.
     ]
   where
-    firstEntry = case shelleyBasedEra @era of
+    firstEntry = case sbe of
       ShelleyBasedEraShelley -> 37
       ShelleyBasedEraAllegra -> 39
       ShelleyBasedEraMary    -> 39
@@ -78,12 +76,12 @@ prop_bsCostsMary    :: Bool
 prop_bsCostsAlonzo  :: Bool
 prop_bsCostsBabbage :: Bool
 prop_bsCostsConway  :: Bool
-prop_bsCostsShelley = measureBSCosts AsShelleyEra == [37..60] ++ [62..102]
-prop_bsCostsAllegra = measureBSCosts AsAllegraEra == [39..62] ++ [64..104]
-prop_bsCostsMary    = measureBSCosts AsMaryEra    == [39..62] ++ [64..104]
-prop_bsCostsAlonzo  = measureBSCosts AsAlonzoEra  == [42..65] ++ [67..107]
-prop_bsCostsBabbage = measureBSCosts AsBabbageEra == [42..65] ++ [67..107]
-prop_bsCostsConway  = measureBSCosts AsConwayEra  == [42..65] ++ [67..107]
+prop_bsCostsShelley = measureBSCosts ShelleyBasedEraShelley == [37..60] ++ [62..102]
+prop_bsCostsAllegra = measureBSCosts ShelleyBasedEraAllegra == [39..62] ++ [64..104]
+prop_bsCostsMary    = measureBSCosts ShelleyBasedEraMary    == [39..62] ++ [64..104]
+prop_bsCostsAlonzo  = measureBSCosts ShelleyBasedEraAlonzo  == [42..65] ++ [67..107]
+prop_bsCostsBabbage = measureBSCosts ShelleyBasedEraBabbage == [42..65] ++ [67..107]
+prop_bsCostsConway  = measureBSCosts ShelleyBasedEraConway  == [42..65] ++ [67..107]
 
 stepFunction :: [(Int, Int)] -> [Int]
 stepFunction f = scanl1 (+) steps
@@ -91,8 +89,8 @@ stepFunction f = scanl1 (+) steps
 
 -- Measure the cost of metadata map entries.
 -- This is the cost of the index with an empty BS as payload.
-measureMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
-measureMapCosts era = map (metadataSize era . Just . replicateEmptyBS) [0..maxMapSize]
+measureMapCosts :: ShelleyBasedEra era -> [Int]
+measureMapCosts sbe = map (metadataSize sbe . Just . replicateEmptyBS) [0..maxMapSize]
  where
   replicateEmptyBS :: Int -> TxMetadata
   replicateEmptyBS n = listMetadata $ replicate n $ TxMetaBytes BS.empty
@@ -101,46 +99,44 @@ listMetadata :: [TxMetadataValue] -> TxMetadata
 listMetadata l = makeTransactionMetadata $ Map.fromList $ zip [0..] l
 
 -- Cost of metadata with a single BS of size [0..maxBSSize].
-measureBSCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
-measureBSCosts era = map (metadataSize era . Just . bsMetadata) [0..maxBSSize]
+measureBSCosts :: ShelleyBasedEra era -> [Int]
+measureBSCosts sbe = map (metadataSize sbe . Just . bsMetadata) [0..maxBSSize]
  where bsMetadata s = listMetadata [TxMetaBytes $ BS.replicate s 0]
 
-metadataSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
-metadataSize p m = dummyTxSize p m - dummyTxSize p Nothing
+metadataSize :: ShelleyBasedEra era -> Maybe TxMetadata -> Int
+metadataSize sbe m = dummyTxSize sbe m - dummyTxSize sbe Nothing
 
-dummyTxSizeInEra :: IsShelleyBasedEra era => TxMetadataInEra era -> Int
-dummyTxSizeInEra metadata = case createAndValidateTransactionBody shelleyBasedEra dummyTx of
-  Right b -> BS.length $ serialiseToCBOR b
+dummyTxSizeInEra :: ShelleyBasedEra era -> TxMetadataInEra era -> Int
+dummyTxSizeInEra sbe metadata = case createAndValidateTransactionBody sbe dummyTx of
+  Right b -> shelleyBasedEraConstraints sbe $ BS.length $ serialiseToCBOR b
   Left err -> error $ "metaDataSize " ++ show err
  where
-  dummyTx = defaultTxBodyContent shelleyBasedEra
+  dummyTx = defaultTxBodyContent sbe
     & setTxIns
       [ ( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
         , BuildTxWith $ KeyWitness KeyWitnessForSpending
         )
       ]
-    & setTxFee (mkTxFee 0)
+    & setTxFee (mkTxFee sbe 0)
     & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (mkTxValidityUpperBound 0)
+    & setTxValidityUpperBound (mkTxValidityUpperBound sbe 0)
     & setTxMetadata metadata
 
-dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
-dummyTxSize _p m = (dummyTxSizeInEra @era) $ metadataInEra m
+dummyTxSize :: ShelleyBasedEra era -> Maybe TxMetadata -> Int
+dummyTxSize sbe m = dummyTxSizeInEra sbe $ metadataInEra sbe m
 
-metadataInEra :: forall era . IsShelleyBasedEra era => Maybe TxMetadata -> TxMetadataInEra era
-metadataInEra Nothing = TxMetadataNone
-metadataInEra (Just m) = case forEraMaybeEon (cardanoEra @era) of
-  Nothing -> error "unreachable"
-  Just e -> TxMetadataInEra e m
+metadataInEra :: ShelleyBasedEra era -> Maybe TxMetadata -> TxMetadataInEra era
+metadataInEra _ Nothing = TxMetadataNone
+metadataInEra sbe (Just m) = TxMetadataInEra sbe m
 
-mkMetadata :: forall era . IsShelleyBasedEra era => Int -> Either String (TxMetadataInEra era)
-mkMetadata 0 = Right $ metadataInEra Nothing
-mkMetadata size
+mkMetadata :: ShelleyBasedEra era -> Int -> Either String (TxMetadataInEra era)
+mkMetadata sbe 0 = Right $ metadataInEra sbe Nothing
+mkMetadata sbe size
   = if size < minSize
       then Left $ "Error : metadata must be 0 or at least " ++ show minSize ++ " bytes in this era."
-      else Right $ metadataInEra $ Just metadata
+      else Right $ metadataInEra sbe $ Just metadata
  where
-  minSize = case shelleyBasedEra @era of
+  minSize = case sbe of
     ShelleyBasedEraShelley -> 37
     ShelleyBasedEraAllegra -> 39
     ShelleyBasedEraMary    -> 39
