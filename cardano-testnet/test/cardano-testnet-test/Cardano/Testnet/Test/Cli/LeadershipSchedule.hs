@@ -67,9 +67,9 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
       cTestnetOptions = def
         { cardanoNodeEra = asbe
         , cardanoNodes =
-          [ SpoNodeOptions Nothing []
-          , SpoNodeOptions Nothing []
-          , SpoNodeOptions Nothing []
+          [ SpoNodeOptions []
+          , SpoNodeOptions []
+          , SpoNodeOptions []
           ]
         }
       eraString = eraToString sbe
