@@ -12,32 +12,44 @@ set -o pipefail
 # to be run manually (to start the nodes, post transactions, etc.).
 #
 # There are three ways of triggering the transition to Shelley:
-# 1. Trigger transition at protocol version 2.0.0 (as on mainnet)
+# 1. Trigger transition at protocol version 2.0.0 (as on mainnet).
 #    The system starts at 0.0.0, and we can only increase it by 1 in the major
-#    version, so this does require to
-#    a) post an update proposal and votes to transition to 1.0.0
+#    version, so this does require to:
+#
+#    a) post an update proposal and votes to transition to 1.0.0,
+#
 #    b) wait for the protocol to change (end of the epoch, or end of the last
-#      epoch if it's posted near the end of the epoch)
+#       epoch if it's posted near the end of the epoch),
+#
 #    c) change configuration.yaml to have 'LastKnownBlockVersion-Major: 2',
-#      and restart the nodes
+#       and restart the nodes
+#
 #    d) post an update proposal and votes to transition to 2.0.0
+#
 #    This is what will happen on the mainnet, so it's vital to test this, but
 #    it does contain some manual steps.
-# 2. Trigger transition at protocol version 2.0.0
+#
+# 2. Trigger transition at protocol version 2.0.0.
 #    For testing purposes, we can also modify the system to do the transition to
 #    Shelley at protocol version 1.0.0, by uncommenting the line containing
 #    'TestShelleyHardForkAtVersion' below. Then, we just need to execute step a)
 #    above in order to trigger the transition.
+#
 #    This is still close to the procedure on the mainnet, and requires less
 #    manual steps.
-# 3. Schedule transition in the configuration
+#
+# 3. Schedule the transition in the configuration.
 #    To do this, uncomment the line containing 'TestShelleyHardForkAtEpoch'
 #    below. It's good for a quick test, and does not rely on posting update
 #    proposals to the chain.
+#
 #    This is quite convenient, but it does not test that we can do the
-#    transition by posting update proposals to the network. For even more convenience
-#    if you want to start a node in Shelley, Allegra or Mary from epoch 0, supply the script
-#    with a shelley, allegra or mary string argument. E.g mkfiles.sh mary.
+#    transition by posting update proposals to the network. For even more
+#    convenience if you want to start a node in Shelley, Allegra or Mary from
+#    epoch 0, supply the script with a shelley, allegra or mary string
+#    argument. E.g mkfiles.sh mary.
+
+[ -n "${DEBUG:-}" ] && set -x
 
 ROOT=example
 
@@ -51,9 +63,10 @@ ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 
 INIT_SUPPLY=10020000000
 FUNDS_PER_GENESIS_ADDRESS=$((INIT_SUPPLY / NUM_BFT_NODES))
-FUNDS_PER_BYRON_ADDRESS=$((FUNDS_PER_GENESIS_ADDRESS - 1000000))
+
 # We need to allow for a fee to transfer the funds out of the genesis.
 # We don't care too much, 1 ada is more than enough.
+FUNDS_PER_BYRON_ADDRESS=$((FUNDS_PER_GENESIS_ADDRESS - 1000000))
 
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
@@ -91,7 +104,7 @@ if ! mkdir "${ROOT}"; then
   exit
 fi
 
-# copy and tweak the configuration
+# Copy and tweak the configuration
 cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
 $SED -i "${ROOT}/configuration.yaml" \
     -e 's/Protocol: RealPBFT/Protocol: Cardano/' \
@@ -104,17 +117,19 @@ $SED -i "${ROOT}/configuration.yaml" \
     -e 's/RequiresNoMagic/RequiresMagic/' \
     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
     -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
-# Options for making it easier to trigger the transition to Shelley
+
+# Options for making it easier to trigger the transition to Shelley:
 # If neither of those are used, we have to
 # - post an update proposal + votes to go to protocol version 1
 # - after that's activated, change the configuration to have
 #   'LastKnownBlockVersion-Major: 2', and restart the nodes
 # - post another proposal + vote to go to protocol version 2
 
-#uncomment this for an automatic transition after the first epoch
+# Uncomment the next line for an automatic transition after the first epoch:
 # echo "TestShelleyHardForkAtEpoch: 1" >> ${ROOT}/configuration.yaml
-#uncomment this to trigger the hardfork with protocol version 1
-#echo "TestShelleyHardForkAtVersion: 1"  >> ${ROOT}/configuration.yaml
+
+# Uncomment the next line to trigger the hardfork with protocol version 1:
+# echo "TestShelleyHardForkAtVersion: 1"  >> ${ROOT}/configuration.yaml
 
 # Create the node directories
 for NODE in ${ALL_NODES}; do
@@ -122,7 +137,7 @@ for NODE in ${ALL_NODES}; do
 done
 
 # Make topology files
-#TODO generalise this over the N BFT nodes and pool nodes
+# TODO: generalise this over the N BFT nodes and pool nodes
 cat > "${ROOT}/node-bft1/topology.json" <<EOF
 {
    "Producers": [
@@ -605,33 +620,39 @@ echo "$ROOT/run/all.sh"
 echo
 echo "In order to do the protocol updates, proceed as follows:"
 echo
-echo "  0. invoke ./scripts/cardano/mkfiles.sh"
-echo "  1. wait for the nodes to start producing blocks"
-echo "  2. invoke ./scripts/cardano/update-1.sh <N>"
-echo "     if you are early enough in the epoch N = current epoch"
-echo "     if not N = current epoch + 1. This applies for all update proposals"
-echo "     wait for the next epoch for the update to take effect"
+echo "  0. Invoke ./scripts/byron-to-alonzo/mkfiles.sh and"
+echo "     start one or all nodes per above command examples."
 echo
-echo "  3. invoke ./scripts/cardano/update-2.sh"
-echo "  4. restart the nodes"
-echo "     wait for the next epoch for the update to take effect"
-echo "     you should be in the Shelley era if the update was successful"
+echo "  1. Wait for the nodes to start producing blocks."
 echo
-echo "  5. invoke ./scripts/cardano/update-3.sh <N>"
+echo "  2. Invoke ./scripts/byron-to-alonzo/update-1.sh."
+echo "     Wait for the next epoch for the update to take effect."
+echo
+echo "  3. Invoke ./scripts/byron-to-alonzo/update-2.sh."
+echo
+echo "  4. Restart the nodes."
+echo "     Wait for the next epoch for the update to take effect."
+echo "     You should be in the Shelley era if the update was successful."
+echo
+echo "  5. Invoke ./scripts/byron-to-alonzo/update-3.sh <N>."
 echo "     Here, <N> the current epoch (2 if you're quick)."
 echo "     If you provide the wrong epoch, you will see an error"
 echo "     that will tell you the current epoch, and can run"
 echo "     the script again."
-echo "  6. restart the nodes"
-echo "     wait for the next epoch for the update to take effect"
-echo "     you should be in the Allegra era if the update was successful"
-echo "  7. invoke ./scripts/cardano/update-4.sh <N>"
-echo "  8. restart the nodes"
-echo "     wait for the next epoch for the update to take effect"
-echo "     you should be in the Mary era if the update was successful"
-echo "  9. invoke ./scripts/cardano/update-5.sh <N>"
-echo "     wait for the next epoch for the update to take effect"
-echo "     you should be in the Alonzo era if the update was successful"
+echo
+echo "  6. Restart the nodes."
+echo "     Wait for the next epoch for the update to take effect."
+echo "     You should be in the Allegra era if the update was successful."
+echo
+echo "  7. Invoke ./scripts/byron-to-alonzo/update-4.sh <N>."
+echo
+echo "  8. Restart the nodes."
+echo "     Wait for the next epoch for the update to take effect."
+echo "     You should be in the Mary era if the update was successful."
+echo
+echo "  9. Invoke ./scripts/byron-to-alonzo/update-5.sh <N>."
+echo "     Wait for the next epoch for the update to take effect."
+echo "     You should be in the Alonzo era if the update was successful."
 echo
 echo "You can observe the status of the updates by grepping the logs, via"
 echo
