@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Tracer.Acceptors.Client
   ( runAcceptorsClient
@@ -34,14 +36,15 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
                    localAddressFromPath, localSnocket, makeLocalBearer)
-import           Ouroboros.Network.Socket (ConnectionId (..), ConnectToArgs (..),
-                   HandshakeCallbacks (..), connectToNode, nullNetworkConnectTracers)
+import           Ouroboros.Network.Socket (ConnectionId (..),
+                   ConnectToArgs (..), HandshakeCallbacks (..),
+                   connectToNode, debuggingNetworkConnectTracers,
+                   nullNetworkConnectTracers)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void, absurd)
-import           Data.Word (Word32)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsInit)
 
@@ -59,12 +62,12 @@ runAcceptorsClient
      , DPF.AcceptorConfiguration
      )
   -> IO ()
-runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) = withIOManager \iocp -> do
-  traceWith (teTracer tracerEnv) $ TracerSockConnecting p
+runAcceptorsClient tracerEnv@TracerEnv {..} tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) = withIOManager \iocp -> do
+  traceWith teTracer $ TracerSockConnecting p
   doConnectToForwarder
     (localSnocket iocp)
     (localAddressFromPath p)
-    (TC.networkMagic $ teConfig tracerEnv)
+    tracerEnv
     noTimeLimitsHandshake $
     -- Please note that we always run all the supported protocols,
     -- there is no mechanism to disable some of them.
@@ -94,38 +97,36 @@ runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) 
 doConnectToForwarder
   :: Snocket IO LocalSocket LocalAddress
   -> LocalAddress
-  -> Word32
+  -> TracerEnv
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
   -> OuroborosApplication 'Mux.InitiatorMode
                           (MinimalInitiatorContext LocalAddress)
                           (ResponderContext LocalAddress)
                           LBS.ByteString IO () Void
   -> IO ()
-doConnectToForwarder snocket address netMagic timeLimits app = do
-  done <- connectToNode
-    snocket
-    makeLocalBearer
-    args
-    mempty -- LocalSocket does not require to be configured
-    (simpleSingletonVersions
-       ForwardingV_1
-       (ForwardingVersionData $ NetworkMagic netMagic)
-       (const app)
-    )
-    Nothing
-    address
-  case done of
-    Left err -> throwIO err
-    Right choice -> case choice of
-      Left () -> return ()
-      Right void -> absurd void
+doConnectToForwarder snocket address TracerEnv {..} timeLimits app
+  = connectToNode
+      snocket
+      makeLocalBearer
+      ConnectToArgs {..}
+      mempty -- LocalSocket does not require to be configured
+      versions
+      Nothing
+      address >>= \case
+                      Right (Left ()) -> pure ()
+                      Right (Right void) -> absurd void
+                      Left err -> throwIO err
   where
-    args = ConnectToArgs {
-      ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
-      ctaHandshakeTimeLimits = timeLimits,
-      ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
-      ctaConnectTracers = nullNetworkConnectTracers,
-      ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
+    TC.TracerConfig {..} = teConfig
+    ctaHandshakeCodec = codecHandshake forwardingVersionCodec
+    ctaHandshakeTimeLimits = timeLimits
+    ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm
+    ctaConnectTracers
+      | Just True <- tracerConfigDebug = debuggingNetworkConnectTracers
+      | otherwise = nullNetworkConnectTracers
+    ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion
+    fwdVersData = ForwardingVersionData $ NetworkMagic networkMagic
+    versions = simpleSingletonVersions ForwardingV_1 fwdVersData $ const app
 
 runEKGAcceptorInit
   :: TracerEnv

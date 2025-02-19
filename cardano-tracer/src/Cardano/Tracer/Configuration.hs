@@ -152,6 +152,7 @@ data TracerConfig = TracerConfig
   , metricsHelp     :: !(Maybe FileOrMap)           -- ^ Prometheus ONLY: JSON file or object containing a key-value map "metric name -> help text" for "# HELP " annotations
   , resourceFreq    :: !(Maybe Int)                 -- ^ Frequency (1/millisecond) for gathering resource data.
   , ekgRequestFull  :: !(Maybe Bool)                -- ^ Request full set of metrics always, vs. deltas only (safer, but more overhead); default: False
+  , tracerConfigDebug :: !(Maybe Bool)              -- ^ Optional debug flag.
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
