@@ -308,12 +308,12 @@ mkdir "${ROOT}/shelley"
 cp configuration/cardano/shelley_qa-alonzo-genesis.json "${ROOT}/shelley/genesis.alonzo.spec.json"
 cp configuration/cardano/shelley_qa-conway-genesis.json "${ROOT}/shelley/genesis.conway.spec.json"
 
-cardano-cli genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir "${ROOT}/shelley"
+cardano-cli shelley genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir "${ROOT}/shelley"
 
 
 # Now generate for real:
 
-cardano-cli genesis create \
+cardano-cli shelley genesis create \
     --testnet-magic ${NETWORK_MAGIC} \
     --genesis-dir "${ROOT}/shelley/" \
     --gen-genesis-keys ${NUM_BFT_NODES} \
@@ -352,7 +352,7 @@ jq --raw-output '
 rm "${ROOT}/shelley/copy2-genesis.json"
 rm "${ROOT}/shelley/copy-genesis.json"
 
-cardano-cli stake-address key-gen \
+cardano-cli shelley stake-address key-gen \
   --verification-key-file "${ROOT}/shelley/utxo-keys/utxo-stake.vkey" \
   --signing-key-file "${ROOT}/shelley/utxo-keys/utxo-stake.skey"
 
@@ -375,7 +375,7 @@ find "${ROOT}/shelley/utxo-keys" -type f | while IFS= read -r FILE; do
       or .type == "PaymentSigningKeyShelley_ed25519"
       or .type == "PaymentVerificationKeyShelley_ed25519"
       )' < "$FILE" > /dev/null; then
-    ln -sf "../$FILE" "${ROOT}/utxo-keys/$(basename "$FILE")"
+    ln -srf "$FILE" "${ROOT}/utxo-keys/$(basename "$FILE")"
   fi
 done
 
@@ -460,7 +460,7 @@ for ADDR in ${ADDRS}; do
       --signing-key-file      "${ROOT}/addresses/${ADDR}.skey"
 
   # Stake address keys
-  cardano-cli stake-address key-gen \
+  cardano-cli shelley stake-address key-gen \
       --verification-key-file "${ROOT}/addresses/${ADDR}-stake.vkey" \
       --signing-key-file      "${ROOT}/addresses/${ADDR}-stake.skey"
 
@@ -472,13 +472,13 @@ for ADDR in ${ADDRS}; do
       --out-file "${ROOT}/addresses/${ADDR}.addr"
 
   # Stake addresses
-  cardano-cli stake-address build \
+  cardano-cli shelley stake-address build \
       --stake-verification-key-file "${ROOT}/addresses/${ADDR}-stake.vkey" \
       --testnet-magic ${NETWORK_MAGIC} \
       --out-file "${ROOT}/addresses/${ADDR}-stake.addr"
 
   # Stake addresses registration certs
-  cardano-cli stake-address registration-certificate \
+  cardano-cli shelley stake-address registration-certificate \
       --stake-verification-key-file "${ROOT}/addresses/${ADDR}-stake.vkey" \
       --out-file "${ROOT}/addresses/${ADDR}-stake.reg.cert"
 
@@ -490,7 +490,7 @@ USER_POOL_N="1"
 for N in ${USER_POOL_N}; do
 
   # Stake address delegation certs
-  cardano-cli stake-address delegation-certificate \
+  cardano-cli shelley stake-address stake-delegation-certificate \
       --stake-verification-key-file "${ROOT}/addresses/user${N}-stake.vkey" \
       --cold-verification-key-file  "${ROOT}/node-pool${N}/shelley/operator.vkey" \
       --out-file "${ROOT}/addresses/user${N}-stake.deleg.cert"
@@ -511,7 +511,7 @@ echo "====================================================================="
 
 for NODE in ${POOL_NODES}; do
 
-  cardano-cli stake-pool registration-certificate \
+  cardano-cli shelley stake-pool registration-certificate \
     --testnet-magic ${NETWORK_MAGIC} \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
     --cold-verification-key-file             "${ROOT}/${NODE}/shelley/operator.vkey" \
@@ -663,7 +663,7 @@ echo ""
 echo "EnableLogMetrics: False" >> "${ROOT}/configuration.yaml"
 echo "EnableLogging: True" >> "${ROOT}/configuration.yaml"
 
-if [ "$1" = "babbage" ]; then
+if [ "${1:-}" = "babbage" ]; then
   {
     echo "TestShelleyHardForkAtEpoch: 0"
     echo "TestAllegraHardForkAtEpoch: 0"
@@ -680,7 +680,7 @@ if [ "$1" = "babbage" ]; then
   # Copy the cost model
   echo "Nodes will start in Alonzo era from epoch 0"
 
-elif [ "$1" = "alonzo" ]; then
+elif [ "${1:-}" = "alonzo" ]; then
   {
     echo "TestShelleyHardForkAtEpoch: 0"
     echo "TestAllegraHardForkAtEpoch: 0"
@@ -696,7 +696,7 @@ elif [ "$1" = "alonzo" ]; then
   # Copy the cost model
   echo "Nodes will start in Alonzo era from epoch 0"
 
-elif [ "$1" = "mary" ]; then
+elif [ "${1:-}" = "mary" ]; then
   {
     echo "TestShelleyHardForkAtEpoch: 0"
     echo "TestAllegraHardForkAtEpoch: 0"
@@ -707,7 +707,7 @@ elif [ "$1" = "mary" ]; then
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 4/'
   echo "Nodes will start in Mary era from epoch 0"
 
-elif [ "$1" = "allegra" ]; then
+elif [ "${1:-}" = "allegra" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
   echo "TestAllegraHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
 
@@ -715,7 +715,7 @@ elif [ "$1" = "allegra" ]; then
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 3/'
   echo "Nodes will start in Allegra era from epoch 0"
 
-elif [ "$1" = "shelley" ]; then
+elif [ "${1:-}" = "shelley" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> "${ROOT}/configuration.yaml"
 
   $SED -i "${ROOT}/configuration.yaml" \
