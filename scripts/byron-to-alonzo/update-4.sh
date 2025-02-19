@@ -26,12 +26,12 @@ pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
 
-TXID2=$(cardano-cli transaction txid --tx-file tx2.tx)
+TXID2=$(cardano-cli allegra transaction txid --tx-file tx2.tx)
 
 
 # Create the update proposal to change the protocol version to 4
 
-cardano-cli governance create-update-proposal \
+cardano-cli allegra governance action create-protocol-parameters-update \
             --out-file update-proposal-mary \
             --epoch "${EPOCH}" \
             --genesis-verification-key-file shelley/genesis-keys/genesis1.vkey \
@@ -41,22 +41,40 @@ cardano-cli governance create-update-proposal \
 
 # Create a transaction body containing the update proposal.
 
-cardano-cli transaction build-raw \
-            --allegra-era \
-            --fee 186181 \
+# Slight over-estimate on the fee
+# From mkfiles.sh
+FUNDS_PER_BYRON_ADDRESS=5009000000
+NUM_BFT_NODES=2
+
+# Slight over-estimate on the fee
+UPDATE3_FEE=300000
+UPDATE4_FEE=200000
+STAKE_KEY_DEPOSIT=400000
+STAKEPOOL_DEPOSIT=0
+CHANGE=$((
+  + NUM_BFT_NODES * FUNDS_PER_BYRON_ADDRESS
+  - COINS_IN_INPUT
+  - STAKEPOOL_DEPOSIT
+  - 2 * STAKE_KEY_DEPOSIT
+  - UPDATE3_FEE
+  - UPDATE4_FEE
+))
+
+cardano-cli allegra transaction build-raw \
+            --fee "$UPDATE4_FEE" \
             --tx-in "$TXID2#0" \
             --tx-in "$TXID2#1" \
             --tx-in "$TXID2#2" \
             --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
             --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
-            --tx-out "$(cat addresses/user1.addr)+9017582318" \
+            --tx-out "$(cat addresses/user1.addr)+$CHANGE" \
             --update-proposal-file update-proposal-mary \
             --out-file tx3.txbody
 
 # Sign the transaction body with the two genesis delegate keys,
 # and the the uxto spending key.
 
-cardano-cli transaction sign \
+cardano-cli allegra transaction sign \
             --signing-key-file addresses/user1.skey \
             --signing-key-file shelley/delegate-keys/delegate1.skey \
             --signing-key-file shelley/delegate-keys/delegate2.skey \
@@ -65,7 +83,7 @@ cardano-cli transaction sign \
             --out-file      tx3.tx
 
 
-cardano-cli transaction submit --tx-file tx3.tx --testnet-magic 42
+cardano-cli allegra transaction submit --tx-file tx3.tx --testnet-magic 42
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 3/LastKnownBlockVersion-Major: 4/' \

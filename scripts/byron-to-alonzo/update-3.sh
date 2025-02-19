@@ -31,9 +31,9 @@ export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
 TXID0=$(cardano-cli byron transaction txid --tx tx0.tx)
 TXID1=$(cardano-cli byron transaction txid --tx tx1.tx)
 
-cardano-cli governance create-update-proposal \
+cardano-cli shelley governance action create-protocol-parameters-update \
             --out-file update-proposal-allegra \
-            --epoch ${EPOCH} \
+            --epoch "${EPOCH}" \
             --genesis-verification-key-file shelley/genesis-keys/genesis1.vkey \
             --genesis-verification-key-file shelley/genesis-keys/genesis2.vkey \
             --protocol-major-version ${VERSION} \
@@ -60,15 +60,30 @@ cardano-cli key convert-byron-key \
 #  4. delegate from the user1 stake address to the stake pool
 # We'll include the update proposal
 
-cardano-cli transaction build-raw \
-            --shelley-era \
+# From mkfiles.sh
+FUNDS_PER_BYRON_ADDRESS=5009000000
+NUM_BFT_NODES=2
+
+# Slight over-estimate on the fee
+UPDATE3_FEE=300000
+STAKE_KEY_DEPOSIT=400000
+STAKEPOOL_DEPOSIT=0
+CHANGE=$((
+  + NUM_BFT_NODES * FUNDS_PER_BYRON_ADDRESS
+  - COINS_IN_INPUT
+  - STAKEPOOL_DEPOSIT
+  - 2 * STAKE_KEY_DEPOSIT
+  - UPDATE3_FEE
+))
+
+cardano-cli shelley transaction build-raw \
             --invalid-hereafter 100000 \
-            --fee 231501 \
+            --fee "$UPDATE3_FEE" \
             --tx-in "${TXID0}#0" \
             --tx-in "${TXID1}#0" \
             --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
             --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
-            --tx-out "$(cat addresses/user1.addr)+9017768499" \
+            --tx-out "$(cat addresses/user1.addr)+$CHANGE" \
             --certificate-file addresses/pool-owner1-stake.reg.cert \
             --certificate-file node-pool1/registration.cert \
             --certificate-file addresses/user1-stake.reg.cert \
@@ -83,7 +98,7 @@ cardano-cli transaction build-raw \
 # 4. the pool1 operator key, due to the pool registration cert
 # 5. the genesis delegate keys, due to the update proposal
 
-cardano-cli transaction sign \
+cardano-cli shelley transaction sign \
             --signing-key-file shelley/utxo-keys/utxo1.skey \
             --signing-key-file addresses/user1-stake.skey \
             --signing-key-file node-pool1/owner.skey \
@@ -99,7 +114,7 @@ cardano-cli transaction sign \
             --out-file      tx2.tx
 
 
-cardano-cli transaction submit --tx-file tx2.tx --testnet-magic 42
+cardano-cli shelley transaction submit --tx-file tx2.tx --testnet-magic 42
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 2/LastKnownBlockVersion-Major: 3/' \
