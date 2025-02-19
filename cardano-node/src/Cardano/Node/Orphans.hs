@@ -12,7 +12,7 @@ import           Cardano.Api ()
 
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag(..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
@@ -73,3 +73,4 @@ instance FromJSON GenesisConfigFlags where
       <*> v .:? "BucketRate"
       <*> v .:? "CSJJumpSize"
       <*> v .:? "GDDRateLimit"
+

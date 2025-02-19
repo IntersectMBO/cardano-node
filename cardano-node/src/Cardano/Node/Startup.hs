@@ -19,6 +19,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Tracing.NetworkOrphans
 import           Cardano.Node.Types (PeerSnapshotFile)
 import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
@@ -37,7 +38,8 @@ import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig, WarmValency)
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig,
+                   WarmValency)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 

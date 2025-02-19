@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
@@ -47,11 +48,9 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import           Control.Monad (when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor (Bifunctor (..))
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
@@ -60,6 +59,10 @@ import           System.FilePath (takeDirectory, (</>))
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
+
+instance ToJSON PeerSharing
+instance FromJSON PeerSharing
+
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
@@ -128,9 +131,6 @@ data NodeConfiguration
        , ncMaxConcurrencyDeadline :: !(Maybe MaxConcurrencyDeadline)
 
          -- Logging parameters:
-       , ncLoggingSwitch  :: !Bool
-       , ncLogMetrics     :: !Bool
-       , ncTraceConfig    :: !TraceOptions
        , ncTraceForwardSocket :: !(Maybe (SocketPath, ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
@@ -214,9 +214,6 @@ data PartialNodeConfiguration
        , pncMaxConcurrencyDeadline :: !(Last MaxConcurrencyDeadline)
 
          -- Logging parameters:
-       , pncLoggingSwitch  :: !(Last Bool)
-       , pncLogMetrics     :: !(Last Bool)
-       , pncTraceConfig    :: !(Last PartialTraceOptions)
        , pncTraceForwardSocket :: !(Last (SocketPath, ForwarderMode))
 
          -- Configuration for testing purposes
@@ -296,18 +293,6 @@ instance FromJSON PartialNodeConfiguration where
       pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
       pncMaxConcurrencyDeadline <- Last <$> v .:? "MaxConcurrencyDeadline"
 
-      -- Logging parameters
-      pncLoggingSwitch'  <-                 v .:? "TurnOnLogging" .!= True
-      pncLogMetrics      <- Last        <$> v .:? "TurnOnLogMetrics"
-      useTraceDispatcher <-                 v .:? "UseTraceDispatcher" .!= True
-      pncTraceConfig     <-  if pncLoggingSwitch'
-                             then do
-                               partialTraceSelection <- parseJSON $ Object v
-                               if useTraceDispatcher
-                               then return $ Last $ Just $ PartialTraceDispatcher partialTraceSelection
-                               else return $ Last $ Just $ PartialTracingOnLegacy partialTraceSelection
-                             else return $ Last $ Just PartialTracingOff
-
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= CardanoProtocol
       pncProtocolConfig <-
@@ -376,9 +361,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
-           , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
-           , pncLogMetrics
-           , pncTraceConfig
            , pncTraceForwardSocket = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
@@ -589,7 +571,6 @@ defaultPartialNodeConfiguration =
   PartialNodeConfiguration
     { pncConfigFile = Last . Just $ ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , pncDatabaseFile = Last . Just $ OnePathForAllDbs "mainnet/db/"
-    , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncExperimentalProtocolsEnabled = Last $ Just False
@@ -601,8 +582,6 @@ defaultPartialNodeConfiguration =
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
-    , pncLogMetrics = mempty
-    , pncTraceConfig = mempty
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncLedgerDbConfig =
@@ -667,9 +646,6 @@ makeNodeConfiguration pnc = do
   validateDB <- lastToEither "Missing ValidateDB" $ pncValidateDB pnc
   startAsNonProducingNode <- lastToEither "Missing StartAsNonProducingNode" $ pncStartAsNonProducingNode pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
-  loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
-  logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
-  traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
@@ -770,10 +746,6 @@ makeNodeConfiguration pnc = do
              , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
-             , ncLoggingSwitch = loggingSwitch
-             , ncLogMetrics = logMetrics
-             , ncTraceConfig = if loggingSwitch then traceConfig
-                                                else TracingOff
              , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
              , ncLedgerDbConfig
@@ -820,3 +792,6 @@ parseNodeConfigurationFP (Just (ConfigYamlFilePath fp)) = do
     nc <- decodeFileThrow fp
     -- Make all the files be relative to the location of the config file.
     pure $ adjustFilePaths (takeDirectory fp </>) nc
+
+lastToEither :: String -> Last a -> Either String a
+lastToEither errMsg (Last x) = maybe (Left errMsg) Right x
