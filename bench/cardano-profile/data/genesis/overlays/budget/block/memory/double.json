@@ -1,0 +1,7 @@
+{
+  "alonzo": {
+    "maxBlockExUnits": {
+      "exUnitsMem": 124000000
+    }
+  }
+}
