@@ -91,6 +91,6 @@ There's a script (`scripts/generate-release-changelog-links.hs`) that generates 
 > example usage (be sure to run `cabal build all` at least once beforehand):
 > ```
 > $ nix build .#project.x86_64-linux.plan-nix.json
-> $ ./scripts/generate-release-changelog-links.hs result-json $GITHUB_API_TOKEN
+> $ ./scripts/generate-release-changelog-links.hs result-json $GITHUB_API_TOKEN -o links.md
 > ```
 > for more information, including how to generate / retrieve a GitHub API token, use `./scripts/generate-release-changelog-links.hs --help`
