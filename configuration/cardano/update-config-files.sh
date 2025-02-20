@@ -43,3 +43,6 @@ copyTmplCfg "config.json"
 copyTmplCfg "conway.json"
 copyTmplCfg "shelley.json"
 copyTmplCfg "topology-empty-p2p.json"
+
+# Prevent write errors on script retries due to nix store no-write default perm
+chmod -R +w "${OUT}"
