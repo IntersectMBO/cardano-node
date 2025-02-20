@@ -1,4 +1,4 @@
-name: Upload to ghci.io
+name: Upload to ghcr.io
 
 on:
   push:
