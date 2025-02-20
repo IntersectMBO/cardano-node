@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.3.2 (February 24, 2025)
+
+* Introduce symbolic links.
+
 ## 0.3.1 (January 22, 2025)
 
 * Fix race condition when querying `NodeInfo` data point, occasionally resulting in fallback `NodeName`s instead of proper ones.
