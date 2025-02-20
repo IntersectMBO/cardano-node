@@ -650,6 +650,10 @@ echo "  8. Restart the nodes."
 echo "     Wait for the next epoch for the update to take effect."
 echo "     You should be in the Mary era if the update was successful."
 echo
+echo "  a. Optionally, invoke ./scripts/byron-to-alonzo/mint.sh"
+echo "     and then ./scripts/byron-to-alonzo/burn.sh for a native token"
+echo "     minting and burning example in Mary."
+echo
 echo "  9. Invoke ./scripts/byron-to-alonzo/update-5.sh <N>."
 echo "     Wait for the next epoch for the update to take effect."
 echo "     You should be in the Alonzo era if the update was successful."
@@ -658,27 +662,20 @@ echo "You can observe the status of the updates by grepping the logs, via"
 echo
 echo "  grep LedgerUpdate ${ROOT}/node-pool1/node.log"
 echo
-echo "When in Shelley (after 3, and before 4), you should be able "
-echo "to look at the protocol parameters, or the ledger state, "
-echo "using commands like"
+echo "When in Shelley (after step 3), you should be able"
+echo "to look at the protocol parameters, or the ledger state,"
+echo "using commands like:"
 echo
 echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
-echo "  cardano-cli query protocol-parameters \\"
-echo "  --cardano-mode --testnet-magic 42"
+echo "  cardano-cli query protocol-parameters --testnet-magic 42"
 echo
-echo "This will fail outside of the Shelley era. In particular, "
-echo "after step 3, you will get an error message that tells you "
-echo "that you are in the Allegra era. You must then use the --allegra-era flag:"
-echo
-echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
-echo "  cardano-cli query protocol-parameters \\"
-echo "  --cardano-mode --allegra-era --testnet-magic 42"
-echo
-echo "Similarly, use --mary-era in the Mary era."
+echo "Occassionally on startup, the bft forgers in byron may encounter a"
+echo "\"TraceNodeCannotForge\" error due to \"PBftCannotForgeThresholdExceeded\""
+echo "during the first several blocks.  If this occurs, simply wipe state and retry."
 
 # For an automatic transition at epoch 0, specifying mary, allegra or shelley
-# will start the node in the appropriate era.
-echo ""
+# as a cli arg will start the node in the appropriate era.
+echo
 
 # These are needed for cardano-submit-api
 echo "EnableLogMetrics: False" >> "${ROOT}/configuration.yaml"
