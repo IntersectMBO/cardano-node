@@ -28,16 +28,17 @@ jobs:
     - name: Get specific check run status
       run: |
         while [[ true ]]; do
-          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=ci/hydra-build:required" --jq '.check_runs[].conclusion')
+          check_name='ci/hydra-build:required'
+          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check_name" --jq '.check_runs[].conclusion')
           case "$conclusion" in
             success)
-              echo "ci/hydra-build:required succeeded"
+              echo "$check_name succeeded"
               exit 0;;
             '')
-              echo "ci/hydra-build:required pending. Waiting 30s..."
+              echo "$check_name pending. Waiting 30s..."
               sleep 30;;
             *)
-              echo "ci/hydra-build:required terminated unsuccessfully"
+              echo "$check_name terminated unsuccessfully"
               exit 1;;
           esac
         done
