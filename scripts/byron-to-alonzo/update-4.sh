@@ -25,6 +25,7 @@ SPLIT_OUTPUT_ALLOC=1000000000
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 TXID2=$(cardano-cli allegra transaction txid --tx-file tx2.tx)
 
@@ -72,12 +73,11 @@ cardano-cli allegra transaction sign \
             --signing-key-file addresses/user1.skey \
             --signing-key-file shelley/delegate-keys/delegate1.skey \
             --signing-key-file shelley/delegate-keys/delegate2.skey \
-            --testnet-magic 42 \
             --tx-body-file  tx3.txbody \
             --out-file      tx3.tx
 
 
-cardano-cli allegra transaction submit --tx-file tx3.tx --testnet-magic 42
+cardano-cli allegra transaction submit --tx-file tx3.tx
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 3/LastKnownBlockVersion-Major: 4/' \

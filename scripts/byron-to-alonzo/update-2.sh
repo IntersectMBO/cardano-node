@@ -15,17 +15,17 @@ ROOT=example
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 cardano-cli byron submit-update-proposal \
-            --testnet-magic 42 \
             --filepath update-proposal-1
 
 sleep 2
+
 cardano-cli byron submit-proposal-vote  \
-            --testnet-magic 42 \
             --filepath update-vote-1.000
+
 cardano-cli byron submit-proposal-vote  \
-            --testnet-magic 42 \
             --filepath update-vote-1.001
 
 sed -i configuration.yaml \

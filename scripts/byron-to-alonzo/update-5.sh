@@ -25,6 +25,7 @@ SPLIT_OUTPUT_ALLOC=1000000000
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-pool1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 TXID3=$(cardano-cli mary transaction txid --tx-file tx3.tx)
 
@@ -72,12 +73,11 @@ cardano-cli mary transaction sign \
             --signing-key-file addresses/user1.skey \
             --signing-key-file shelley/delegate-keys/delegate1.skey \
             --signing-key-file shelley/delegate-keys/delegate2.skey \
-            --testnet-magic 42 \
             --tx-body-file  tx4.txbody \
             --out-file      tx4.tx
 
 
-cardano-cli mary transaction submit --tx-file tx4.tx --testnet-magic 42
+cardano-cli mary transaction submit --tx-file tx4.tx
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 4/LastKnownBlockVersion-Major: 5/' \

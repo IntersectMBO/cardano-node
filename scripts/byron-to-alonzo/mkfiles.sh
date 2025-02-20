@@ -11,6 +11,9 @@ set -o pipefail
 # The script generates all the files needed for the setup, and prints commands
 # to be run manually (to start the nodes, post transactions, etc.).
 #
+# One option to ensure you are running with repo matched cardano-cli and cardano-node
+# versions is to enter a nix shell: `nix shell .#cardano-cli .#cardano-node`
+#
 # There are three ways of triggering the transition to Shelley:
 # 1. Trigger transition at protocol version 2.0.0 (as on mainnet).
 #    The system starts at 0.0.0, and we can only increase it by 1 in the major
@@ -108,7 +111,7 @@ fi
 cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
 $SED -i "${ROOT}/configuration.yaml" \
     -e 's/Protocol: RealPBFT/Protocol: Cardano/' \
-    -e '/Protocol/ aPBftSignatureThreshold: 0.6' \
+    -e '/^Protocol:/ aPBftSignatureThreshold: 0.6' \
     -e 's/minSeverity: Info/minSeverity: Debug/' \
     -e 's|GenesisFile: genesis.json|ByronGenesisFile: byron/genesis.json|' \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
@@ -318,16 +321,13 @@ echo "====================================================================="
 # Set up our template
 mkdir "${ROOT}/shelley"
 
-# Copy the QA testnet alonzo and conway genesis files which is equivalent to the mainnet
-
-cp configuration/cardano/shelley_qa-alonzo-genesis.json "${ROOT}/shelley/genesis.alonzo.spec.json"
-cp configuration/cardano/shelley_qa-conway-genesis.json "${ROOT}/shelley/genesis.conway.spec.json"
+# Copy the alonzo and conway testnet template genesis files
+cp configuration/cardano/testnet-template-alonzo.json "${ROOT}/shelley/genesis.alonzo.spec.json"
+cp configuration/cardano/testnet-template-conway.json "${ROOT}/shelley/genesis.conway.spec.json"
 
 cardano-cli shelley genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir "${ROOT}/shelley"
 
-
 # Now generate for real:
-
 cardano-cli shelley genesis create \
     --testnet-magic ${NETWORK_MAGIC} \
     --genesis-dir "${ROOT}/shelley/" \
@@ -342,8 +342,6 @@ cp "${ROOT}/shelley/genesis.json" "${ROOT}/shelley/copy-genesis.json"
 # We're going to use really quick epochs (300 seconds), by using short slots 0.2s
 # and K=10, but we'll keep long KES periods so we don't have to bother
 # cycling KES keys
-
-
 jq -M '. +
     { slotLength:0.1
     , securityParam:10
@@ -408,7 +406,6 @@ echo "====================================================================="
 
 # Make the pool operator cold keys
 # This was done already for the BFT nodes as part of the genesis creation
-
 for NODE in ${POOL_NODES}; do
   cardano-cli node key-gen \
       --cold-verification-key-file                 "${ROOT}/${NODE}/shelley/operator.vkey" \
@@ -421,7 +418,6 @@ for NODE in ${POOL_NODES}; do
 done
 
 # Symlink the BFT operator keys from the genesis delegates, for uniformity
-
 for N in ${BFT_NODES_N}; do
   ln -s "../../shelley/delegate-keys/delegate${N}.skey" "${ROOT}/node-bft${N}/shelley/operator.skey"
   ln -s "../../shelley/delegate-keys/delegate${N}.vkey" "${ROOT}/node-bft${N}/shelley/operator.vkey"
@@ -430,9 +426,7 @@ for N in ${BFT_NODES_N}; do
   ln -s "../../shelley/delegate-keys/delegate${N}.vrf.skey" "${ROOT}/node-bft${N}/shelley/vrf.skey"
 done
 
-
 # Make hot keys and for all nodes
-
 for NODE in ${ALL_NODES}; do
   cardano-cli node key-gen-KES \
       --verification-key-file "${ROOT}/${NODE}/shelley/kes.vkey" \
@@ -453,13 +447,11 @@ for NODE in ${ALL_NODES}; do
 done
 echo "====================================================================="
 
-
 # Make some payment and stake addresses
 # user1..n:       will own all the funds in the system, we'll set this up from
 #                 initial utxo the
 # pool-owner1..n: will be the owner of the pools and we'll use their reward
 #                 account for pool rewards
-
 USER_ADDRS="user1"
 POOL_ADDRS="pool-owner1"
 
@@ -503,7 +495,6 @@ done
 USER_POOL_N="1"
 
 for N in ${USER_POOL_N}; do
-
   # Stake address delegation certs
   cardano-cli shelley stake-address stake-delegation-certificate \
       --stake-verification-key-file "${ROOT}/addresses/user${N}-stake.vkey" \
@@ -521,9 +512,7 @@ echo
 ls -1 "${ROOT}/addresses/"
 echo "====================================================================="
 
-
 # Next is to make the stake pool registration cert
-
 for NODE in ${POOL_NODES}; do
 
   cardano-cli shelley stake-pool registration-certificate \
@@ -616,7 +605,11 @@ echo
 echo "Alternatively, you can run all the nodes in one go:"
 echo
 echo "$ROOT/run/all.sh"
-
+echo
+echo "One option to ensure you are running with repo matched"
+echo "cardano-cli and cardano-node versions is to enter a nix shell"
+echo "before starting the nodes:"
+echo "  nix shell .#cardano-cli .#cardano-node"
 echo
 echo "In order to do the protocol updates, proceed as follows:"
 echo

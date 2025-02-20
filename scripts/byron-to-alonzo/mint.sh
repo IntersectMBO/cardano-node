@@ -11,6 +11,7 @@ SPLIT_OUTPUT_ALLOC=1000000000
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 mkdir -p ma
 cardano-cli address key-gen \
@@ -66,10 +67,21 @@ cardano-cli mary transaction build-raw \
 cardano-cli mary transaction sign \
             --signing-key-file addresses/user1.skey \
             --signing-key-file ma/policy.skey \
-            --testnet-magic 42 \
             --tx-body-file  tx3.txbody \
             --out-file      tx3.tx
 
-cardano-cli mary transaction submit --tx-file tx3.tx --testnet-magic 42
+echo
+echo "The whole utxo prior to minting is:"
+echo
+cardano-cli query utxo --whole-utxo --output-json
+echo
+
+cardano-cli mary transaction submit --tx-file tx3.tx
+sleep 2
+echo
+echo "The whole utxo after minting is:"
+echo
+cardano-cli query utxo --whole-utxo --output-json
+echo
 
 popd
