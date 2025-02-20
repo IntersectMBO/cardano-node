@@ -27,6 +27,7 @@ jobs:
     steps:
     - name: Get specific check run status
       run: |
+        echo "Running: gh api repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs --jq '.check_runs[] | select(.name == "ci/hydra-build:required") | .conclusion'"
         while [[ true ]]; do
           conclusion=$(gh api repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs --jq '.check_runs[] | select(.name == "ci/hydra-build:required") | .conclusion')
           case "$conclusion" in
@@ -37,7 +38,7 @@ jobs:
               echo "ci/hydra-build:required failed"
               exit 1;;
             *)
-              echo "ci/hydra-build:required pending. Waiting 30s..."
+              echo "ci/hydra-build:required pending (conclusion is '$conclusion'). Waiting 30s..."
               sleep 30;;
           esac
         done
