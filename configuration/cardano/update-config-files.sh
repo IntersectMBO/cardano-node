@@ -1,32 +1,45 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+OUT=$(dirname "$(realpath "$0")")
+ROOT=$(realpath "${OUT}/../..")
 
-OUT=$(dirname $(realpath $0))
-ROOT=$(realpath ${OUT}/../..)
-nix build "${ROOT}"#hydraJobs.cardano-deployment
-SRC="${ROOT}/result"
+# Provide access to iohkNix environment configs
+IOHK_NIX_CFGS=$(nix build --print-out-paths --no-link "${ROOT}"#hydraJobs.cardano-deployment)
 
-copyFile() {
-  echo $1
-  cp ${SRC}/$1 ${OUT}/$1
+# Provide access to iohkNix testnet templates
+IOHK_NIX_OUT=$(nix eval --raw --impure \
+  --expr "let f = builtins.getFlake \"git+file://\${toString $ROOT}\"; in f.inputs.iohkNix.outPath")
+
+copyCfg() {
+  echo "$1"
+  cp "${IOHK_NIX_CFGS}/$1" "${OUT}/$1"
 }
 
-echo "#################"
-echo "# Copying files #"
-echo "#################"
+copyTmplCfg() {
+  echo "testnet-template-$1"
+  cp "${IOHK_NIX_OUT}/cardano-lib/testnet-template/$1" "${OUT}/testnet-template-$1"
+}
 
-copyFile "mainnet-alonzo-genesis.json"
-copyFile "mainnet-byron-genesis.json"
-copyFile "mainnet-conway-genesis.json"
-copyFile "mainnet-config.json"
-copyFile "mainnet-config-new-tracing.json"
-copyFile "mainnet-shelley-genesis.json"
-copyFile "mainnet-topology.json"
+echo "################################"
+echo "# Copying Network Config Files #"
+echo "################################"
 
-copyFile "shelley_qa-conway-genesis.json"
-copyFile "shelley_qa-alonzo-genesis.json"
-copyFile "shelley_qa-byron-genesis.json"
-copyFile "shelley_qa-config.json"
-copyFile "shelley_qa-shelley-genesis.json"
-copyFile "shelley_qa-topology.json"
+# Mainnet
+copyCfg "mainnet-alonzo-genesis.json"
+copyCfg "mainnet-byron-genesis.json"
+copyCfg "mainnet-config.json"
+copyCfg "mainnet-conway-genesis.json"
+copyCfg "mainnet-shelley-genesis.json"
+copyCfg "mainnet-topology.json"
+
+# IohkNix new tracing config placeholder
+# copyCfg "mainnet-config-new-tracing.json"
+
+# Testnet-template
+copyTmplCfg "alonzo.json"
+copyTmplCfg "byron.json"
+copyTmplCfg "config.json"
+copyTmplCfg "conway.json"
+copyTmplCfg "shelley.json"
+copyTmplCfg "topology-empty-p2p.json"
