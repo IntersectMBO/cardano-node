@@ -10,6 +10,7 @@ ROOT=example
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 SCRIPT=ma/policy.script
 
@@ -40,10 +41,21 @@ cardano-cli mary transaction build-raw \
 cardano-cli mary transaction sign \
             --signing-key-file addresses/user1.skey \
             --signing-key-file ma/policy.skey \
-            --testnet-magic 42 \
             --tx-body-file  tx-burn.txbody \
             --out-file      tx-burn.tx
 
-cardano-cli mary transaction submit --tx-file tx-burn.tx --testnet-magic 42
+echo
+echo "The whole utxo prior to burning is:"
+echo
+cardano-cli query utxo --whole-utxo --output-json
+echo
+
+cardano-cli mary transaction submit --tx-file tx-burn.tx
+sleep 2
+echo
+echo "The whole utxo after burning is:"
+echo
+cardano-cli query utxo --whole-utxo --output-json
+echo
 
 popd

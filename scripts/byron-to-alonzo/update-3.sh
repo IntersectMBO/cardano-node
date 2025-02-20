@@ -27,6 +27,7 @@ SPLIT_OUTPUT_ALLOC=1000000000
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 TXID0=$(cardano-cli byron transaction txid --tx tx0.tx)
 TXID1=$(cardano-cli byron transaction txid --tx tx1.tx)
@@ -110,12 +111,11 @@ cardano-cli shelley transaction sign \
             --signing-key-file shelley/delegate-keys/delegate2.skey \
             --signing-key-file byron/payment-keys.000-converted.key \
             --signing-key-file byron/payment-keys.001-converted.key \
-            --testnet-magic 42 \
             --tx-body-file  tx2.txbody \
             --out-file      tx2.tx
 
 
-cardano-cli shelley transaction submit --tx-file tx2.tx --testnet-magic 42
+cardano-cli shelley transaction submit --tx-file tx2.tx
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 2/LastKnownBlockVersion-Major: 3/' \
