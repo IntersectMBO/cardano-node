@@ -25,7 +25,7 @@ jobs:
     name: "Wait for hydra check-runs"
     runs-on: ubuntu-latest
     steps:
-    - name: Get specific check run status
+    - name: Waiting for ci/hydra-build:required to complete
       run: |
         while [[ true ]]; do
           check_name='ci/hydra-build:required'
