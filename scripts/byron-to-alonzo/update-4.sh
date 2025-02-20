@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-
-set -e
-# set -x
+set -euo pipefail
 
 # This script will initiate the transition to protocol version 4 (Mary).
 
 # You need to provide the current epoch as a positional argument (the Shelley
-# update system requires this to be includded in the update proposal).
+# update system requires this to be included in the update proposal).
 
 
 # In order for this to be successful, you need to already be in protocol version
@@ -14,13 +12,15 @@ set -e
 # Also, you need to restart the nodes after running this script in order for the
 # update to be endorsed by the nodes.
 
-if [ ! "$1" ]; then echo "update-4.sh: expects an <N> epoch argument"; exit; fi
+[ -n "${DEBUG:-}" ] && set -x
+
+[ ! "${1:-}" ] && { echo "update-4.sh: expects an <N> epoch argument"; exit; }
 
 EPOCH=$1
 VERSION=4
 
 ROOT=example
-COINS_IN_INPUT=1000000000
+SPLIT_OUTPUT_ALLOC=1000000000
 
 pushd ${ROOT}
 
@@ -41,32 +41,26 @@ cardano-cli allegra governance action create-protocol-parameters-update \
 
 # Create a transaction body containing the update proposal.
 
-# Slight over-estimate on the fee
-# From mkfiles.sh
-FUNDS_PER_BYRON_ADDRESS=5009000000
-NUM_BFT_NODES=2
+# Obtain the input lovelace dynamically to reduce change calc complexity
+TOTAL_INPUT_LOVELACE=$(
+  cardano-cli query utxo --whole-utxo --output-json \
+    | jq -er '[to_entries[] | select(.value.value | length == 1) | .value.value.lovelace] | add')
 
 # Slight over-estimate on the fee
-UPDATE3_FEE=300000
-UPDATE4_FEE=200000
-STAKE_KEY_DEPOSIT=400000
-STAKEPOOL_DEPOSIT=0
+FEE=200000
 CHANGE=$((
-  + NUM_BFT_NODES * FUNDS_PER_BYRON_ADDRESS
-  - COINS_IN_INPUT
-  - STAKEPOOL_DEPOSIT
-  - 2 * STAKE_KEY_DEPOSIT
-  - UPDATE3_FEE
-  - UPDATE4_FEE
+  + TOTAL_INPUT_LOVELACE
+  - SPLIT_OUTPUT_ALLOC
+  - FEE
 ))
 
 cardano-cli allegra transaction build-raw \
-            --fee "$UPDATE4_FEE" \
+            --fee "$FEE" \
             --tx-in "$TXID2#0" \
             --tx-in "$TXID2#1" \
             --tx-in "$TXID2#2" \
-            --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
-            --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+$((SPLIT_OUTPUT_ALLOC / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+$((SPLIT_OUTPUT_ALLOC / 2))" \
             --tx-out "$(cat addresses/user1.addr)+$CHANGE" \
             --update-proposal-file update-proposal-mary \
             --out-file tx3.txbody
@@ -87,7 +81,6 @@ cardano-cli allegra transaction submit --tx-file tx3.tx --testnet-magic 42
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 3/LastKnownBlockVersion-Major: 4/' \
-
 
 popd
 

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-
-set -e
-# set -x
+set -euo pipefail
 
 # This script will initiate the transition to protocol version 2 (Shelley).
 
@@ -9,6 +7,8 @@ set -e
 # 1 (which happens one or two epoch boundaries after invoking update-1.sh).
 # Also, you need to restart the nodes after running this script in order for the
 # update to be endorsed by the nodes.
+
+[ -n "${DEBUG:-}" ] && set -x
 
 ROOT=example
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-# set -x
-
-# This script will
+# This script will:
 # - move funds out of the Byron genesis address, so that we can use them later in Shelley
 # - initiate the transition to protocol version 1 (Byron, OBFT)
+
+[ -n "${DEBUG:-}" ] && set -x
 
 ROOT=example
 

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-
-set -e
-# set -x
+set -euo pipefail
 
 # This script will initiate the transition to protocol version 3 (Allegra).
 
@@ -16,13 +14,15 @@ set -e
 # Also, you need to restart the nodes after running this script in order for the
 # update to be endorsed by the nodes.
 
-if [ ! "$1" ]; then echo "update-3.sh: expects an <N> epoch argument"; exit; fi
+[ -n "${DEBUG:-}" ] && set -x
+
+[ ! "${1:-}" ] && { echo "update-3.sh: expects an <N> epoch argument"; exit; }
 
 EPOCH=$1
 VERSION=3
 
 ROOT=example
-COINS_IN_INPUT=1000000000
+SPLIT_OUTPUT_ALLOC=1000000000
 
 pushd ${ROOT}
 
@@ -60,29 +60,30 @@ cardano-cli key convert-byron-key \
 #  4. delegate from the user1 stake address to the stake pool
 # We'll include the update proposal
 
-# From mkfiles.sh
-FUNDS_PER_BYRON_ADDRESS=5009000000
-NUM_BFT_NODES=2
+# Obtain the input lovelace dynamically to reduce change calc complexity
+TOTAL_INPUT_LOVELACE=$(
+  cardano-cli query utxo --whole-utxo --output-json \
+    | jq -er '[to_entries[] | select(.value.value | length == 1) | .value.value.lovelace] | add')
 
 # Slight over-estimate on the fee
-UPDATE3_FEE=300000
+FEE=300000
 STAKE_KEY_DEPOSIT=400000
 STAKEPOOL_DEPOSIT=0
 CHANGE=$((
-  + NUM_BFT_NODES * FUNDS_PER_BYRON_ADDRESS
-  - COINS_IN_INPUT
+  + TOTAL_INPUT_LOVELACE
+  - SPLIT_OUTPUT_ALLOC
   - STAKEPOOL_DEPOSIT
   - 2 * STAKE_KEY_DEPOSIT
-  - UPDATE3_FEE
+  - FEE
 ))
 
 cardano-cli shelley transaction build-raw \
             --invalid-hereafter 100000 \
-            --fee "$UPDATE3_FEE" \
+            --fee "$FEE" \
             --tx-in "${TXID0}#0" \
             --tx-in "${TXID1}#0" \
-            --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
-            --tx-out "$(cat addresses/user1.addr)+$((COINS_IN_INPUT / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+$((SPLIT_OUTPUT_ALLOC / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+$((SPLIT_OUTPUT_ALLOC / 2))" \
             --tx-out "$(cat addresses/user1.addr)+$CHANGE" \
             --certificate-file addresses/pool-owner1-stake.reg.cert \
             --certificate-file node-pool1/registration.cert \
@@ -118,7 +119,6 @@ cardano-cli shelley transaction submit --tx-file tx2.tx --testnet-magic 42
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 2/LastKnownBlockVersion-Major: 3/' \
-
 
 popd
 

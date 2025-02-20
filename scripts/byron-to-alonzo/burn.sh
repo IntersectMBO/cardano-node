@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 set -e
-# set -x
 
 # This script creates, signs, and submits a transaction that burns the tokens
 # that were created with mint.sh.
+
+[ -n "${DEBUG:-}" ] && set -x
 
 ROOT=example
 COINS_IN_INPUT=1000000000
