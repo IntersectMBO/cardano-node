@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 set -e
-# set -x
 
 # This script creates, signs, and submits a transaction that creates some new tokens.
 # It uses the output of the transaction from update-4.sh.
+
+[ -n "${DEBUG:-}" ] && set -x
 
 ROOT=example
 COINS_IN_INPUT=1000000000
