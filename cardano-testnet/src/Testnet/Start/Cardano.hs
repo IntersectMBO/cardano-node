@@ -42,7 +42,6 @@ import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
 import           Data.Functor
-import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor, omap)
 import qualified Data.Text as Text
 import           Data.Time (diffUTCTime)
@@ -218,13 +217,6 @@ cardanoTestnet
   testMinimumConfigurationRequirements testnetOptions
 
   H.note_ OS.os
-
-  when (all (isJust . testnetNodeCfgFile) cardanoNodes) $
-    -- TODO: We need a very simple non-obscure way of generating the files necessary
-    -- to run a testnet. "create-staked" is not a good way to do this especially because it
-    -- makes assumptions about where things should go and where genesis template files should be.
-    -- See all of the ad hoc file creation/renaming/dir creation etc below.
-    H.failMessage GHC.callStack "Specifying node configuration files per node not supported yet."
 
   -- Write specification files. Those are the same as the genesis files
   -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.

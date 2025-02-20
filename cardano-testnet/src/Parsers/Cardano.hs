@@ -79,7 +79,7 @@ pNumSpoNodes =
     <>  OA.showDefault
     <>  OA.value 1)
   where
-    defaultSpoOptions = SpoNodeOptions Nothing []
+    defaultSpoOptions = SpoNodeOptions []
 
 pGenesisOptions :: Parser GenesisOptions
 pGenesisOptions =
