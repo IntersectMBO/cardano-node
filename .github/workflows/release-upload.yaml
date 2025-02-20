@@ -33,12 +33,12 @@ jobs:
             success)
               echo "ci/hydra-build:required succeeded"
               exit 0;;
-            failure)
-              echo "ci/hydra-build:required failed"
-              exit 1;;
-            *)
+            '')
               echo "ci/hydra-build:required pending. Waiting 30s..."
               sleep 30;;
+            *)
+              echo "ci/hydra-build:required terminated unsuccessfully"
+              exit 1;;
           esac
         done
     
