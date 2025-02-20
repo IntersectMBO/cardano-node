@@ -35,6 +35,7 @@ module Cardano.Tracer.Utils
   , lookupRegistry
   , elemsRegistry
   , clearRegistry
+  , modifyRegistry
   , modifyRegistry_
   , readRegistry
   , getProcessId
@@ -60,7 +61,7 @@ import           Control.Applicative (liftA2, liftA3)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Async (Concurrently(..))
 import           Control.Concurrent.Extra (Lock)
-import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar_)
+import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar, modifyMVar_)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', stateTVar, readTVarIO, newTVarIO)
 import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
@@ -301,6 +302,9 @@ clearRegistry registry@(Registry mvar) = do
   elemsRegistry registry >>= traverse_ (hClose . fst)
   void do
     swapMVar mvar Map.empty
+
+modifyRegistry :: Registry a b -> (Map.Map a b -> IO (Map.Map a b, res)) -> IO res
+modifyRegistry (Registry registry) = modifyMVar registry
 
 modifyRegistry_ :: Registry a b -> (Map.Map a b -> IO (Map.Map a b)) -> IO ()
 modifyRegistry_ (Registry registry) = modifyMVar_ registry
