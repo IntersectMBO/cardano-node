@@ -69,6 +69,7 @@ in pkgs.commonLib.defServiceModule
         resourceFreq    = mayOpt int           "Frequency (1/ms) for tracing resource usage.";
         metricsHelp     = mayOpt str           "JSON file containing metrics help annotations for Prometheus";
         metricsNoSuffix = mayOpt bool          "Drop suffixes like '_int' in Prometheus exposition, increasing similiarity with legacy system names.";
+        tracerConfigDebug = mayOpt bool        "debug output";
 
         ### Here be dragons, on the other hand..
         configFile      = mayOpt str

@@ -34,6 +34,7 @@
         "Forwarder",
         "PrometheusSimple 12798"
       ],
+      "tracerConfigDebug": true,
       "severity": "Notice"
     },
     "BlockFetch.Decision": {
