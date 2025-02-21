@@ -33,6 +33,7 @@
         "EKGBackend",
         "Forwarder"
       ],
+      "tracerConfigDebug": true,
       "severity": "Notice"
     },
     "BlockFetch.Decision": {
