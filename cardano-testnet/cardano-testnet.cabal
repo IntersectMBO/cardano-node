@@ -209,6 +209,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
+                        Cardano.Testnet.Test.CommandLineExecutable
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SanityCheck
