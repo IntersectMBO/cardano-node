@@ -24,6 +24,7 @@ import           Data.Monoid
 import           Data.Yaml (decodeFileThrow)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
+import qualified System.Directory as System
 import           System.FilePath (takeDirectory, (</>))
 
 import           Testnet.Property.Run
@@ -78,18 +79,24 @@ runCardanoOptions (CardanoTestnetCliOptions testnetOptions genesisOptions) =
               -- Make all the files be relative to the location of the config file.
               adjustFilePaths (takeDirectory nodeInputConfigFile </>) protocolConfig
             (shelley, alonzo, conway) = getShelleyGenesises adjustedProtocolConfig
-        shelleyGenesis :: ShelleyGenesis StandardCrypto <-
-          decodeFileThrow $ unGenesisFile $ npcShelleyGenesisFile shelley
-        alonzoGenesis :: AlonzoGenesis <-
-          decodeFileThrow $ unGenesisFile $ npcAlonzoGenesisFile alonzo
-        conwayGenesis ::  ConwayGenesis StandardCrypto <-
-          decodeFileThrow $ unGenesisFile $ npcConwayGenesisFile conway
+        -- The paths to the genesis files have to exist in the node configuration file,
+        -- but the files themselves don't have to exist. So if the user wants to pass
+        -- its custom genesis file, the file has to exist (and will be mapped to a 'UserProvidedData'
+        -- constructor below). But if the user wants to have cardano-testnet generate the genesis file,
+        -- he should leave the filepath in the node configuration file, but omit the genesis file itself.
+        -- In this latter case, the code below maps the genesis file to a 'NoUserProvidedData' constructor.
+        shelleyGenesis :: UserProvidedData (ShelleyGenesis StandardCrypto) <-
+          genesisFilepathToData $ npcShelleyGenesisFile shelley
+        alonzoGenesis :: UserProvidedData AlonzoGenesis <-
+          genesisFilepathToData $ npcAlonzoGenesisFile alonzo
+        conwayGenesis :: UserProvidedData (ConwayGenesis StandardCrypto) <-
+          genesisFilepathToData $ npcConwayGenesisFile conway
         runTestnet testnetOptions $ cardanoTestnet
           testnetOptions
           genesisOptions
-          (UserProvidedData shelleyGenesis)
-          (UserProvidedData alonzoGenesis)
-          (UserProvidedData conwayGenesis)
+          shelleyGenesis
+          alonzoGenesis
+          conwayGenesis
   where
     getShelleyGenesises (NodeProtocolConfigurationCardano _byron shelley alonzo conway _hardForkConfig _checkPointConfig) =
       (shelley, alonzo, conway)
@@ -99,3 +106,9 @@ runCardanoOptions (CardanoTestnetCliOptions testnetOptions genesisOptions) =
       case errOrNodeConfig of
         Left err -> error $ "Error reading node configuration file: " <> err
         Right nodeConfig -> pure nodeConfig
+    genesisFilepathToData :: Aeson.FromJSON a => GenesisFile -> IO (UserProvidedData a)
+    genesisFilepathToData (GenesisFile filepath) = do
+      exists <- System.doesFileExist filepath
+      if exists
+        then UserProvidedData <$> decodeFileThrow filepath
+        else return NoUserProvidedData
