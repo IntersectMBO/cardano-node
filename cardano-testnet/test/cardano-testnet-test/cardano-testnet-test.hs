@@ -4,6 +4,7 @@ module Main
   ( main
   ) where
 
+
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
@@ -12,6 +13,7 @@ import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
+import qualified Cardano.Testnet.Test.CommandLineExecutable
 import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
@@ -76,6 +78,7 @@ tests = do
            ]
         , T.testGroup "CLI"
           [ ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+          , ignoreOnWindows "cardano-testnet-executable" Cardano.Testnet.Test.CommandLineExecutable.hprop_cardano_testnet_executable
           -- ShutdownOnSigint fails on Mac with
           -- "Log file: /private/tmp/tmp.JqcjW7sLKS/kes-period-info-2-test-30c2d0d8eb042a37/logs/test-spo.stdout.log had no logs indicating the relevant node has minted blocks."
           , ignoreOnMacAndWindows "Shutdown On Sigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
