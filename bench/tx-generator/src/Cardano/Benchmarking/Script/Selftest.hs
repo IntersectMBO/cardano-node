@@ -75,7 +75,7 @@ testScript protocolFile submitMode =
   , InitWallet splitWallet3
   , InitWallet doneWallet
   , DefineSigningKey key skey
-  , AddFund era genesisWallet
+  , AddFund sbe genesisWallet
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
     (L.Coin 90000000000000) key
   , createChange genesisWallet splitWallet1 1 10
@@ -88,7 +88,7 @@ testScript protocolFile submitMode =
   , createChange splitWallet3 splitWallet3 300 30
 -}
 
-  , Submit era submitMode txParams $ Take 4000 $ Cycle
+  , Submit sbe submitMode txParams $ Take 4000 $ Cycle
       $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
   ]
   where
@@ -99,7 +99,7 @@ testScript protocolFile submitMode =
           , teDescription = fromString "Genesis Initial UTxO Signing Key"
           , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"
           }
-    era = AnyCardanoEra AllegraEra
+    sbe = AnyShelleyBasedEra ShelleyBasedEraAllegra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
     genesisWallet = "genesisWallet"
     splitWallet1 = "SplitWallet-1"
@@ -109,4 +109,4 @@ testScript protocolFile submitMode =
     key = "pass-partout"
     createChange :: String -> String -> Int -> Int -> Action
     createChange src dest txCount outputs
-      = Submit era submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs
+      = Submit sbe submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs
