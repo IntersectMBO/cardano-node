@@ -72,7 +72,9 @@ tests = do
                , ignoreOnWindows "Transaction Build Wrong Hash" WrongHash.hprop_transaction_build_wrong_hash
                ]
             , T.testGroup "Plutus"
-                [ ignoreOnWindows "PlutusV3" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3]
+                [ ignoreOnWindows "PlutusV3" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3
+                , ignoreOnWindows "PlutusV2 Create transaction with two script certs" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_create_transaction_with_two_script_certs_v2
+                ]
            ]
         , T.testGroup "CLI"
           [ ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
