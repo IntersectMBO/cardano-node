@@ -19,6 +19,7 @@ import           Ouroboros.Network.Block (BlockNo (..))
 import           Prelude as P (show)
 
 import           Data.Aeson
+import           Data.Aeson.Encode.Pretty
 import           Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.CDF
@@ -359,11 +360,17 @@ dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
     forM_ xs $ LBS.hPutStrLn hnd . encode
 
 dumpAssociatedObjects :: ToJSON a => String -> [(LogObjectSource, a)] -> ExceptT Text IO ()
-dumpAssociatedObjects ident xs = liftIO $
+dumpAssociatedObjects = dumpAssociatedObjectsWith encode
+
+dumpAssociatedObjectsPretty :: ToJSON a => String -> [(LogObjectSource, a)] -> ExceptT Text IO ()
+dumpAssociatedObjectsPretty = dumpAssociatedObjectsWith (encodePretty' defConfig {confCompare = compare, confTrailingNewline = True})
+
+dumpAssociatedObjectsWith :: (a -> LBS.ByteString) -> String -> [(LogObjectSource, a)] -> ExceptT Text IO ()
+dumpAssociatedObjectsWith encoder ident xs = liftIO $
   flip mapConcurrently_ xs $
     \(logObjectSourceFile -> f, x) ->
       withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
-        LBS.hPutStrLn hnd $ encode x
+        LBS.hPutStrLn hnd $ encoder x
 
 readAssociatedObjects :: forall a.
   FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(LogObjectSource, a)]

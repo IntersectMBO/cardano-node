@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                2.0
+version:                2.1
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -11,12 +11,33 @@ author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
+                        LICENSE_easyplot
                         NOTICE
+                        -- The module src-quick/Graphics/EasyPlot.hs is a forked, and heavily modded,
+                        -- version of the easyplot-1.0 package by Julian Bertram.
 extra-doc-files:        CHANGELOG.md
 build-type:             Simple
 
 common project-config
   default-language:     Haskell2010
+
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+                        -Wno-all-missed-specialisations
+
+  if impl(ghc >= 9.8)
+    ghc-options:        -Wno-x-partial
+
+  build-depends:        base >= 4.14 && < 5,
+
+  if os(windows)
+    buildable: False
+
+common extensions
   default-extensions:   BangPatterns
                         BlockArguments
                         DataKinds
@@ -42,24 +63,10 @@ common project-config
                         TypeFamilies
                         ViewPatterns
 
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -Wno-all-missed-specialisations
-
-  if impl(ghc >= 9.8)
-    ghc-options:        -Wno-x-partial
-
-  build-depends:        base >= 4.14 && < 5,
-
-  if os(windows)
-    buildable: False
-
 library
   import:               project-config
+                      , extensions
+
   hs-source-dirs:       src
 
   exposed-modules:      Data.Accum
@@ -138,6 +145,7 @@ library
 
 executable locli
   import:               project-config
+                      , extensions
 
   hs-source-dirs:       app
   main-is:              locli.hs
@@ -157,8 +165,20 @@ executable locli
 executable locli-quick
   import:               project-config
 
+  default-extensions:   NamedFieldPuns
+                        LambdaCase
+                        TypeFamilies
+                        TypeOperators
+
   hs-source-dirs:       app
+                        src-quick
   main-is:              locli-quick.hs
+
+  other-modules:        Cardano.Analysis.Reducer
+                        Cardano.Analysis.Reducer.Util
+                        Data.Reducer
+                        Graphics.EasyPlot
+
   ghc-options:          -threaded
                         -rtsopts
                         "-with-rtsopts=-T -N7 -A2m -c -H64m"
@@ -167,9 +187,11 @@ executable locli-quick
                       , aeson
                       , async
                       , bytestring
-                      , containers
                       , cardano-api
+                      , containers
+                      , directory
                       , extra
+                      , process
                       , split
                       , text
                       , text-short
@@ -180,6 +202,7 @@ executable locli-quick
 
 test-suite test-locli
   import:               project-config
+                      , extensions
 
   hs-source-dirs:       test
   main-is:              test-locli.hs

@@ -747,9 +747,8 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
         Just Refl -> do
           -- TODO: check if runP' has changed
           blockForging <- snd (Api.protocolInfo runP')
-          let isNonProducing = ncStartAsNonProducingNode nc
           traceWith startupTracer
-                    (BlockForgingUpdate (if isNonProducing || null blockForging
+                    (BlockForgingUpdate (if null blockForging
                                           then DisabledBlockForging
                                           else EnabledBlockForging))
           setBlockForging nodeKernel blockForging
