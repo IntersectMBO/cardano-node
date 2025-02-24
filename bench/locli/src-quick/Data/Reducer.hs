@@ -3,7 +3,7 @@
 
 module Data.Reducer (module Data.Reducer) where
 
-import           Data.Foldable
+import qualified Data.Foldable as F (foldl')
 import           Data.Function (on)
 import           Data.Kind (Type)
 import           Data.Maybe
@@ -11,8 +11,8 @@ import           Data.Maybe
 
 class Reducer r where
   type family Elem  r   :: Type
-  type family Accum r   :: Type
   type family Result r  :: Type
+  type family Accum r   :: Type
 
   initialOf :: r -> Accum r
   reducerOf :: r -> Accum r -> Elem r -> Accum r
@@ -20,7 +20,7 @@ class Reducer r where
 
 
 reduce :: (Foldable f, Reducer r) => r -> f (Elem r) -> Result r
-reduce r = resultOf r . foldl' (reducerOf r) (initialOf r)
+reduce r = resultOf r . F.foldl' (reducerOf r) (initialOf r)
 
 
 data Chain r1 r2 = Chain r1 r2
@@ -32,8 +32,8 @@ instance  ( Foldable f2
           ) => Reducer (Chain r1 r2) where
 
   type instance Elem    (Chain r1 r2)  = Elem r1
-  type instance Accum   (Chain r1 r2)  = Accum r1
   type instance Result  (Chain r1 r2)  = Result r2
+  type instance Accum   (Chain r1 r2)  = Accum r1
 
   initialOf (Chain r1 _)  = initialOf r1
   reducerOf (Chain r1 _)  = reducerOf r1
@@ -52,7 +52,7 @@ chainWith ::
   )
   => (Result r1 -> (Accum r2, f2 (Elem r2))) -> r1 -> r2 -> f1 (Elem r1) -> Result r2
 chainWith f r1 r2 =
-  resultOf r2 . uncurry (foldl' (reducerOf r2)) . f . reduce r1
+  resultOf r2 . uncurry (F.foldl' (reducerOf r2)) . f . reduce r1
 
 
 data HigherOrder a where
@@ -61,8 +61,8 @@ data HigherOrder a where
 
 instance Reducer (HigherOrder a) where
   type instance Elem   (HigherOrder a)  = a
-  type instance Accum  (HigherOrder a)  = ([a], Maybe a)
   type instance Result (HigherOrder a)  = [a]
+  type instance Accum  (HigherOrder a)  = (Result (HigherOrder a), Maybe a)
 
   initialOf _ = ([], Nothing)
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Analysis.Reducer
        (module Cardano.Analysis.Reducer)
@@ -15,12 +16,29 @@ import           Data.Reducer
 import           Data.Word
 
 
+data ResourceMeasure = ResourceMeasurePerSlot
+
+instance Reducer ResourceMeasure where
+  type instance Elem    ResourceMeasure = BySlot Word64
+  type instance Result  ResourceMeasure = [(SlotNo, Word64)]
+  type instance Accum   ResourceMeasure = Result ResourceMeasure
+
+  initialOf _ = []
+
+  reducerOf _ acc (BySlot (slotNo, objs)) =
+    case safeLast objs of
+      [measurement] -> (slotNo, measurement) : acc
+      _             -> acc
+
+  resultOf _ = reverse
+
+
 data TxsInMempool = TxsInMempoolPerSlot
 
 instance Reducer TxsInMempool where
   type instance Elem   TxsInMempool = BySlot LogObject
-  type instance Accum  TxsInMempool = ([(SlotNo, Word64)], Word64)
   type instance Result TxsInMempool = [(SlotNo, Word64)]
+  type instance Accum  TxsInMempool = (Result TxsInMempool, Word64)   -- Behold the paramorphism ...
 
   initialOf _ = ([], 0)
 
@@ -34,29 +52,12 @@ instance Reducer TxsInMempool where
   resultOf _ = reverse . fst
 
 
-data ResourceMeasure = ResourceMeasurePerSlot
-
-instance Reducer ResourceMeasure where
-  type instance Elem   ResourceMeasure = BySlot Word64
-  type instance Accum  ResourceMeasure = [(SlotNo, Word64)]
-  type instance Result ResourceMeasure = [(SlotNo, Word64)]
-
-  initialOf _ = []
-
-  reducerOf _ acc (BySlot (slotNo, objs)) =
-    case safeLast objs of
-      [measurement] -> (slotNo, measurement) : acc
-      _             -> acc
-
-  resultOf _ = reverse
-
-
-data Silence = Silence {threshold :: NominalDiffTime, startTime :: UTCTime}
+data Silence = Silence {threshold :: !NominalDiffTime, startTime :: !UTCTime}
 
 instance Reducer Silence where
   type instance Elem   Silence = (UTCTime, SMaybe SlotNo)
-  type instance Accum  Silence = ([(SlotNo, NominalDiffTime)], (UTCTime, SlotNo))
   type instance Result Silence = [(SlotNo, NominalDiffTime)]
+  type instance Accum  Silence = (Result Silence, (UTCTime, SlotNo))  -- ... it's just an extension of the concept of catamorphism which "eats its argument and keeps it too", so what's the problem?
 
   initialOf Silence{startTime} = ([], (startTime, 0))
 
