@@ -1,0 +1,7 @@
+{
+  "alonzo": {
+    "maxBlockExUnits": {
+      "exUnitsSteps": 80000000000
+    }
+  }
+}

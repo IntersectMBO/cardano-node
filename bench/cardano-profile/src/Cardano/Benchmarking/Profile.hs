@@ -3,12 +3,7 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile (
-  names, namesNoEra, namesCloudNoEra
-, byName
-, profiles
-, libMk
-) where
+module Cardano.Benchmarking.Profile (realize) where
 
 --------------------------------------------------------------------------------
 
@@ -20,8 +15,6 @@ import           GHC.Stack (HasCallStack)
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
--- Package: containers.
-import qualified Data.Map.Strict as Map
 -- Package: text.
 import qualified Data.Text            as Text
 -- Package: scientific.
@@ -29,124 +22,37 @@ import qualified Data.Scientific as Scientific
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Paths_cardano_profile as Paths
--- Profiles to export!
-import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesNoEraCloud)
-import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesNoEraEmpty)
-import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesNoEraForgeStress)
-import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesNoEraK3)
-import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesNoEraDense)
-import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesNoEraDish)
-import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesNoEraMiniature)
-import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesNoEraModel)
-import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
-import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
-import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 
 --------------------------------------------------------------------------------
 
-names :: [String]
--- Overlay not supported here, using an empty overlay.
-names = Map.keys (profiles mempty)
-
-namesNoEra :: [String]
--- Overlay not supported here, using an empty overlay.
-namesNoEra = Map.keys (profilesNoEra mempty)
-
-namesCloudNoEra :: [String]
--- Overlay not supported here, using an empty overlay.
-namesCloudNoEra = map Types.name profilesNoEraCloud
-
-byName :: String -> Aeson.Object -> Maybe Types.Profile
-byName name obj =
-  case Map.lookup name (profiles obj) of
-    Nothing -> Nothing
-    (Just profile) -> Just profile
-
---------------------------------------------------------------------------------
-
--- | Adds the Cardano era to `profilesNoEra`.
-profiles :: Aeson.Object -> Map.Map String Types.Profile
-profiles obj = foldMap
-  (\profile -> Map.fromList $
-    let
-        -- TODO: Profiles properties other than the "name" and "era" of
-        --       type string are the only thing that change ??? Remove the
-        --       concept of eras from the profile definitions and make it a
-        --       workbench-level feature (???).
-        addEra p era suffix =
-          let name = Types.name p
-              newName = name ++ "-" ++ suffix
-          in  (newName, p {Types.name = newName, Types.era = era})
-    in 
-        [ addEra profile Types.Allegra "alra"
-        , addEra profile Types.Shelley "shey"
-        , addEra profile Types.Mary    "mary"
-        , addEra profile Types.Alonzo  "alzo"
-        , addEra profile Types.Babbage "bage"
-        , addEra profile Types.Conway  "coay"
-        ]
-  )
-  (profilesNoEra obj)
-
--- | Construct Map with profile name as key, without eras (in name and object).
-profilesNoEra :: HasCallStack => Aeson.Object -> Map.Map String Types.Profile
-profilesNoEra obj = Map.fromList $ map
-  -- Convert to tuple and apply fixes, defaults and derive.
-  (\p ->
-    ( Types.name p
-      -- Compose the profile in the same order as the `jq` profile machinery!
-      -- 1) `addUnusedDefaults`: Adds all properties that are the same for all
-      --                         profiles. This are all candidates to be removed
-      --                         when we finally switch from `jq` to this.
-      -- 2) `overlay`: Applies an optional JSON object as an "overlay". The
-      --               object is read from an envar ("WB_PROFILE_OVERLAY") in
-      --               the `main` function and can override anything (some may
-      --               overridden by later steps) as long as the result is a
-      --               valid `Profile`.
-      -- 3) `shelleyAlonzoConway`: Given an epoch number ("pparamsEpoch"
-      --                           property) creates the "genesis" property
-      --                           using "epoch-timeline.json" and applying the
-      --                           genesis specific overlays ("pparamsOverlays"
-      --                           property).
-      -- 4)  `derive`: Fills the "derive" property.
-      -- 5)  `finalize`: Applies fixes (porting infelicities) needed to fill
-      --                 the "cli_args" property that is also filled here.
-      -- 6) "presets": A special case of `overlay` above. The JSON file to apply
-      --               as an overlay has its name defined in the "preset"
-      --               property. This file has to be defined in the Cabal file.
-    ,   preset
-      . finalize
-      . derive
-      . shelleyAlonzoConway
-      . overlay obj
-      . addUnusedDefaults
-      $ p
-    )
-  )
-  -- All the "families" of profiles. Grouped by common properties or intentions.
-  (
-       profilesNoEraCloud
-    ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
-    ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
-    ++ profilesNoEraK3               -- K3
-    -- Legacy.
-    ++ profilesNoEraDense
-    ++ profilesNoEraDish
-    ++ profilesNoEraMiniature
-    ++ profilesNoEraModel            --
-    ++ profilesNoEraPlutuscall       --
-    -- Empty datasets not running `FixedLoaded`.
-    ++ profilesNoEraChainsync        -- Scenario `Chainsync`
-    ++ profilesNoEraIdle             -- Scenario `Idle`
-    ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
-    -- Extra modules
-    ++ profilesNoEraScalingLocal
-    ++ profilesNoEraScalingCloud
-    ++ profilesNoEraVoting
-  )
+realize :: HasCallStack => Types.Profile -> Types.Profile
+realize =
+    -- Compose the profile in the same order as the `jq` profile machinery!
+    -- 1) `addUnusedDefaults`: Adds all properties that are the same for all
+    --                         profiles. This are all candidates to be removed
+    --                         when we finally switch from `jq` to this.
+    -- 2) `shelleyAlonzoConway`: Given an epoch number ("pparamsEpoch"
+    --                           property) creates the "genesis" property
+    --                           using "epoch-timeline.json" and applying the
+    --                           genesis specific overlays ("pparamsOverlays"
+    --                           property).
+    -- 3) `overlay`: Applies an optional JSON object as an "overlay". The
+    --               object is read from an envar ("WB_PROFILE_OVERLAY") in
+    --               the `main` function and can override anything (some may
+    --               overridden by later steps) as long as the result is a
+    --               valid `Profile`.
+    -- 4)  `derive`: Fills the "derive" property.
+    -- 5)  `finalize`: Applies fixes (porting infelicities) needed to fill
+    --                 the "cli_args" property that is also filled here.
+    -- 6) "presets": A special case of `overlay` above. The JSON file to apply
+    --               as an overlay has its name defined in the "preset"
+    --               property. This file has to be defined in the Cabal file.
+    preset
+  . finalize
+  . derive
+  . overlay
+  . shelleyAlonzoConway
+  . addUnusedDefaults
 
 {-
 
@@ -197,15 +103,6 @@ addUnusedDefaults p =
     }
 
 -- Step 2.
---------------------------------------------------------------------------------
-
--- Merges the profile with a JSON file and stores the overlay contents in the
--- profile.
-overlay :: HasCallStack => Aeson.Object -> Types.Profile -> Types.Profile
-overlay overlaykeyMap profile =
-  (applyOverlay overlaykeyMap profile) {Types.overlay = overlaykeyMap}
-
--- Step 3.
 --------------------------------------------------------------------------------
 
 -- | Fill the "genesis" object "shelley", "alonzo" and "conway" properties
@@ -286,6 +183,17 @@ genesisOverlay overlayName epochParams = do
       -- Right-biased merge of both JSON objects at all depths.
       KeyMap.unionWithKey unionWithKey epochParams keyMap
     _ -> error $ "Not an Aeson Object: \"" ++ fp ++ "\""
+
+-- Step 3.
+--------------------------------------------------------------------------------
+
+-- Merges the profile with a JSON object stored in the "overlay" property.
+overlay :: HasCallStack => Types.Profile -> Types.Profile
+overlay profile =
+  let overlaykeyMap = Types.overlay profile -- An `Aeson.Object`.
+  in if overlaykeyMap /= mempty
+     then applyOverlay overlaykeyMap profile
+     else profile
 
 -- Step 4.
 --------------------------------------------------------------------------------
@@ -561,70 +469,3 @@ unionWithKey _ (Aeson.Object a) (Aeson.Object b) =
   Aeson.Object $ KeyMap.unionWithKey unionWithKey a b
 -- If not an object prefer the right value.
 unionWithKey _ _ b = b
-
--- Makefile utils.
---------------------------------------------------------------------------------
-
-libMKLocations :: [ (String, [ (String, [Types.Profile]) ] ) ]
-libMKLocations =
-  [
-    -- Local profiles.
-    ("LOCAL_PROFILES", [
-      -- Families of local profiles.
-      ("PROFILES_EMPTY"        , profilesNoEraEmpty)
-    , ("PROFILES_MINIATURE"    , profilesNoEraMiniature)
-    , ("PROFILES_FORGE_STRESS" , profilesNoEraForgeStress)
-    , ("PROFILES_PLUTUSCALL"   , profilesNoEraPlutuscall)
-    , ("PROFILES_MODEL"        , profilesNoEraModel)
-    , ("PROFILES_K3"           , profilesNoEraK3)
-    , ("PROFILES_SCENARIOS"    ,
-         profilesNoEraChainsync
-      ++ profilesNoEraIdle
-      ++ profilesNoEraTracerOnly
-      )
-    , ("PROFILES_LEGACY"       ,
-         profilesNoEraDense
-      ++ profilesNoEraDish
-      )
-    , ("PROFILES_SCALING"      , profilesNoEraScalingLocal)
-    ])
-  -- Cloud profiles.
-  , ("CLOUD_PROFILES", [
-      -- Families of cloud profiles.
-      ("PROFILES_NOMAD_PERF"   , profilesNoEraCloud)
-    , ("PROFILES_NOMAD_PERFSSD", profilesNoEraScalingCloud)
-    ])
-  ]
-
-libMk :: [String]
-libMk =
-    foldMap
-      (\(_, families) ->
-        map
-          (\(familyName, ps) ->
-            let profileNames = map Types.name ps
-            in
-              -- For example:
-              -- PROFILES_EMPTY := fast fast-solo ...
-              -- PROFILES_MINIATURE := ci-bench ...
-              familyName ++ " := " ++ unwords profileNames
-          )
-          families
-      )
-      libMKLocations
-  ++
-    [""] -- Empty line.
-  ++
-    foldMap
-      (\(locationName, families) ->
-        map
-          (\(familyName, _) ->
-            -- LOCAL_PROFILES += $(PROFILES_VENDOR)
-            -- ...
-            -- CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
-            -- ...
-            locationName ++ " += $(" ++ familyName ++ ")"
-          )
-          families
-      )
-      libMKLocations
