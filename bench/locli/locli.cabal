@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                2.0
+version:                2.1
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -168,6 +168,7 @@ executable locli-quick
   default-extensions:   NamedFieldPuns
                         LambdaCase
                         TypeFamilies
+                        TypeOperators
 
   hs-source-dirs:       app
                         src-quick
