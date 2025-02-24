@@ -26,7 +26,7 @@
   "connectedPeers": "Number of connected peers",
   "density": "The actual number of blocks created over the maximum expected number of blocks that could be created over the span of the last @k@ blocks.",
   "epoch": "In which epoch is the tip of the current chain.",
-  "forging_enabled": "Can this node forge blocks? (Is it provided with block forging credentials) 0 = no, 1 = yes",
+  "forging_enabled": "A node without forger credentials or started as non-producing has forging disabled.",
   "forks": "counter for forks",
   "haskell_compiler_major": "Cardano compiler version information",
   "haskell_compiler_minor": "Cardano compiler version information",

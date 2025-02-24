@@ -411,7 +411,7 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor _ns = Nothing
 
   metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
-    [("forging_enabled","Can this node forge blocks? (Is it provided with block forging credentials) 0 = no, 1 = yes")]
+    [("forging_enabled","A node without forger credentials or started as non-producing has forging disabled.")]
   metricsDocFor (Namespace _ ["Common"]) =
     [("systemStartTime","The UTC time this node was started."),
      ("node.start.time","The UTC time this node was started represented in POSIX seconds.")]

@@ -189,10 +189,12 @@ logObjectToSql :: LogObject -> Maybe SQLRunnable
 logObjectToSql lo@LogObject{loAt, loBody, loTid} =
   case loBody of
 
-    -- no suitable interpreter found when parsing log object stream
-    LOAny{}                       -> Nothing
     -- trace not emitted by the node
     LOGeneratorSummary{}          -> Nothing
+
+    -- no suitable interpreter found when parsing log object stream
+    LOAny{}                       -> Nothing
+
     -- not required for analysis
     LOTxsAcked{}                  -> Nothing
 
