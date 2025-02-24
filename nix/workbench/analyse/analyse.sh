@@ -101,7 +101,7 @@ fi
 
 if test -v "WB_LOCLI_DB"
 then storage=$WB_LOCLI_DB
-else storage=0
+else storage=1
 fi
 if [[ $storage -eq 1 ]]
 then info analyse "$(red locli storage backend: database)"
