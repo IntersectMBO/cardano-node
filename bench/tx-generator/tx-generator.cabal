@@ -53,7 +53,8 @@ library
                         -- TODO: switch back to -Wwarn=deprecations having dropped Cardano.Api.ProtocolParameters.ProtocolParameters in favour of Cardano.Api.Ledger.PParams
                         -Wno-deprecations
 
-  exposed-modules:      Cardano.Benchmarking.Command
+  exposed-modules:      Cardano.Api.Internal.ProtocolParameters
+                        Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
                         Cardano.Benchmarking.GeneratorTx
                         Cardano.Benchmarking.GeneratorTx.NodeToNode
@@ -92,8 +93,7 @@ library
 
                         Cardano.TxGenerator.Internal.Orphans
 
-  other-modules:        Cardano.Api.Internal.ProtocolParameters
-                        Cardano.TxGenerator.Internal.Fifo
+  other-modules:        Cardano.TxGenerator.Internal.Fifo
                         -- Cardano.TxGenerator.Internal.Orphans
                         Paths_tx_generator
 
@@ -160,6 +160,11 @@ library
                       , unordered-containers
                       , yaml
 
+                      -- Needed by "Data.Either.Combinators (maybeToRight)"
+                      , either
+                      , scientific
+                      , cardano-ledger-babbage >=1.9
+
   default-language:     Haskell2010
   default-extensions:   OverloadedStrings
 
@@ -204,8 +209,7 @@ test-suite tx-generator-apitest
                       , transformers-except
                       , tx-generator
 
-  other-modules:        Cardano.Api.Internal.ProtocolParameters
-                      , Paths_tx_generator
+  other-modules:        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
 
 test-suite tx-generator-test
