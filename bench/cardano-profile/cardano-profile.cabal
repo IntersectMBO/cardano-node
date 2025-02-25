@@ -13,11 +13,13 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-data-files:             data/all-profiles.json
-                        data/ci-test-bage.json
+data-files:             data/all-profiles-coay.json
                         data/genesis/epoch-timeline.json
                         data/genesis/overlays/*.json
+                        data/genesis/overlays/budget/block/memory/*.json
+                        data/genesis/overlays/budget/block/steps/*.json
                         data/presets/*.json
+                        data/test/ci-test-bage.json
                         data/test/default-coay/*.json
                         data/test/chainsync-early-alonzo-coay/*.json
                         data/test/chainsync-early-byron-coay/*.json
@@ -61,6 +63,7 @@ library
                       , Cardano.Benchmarking.Profile.Extra.Scaling
                       , Cardano.Benchmarking.Profile.Extra.Voting
                       , Cardano.Benchmarking.Profile.NodeSpecs
+                      , Cardano.Benchmarking.Profile.Playground
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
@@ -84,6 +87,7 @@ executable cardano-profile
                       , aeson-pretty
                       , vector
                       , bytestring
+                      , containers
                       , optparse-applicative-fork
                       , text
                       , cardano-profile

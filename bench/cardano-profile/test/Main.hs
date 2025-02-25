@@ -17,10 +17,25 @@ import qualified Test.Tasty           as Tasty
 -- Package: tasty-hunit.
 import           Test.Tasty.HUnit
 -- Package: self.
-import qualified Cardano.Benchmarking.Profile as Profiles
+import qualified Cardano.Benchmarking.Profile as Profile
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.NodeSpecs.Tests as NodeSpecs
 import qualified Paths_cardano_profile as Paths
+-- Static / built-in / profiles part of the test-suite.
+import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesNoEraCloud)
+import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesNoEraEmpty)
+import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesNoEraForgeStress)
+import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesNoEraK3)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesNoEraDense)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesNoEraDish)
+import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesNoEraMiniature)
+import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesNoEraModel)
+import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
+import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
+import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 
 --------------------------------------------------------------------------------
 
@@ -43,7 +58,7 @@ testGroupTypes :: Tasty.TestTree
 testGroupTypes = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Types"
   [ testCase "Profile FromJson / ToJson" $ do
-      fp <- Paths.getDataFileName "data/ci-test-bage.json"
+      fp <- Paths.getDataFileName "data/test/ci-test-bage.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
@@ -459,7 +474,32 @@ ciTestBage = Types.Profile {
 
 -- All profiles without an overlay.
 profiles :: Map.Map String Types.Profile
-profiles = Profiles.profiles mempty
+profiles = Map.fromList $ map
+  (\p ->
+    ( Types.name p
+    , Profile.realize p -- No overlay added!
+    )
+  )
+  (
+       profilesNoEraCloud
+    ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
+    ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
+    ++ profilesNoEraK3               -- K3
+    -- Legacy.
+    ++ profilesNoEraDense
+    ++ profilesNoEraDish
+    ++ profilesNoEraMiniature
+    ++ profilesNoEraModel            --
+    ++ profilesNoEraPlutuscall       --
+    -- Empty datasets not running `FixedLoaded`.
+    ++ profilesNoEraChainsync        -- Scenario `Chainsync`
+    ++ profilesNoEraIdle             -- Scenario `Idle`
+    ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
+    -- Extra modules
+    ++ profilesNoEraScalingLocal
+    ++ profilesNoEraScalingCloud
+    ++ profilesNoEraVoting
+  )
 
 -- Check all builtin profiles (no overlay) with "data/all-profiles.json".
 -- `Profile` properties are checked independently for better error messages.
@@ -467,7 +507,7 @@ testGroupMap :: Tasty.TestTree
 testGroupMap = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (Without overlay)"
   [ testCase "Profiles (Builtin)" $ do
-      fp <- Paths.getDataFileName "data/all-profiles.json"
+      fp <- Paths.getDataFileName "data/all-profiles-coay.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
@@ -691,29 +731,28 @@ overlay =
     ])
   ]
 
--- Lookup profile by name (after applying the overlay).
-profileWithOverlay :: String -> Maybe Types.Profile
-profileWithOverlay name = Profiles.byName name overlay
-
 testGroupOverlay :: Tasty.TestTree
 testGroupOverlay = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (With overlay)"
-  [ testCase "HOLA!-bage" $ do
-      case profileWithOverlay "HOLA!-bage" of
-        Nothing -> error "No profile found!"
-        (Just profile) -> do
+  [ testCase "HOLA!" $ do
+      fp <- Paths.getDataFileName "data/test/ci-test-bage.json"
+      eitherAns <- Aeson.eitherDecodeFileStrict fp
+      case eitherAns of
+        (Left err) -> fail err
+        (Right profile) -> do
+          let profileWithOverlay = Profile.realize (profile {Types.overlay = overlay})
           assertEqual "New name"
-            "HOLA!-bage"
-            (Types.name profile)
+            "HOLA!"
+            (Types.name profileWithOverlay)
           assertEqual "New genesis.network_magic"
             1327330847
-            (Types.network_magic $ Types.genesis profile)
+            (Types.network_magic $ Types.genesis profileWithOverlay)
           -- The overlay should be applied before calculating derived values.
           assertEqual "New derived.effective_epochs"
-            25001
-            (Types.effective_epochs $ Types.derived profile)
+            5000
+            (Types.effective_epochs $ Types.derived profileWithOverlay)
           -- The overlay used is added to the profile.
           assertEqual "New overlay"
             overlay
-            (Types.overlay profile)
+            (Types.overlay profileWithOverlay)
   ]
