@@ -13,14 +13,16 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-data-files:             data/bench-torus-52.json
-                        data/bench-torus-dense-52.json
-                        data/ci-test-nomadcwqa.json
-                        data/ci-test-nomadperf.json
-                        data/ci-test.json
-                        data/default-nomadcwqa.json
-                        data/default-nomadperf.json
-                        data/default.json
+data-files:             data/test/6-dense-coay/*.json
+                        data/test/ci-test-coay/*.json
+                        data/test/ci-test-nomadperf-coay/*.json
+                        data/test/ci-test-nomadperf-nop2p-coay/*.json
+                        data/test/default-coay/*.json
+                        data/test/default-nomadperf-coay/*.json
+                        data/test/default-nomadperf-nop2p-coay/*.json
+                        data/test/trace-bench-coay/*.json
+                        data/test/value-nomadperf-nop2p-coay/*.json
+                        data/test/value-volt-nomadperf-coay/*.json
 
 common project-config
   build-depends:        base >= 4.14 && < 5
@@ -39,11 +41,15 @@ library
   import:               project-config
   hs-source-dirs:       src
   exposed-modules:      Cardano.Benchmarking.Topology
+                      , Cardano.Benchmarking.Topology.Projection
                       , Cardano.Benchmarking.Topology.Types
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
                       , text
+                      , network
+                      , iproute
+                      , dns
 
 executable cardano-topology
   import:               project-config
@@ -66,7 +72,8 @@ test-suite cardano-topology-test
   hs-source-dirs:       test/
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
-  other-modules:        Paths_cardano_topology
+  other-modules:        Cardano.Benchmarking.Topology.Projection.Tests
+                      , Paths_cardano_topology
   autogen-modules:      Paths_cardano_topology
   build-depends:        base
                       , aeson

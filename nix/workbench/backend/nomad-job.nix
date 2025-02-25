@@ -747,7 +747,7 @@ let
               env = false;
               destination = "local/${stateDir}/tracer/start.sh";
               data = escapeTemplate
-                profileData.tracer-service.start.value;
+                profileData.tracer-service.start;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -762,14 +762,14 @@ let
                   # When running locally every tracer has a 127.0.0.1 address
                   # and EKG and prometheus ports clash!
                   (builtins.removeAttrs
-                    profileData.tracer-service.config.value
+                    profileData.tracer-service.config
                     [ "hasEKG" "hasPrometheus" "hasRTView" ]
                   )
                   # Make it easier to download every log
                   {
                       logging = builtins.map
                         (value: value // { logRoot="./logRoot"; })
-                        profileData.tracer-service.config.value.logging
+                        profileData.tracer-service.config.logging
                       ;
                   }
                 )
@@ -786,7 +786,7 @@ let
               env = false;
               destination = "local/${stateDir}/${nodeSpec.name}/start.sh";
               data = escapeTemplate (
-                let scriptValue = profileData.node-services."${nodeSpec.name}".start.value;
+                let scriptValue = profileData.node-services."${nodeSpec.name}".start;
                 in (startScriptToGoTemplate
                     nodeSpec                         # nodeSpec
                     servicePortName                  # servicePortName
@@ -802,7 +802,7 @@ let
               env = false;
               destination = "local/${stateDir}/${nodeSpec.name}/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
-                profileData.node-services."${nodeSpec.name}".config.value);
+                profileData.node-services."${nodeSpec.name}".config);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -847,63 +847,67 @@ let
           ])
           ++
           # Generator
-          (lib.optionals (taskName == generatorTaskName) [
-            ## Generator start.sh script.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/start.sh";
-              data = escapeTemplate
-                profileData.generator-service.start.value;
-              change_mode = "noop";
-              error_on_missing_key = true;
-              perms = "744"; # Only for every "start.sh" script. Default: "644"
-            }
-            ## Generator configuration file.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/run-script.json";
-              data = escapeTemplate (
-                let runScript = profileData.generator-service.config;
-                in
-                   # Recreate the "run-script.json" with IPs and ports that are
-                   # nomad template variables.
-                   (runScriptToGoTemplate
-                     runScript.value
-                     # Just the node names.
-                     (lib.attrsets.mapAttrsToList
-                       (nodeSpecNodeName: nodeSpecNode: nodeSpecNodeName)
-                       # All the producer nodes. How the workbench creates it.
-                       (lib.attrsets.filterAttrs
-                         (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
-                         profileData.node-specs.value
+          (lib.optionals (taskName == generatorTaskName) (
+            [
+              ## Generator start.sh script.
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/start.sh";
+                data = escapeTemplate
+                  profileData.generator-service.start;
+                change_mode = "noop";
+                error_on_missing_key = true;
+                perms = "744"; # Only for every "start.sh" script. Default: "644"
+              }
+              ## Generator configuration file.
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/run-script.json";
+                data = escapeTemplate (
+                  let runScript = profileData.generator-service.config;
+                  in
+                     # Recreate the "run-script.json" with IPs and ports that are
+                     # nomad template variables.
+                     (runScriptToGoTemplate
+                       runScript
+                       # Just the node names.
+                       (lib.attrsets.mapAttrsToList
+                         (nodeSpecNodeName: nodeSpecNode: nodeSpecNodeName)
+                         # All the producer nodes. How the workbench creates it.
+                         (lib.attrsets.filterAttrs
+                           (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
+                           profileData.node-specs.value
+                         )
                        )
                      )
-                   )
-              );
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
+                );
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+            ]
+            ++
             ## Generator Plutus redeemer.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/plutus-redeemer.json";
-              data = escapeTemplate
-                (__readFile profileData.generator-service.plutus-redeemer.JSON)
-              ;
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
+            lib.optionals ((profileData.generator-service.plutus-redeemer or null) != null) [
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/plutus-redeemer.json";
+                data = escapeTemplate profileData.generator-service.plutus-redeemer;
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+            ]
+            ++
             ## Generator Plutus datum.
-            {
-              env = false;
-              destination = "local/${stateDir}/generator/plutus-datum.json";
-              data = escapeTemplate
-                (__readFile profileData.generator-service.plutus-datum.JSON)
-              ;
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
-          ])
+            lib.optionals ((profileData.generator-service.plutus-datum or null) != null) [
+              {
+                env = false;
+                destination = "local/${stateDir}/generator/plutus-datum.json";
+                data = escapeTemplate profileData.generator-service.plutus-datum;
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+            ]
+          ))
           ++
           # workloads
           (builtins.map (workload:
@@ -911,7 +915,7 @@ let
             {
               env = false;
               destination = "local/${stateDir}/workloads/${workload.name}/start.sh";
-              data = escapeTemplate workload.start.value;
+              data = escapeTemplate workload.start;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -925,7 +929,7 @@ let
               env = false;
               destination = "local/${stateDir}/healthcheck/start.sh";
               data = escapeTemplate
-                profileData.healthcheck-service.start.value;
+                profileData.healthcheck-service.start;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -949,7 +953,7 @@ let
               {
                 env = false;
                 destination = "local/${stateDir}/ssh/start.sh";
-                data = escapeTemplate ssh-service.start.value;
+                data = escapeTemplate ssh-service.start;
                 change_mode = "noop";
                 error_on_missing_key = true;
                 perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -958,7 +962,7 @@ let
               {
                 env = false;
                 destination = "local/${stateDir}/ssh/sshd_config";
-                data = escapeTemplate ssh-service.config.value;
+                data = escapeTemplate ssh-service.config;
                 change_mode = "noop";
                 error_on_missing_key = true;
                 perms = "744"; # Only for every "start.sh" script. Default: "644"
