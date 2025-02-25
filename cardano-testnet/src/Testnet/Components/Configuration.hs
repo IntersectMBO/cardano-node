@@ -121,13 +121,15 @@ createSPOGenesisAndFiles
   -> NumDReps -- ^ The number of pools to make
   -> Word64 -- ^ The maximum supply
   -> AnyShelleyBasedEra -- ^ The era to use
-  -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use.
-  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
-  -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
+  -> (ShelleyGenesis StandardCrypto, GenesisOrigin) -- ^ The shelley genesis to use.
+  -> (AlonzoGenesis, GenesisOrigin) -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
+  -> (ConwayGenesis StandardCrypto, GenesisOrigin) -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply asbe@(AnyShelleyBasedEra sbe) shelleyGenesis
-                         alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
+createSPOGenesisAndFiles
+  nPoolNodes nDelReps maxSupply asbe@(AnyShelleyBasedEra sbe)
+  (shelleyGenesis, shelleyOrigin) (alonzoGenesis, alonzoOrigin) (conwayGenesis, conwayOrigin)
+  (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
       inputGenesisConwayFp  = tempAbsPath </> genesisInputFilepath ConwayEra
@@ -179,6 +181,12 @@ createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply asbe@(AnyShelleyBasedEra 
     , "--out-dir", tempAbsPath
     ]
 
+  -- Overwrite the genesis files created by create-testnet-data with the files
+  -- specified by the user (if any)
+  overwriteCreateTestnetDataGenesis shelleyOrigin inputGenesisShelleyFp ShelleyEra
+  overwriteCreateTestnetDataGenesis alonzoOrigin inputGenesisAlonzoFp AlonzoEra
+  overwriteCreateTestnetDataGenesis conwayOrigin inputGenesisConwayFp ConwayEra
+
   -- Remove the input files. We don't need them anymore, since create-testnet-data wrote new versions.
   forM_ [inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp] (liftIO . System.removeFile)
 
@@ -188,6 +196,11 @@ createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply asbe@(AnyShelleyBasedEra 
   return genesisShelleyDir
   where
     genesisInputFilepath e = "genesis-input." <> anyEraToString (AnyCardanoEra e) <> ".json"
+    -- | Overwrites the genesis file created by create-testnet-data with the one provided by the user (if any)
+    overwriteCreateTestnetDataGenesis origin genesisFp (AnyCardanoEra e) =
+      case origin of
+        DefaultedOrigin -> pure ()
+        UserProvidedOrigin -> H.copyFile genesisFp (tempAbsPath </> anyEraToString e <> "-genesis.json")
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
