@@ -58,6 +58,7 @@ data ChainCommand
   |             PrepareDB   String [TextInputFile] SqliteOutputFile
   |               UnlogDB   (JsonInputFile (RunLogs ()))
   |    ValidateHashTimeline (JsonInputFile [LogObject])
+  |          DumpTraceFreqs
 
   |        BuildMachViews
   |         DumpMachViews
@@ -140,6 +141,8 @@ parseChainCommand =
    , op "hash-timeline" "Quickly validate timeline by hashes"
      (ValidateHashTimeline
         <$> optJsonInputFile  "timeline"     "Hash timeline (JSON from prepare step)")
+   , op "dump-tracefreqs" "Dump host trace frequencies to JSON"
+     (DumpTraceFreqs & pure)
    ]) <|>
 
   subparser (mconcat [ commandGroup "Block propagation:  machine views"
@@ -419,28 +422,24 @@ runChainCommand _ c@WriteMetaGenesis{} = missingCommandData c
 runChainCommand s
   c@(Unlog rlf okDErr loAnyLimit) = do
   progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
-  runLogsBare <- Aeson.eitherDecode @(RunLogs ())
-                 <$> LBS.readFile (unJsonInputFile rlf)
-                 & newExceptT
+  runLogsBare <- readRunLogsBare rlf
                  & firstExceptT (CommandError c . pack)
   progress "logs" (Q $ printf "parsing logs for %d hosts" $
                    Map.size $ rlHostLogs runLogsBare)
   progress "logs" (Q $ printf "LOAny constraint:  %s" (show loAnyLimit :: String))
   runLogs <- runLiftLogObjects runLogsBare okDErr loAnyLimit
-             & firstExceptT (CommandError c)
+             & firstExceptT (CommandError c . pack)
   pure s { sRunLogs = Just runLogs }
 
 runChainCommand s
   c@(UnlogDB rlf) = do
   progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
-  runLogsBare <- Aeson.eitherDecode @(RunLogs ())
-                 <$> LBS.readFile (unJsonInputFile rlf)
-                 & newExceptT
+  runLogsBare <- readRunLogsBare rlf
                  & firstExceptT (CommandError c . pack)
   progress "logs" (Q $ printf "loading logs from DBs for %d hosts" $
                    Map.size $ rlHostLogs runLogsBare)
-  runLogs <- runLiftLogObjectsDB runLogsBare
-             & firstExceptT (CommandError c)
+  runLogs <- runLiftLogObjectsDB LoadLogObjectsAll runLogsBare
+             & firstExceptT (CommandError c . pack)
   pure s { sRunLogs = Just runLogs }
 
 runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
@@ -451,13 +450,22 @@ runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
 runChainCommand _ c@DumpLogObjects = missingCommandData c
   ["lifted log objects"]
 
+runChainCommand s@State{sRunLogs=Just RunLogs{rlHostLogs}}
+  c@DumpTraceFreqs = do
+  let tracefreqs = map hlLogs . Map.elems $ hlTraceFreqs <$> rlHostLogs
+  progress "tracefreqs" (Q $ printf "dumping %d tracefreq objects" $ length tracefreqs)
+  dumpAssociatedObjectsPretty "tracefreqs" tracefreqs & firstExceptT (CommandError c)
+  pure s
+runChainCommand _ c@DumpTraceFreqs = missingCommandData c
+  ["lifted log objects"]
+
 -- runChainCommand s c@(ReadMachViews _ _)    -- () -> [(JsonLogfile, MachView)]
 
 runChainCommand s
   c@(PrepareDB machName inFiles outFile) = do
     progress "prepare-db" (Q $ printf "preparing DB %s from '%s' logs" (unSqliteOutputFile outFile) machName)
     prepareDB machName (map unTextInputFile inFiles) (unSqliteOutputFile outFile)
-      & firstExceptT (CommandError c)
+      & firstExceptT (CommandError c . pack)
     pure s
 
 runChainCommand s

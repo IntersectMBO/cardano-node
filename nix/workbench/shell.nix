@@ -40,7 +40,7 @@ in project.shellFor {
     export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
-    export WB_LOCLI_DB=''${WB_LOCLI_DB:-0}
+    export WB_LOCLI_DB=''${WB_LOCLI_DB:-1}
     export WB_SHELL_PROFILE=${profileName}
     export WB_SHELL_PROFILE_DATA=${profileData}
 
