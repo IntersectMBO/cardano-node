@@ -13,7 +13,7 @@ module Cardano.Testnet (
   TestnetNodeOptions(..),
   cardanoDefaultTestnetNodeOptions,
   getDefaultAlonzoGenesis,
-  getDefaultShelleyGenesis,
+  getDefaultGenesisBatch,
 
   -- * Configuration
   Conf(..),

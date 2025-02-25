@@ -23,7 +23,9 @@ module Testnet.Start.Types
   , isSpoNodeOptions
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
+  , GenesisBatch(..)
   , GenesisOptions(..)
+  , GenesisOrigin(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -33,6 +35,11 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+import           Cardano.Api.Ledger (StandardCrypto)
+
+import           Cardano.Ledger.Alonzo.Genesis
+import           Cardano.Ledger.Conway.Genesis
+import           Cardano.Ledger.Shelley.Genesis
 
 import           Prelude
 
@@ -138,6 +145,14 @@ data TestnetNodeOptions
 data UserNodeConfig =
   UserNodeConfigNotSubmitted
   | UserNodeConfig FilePath
+
+-- | Type to track if a genesis file was provided by the user or defaulted by @cardano-testnet@.
+data GenesisOrigin =
+  UserProvidedOrigin -- ^ Caller of @cardano-tesnet@ provided the genesis files
+  | DefaultedOrigin -- ^ Genesis file provided by @cardano-testnet@ itself
+
+-- | Type to bundle all genesis files, whether provided by the user or defaulted by @cardano-testnet@.
+newtype GenesisBatch = GenesisBatch (ShelleyGenesis StandardCrypto, AlonzoGenesis, ConwayGenesis StandardCrypto, GenesisOrigin)
 
 -- | Get extra CLI arguments passed to the node executable
 testnetNodeExtraCliArgs :: TestnetNodeOptions -> [String]
