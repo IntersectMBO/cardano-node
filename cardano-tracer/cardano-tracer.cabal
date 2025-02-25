@@ -158,6 +158,12 @@ library
                       , utf8-string
                       , vector
 
+  if flag(systemd) && os(linux)
+    build-depends:      libsystemd-journal >= 1.4.4
+
+  if (flag(systemd) && os(linux)) || flag(rtview)
+    build-depends:      unordered-containers
+
   build-depends:        aeson
                       , async
                       , auto-update
@@ -191,13 +197,9 @@ library
                       , trace-dispatcher
                       , trace-forward
                       , trace-resources
-                      , unordered-containers
                       , wai ^>= 3.2
                       , warp ^>= 3.4
                       , yaml
-
-  if flag(systemd) && os(linux)
-    build-depends:      libsystemd-journal >= 1.4.4
 
   if os(windows)
     build-depends:    Win32
