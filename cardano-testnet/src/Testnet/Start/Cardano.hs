@@ -99,7 +99,9 @@ cardanoTestnetDefault testnetOptions shelleyOptions conf = do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
   shelleyGenesis <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply shelleyOptions
-  cardanoTestnet testnetOptions conf UserNodeConfigNotSubmitted shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
+  cardanoTestnet
+    testnetOptions conf UserNodeConfigNotSubmitted
+    (shelleyGenesis, DefaultedOrigin) (alonzoGenesis, DefaultedOrigin) (Defaults.defaultConwayGenesis, DefaultedOrigin)
   where
     CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply} = testnetOptions
 
@@ -194,14 +196,14 @@ cardanoTestnet :: ()
   => CardanoTestnetOptions -- ^ The options to use
   -> Conf
   -> UserNodeConfig -- ^ The node configuration file to use. If omitted it's generated.
-  -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
-                                   --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
-  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
-  -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
+  -> (ShelleyGenesis StandardCrypto, GenesisOrigin) -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
+                                                    --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
+  -> (AlonzoGenesis, GenesisOrigin)  -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
+  -> (ConwayGenesis StandardCrypto, GenesisOrigin) -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> H.Integration TestnetRuntime
 cardanoTestnet
   testnetOptions Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} mNodeConfigFile
-  shelleyGenesis alonzoGenesis conwayGenesis = do
+  shelleyPair@(shelleyGenesis, _) alonzoPair@(alonzoGenesis, _) conwayPair@(conwayGenesis, _) = do
   let CardanoTestnetOptions
         { cardanoNodeEra=asbe
         , cardanoMaxSupply=maxSupply
@@ -225,7 +227,7 @@ cardanoTestnet
   writeGenesisSpecFile "alonzo" alonzoGenesis
   writeGenesisSpecFile "conway" conwayGenesis
 
-  _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+  _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyPair alonzoPair conwayPair (TmpAbsolutePath tmpAbsPath)
 
   -- TODO: This should come from the configuration!
   let makePathsAbsolute :: (Element a ~ FilePath, MonoFunctor a) => a -> a

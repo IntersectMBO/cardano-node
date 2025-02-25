@@ -24,6 +24,7 @@ module Testnet.Start.Types
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
+  , GenesisOrigin(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -138,6 +139,11 @@ data TestnetNodeOptions
 data UserNodeConfig =
   UserNodeConfigNotSubmitted
   | UserNodeConfig FilePath
+
+-- | Type to track if a genesis file was provided by the user or defaulted by @cardano-testnet@.
+data GenesisOrigin =
+  UserProvidedOrigin -- ^ Caller of @cardano-tesnet@ provided the genesis files
+  | DefaultedOrigin -- ^ Genesis file provided by @cardano-testnet@ itself
 
 -- | Get extra CLI arguments passed to the node executable
 testnetNodeExtraCliArgs :: TestnetNodeOptions -> [String]
