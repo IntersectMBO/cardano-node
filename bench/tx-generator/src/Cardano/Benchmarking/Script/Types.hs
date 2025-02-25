@@ -40,7 +40,7 @@ module Cardano.Benchmarking.Script.Types (
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley
+import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters)
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)

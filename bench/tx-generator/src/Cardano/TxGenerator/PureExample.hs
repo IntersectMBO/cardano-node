@@ -7,7 +7,7 @@ module  Cardano.TxGenerator.PureExample
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (convertToLedgerProtocolParameters)
+import           Cardano.Api.Internal.ProtocolParameters (convertToLedgerProtocolParameters)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
