@@ -1,20 +1,16 @@
 {-# LANGUAGE LambdaCase #-}
 
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
--- showHex needs to be a show instance on ghc8, but not any more on ghc9
-
-module Cardano.Logging.Utils (
-    runInLoop
-  , uncurry3
-  , showT
-  , showTHex
-  ) where
+module Cardano.Logging.Utils
+       ( module Cardano.Logging.Utils )
+       where
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.Text as T
-import           Numeric (showHex)
+import qualified Data.Text.Lazy as TL (toStrict)
+import qualified Data.Text.Lazy.Builder as T (toLazyText)
+import qualified Data.Text.Lazy.Builder.Int as T
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
@@ -39,17 +35,11 @@ runInLoop action localSocket prevDelayInSecs =
       then prevDelayInSecs * 2
       else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
 
--- | Converts a curried function to a function on a triple.
-uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
-uncurry3 f (a,b,c) = f a b c
-
-
 -- | Convenience function for a Show instance to be converted to text immediately
 {-# INLINE showT #-}
 showT :: Show a => a -> T.Text
 showT = T.pack . show
 
--- | Convenience function for a showHex call converted to text immediately
 {-# INLINE showTHex #-}
-showTHex :: (Integral a, Show a) => a -> T.Text
-showTHex i = T.pack (showHex i [])
+showTHex :: Integral a => a -> T.Text
+showTHex = TL.toStrict . T.toLazyText . T.hexadecimal

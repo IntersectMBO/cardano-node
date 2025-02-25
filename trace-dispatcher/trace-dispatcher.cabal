@@ -31,6 +31,7 @@ library
                       Cardano.Logging.Formatter
                       Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
+                      Cardano.Logging.Prometheus.Exposition
                       Cardano.Logging.Trace
                       Cardano.Logging.TraceDispatcherMessage
                       Cardano.Logging.Tracer.DataPoint
