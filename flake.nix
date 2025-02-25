@@ -27,7 +27,7 @@
     };
     utils.url = "github:numtide/flake-utils";
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/jl/env-reduce";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     ops-lib = {
@@ -255,7 +255,7 @@
               (mkFlakeAttrs (pkgs.extend (prev: final: { cardanoNodeProject = p; }))).ciJobs
             ) project.projectVariants;
             ciJobs = {
-              cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet preview preprod shelley_qa; };
+              cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet preview preprod; };
             } // optionalAttrs (system == "x86_64-linux") {
               native = packages // {
                 shells = devShells;
