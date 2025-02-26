@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-partial-fields  #-}
@@ -68,12 +69,14 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text, intercalate, pack, singleton, unpack)
+import           Data.Text as T (Text, intercalate, null, pack, singleton, unpack, words)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Encoding (decodeUtf8)
+import           Data.Text.Read as T (decimal)
 import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
+import           Network.Socket (PortNumber)
 
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
@@ -370,6 +373,7 @@ data BackendConfig =
   | Stdout FormatLogging
   | EKGBackend
   | DatapointBackend
+  | PrometheusSimple PortNumber
   deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON BackendConfig where
@@ -377,18 +381,25 @@ instance AE.ToJSON BackendConfig where
   toJSON DatapointBackend = AE.String "DatapointBackend"
   toJSON EKGBackend = AE.String "EKGBackend"
   toJSON (Stdout f) = AE.String $ "Stdout " <> (pack . show) f
+  toJSON (PrometheusSimple p) = AE.String $ "PrometheusSimple " <> (pack . show) p
 
 instance AE.FromJSON BackendConfig where
-  parseJSON (AE.String "Forwarder")            = pure Forwarder
-  parseJSON (AE.String "EKGBackend")           = pure EKGBackend
-  parseJSON (AE.String "DatapointBackend")     = pure DatapointBackend
-  parseJSON (AE.String "Stdout HumanFormatColoured")
-                                               = pure $ Stdout HumanFormatColoured
-  parseJSON (AE.String "Stdout HumanFormatUncoloured")
-                                               = pure $ Stdout HumanFormatUncoloured
-  parseJSON (AE.String "Stdout MachineFormat") = pure $ Stdout MachineFormat
-  parseJSON other                              = fail $ "Parsing of backend config failed."
-                        <> "Unknown config: " <> show other
+  parseJSON = AE.withText "BackendConfig" $ \case
+    "Forwarder"                     -> pure Forwarder
+    "EKGBackend"                    -> pure EKGBackend
+    "DatapointBackend"              -> pure DatapointBackend
+    "Stdout HumanFormatColoured"    -> pure $ Stdout HumanFormatColoured
+    "Stdout HumanFormatUncoloured"  -> pure $ Stdout HumanFormatUncoloured
+    "Stdout MachineFormat"          -> pure $ Stdout MachineFormat
+    prometheus                      -> case T.words prometheus of
+      ["PrometheusSimple", portNo_] ->
+        let portParseFailure = fail $ "invalid PrometheusSimple port: " ++ show portNo_
+        in case T.decimal portNo_ of
+          Right (portNo :: Word, rest)
+            | T.null rest && 0 < portNo && portNo < 65536 -> pure $ PrometheusSimple $ fromIntegral portNo
+            | otherwise                                   -> portParseFailure
+          Left{} -> portParseFailure
+      _ -> fail $ "unknown backend: " ++ show prometheus
 
 data FormatLogging =
     HumanFormatColoured
