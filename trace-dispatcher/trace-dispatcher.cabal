@@ -32,6 +32,7 @@ library
                       Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
                       Cardano.Logging.Prometheus.Exposition
+                      Cardano.Logging.Prometheus.TCPServer
                       Cardano.Logging.Trace
                       Cardano.Logging.TraceDispatcherMessage
                       Cardano.Logging.Tracer.DataPoint
@@ -59,8 +60,10 @@ library
                       , ekg-core
                       , ekg-forward >= 0.8
                       , hostname
+                      , io-classes
                       , network
                       , network-mux
+                      , network-run
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.19
                       , ouroboros-network-api
@@ -69,6 +72,7 @@ library
                       , stm
                       , text
                       , time
+                      , time-manager
                       , trace-forward
                       , unagi-chan >= 0.4.1.4
                       , unliftio
