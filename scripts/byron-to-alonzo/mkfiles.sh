@@ -41,16 +41,11 @@ set -o pipefail
 #    This is still close to the procedure on the mainnet, and requires less
 #    manual steps.
 #
-# 3. Schedule the transition in the configuration.
-#    To do this, uncomment the line containing 'TestShelleyHardForkAtEpoch'
-#    below. It's good for a quick test, and does not rely on posting update
-#    proposals to the chain.
-#
-#    This is quite convenient, but it does not test that we can do the
-#    transition by posting update proposals to the network. For even more
-#    convenience if you want to start a node in Shelley, Allegra or Mary from
-#    epoch 0, supply the script with a shelley, allegra or mary string
-#    argument. E.g mkfiles.sh mary.
+# 3. Starting in a declared era.
+#    If you want to start a node in a specific era epoch 0, supply the script
+#    with a shelley, allegra, mary, alonzo string argument. E.g
+#    mkfiles.sh mary. This is quite convenient, but it does not test that we
+#    can do the transition by posting update proposals to the network.
 
 [ -n "${DEBUG:-}" ] && set -x
 
@@ -121,17 +116,18 @@ $SED -i "${ROOT}/configuration.yaml" \
     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
     -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
 
-# Options for making it easier to trigger the transition to Shelley:
-# If neither of those are used, we have to
-# - post an update proposal + votes to go to protocol version 1
-# - after that's activated, change the configuration to have
-#   'LastKnownBlockVersion-Major: 2', and restart the nodes
-# - post another proposal + vote to go to protocol version 2
-
-# Uncomment the next line for an automatic transition after the first epoch:
-# echo "TestShelleyHardForkAtEpoch: 1" >> ${ROOT}/configuration.yaml
-
-# Uncomment the next line to trigger the hardfork with protocol version 1:
+# To transition to Shelley with the default setup, we have to:
+#
+# - post an update proposal + votes to go to protocol version 1 using
+#   scripts/byron-to-alonzo/update-1.sh
+#
+# - post another update proposal + votes to go to protocol version 2 and change
+#   the configuration to have 'LastKnownBlockVersion-Major: 2' using
+#   scripts/byron-to-alonzo/update-2.sh, and finally restart the nodes
+#
+# To make it easier to trigger the transition to Shelley, uncomment the next
+# code line to trigger the hardfork with protocol version 1 and then
+# scripts/byron-to-alonzo/update-2.sh can be skipped:
 # echo "TestShelleyHardForkAtVersion: 1"  >> ${ROOT}/configuration.yaml
 
 # Create the node directories
@@ -688,8 +684,8 @@ if [ "${1:-}" = "babbage" ]; then
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 7/'
 
-  # Copy the cost model
-  echo "Nodes will start in Alonzo era from epoch 0"
+  echo "Nodes will start in Babbage era from epoch 0"
+  echo "Caveat: forging will be disabled."
 
 elif [ "${1:-}" = "alonzo" ]; then
   {
@@ -704,7 +700,6 @@ elif [ "${1:-}" = "alonzo" ]; then
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
 
-  # Copy the cost model
   echo "Nodes will start in Alonzo era from epoch 0"
 
 elif [ "${1:-}" = "mary" ]; then
