@@ -187,7 +187,7 @@ createSPOGenesisAndFiles nPoolNodes nDelReps maxSupply asbe@(AnyShelleyBasedEra 
 
   return genesisShelleyDir
   where
-    genesisInputFilepath e = "genesis-input." <> anyEraToString (AnyCardanoEra e) <> ".json"
+    genesisInputFilepath e = "genesis-input." <> eraToString e <> ".json"
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
