@@ -164,7 +164,7 @@ library
                       , bimap
                       , blaze-html
                       , bytestring
-                      , cardano-node
+                      -- , cardano-node
                       , cborg
                       , containers
                       , contra-tracer
