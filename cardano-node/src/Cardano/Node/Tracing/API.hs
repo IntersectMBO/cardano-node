@@ -8,7 +8,8 @@ module Cardano.Node.Tracing.API
   ) where
 
 import           Cardano.Logging hiding (traceWith)
-import           Cardano.Node.Configuration.NodeAddress (File (..))
+import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
+import           Cardano.Node.Configuration.NodeAddress (File (..), PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
@@ -34,11 +35,12 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import           Prelude
 
 import           Control.DeepSeq (deepseq)
+import           Control.Monad (forM_)
 import           "contra-tracer" Control.Tracer (traceWith)
 import           "trace-dispatcher" Control.Tracer (nullTracer)
 import           Data.Bifunctor (first)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe
 import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           System.Metrics as EKG
@@ -91,6 +93,9 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer trConfig (Left ekgStore)
 
+    forM_ prometheusSimple $
+      runPrometheusSimple ekgStore
+
     stdoutTrace <- standardTracer
 
     -- We should initialize forwarding only if 'Forwarder' backend
@@ -120,6 +125,16 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
       p
 
    where
+    -- This backend can only be used globally, i.e. will always apply to the namespace root.
+    -- Multiple definitions, especially with differing ports, are considered a *misconfiguration*.
+    prometheusSimple :: Maybe PortNumber
+    prometheusSimple =
+      listToMaybe [ portNo
+                    | options                 <- Map.elems (tcOptions trConfig)
+                    , ConfBackend backends'   <- options
+                    , PrometheusSimple portNo <- backends'
+                    ]
+
     forwarderBackendEnabled =
       (any (any checkForwarder) . Map.elems) $ tcOptions trConfig
 
