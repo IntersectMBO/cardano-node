@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,7 +16,7 @@ module Cardano.Node.Tracing.Tracers.Startup
   , ppStartupInfoTrace
   )  where
 
-import           Cardano.Api (NetworkMagic (..), SlotNo (..))
+import           Cardano.Api (NetworkMagic (..))
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Chain.Genesis as Gen
@@ -40,14 +41,18 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLed
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
-import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
-                   UseLedgerPeers (..))
+import           Ouroboros.Network.Block
+import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..),
+                   NodeToClientVersionData (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersionData (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers
+import           Ouroboros.Network.PeerSelection.PeerTrustable
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   LocalRootConfig (..), WarmValency (..))
 
 import           Prelude
 
-import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.List (intercalate)
 import qualified Data.Map.Strict as Map
@@ -55,10 +60,101 @@ import           Data.Text (Text, pack)
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
-import           Network.Socket (SockAddr)
+import           Network.Socket (SockAddr (..))
 
 import           Paths_cardano_node (version)
 
+
+instance ToJSON NodeToNodeVersion where
+  toJSON NodeToNodeV_13  = Number 13
+  toJSON NodeToNodeV_14  = Number 14
+
+instance FromJSON NodeToNodeVersion where
+  parseJSON (Number 13) = return NodeToNodeV_13
+  parseJSON (Number 14) = return NodeToNodeV_14
+  parseJSON (Number x) = fail ("FromJSON.NodeToNodeVersion: unsupported node-to-node protocol version " ++ show x)
+  parseJSON x          = fail ("FromJSON.NodeToNodeVersion: error parsing NodeToNodeVersion: " ++ show x)
+
+
+instance ToJSON NodeToClientVersion where
+  toJSON NodeToClientV_16 = Number 16
+  toJSON NodeToClientV_17 = Number 17
+  toJSON NodeToClientV_18 = Number 18
+  toJSON NodeToClientV_19 = Number 19
+  -- NB: When adding a new version here, update FromJSON below as well!
+
+instance FromJSON NodeToClientVersion where
+  parseJSON (Number 16) = return NodeToClientV_16
+  parseJSON (Number 17) = return NodeToClientV_17
+  parseJSON (Number 18) = return NodeToClientV_18
+  parseJSON (Number 19) = return NodeToClientV_19
+  parseJSON (Number x) = fail ("FromJSON.NodeToClientVersion: unsupported node-to-client protocol version " ++ show x)
+  parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
+
+instance ToJSON NodeToNodeVersionData where
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps q) =
+    Aeson.object [ "networkMagic" .= toJSON m
+                 , "diffusionMode" .= show dm
+                 , "peerSharing" .= show ps
+                 , "query" .= toJSON q
+                 ]
+
+instance ToJSON NodeToClientVersionData where
+  toJSON (NodeToClientVersionData (NetworkMagic m) q) =
+    Aeson.object [ "networkMagic" .= toJSON m
+                 , "query" .= toJSON q
+                 ]
+
+
+instance ToJSON LocalRootConfig where
+  toJSON LocalRootConfig { peerAdvertise,
+                           peerTrustable,
+                           diffusionMode } =
+    Aeson.object
+      [ "peerAdvertise" .= peerAdvertise
+      , "peerTrustable" .= peerTrustable
+      , "diffusionMode" .= show diffusionMode
+      ]
+
+
+instance FromJSON UseLedgerPeers where
+  parseJSON (Number slot) = return $
+    case compare slot 0 of
+      GT -> UseLedgerPeers (After (SlotNo (floor slot)))
+      EQ -> UseLedgerPeers Always
+      LT -> DontUseLedgerPeers
+  parseJSON invalid = fail $ "Parsing of slot number failed due to type mismatch. "
+                            <> "Encountered: " <> show invalid
+
+instance FromJSON PeerTrustable where
+  parseJSON = Aeson.withBool "PeerTrustable" $ \b ->
+    pure $ if b then IsTrustable
+                else IsNotTrustable
+
+instance ToJSON PeerTrustable where
+  toJSON IsTrustable = Bool True
+  toJSON IsNotTrustable = Bool False
+
+instance ToJSON UseLedgerPeers where
+  toJSON DontUseLedgerPeers                  = Number (-1)
+  toJSON (UseLedgerPeers Always)             = Number 0
+  toJSON (UseLedgerPeers (After (SlotNo s))) = Number (fromIntegral s)
+
+instance ToJSON HotValency where
+  toJSON (HotValency v) = toJSON v
+instance ToJSON WarmValency where
+  toJSON (WarmValency v) = toJSON v
+
+instance FromJSON HotValency where
+  parseJSON v = HotValency <$> parseJSON v
+
+instance FromJSON WarmValency where
+  parseJSON v = WarmValency <$> parseJSON v
+
+instance Aeson.ToJSONKey RelayAccessPoint where
+
+
+------------------------------------------------
 
 getStartupInfo
   :: NodeConfiguration

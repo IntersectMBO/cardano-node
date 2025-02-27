@@ -56,6 +56,7 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Util.Enclose (EnclosingTimed)
 import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -151,7 +152,8 @@ instance ToJSON UnversionedProtocol
 instance ToJSON UnversionedProtocolData
 
 runTraceDocumentationCmd
-  :: TraceDocumentationCmd
+  :: ToJSON EnclosingTimed
+  => TraceDocumentationCmd
   -> IO ()
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
   docTracers tdcConfigFile tdcOutput tdMetricsHelp
@@ -160,7 +162,8 @@ runTraceDocumentationCmd TraceDocumentationCmd{..} = do
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
 docTracers ::
-     FilePath
+     ToJSON EnclosingTimed
+  => FilePath
   -> FilePath
   -> Maybe FilePath
   -> IO ()
@@ -177,6 +180,7 @@ docTracersFirstPhase :: forall blk peer remotePeer.
   , Proxy blk ~ Proxy (CardanoBlock StandardCrypto)
   , Proxy peer ~ Proxy (NtN.ConnectionId LocalAddress)
   , Proxy remotePeer ~ Proxy (NtN.ConnectionId NtN.RemoteAddress)
+  , ToJSON EnclosingTimed
   )
   => Maybe FilePath
   -> IO (DocTracer, TraceConfig)

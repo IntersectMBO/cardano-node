@@ -19,7 +19,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Tracing.NetworkOrphans
 import           Cardano.Node.Types (PeerSnapshotFile)
 import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT

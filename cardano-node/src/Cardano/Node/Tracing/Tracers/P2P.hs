@@ -25,9 +25,9 @@ import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
+import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
-import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor

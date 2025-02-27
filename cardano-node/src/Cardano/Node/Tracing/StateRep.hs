@@ -25,6 +25,7 @@ import           Cardano.Logging
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
+import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin, withOrigin)
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as NPV
