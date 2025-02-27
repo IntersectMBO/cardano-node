@@ -56,11 +56,11 @@ let
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.yaml" (toJSON (if (cfg.useNewTopology) then assertNewTopology i else oldTopology i));
+    else toFile "topology.json" (toJSON (if (cfg.useNewTopology) then assertNewTopology i else oldTopology i));
 
   topology = i:
     if cfg.useSystemdReload
-    then "/etc/cardano-node/topology-${toString i}.yaml"
+    then "/etc/cardano-node/topology-${toString i}.json"
     else selectTopology i;
 
   mkScript = cfg:
@@ -624,7 +624,7 @@ in {
           if only the topology file has changed and p2p is in use.
 
           Cardano-node topology files will be stored in /etc as:
-            /etc/cardano-node/topology-''${toString i}.yaml
+            /etc/cardano-node/topology-''${toString i}.json
 
           For peerSharing enabled networks, peer sharing files will be stored in /etc as:
             /etc/cardano-node/peer-sharing-''${toString i}.json
@@ -803,7 +803,7 @@ in {
       environment.etc = mkMerge [
         (mkIf cfg.useSystemdReload
           (foldl'
-            (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.yaml".source = selectTopology i;}) {}
+            (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.json".source = selectTopology i;}) {}
           (range 0 (cfg.instances - 1)))
         )
         (mkIf (cfg.useNewTopology && cfg.useSystemdReload)
