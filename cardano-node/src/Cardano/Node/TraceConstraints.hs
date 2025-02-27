@@ -12,8 +12,10 @@ import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
-import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
-                   GetHeader, HasHeader, Header)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash (..),
+                   ForgeStateUpdateError, GetHeader, HasHeader, Header)
+import           Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import           Ouroboros.Consensus.HardFork.Combinator.Basics (HardForkBlock)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate, LedgerWarning)
@@ -32,6 +34,7 @@ import           Data.Set
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =
     ( ConvertTxId blk
+    , ConvertRawHash (Header blk)
     , HasKESMetricsData blk
     , HasTxs blk
     , HasTxId (GenTx blk)

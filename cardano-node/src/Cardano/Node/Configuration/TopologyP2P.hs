@@ -35,6 +35,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Tracing.Render (renderHeaderHashForDetails)
+import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Cardano.Node.Types
 import           Ouroboros.Consensus.Block (ConvertRawHash (..))
 import           Ouroboros.Network.Block
@@ -59,7 +60,7 @@ import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable (.
 import qualified Ouroboros.Network.PeerSelection.PublicRootPeers as PublicRootPeers
 import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   LocalRootConfig (..), LocalRootPeers, WarmValency (..), toGroups)
+                   LocalRootPeers, WarmValency (..), toGroups)
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.Handshake (HandshakeException (..),
                    HandshakeProtocolError (..), RefuseReason (..))
@@ -442,30 +443,6 @@ instance Aeson.ToJSON SockAddr where
         Aeson.object [ "socketPath" .= show path ]
 
 
-instance Aeson.ToJSONKey RelayAccessPoint where
-
-instance ToJSON HotValency where
-  toJSON (HotValency v) = toJSON v
-instance ToJSON WarmValency where
-  toJSON (WarmValency v) = toJSON v
-
-instance FromJSON HotValency where
-  parseJSON v = HotValency <$> parseJSON v
-
-instance FromJSON WarmValency where
-  parseJSON v = WarmValency <$> parseJSON v
-
-instance ToJSON LocalRootConfig where
-  toJSON LocalRootConfig { peerAdvertise,
-                           peerTrustable,
-                           diffusionMode } =
-    Aeson.object
-      [ "peerAdvertise" .= peerAdvertise
-      , "peerTrustable" .= peerTrustable
-      , "diffusionMode" .= show diffusionMode
-      ]
-
-
 instance Aeson.ToJSONKey DomainAccessPoint where
   toJSONKey = Aeson.toJSONKeyText render
     where
@@ -675,15 +652,6 @@ instance ToJSON RemoteSt where
 
 instance ToJSON addr => Aeson.ToJSONKey (ConnectionId addr) where
 
-instance FromJSON UseLedgerPeers where
-  parseJSON (Number slot) = return $
-    case compare slot 0 of
-      GT -> UseLedgerPeers (After (SlotNo (floor slot)))
-      EQ -> UseLedgerPeers Always
-      LT -> DontUseLedgerPeers
-  parseJSON invalid = fail $ "Parsing of slot number failed due to type mismatch. "
-                            <> "Encountered: " <> show invalid
-
 instance ToJSON LedgerStateJudgement where
   toJSON YoungEnough = String "YoungEnough"
   toJSON TooOld      = String "TooOld"
@@ -702,11 +670,6 @@ instance FromJSON AssociationMode where
   parseJSON (String "Unrestricted")   = pure Unrestricted
   parseJSON _                      = fail "Invalid JSON for AssociationMode"
 
-instance ToJSON UseLedgerPeers where
-  toJSON DontUseLedgerPeers                  = Number (-1)
-  toJSON (UseLedgerPeers Always)             = Number 0
-  toJSON (UseLedgerPeers (After (SlotNo s))) = Number (fromIntegral s)
-
 instance ToJSON UseBootstrapPeers where
   toJSON DontUseBootstrapPeers   = Null
   toJSON (UseBootstrapPeers dps) = toJSON dps
@@ -714,15 +677,6 @@ instance ToJSON UseBootstrapPeers where
 instance FromJSON UseBootstrapPeers where
   parseJSON Null = pure DontUseBootstrapPeers
   parseJSON v    = UseBootstrapPeers <$> parseJSON v
-
-instance FromJSON PeerTrustable where
-  parseJSON = Aeson.withBool "PeerTrustable" $ \b ->
-    pure $ if b then IsTrustable
-                else IsNotTrustable
-
-instance ToJSON PeerTrustable where
-  toJSON IsTrustable = Bool True
-  toJSON IsNotTrustable = Bool False
 
 instance ToJSON SI.Time where
   toJSON = String . pack . show
@@ -735,3 +689,4 @@ instance ToJSON peerAddr => ToJSON (PublicRootPeers.PublicRootPeers peerAddr) wh
                  , "bigLedgerPeers" .= PublicRootPeers.getBigLedgerPeers prp
                  , "publicConfigPeers" .= Map.keysSet (PublicRootPeers.getPublicConfigPeers prp)
                  ]
+

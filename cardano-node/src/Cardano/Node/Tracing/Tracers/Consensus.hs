@@ -1277,7 +1277,6 @@ instance
   , ToJSON (GenTxId blk)
   , LedgerSupportsMempool blk
   , ConvertRawHash blk
-  , ToJSON EnclosingTimed
   ) => LogFormatting (TraceEventMempool blk) where
   forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mconcat
@@ -1341,7 +1340,7 @@ instance
   forMachine _dtal (TraceMempoolSynced et) =
     mconcat
       [ "kind" .= String "TraceMempoolSynced"
-      , "enclosingTime" .= et
+      , "enclosingTime" .= show et
       ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =

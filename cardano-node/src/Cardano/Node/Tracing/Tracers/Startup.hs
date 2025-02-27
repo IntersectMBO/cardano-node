@@ -142,6 +142,7 @@ instance ToJSON UseLedgerPeers where
 
 instance ToJSON HotValency where
   toJSON (HotValency v) = toJSON v
+
 instance ToJSON WarmValency where
   toJSON (WarmValency v) = toJSON v
 
@@ -152,7 +153,6 @@ instance FromJSON WarmValency where
   parseJSON v = WarmValency <$> parseJSON v
 
 instance Aeson.ToJSONKey RelayAccessPoint where
-
 
 ------------------------------------------------
 
