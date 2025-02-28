@@ -494,6 +494,10 @@
           imports = [./nix/nixos/cardano-submit-api-service.nix];
           services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
         };
+        cardano-tracer = { pkgs, lib, ... }: {
+          imports = [ ./nix/nixos/cardano-tracer-service.nix ];
+          services.cardano-tracer.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+        };
       };
     };
 }
