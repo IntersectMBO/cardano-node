@@ -1,48 +1,51 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
+-- | Run a simple Prometheus TCP server, responding *only* to the '/metrics' URL with current Node metrics
 module Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple) where
 
 import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSample)
+import           Cardano.Logging.Prometheus.NetworkRun
 
 import           Control.Concurrent.Async (async)
-import           Control.Monad (unless)
+import           Control.Monad (when)
 import           Control.Monad.Class.MonadAsync (link)
 import           Data.ByteString (ByteString)
-import           Data.ByteString.Builder (toLazyByteString)
+import           Data.ByteString.Builder
 import qualified Data.ByteString.Char8 as BC
 import           Data.Int (Int64)
-import           Data.List (find)
+import           Data.List (find, intersperse)
 import           Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T (encodeUtf8Builder)
-import           GHC.Conc (labelThread, myThreadId)
-import           Network.Run.TCP.Timeout
-import           Network.Socket (PortNumber)
+import           Network.HTTP.Date (epochTimeToHTTPDate, formatHTTPDate)
+import           Network.Socket (HostName, PortNumber)
 import qualified Network.Socket.ByteString as Strict (recv)
 import qualified Network.Socket.ByteString.Lazy as Lazy (sendAll)
 import           System.Metrics as EKG (Store, sampleAll)
-import           System.TimeManager (tickle)
+import           System.Posix.Types (EpochTime)
+import           System.PosixCompat.Time (epochTime)
 
 
-runPrometheusSimple :: EKG.Store -> PortNumber -> IO ()
-runPrometheusSimple ekgStore portNo =
+runPrometheusSimple :: EKG.Store -> Maybe HostName -> PortNumber -> IO ()
+runPrometheusSimple ekgStore mHost portNo =
   async serveListener >>= link
   where
     getCurrentExposition = renderExpositionFromSample <$> sampleAll ekgStore
-    serveListener = do
-      myThreadId >>= flip labelThread "PrometheusSimple server"
-      runTCPServer 300 (Just "0.0.0.0") (show portNo) (serveAccepted getCurrentExposition)   -- hardcoded: 300 seconds inactivity, and socket resource will be released
+    serveListener =
+      runTCPServer (defaultRunParams "PrometheusSimple") mHost portNo (serveAccepted getCurrentExposition)
 
--- serves an incoming connection; will terminate upon remote socket close or be reaped by inactivity timeout
+-- serves an incoming connection; will release socket upon remote close, inactivity timeout or runRecvMaxSize bytes received
 serveAccepted :: IO Text -> TimeoutServer ()
-serveAccepted getCurrentExposition _ timeoutHandle sock = go
+serveAccepted getCurrentExposition NetworkRunParams{runRecvMaxSize} resetTimeout sock = go
   where
     go = do
-      msg <- Strict.recv sock 2048
-      unless (BC.null msg) $ do
+      msg <- Strict.recv sock runRecvMaxSize
+      let len = BC.length msg
+      when (0 < len && len < runRecvMaxSize) $ do
         response <- buildResponse getCurrentExposition $ pseudoParse msg
-        Lazy.sendAll sock $ toLazyByteString $ T.encodeUtf8Builder response
-        tickle timeoutHandle
+        Lazy.sendAll sock $ toLazyByteString response
+        resetTimeout
         go
 
 
@@ -77,47 +80,63 @@ pseudoParse request =
         caseInsensitive = ["Accept:", "accept:", "ACCEPT:"]
 
 -- builds a minimal complete HTTP response based on route, HTTP verb and requested content type
-buildResponse :: IO Text -> Maybe (ByteString, Method, Accept) -> IO Text
+buildResponse :: IO Text -> Maybe (ByteString, Method, Accept) -> IO Builder
 buildResponse getCurrentExposition = \case
-  Nothing -> pure $ responseError errorBadRequest
+  Nothing -> pure $ responseError False errorBadRequest
   Just (route, method, accept)
-    | route /= "/metrics"   -> pure $ responseError errorNotFound
-    | method == UNSUPPORTED -> pure $ responseError errorBadMethod
-    | accept == Unsupported -> pure $ responseError errorBadContent
+    | route /= "/metrics"   -> pure $ responseError withBody errorNotFound
+    | method == UNSUPPORTED -> pure $ responseError withBody errorBadMethod
+    | accept == Unsupported -> pure $ responseError withBody errorBadContent
     | otherwise ->
         let content = if accept == OpenMetrics then hdrContentTypeOpenMetrics else hdrContentTypeText
-        in responseMessage (method == GET) content <$> getCurrentExposition
+        in responseMessage withBody content <$> getCurrentExposition <*> epochTime
+    where withBody = method == GET
 
-hdrContentType :: [Text] -> Text
-hdrContentType values = "Content-Type: " <> T.intercalate ";" values
+hdrContentType :: [ByteString] -> Builder
+hdrContentType = mconcat . ("Content-Type: " :) . intersperse (char8 ';') . map byteString
 
-hdrContentTypeText, hdrContentTypeOpenMetrics :: Text
+hdrContentTypeText, hdrContentTypeOpenMetrics :: Builder
 hdrContentTypeText        = hdrContentType ["text/plain", "charset=utf-8"]
 hdrContentTypeOpenMetrics = hdrContentType ["application/openmetrics-text", "version=1.0.0", "charset=utf-8"]
 
-hdrContentLength :: Int64 -> Text
-hdrContentLength len = "Content-Length: " <> T.pack (show len)
+hdrContentLength :: Int64 -> Builder
+hdrContentLength len = "Content-Length: " <> int64Dec len
 
-errorBadRequest, errorNotFound, errorBadMethod, errorBadContent :: (Text, Text)
+errorBadRequest, errorNotFound, errorBadMethod, errorBadContent :: (ByteString, ByteString)
 errorBadRequest = ("400", "Bad Request")
 errorNotFound   = ("404", "Not Found")
 errorBadMethod  = ("405", "Method Not Allowed")
 errorBadContent = ("415", "Unsupported Media Type")
 
-responseError :: (Text, Text) -> Text
-responseError (errCode, errMsg) = T.unlines
-  [ "HTTP/1.1 " <> errCode
-  , hdrContentTypeText
-  , hdrContentLength (T.length msg)
-  , ""
-  , msg
-  ]
-  where msg = errCode <> " " <> errMsg
+-- HTTP header line break
+nl :: Builder
+nl = char8 '\r' <> char8 '\n'
 
-responseMessage :: Bool -> Text -> Text -> Text
-responseMessage withBody contentType msg = T.unlines $
-  [ "HTTP/1.1 200 OK"
-  , contentType
-  , hdrContentLength (T.length msg)
-  , ""
-  ] ++ [ msg | withBody ]
+responseError :: Bool -> (ByteString, ByteString) -> Builder
+responseError withBody (errCode, errMsg) =
+  mconcat $ intersperse nl $
+    "HTTP/1.1 " <> byteString errCode :
+    if withBody
+      then  [ hdrContentLength (fromIntegral $ BC.length msg)
+            , hdrContentTypeText
+            , ""
+            , byteString msg
+            ]
+      else  [ hdrContentLength 0
+            , nl
+            ]
+  where
+    msg = errCode <> " " <> errMsg
+
+responseMessage :: Bool -> Builder -> Text -> EpochTime -> Builder
+responseMessage withBody contentType msg now =
+  mconcat $ intersperse nl
+    [ "HTTP/1.1 200 OK"
+    , hdrContentLength (T.length msg)
+    , contentType
+    , "Date: " <> byteString httpDate
+    , ""
+    , if withBody then T.encodeUtf8Builder msg else ""
+    ]
+    where
+      httpDate = formatHTTPDate $ epochTimeToHTTPDate now

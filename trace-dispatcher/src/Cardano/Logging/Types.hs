@@ -3,8 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneDeriving, ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-partial-fields  #-}
 
@@ -384,7 +383,7 @@ data BackendConfig =
   | Stdout FormatLogging
   | EKGBackend
   | DatapointBackend
-  | PrometheusSimple PortNumber
+  | PrometheusSimple (Maybe HostName) PortNumber
   deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON BackendConfig where
@@ -392,7 +391,7 @@ instance AE.ToJSON BackendConfig where
   toJSON DatapointBackend = AE.String "DatapointBackend"
   toJSON EKGBackend = AE.String "EKGBackend"
   toJSON (Stdout f) = AE.String $ "Stdout " <> (pack . show) f
-  toJSON (PrometheusSimple p) = AE.String $ "PrometheusSimple " <> (pack . show) p
+  toJSON (PrometheusSimple h p) = AE.String $ "PrometheusSimple " <> maybe mempty ((<> " ") . pack) h <> (pack . show) p
 
 instance AE.FromJSON BackendConfig where
   parseJSON = AE.withText "BackendConfig" $ \case
@@ -402,15 +401,19 @@ instance AE.FromJSON BackendConfig where
     "Stdout HumanFormatColoured"    -> pure $ Stdout HumanFormatColoured
     "Stdout HumanFormatUncoloured"  -> pure $ Stdout HumanFormatUncoloured
     "Stdout MachineFormat"          -> pure $ Stdout MachineFormat
-    prometheus                      -> case T.words prometheus of
-      ["PrometheusSimple", portNo_] ->
-        let portParseFailure = fail $ "invalid PrometheusSimple port: " ++ show portNo_
-        in case T.decimal portNo_ of
-          Right (portNo :: Word, rest)
-            | T.null rest && 0 < portNo && portNo < 65536 -> pure $ PrometheusSimple $ fromIntegral portNo
-            | otherwise                                   -> portParseFailure
-          Left{} -> portParseFailure
-      _ -> fail $ "unknown backend: " ++ show prometheus
+    prometheus                      -> either fail pure (parsePrometheusString prometheus)
+
+parsePrometheusString :: Text -> Either String BackendConfig
+parsePrometheusString t = case T.words t of
+  ["PrometheusSimple", portNo_]       -> parsePort portNo_ >>= Right . PrometheusSimple Nothing
+  ["PrometheusSimple", host, portNo_] -> parsePort portNo_ >>= Right . PrometheusSimple (Just $ unpack host)
+  _ -> Left $ "unknown backend: " ++ show t
+  where
+    parsePort p = case T.decimal p of
+      Right (portNo :: Word, rest)
+        | T.null rest && 0 < portNo && portNo < 65536 -> Right $ fromIntegral portNo
+      _                                               -> failure
+      where failure = Left $ "invalid PrometheusSimple port: " ++ show p
 
 data FormatLogging =
     HumanFormatColoured
