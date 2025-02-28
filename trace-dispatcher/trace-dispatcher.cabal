@@ -32,6 +32,7 @@ library
                       Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
                       Cardano.Logging.Prometheus.Exposition
+                      Cardano.Logging.Prometheus.NetworkRun
                       Cardano.Logging.Prometheus.TCPServer
                       Cardano.Logging.Trace
                       Cardano.Logging.TraceDispatcherMessage
@@ -59,11 +60,12 @@ library
                       , ekg-wai
                       , ekg-core
                       , ekg-forward >= 0.9
+                      , hashable
                       , hostname
+                      , http-date
                       , io-classes
                       , network
                       , network-mux
-                      , network-run
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.19
                       , ouroboros-network-api
@@ -75,6 +77,7 @@ library
                       , time-manager
                       , trace-forward
                       , unagi-chan >= 0.4.1.4
+                      , unix-compat
                       , unliftio
                       , unliftio-core
                       , unordered-containers
@@ -93,6 +96,9 @@ library
                         -Widentities
                         -Wredundant-constraints
                         -Wmissing-export-lists
+
+  if impl(ghc >= 9.8)
+    ghc-options:        -Wno-x-partial
 
 
 test-suite trace-dispatcher-test
