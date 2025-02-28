@@ -24,8 +24,8 @@ let
       advertise = g.advertise or false;
     }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
     bootstrapPeers = cfg.bootstrapPeers;
-  } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
-    useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
+  } // optionalAttrs (cfg.useLedgerAfterSlot != null) {
+    useLedgerAfterSlot = cfg.useLedgerAfterSlot;
   } // optionalAttrs (cfg.peerSnapshotFile i != null) {
     peerSnapshotFile = cfg.peerSnapshotFile i;
   };
@@ -167,6 +167,12 @@ let
       ''}
       ${toString cmd}'';
 in {
+  imports = [
+    # Update the option name for consistency with the cardano-node topology file key.
+    (mkRenamedOptionModule
+      [ "services" "cardano-node" "usePeersFromLedgerAfterSlot" ] [ "services" "cardano-node" "useLedgerAfterSlot" ])
+  ];
+
   options = {
     services.cardano-node = {
       enable = mkOption {
@@ -528,7 +534,7 @@ in {
         }];
         description = ''
           Routes to public peers. Only used if slot is less than
-          usePeersFromLedgerAfterSlot.
+          useLedgerAfterSlot.
         '';
       };
 
@@ -537,7 +543,7 @@ in {
         default = _: [];
         description = ''
           Routes to public peers. Only used if slot is less than
-          usePeersFromLedgerAfterSlot and specific to a given instance when
+          useLedgerAfterSlot and specific to a given instance when
           multiple instances are used.
         '';
       };
@@ -581,10 +587,10 @@ in {
         '';
       };
 
-      usePeersFromLedgerAfterSlot = mkOption {
+      useLedgerAfterSlot = mkOption {
         type = types.nullOr types.int;
         default = if cfg.kesKey != null then null
-          else envConfig.usePeersFromLedgerAfterSlot or null;
+          else envConfig.useLedgerAfterSlot or null;
         description = ''
           If set, bootstraps from public roots until it reaches given slot,
           then it switches to using the ledger as a source of peers. It
