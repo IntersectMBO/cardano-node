@@ -19,7 +19,7 @@ services:
     depends_on:
       - cardano-node
     volumes:
-      - node-ipc:/node-ipc
+      - node-ipc:/ipc
     ports:
       - 8090:8090
     restart: on-failure
