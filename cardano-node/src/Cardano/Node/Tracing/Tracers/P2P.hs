@@ -19,6 +19,8 @@
 module Cardano.Node.Tracing.Tracers.P2P
   () where
 
+-- import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Cardano.Logging
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -84,11 +86,11 @@ instance
              , "domainAddress" .= toJSON d
              , "diffTime" .= show dt
              ]
-  forMachine _dtal (TraceLocalRootResult d res) =
-    mconcat [ "kind" .= String "LocalRootResult"
-             , "domainAddress" .= toJSON d
-             , "result" .= toJSONList res
-             ]
+  -- forMachine _dtal (TraceLocalRootResult d res) =
+  --   mconcat [ "kind" .= String "LocalRootResult"
+  --            , "domainAddress" .= toJSON d
+  --            , "result" .= toJSONList res
+  --            ]
   forMachine _dtal (TraceLocalRootGroups groups) =
     mconcat [ "kind" .= String "LocalRootGroups"
              , "localRootGroups" .= toJSON groups
@@ -100,7 +102,7 @@ instance
              ]
   forMachine _dtal (TraceLocalRootError d exception) =
     mconcat [ "kind" .= String "LocalRootError"
-             , "domainAddress" .= toJSON d
+             , "domainAddress" .= Text.decodeUtf8 d
              , "reason" .= show exception
              ]
   forMachine _dtal (TraceLocalRootReconfigured d exception) =
@@ -119,7 +121,7 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
   namespaceFor = \case
     TraceLocalRootDomains {}      -> Namespace [] ["LocalRootDomains"]
     TraceLocalRootWaiting {}      -> Namespace [] ["LocalRootWaiting"]
-    TraceLocalRootResult {}       -> Namespace [] ["LocalRootResult"]
+    -- TraceLocalRootResult {}       -> Namespace [] ["LocalRootResult"]
     TraceLocalRootGroups {}       -> Namespace [] ["LocalRootGroups"]
     TraceLocalRootFailure {}      -> Namespace [] ["LocalRootFailure"]
     TraceLocalRootError {}        -> Namespace [] ["LocalRootError"]
@@ -178,23 +180,23 @@ instance LogFormatting TracePublicRootPeers where
     mconcat [ "kind" .= String "PublicRootDomains"
              , "domainAddresses" .= toJSONList domains
              ]
-  forMachine _dtal (TracePublicRootResult b res) =
-    mconcat [ "kind" .= String "PublicRootResult"
-             , "domain" .= show b
-             , "result" .= toJSONList res
-             ]
-  forMachine _dtal (TracePublicRootFailure b d) =
-    mconcat [ "kind" .= String "PublicRootFailure"
-             , "domain" .= show b
-             , "reason" .= show d
-             ]
+  -- forMachine _dtal (TracePublicRootResult b res) =
+  --   mconcat [ "kind" .= String "PublicRootResult"
+  --            , "domain" .= show b
+  --            , "result" .= toJSONList res
+  --            ]
+  -- forMachine _dtal (TracePublicRootFailure b d) =
+  --   mconcat [ "kind" .= String "PublicRootFailure"
+  --            , "domain" .= show b
+  --            , "reason" .= show d
+  --            ]
   forHuman = pack . show
 
 instance MetaTrace TracePublicRootPeers where
   namespaceFor TracePublicRootRelayAccessPoint {} = Namespace [] ["PublicRootRelayAccessPoint"]
   namespaceFor TracePublicRootDomains {} = Namespace [] ["PublicRootDomains"]
-  namespaceFor TracePublicRootResult {} = Namespace [] ["PublicRootResult"]
-  namespaceFor TracePublicRootFailure {} = Namespace [] ["PublicRootFailure"]
+  -- namespaceFor TracePublicRootResult {} = Namespace [] ["PublicRootResult"]
+  -- namespaceFor TracePublicRootFailure {} = Namespace [] ["PublicRootFailure"]
 
   severityFor (Namespace [] ["PublicRootRelayAccessPoint"]) _ = Just Info
   severityFor (Namespace [] ["PublicRootDomains"]) _ = Just Info

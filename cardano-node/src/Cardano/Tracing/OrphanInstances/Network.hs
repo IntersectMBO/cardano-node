@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -78,6 +79,8 @@ import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelection
 import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.PublicRootPeers (PublicRootPeers)
 import qualified Ouroboros.Network.PeerSelection.PublicRootPeers as PublicRootPeers
+-- import            Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions (pattern (DnsLocalPeer, DnsPublicPeer))
+import qualified Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions as DNS
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
@@ -118,7 +121,7 @@ import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
 import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
-import qualified Data.Aeson.Types as Aeson
+-- import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (first))
 import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
@@ -127,11 +130,11 @@ import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (Text, pack)
-import qualified Data.Text as Text
+-- import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Network.Mux (MiniProtocolNum (..))
 import qualified Network.Mux as Mux
-import           Network.Socket (SockAddr (..))
+import           Network.Socket (SockAddr (..), PortNumber)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 
@@ -260,8 +263,8 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       NotEnoughLedgerPeers {}        -> Warning
       NotEnoughBigLedgerPeers {}     -> Warning
       TraceLedgerPeersDomains {}     -> Debug
-      TraceLedgerPeersResult {}      -> Debug
-      TraceLedgerPeersFailure {}     -> Debug
+      -- TraceLedgerPeersResult {}      -> Debug
+      -- TraceLedgerPeersFailure {}     -> Debug
       UsingBigLedgerPeerSnapshot {}  -> Debug
 
 
@@ -279,6 +282,13 @@ instance HasSeverityAnnotation (WithAddr addr ErrorPolicyTrace) where
     ErrorPolicyUnhandledConnectionException {} -> Error
     ErrorPolicyAcceptException {} -> Error
 
+instance HasPrivacyAnnotation DNS.DnsTrace
+instance HasSeverityAnnotation DNS.DnsTrace where
+  getSeverityAnnotation ev = case ev of
+    DNS.DnsResult DNS.DnsLocalPeer _ _ _ -> Info
+    DNS.DnsResult {}                 -> Debug
+    DNS.DnsTraceLookupError {}       -> Debug
+    DNS.DnsSRVFail {}                -> Debug
 
 instance HasPrivacyAnnotation (WithDomainName DnsTrace)
 instance HasSeverityAnnotation (WithDomainName DnsTrace) where
@@ -745,6 +755,11 @@ instance Transformable Text IO (WithDomainName (SubscriptionTrace SockAddr)) whe
 instance HasTextFormatter (WithDomainName (SubscriptionTrace SockAddr)) where
   formatText a _ = pack (show a)
 
+instance Transformable Text IO DNS.DnsTrace where
+  trTransformer = trStructuredText
+
+instance HasTextFormatter DNS.DnsTrace where
+  formatText a _ = pack (show a)
 
 instance Transformable Text IO (WithDomainName DnsTrace) where
   trTransformer = trStructuredText
@@ -1580,18 +1595,18 @@ instance ToObject TraceLedgerPeers where
       [ "kind" .= String "TraceLedgerPeersDomains"
       , "domainAccessPoints" .= daps
       ]
-  toObject _verb (TraceLedgerPeersResult dap ips) =
-    mconcat
-      [ "kind" .= String "TraceLedgerPeersResult"
-      , "domainAccessPoint" .= show dap
-      , "ips" .= map show ips
-      ]
-  toObject _verb (TraceLedgerPeersFailure dap reason) =
-    mconcat
-      [ "kind" .= String "TraceLedgerPeersFailure"
-      , "domainAccessPoint" .= show dap
-      , "error" .= show reason
-      ]
+  -- toObject _verb (TraceLedgerPeersResult dap ips) =
+  --   mconcat
+  --     [ "kind" .= String "TraceLedgerPeersResult"
+  --     , "domainAccessPoint" .= show dap
+  --     , "ips" .= map show ips
+  --     ]
+  -- toObject _verb (TraceLedgerPeersFailure dap reason) =
+  --   mconcat
+  --     [ "kind" .= String "TraceLedgerPeersFailure"
+  --     , "domainAccessPoint" .= show dap
+  --     , "error" .= show reason
+  --     ]
   toObject _verb UsingBigLedgerPeerSnapshot =
     mconcat
       [ "kind" .= String "UsingBigLedgerPeerSnapshot"
@@ -1626,6 +1641,26 @@ instance ToObject (WithDomainName (SubscriptionTrace SockAddr)) where
              , "domain" .= show dom
              , "event" .= show ev ]
 
+instance ToObject DNS.DnsTrace where
+  toObject _verb (DNS.DnsResult peerKind domain mSRVDomain result) =
+    mconcat [ "kind" .= String "DnsResult"
+            , "peerType" .= show peerKind
+            , "domain" .= Text.decodeUtf8 domain
+            , "viaSRV" .= toJSON (Text.decodeUtf8 <$> mSRVDomain)
+            , "result" .= Aeson.toJSONList result
+            ]
+  toObject _verb (DNS.DnsTraceLookupError peerKind lookupType domain dnsError) =
+    mconcat [ "kind" .= String "DnsTraceLookupError"
+            , "peerType" .= show peerKind
+            , "DNSLookupType" .= toJSON (show <$> lookupType)
+            , "domain" .= Text.decodeUtf8 domain
+            , "DNSError" .= show dnsError
+            ]
+  toObject _verb (DNS.DnsSRVFail peerKind domain) =
+    mconcat [ "kind" .= String "DnsSRVFail"
+            , "peerType" .= show peerKind
+            , "domain" .= Text.decodeUtf8 domain
+            ]
 
 instance ToObject peer => ToObject (Mux.WithBearer peer Mux.Trace) where
   toObject verb (Mux.WithBearer b ev) =
@@ -1666,11 +1701,11 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              , "domainAddress" .= toJSON d
              , "diffTime" .= show dt
              ]
-  toObject _verb (TraceLocalRootResult d res) =
-    mconcat [ "kind" .= String "LocalRootResult"
-             , "domainAddress" .= toJSON d
-             , "result" .= Aeson.toJSONList res
-             ]
+  -- toObject _verb (TraceLocalRootResult d res) =
+  --   mconcat [ "kind" .= String "LocalRootResult"
+  --            , "domainAddress" .= toJSON d
+  --            , "result" .= Aeson.toJSONList res
+  --            ]
   toObject _verb (TraceLocalRootGroups groups) =
     mconcat [ "kind" .= String "LocalRootGroups"
              , "localRootGroups" .= toJSON groups
@@ -1682,7 +1717,7 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              ]
   toObject _verb (TraceLocalRootError d dexception) =
     mconcat [ "kind" .= String "LocalRootError"
-             , "domainAddress" .= toJSON d
+             , "domainAddress" .= Text.decodeUtf8 d
              , "reason" .= show dexception
              ]
   toObject _verb (TraceLocalRootReconfigured _ _) =
@@ -1694,17 +1729,20 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
       , "dnsMap" .= dnsMap
       ]
 
-instance Aeson.ToJSONKey DomainAccessPoint where
-  toJSONKey = Aeson.toJSONKeyText render
-    where
-      render da = mconcat
-        [ Text.decodeUtf8 (dapDomain da)
-        , ":"
-        , Text.pack $ show @Int (fromIntegral (dapPortNumber da))
-        ]
+-- instance Aeson.ToJSONKey DomainAccessPoint where
+--   toJSONKey = Aeson.toJSONKeyText render
+--     where
+--       render da = mconcat
+--         [ Text.decodeUtf8 (dapDomain da)
+--         , ":"
+--         , Text.pack $ show @Int (fromIntegral (dapPortNumber da))
+--         ]
 
 instance ToJSON IP where
   toJSON ip = String (pack . show $ ip)
+
+instance ToJSON PortNumber where
+  toJSON port = String (pack . show $ port)
 
 instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootRelayAccessPoint relays) =
@@ -1715,16 +1753,16 @@ instance ToObject TracePublicRootPeers where
     mconcat [ "kind" .= String "PublicRootDomains"
              , "domainAddresses" .= Aeson.toJSONList domains
              ]
-  toObject _verb (TracePublicRootResult b res) =
-    mconcat [ "kind" .= String "PublicRootResult"
-             , "domain" .= show b
-             , "result" .= Aeson.toJSONList res
-             ]
-  toObject _verb (TracePublicRootFailure b d) =
-    mconcat [ "kind" .= String "PublicRootFailure"
-             , "domain" .= show b
-             , "reason" .= show d
-             ]
+  -- toObject _verb (TracePublicRootResult b res) =
+  --   mconcat [ "kind" .= String "PublicRootResult"
+  --            , "domain" .= show b
+  --            , "result" .= Aeson.toJSONList res
+  --            ]
+  -- toObject _verb (TracePublicRootFailure b d) =
+  --   mconcat [ "kind" .= String "PublicRootFailure"
+  --            , "domain" .= show b
+  --            , "reason" .= show d
+  --            ]
 
 instance ToJSON KnownPeerInfo where
   toJSON (KnownPeerInfo
@@ -2545,7 +2583,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
                                              listValue (\(localAddr, connState) ->
                                                 Aeson.object
                                                   [ "localAddress" .= localAddr
-                                                  , "state" .= toJSON connState  
+                                                  , "state" .= toJSON connState
                                                   ]
                                              )
                                              (Map.toList inner)

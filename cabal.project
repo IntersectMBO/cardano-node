@@ -64,3 +64,23 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: a444fe90a2393c7ba82e8aae1107b4a0783dccb9
+  --sha256: sha256-wU4jAZ8UYVWv5pgLBZGwbEDKSfjvfRvuv5jO59u0mO8=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  --sha256: sha256-hfxlPPsMdZ8sVWaZXCE0xJwMekRI+Q1kzU08USYf/aU=
+  tag: 0d82e103c61885e65159e8369b3edd5b6213b400
+  subdir:
+    ouroboros-network
+    ouroboros-network-api

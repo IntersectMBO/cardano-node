@@ -14,9 +14,11 @@
 module Cardano.Node.Tracing.Tracers.Diffusion
   () where
 
-
+import qualified Data.Text.Encoding as Text
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.DNSActions
 import           Cardano.Logging
-import           Data.Aeson (Value (String), (.=))
+import           Data.Aeson (ToJSON (..), Value (String), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.Text (pack)
 import           Formatting
 import qualified Network.Mux as Mux
@@ -757,6 +759,30 @@ instance MetaTrace (ND.DiffusionTracer ntnAddr ntcAddr) where
       , Namespace [] ["SystemdSocketConfiguration"]
       ]
 
+
+instance
+  (
+  ) => LogFormatting DnsTrace where
+  forMachine _dtal (DnsResult peerKind domain mSRVDomain result) =
+    mconcat [ "kind" .= String "DnsResult"
+            , "peerType" .= show peerKind
+            , "domain" .= Text.decodeUtf8 domain
+            , "viaSRV" .= toJSON (Text.decodeUtf8 <$> mSRVDomain)
+            , "result" .= Aeson.toJSONList result
+            ]
+  forMachine _dtal (DnsTraceLookupError peerKind lookupType domain dnsError) =
+    mconcat [ "kind" .= String "DnsTraceLookupError"
+            , "peerType" .= show peerKind
+            , "DNSLookupType" .= toJSON (show <$> lookupType)
+            , "domain" .= Text.decodeUtf8 domain
+            , "DNSError" .= show dnsError
+            ]
+  forMachine _dtal (DnsSRVFail peerKind domain) =
+    mconcat [ "kind" .= String "DnsSRVFail"
+            , "peerType" .= show peerKind
+            , "domain" .= Text.decodeUtf8 domain
+            ]
+
 --------------------------------------------------------------------------------
 -- LedgerPeers Tracer
 --------------------------------------------------------------------------------
@@ -839,22 +865,49 @@ instance LogFormatting TraceLedgerPeers where
       [ "kind" .= String "TraceLedgerPeersDomains"
       , "domainAccessPoints" .= daps
       ]
-  forMachine _dtal (TraceLedgerPeersResult dap ips) =
-    mconcat
-      [ "kind" .= String "TraceLedgerPeersResult"
-      , "domainAccessPoint" .= show dap
-      , "ips" .= map show ips
-      ]
-  forMachine _dtal (TraceLedgerPeersFailure dap reason) =
-    mconcat
-      [ "kind" .= String "TraceLedgerPeersFailure"
-      , "domainAccessPoint" .= show dap
-      , "error" .= show reason
-      ]
+  -- forMachine _dtal (TraceLedgerPeersResult dap ips) =
+  --   mconcat
+  --     [ "kind" .= String "TraceLedgerPeersResult"
+  --     , "domainAccessPoint" .= show dap
+  --     , "ips" .= map show ips
+  --     ]
+  -- forMachine _dtal (TraceLedgerPeersFailure dap reason) =
+  --   mconcat
+  --     [ "kind" .= String "TraceLedgerPeersFailure"
+  --     , "domainAccessPoint" .= show dap
+  --     , "error" .= show reason
+  --     ]
   forMachine _dtal UsingBigLedgerPeerSnapshot =
     mconcat
       [ "kind" .= String "UsingBigLedgerPeerSnapshot"
       ]
+
+instance MetaTrace DnsTrace where
+  namespaceFor DnsResult {} =
+    Namespace [] ["DnsResult"]
+  namespaceFor DnsTraceLookupError {} =
+    Namespace [] ["DnsTraceLookupError"]
+  namespaceFor DnsSRVFail {} =
+    Namespace [] ["DnsSRVFail"]
+
+  severityFor (Namespace _ ["DnsResult"]) _ = Just Debug
+  severityFor (Namespace _ ["DnsTraceLookupError"]) _ = Just Debug
+  severityFor (Namespace _ ["DnsSRVFail"]) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["DnsResult"]) = Just
+    ""
+  documentFor (Namespace _ ["DnsTraceLookupError"]) = Just
+    ""
+  documentFor (Namespace _ ["DnsSRVFail"]) = Just
+    ""
+  documentFor _ = Nothing
+
+  allNamespaces = [
+      Namespace [] ["DnsResult"]
+    , Namespace [] ["DnsTraceLookupError"]
+    , Namespace [] ["DnsSRVFail"]
+    ]
 
 instance MetaTrace TraceLedgerPeers where
     namespaceFor PickedLedgerPeer {} =
@@ -885,10 +938,10 @@ instance MetaTrace TraceLedgerPeers where
       Namespace [] ["NotEnoughBigLedgerPeers"]
     namespaceFor TraceLedgerPeersDomains {} =
       Namespace [] ["TraceLedgerPeersDomains"]
-    namespaceFor TraceLedgerPeersResult {} =
-      Namespace [] ["TraceLedgerPeersResult"]
-    namespaceFor TraceLedgerPeersFailure {} =
-      Namespace [] ["TraceLedgerPeersFailure"]
+    -- namespaceFor TraceLedgerPeersResult {} =
+    --   Namespace [] ["TraceLedgerPeersResult"]
+    -- namespaceFor TraceLedgerPeersFailure {} =
+    --   Namespace [] ["TraceLedgerPeersFailure"]
     namespaceFor UsingBigLedgerPeerSnapshot {} =
       Namespace [] ["UsingBigLedgerPeerSnapshot"]
 

@@ -461,6 +461,9 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
            , P2P.dtTraceLedgerPeersTracer =
                tracerOnOff (traceLedgerPeers trSel)
                             verb "LedgerPeers" tr
+           , P2P.dtDnsTracer =
+               tracerOnOff (traceDns trSel)
+                            verb "Dns" tr
            }
        DisabledP2PMode ->
          Diffusion.NonP2PTracers NonP2P.TracersExtra

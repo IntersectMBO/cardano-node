@@ -631,6 +631,9 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
     !dtLedgerPeersTr   <- mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "Peers", "Ledger"]
+    !dtDnsTr <- mkCardanoTracer
+      trBase trForward mbTrEKG
+      ["Net", "PeerSelection", "DNS"]
     configureTracers configReflection trConfig [dtLedgerPeersTr]
 
     pure $ Diffusion.P2PTracers P2P.TracersExtra
@@ -668,6 +671,8 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
                  traceWith localServerTr
              , P2P.dtTraceLedgerPeersTracer = Tracer $
                  traceWith dtLedgerPeersTr
+             , P2P.dtDnsTracer = Tracer $
+                 traceWith dtDnsTr
              }
 
 mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint trConfig DisabledP2PMode = do

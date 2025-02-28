@@ -37,6 +37,7 @@ module Cardano.Tracing.Config
   , TraceDiffusionInitialization
   , TraceDnsResolver
   , TraceDnsSubscription
+  , TraceDns
   , TraceErrorPolicy
   , TraceForge
   , TraceForgeStateInfo
@@ -140,6 +141,7 @@ type DebugPeerSelectionInitiator = ("DebugPeerSelectionInitiator" :: Symbol)
 type DebugPeerSelectionInitiatorResponder = ("DebugPeerSelectionInitiatorResponder" :: Symbol)
 type TraceDiffusionInitialization = ("TraceDiffusionInitialization" :: Symbol)
 type TraceDnsResolver = ("TraceDnsResolver" :: Symbol)
+type TraceDns = ("TraceDns" :: Symbol)
 type TraceDnsSubscription = ("TraceDnsSubscription" :: Symbol)
 type TraceErrorPolicy = ("TraceErrorPolicy" :: Symbol)
 type TraceForge = ("TraceForge" :: Symbol)
@@ -212,6 +214,7 @@ data TraceSelection
   , traceDebugPeerSelectionInitiatorTracer :: OnOff DebugPeerSelectionInitiator
   , traceDebugPeerSelectionInitiatorResponderTracer :: OnOff DebugPeerSelectionInitiatorResponder
   , traceDiffusionInitialization :: OnOff TraceDiffusionInitialization
+  , traceDns :: OnOff TraceDns
   , traceDnsResolver :: OnOff TraceDnsResolver
   , traceDnsSubscription :: OnOff TraceDnsSubscription
   , traceErrorPolicy :: OnOff TraceErrorPolicy
@@ -319,6 +322,7 @@ data PartialTraceSelection
       , pTraceKeepAliveProtocol :: Last (OnOff TraceKeepAliveProtocol)
       , pTraceGsm :: Last (OnOff TraceGsm)
       , pTraceCsj :: Last (OnOff TraceCsj)
+      , pTraceDns :: Last (OnOff TraceDns)
       } deriving (Eq, Generic, Show)
 
 
@@ -387,6 +391,7 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceKeepAliveProtocol) v
       <*> parseTracer (Proxy @TraceGsm) v
       <*> parseTracer (Proxy @TraceCsj) v
+      <*> parseTracer (Proxy @TraceDns) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -452,6 +457,7 @@ defaultPartialTraceConfiguration =
     , pTraceKeepAliveProtocol = pure $ OnOff False
     , pTraceGsm = pure $ OnOff True
     , pTraceCsj = pure $ OnOff True
+    , pTraceDns = pure $ OnOff True
     }
 
 
@@ -519,6 +525,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceKeepAliveProtocol <- proxyLastToEither (Proxy @TraceKeepAliveProtocol) pTraceKeepAliveProtocol
    traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
+   traceDns <- proxyLastToEither (Proxy @TraceDns) pTraceDns
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -579,6 +586,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceKeepAliveProtocol = traceKeepAliveProtocol
              , traceGsm = traceGsm
              , traceCsj = traceCsj
+             , traceDns = traceDns
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -643,6 +651,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceKeepAliveProtocol <- proxyLastToEither (Proxy @TraceKeepAliveProtocol) pTraceKeepAliveProtocol
   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
+  traceDns <- proxyLastToEither (Proxy @TraceDns) pTraceDns
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -703,6 +712,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceKeepAliveProtocol = traceKeepAliveProtocol
             , traceGsm = traceGsm
             , traceCsj = traceCsj
+            , traceDns = traceDns
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)
