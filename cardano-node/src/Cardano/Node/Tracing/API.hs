@@ -43,7 +43,9 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux.Trace (TraceLabelPeer (..))
+import           Network.Socket (HostName)
 import           System.Metrics as EKG
+
 
 initTraceDispatcher ::
   forall blk p2p.
@@ -94,7 +96,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
     ekgTrace <- ekgTracer trConfig (Left ekgStore)
 
     forM_ prometheusSimple $
-      runPrometheusSimple ekgStore
+      uncurry (runPrometheusSimple ekgStore)
 
     stdoutTrace <- standardTracer
 
@@ -127,12 +129,12 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
    where
     -- This backend can only be used globally, i.e. will always apply to the namespace root.
     -- Multiple definitions, especially with differing ports, are considered a *misconfiguration*.
-    prometheusSimple :: Maybe PortNumber
+    prometheusSimple :: Maybe (Maybe HostName, PortNumber)
     prometheusSimple =
-      listToMaybe [ portNo
-                    | options                 <- Map.elems (tcOptions trConfig)
-                    , ConfBackend backends'   <- options
-                    , PrometheusSimple portNo <- backends'
+      listToMaybe [ (mHost, portNo)
+                    | options                       <- Map.elems (tcOptions trConfig)
+                    , ConfBackend backends'         <- options
+                    , PrometheusSimple mHost portNo <- backends'
                     ]
 
     forwarderBackendEnabled =
