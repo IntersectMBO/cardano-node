@@ -206,6 +206,10 @@ in {
           "time-detail"
         ];
         default = "none";
+        description = ''
+          Haskell profiling types which are available and will be applied to
+          the cardano-node binary if declared.
+        '';
       };
 
       eventlog = mkOption {
@@ -230,8 +234,8 @@ in {
         defaultText = "cardano-node packages";
         description = ''
           The cardano-node packages and library that should be used. The main
-          usage is sharing optimization which reduces eval time when service is
-          instantiated multiple times.
+          use case is for a sharing optimization which reduces eval time when
+          cardano node packages are instantiated multiple times.
         '';
       };
 
@@ -257,19 +261,19 @@ in {
         '';
       };
 
-      environments = mkOption {
-        type = types.attrs;
-        default = cfg.cardanoNodePackages.cardanoLib.environments;
-        description = ''
-          The environments cardano-node will connect to.
-        '';
-      };
-
       environment = mkOption {
         type = types.enum (attrNames cfg.environments);
         default = "preview";
         description = ''
           The environment cardano-node will connect to.
+        '';
+      };
+
+      environments = mkOption {
+        type = types.attrs;
+        default = cfg.cardanoNodePackages.cardanoLib.environments;
+        description = ''
+          The environments cardano-node will possibly utilize.
         '';
       };
 
