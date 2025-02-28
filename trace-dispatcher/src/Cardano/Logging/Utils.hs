@@ -11,6 +11,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL (toStrict)
 import qualified Data.Text.Lazy.Builder as T (toLazyText)
 import qualified Data.Text.Lazy.Builder.Int as T
+import           GHC.Conc (labelThread, myThreadId)
+
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
@@ -43,3 +45,6 @@ showT = T.pack . show
 {-# INLINE showTHex #-}
 showTHex :: Integral a => a -> T.Text
 showTHex = TL.toStrict . T.toLazyText . T.hexadecimal
+
+threadLabelMe :: String -> IO ()
+threadLabelMe label = myThreadId >>= flip labelThread label
