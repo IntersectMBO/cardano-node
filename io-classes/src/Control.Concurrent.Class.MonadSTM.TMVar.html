@@ -1,0 +1,30 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ExplicitNamespaces #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | This module corresponds to `Control.Concurrent.STM.TMVar` in &quot;stm&quot; package</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.TMVar</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * MonadSTM</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#TMVar"><span class="hs-identifier">TMVar</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newTMVar"><span class="hs-identifier">newTMVar</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newEmptyTMVar"><span class="hs-identifier">newEmptyTMVar</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newTMVarIO"><span class="hs-identifier">newTMVarIO</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newEmptyTMVarIO"><span class="hs-identifier">newEmptyTMVarIO</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#takeTMVar"><span class="hs-identifier">takeTMVar</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#tryTakeTMVar"><span class="hs-identifier">tryTakeTMVar</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#putTMVar"><span class="hs-identifier">putTMVar</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#tryPutTMVar"><span class="hs-identifier">tryPutTMVar</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#readTMVar"><span class="hs-identifier">readTMVar</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#tryReadTMVar"><span class="hs-identifier">tryReadTMVar</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#swapTMVar"><span class="hs-identifier">swapTMVar</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#writeTMVar"><span class="hs-identifier">writeTMVar</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#isEmptyTMVar"><span class="hs-identifier">isEmptyTMVar</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- * MonadLabelledSTM</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#labelTMVar"><span class="hs-identifier">labelTMVar</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#labelTMVarIO"><span class="hs-identifier">labelTMVarIO</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- * MonadTraceSTM</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#traceTMVar"><span class="hs-identifier">traceTMVar</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#traceTMVarIO"><span class="hs-identifier">traceTMVarIO</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html"><span class="hs-identifier">Control.Monad.Class.MonadSTM.Internal</span></a></span><span>
+</span><span id="line-30"></span></pre></body></html>
