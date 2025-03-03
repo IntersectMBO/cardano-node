@@ -47,7 +47,11 @@ library
                       Control.Tracer.Arrow
                       Control.Tracer
 
-  default-extensions:   OverloadedStrings
+  default-extensions:   LambdaCase
+                        NamedFieldPuns
+                        OverloadedStrings
+
+
   build-depends:        base >=4.12 && <5
                       , aeson >= 2.1.0.0
                       , aeson-pretty
@@ -57,7 +61,6 @@ library
                       , containers
                       , contra-tracer
                       , deepseq
-                      , ekg-wai
                       , ekg-core
                       , ekg-forward >= 0.9
                       , hashable
@@ -175,7 +178,7 @@ benchmark trace-dispatcher-bench
                       , aeson
                       , containers
                       , criterion
-                      , ekg-wai
+                      , ekg-core
                       , text
                       , time
                       , trace-dispatcher

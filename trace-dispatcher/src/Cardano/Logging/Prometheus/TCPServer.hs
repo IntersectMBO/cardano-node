@@ -1,6 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
-
 -- | Run a simple Prometheus TCP server, responding *only* to the '/metrics' URL with current Node metrics
 module Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple) where
 
