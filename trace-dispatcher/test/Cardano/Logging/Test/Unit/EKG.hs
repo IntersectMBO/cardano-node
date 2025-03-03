@@ -35,7 +35,7 @@ instance MetaTrace Measure where
 testEKG :: IO Int
 testEKG = do
     store <- newStore
-    tracer <- ekgTracer emptyTraceConfig (Left store)
+    tracer <- ekgTracer emptyTraceConfig store
     let formattedTracer = metricsFormatter tracer
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [formattedTracer]
