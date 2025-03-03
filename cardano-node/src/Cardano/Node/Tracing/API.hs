@@ -93,7 +93,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore
-    ekgTrace <- ekgTracer trConfig (Left ekgStore)
+    ekgTrace <- ekgTracer trConfig ekgStore
 
     forM_ prometheusSimple $
       uncurry (runPrometheusSimple ekgStore)
