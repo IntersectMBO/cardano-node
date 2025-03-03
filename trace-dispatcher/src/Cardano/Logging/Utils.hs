@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Cardano.Logging.Utils
        ( module Cardano.Logging.Utils )
        where
@@ -11,6 +9,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL (toStrict)
 import qualified Data.Text.Lazy.Builder as T (toLazyText)
 import qualified Data.Text.Lazy.Builder.Int as T
+import qualified Data.Text.Lazy.Builder.RealFloat as T (realFloat)
 import           GHC.Conc (labelThread, myThreadId)
 
 
@@ -45,6 +44,9 @@ showT = T.pack . show
 {-# INLINE showTHex #-}
 showTHex :: Integral a => a -> T.Text
 showTHex = TL.toStrict . T.toLazyText . T.hexadecimal
+
+showTReal :: RealFloat a => a -> T.Text
+showTReal = TL.toStrict . T.toLazyText . T.realFloat
 
 threadLabelMe :: String -> IO ()
 threadLabelMe label = myThreadId >>= flip labelThread label
