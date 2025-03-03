@@ -7,7 +7,7 @@ module Cardano.Tracer.Handlers.Logs.File
 
 import           Cardano.Logging (TraceObject (..))
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.Utils
+import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotationAndSymlink)
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils (nl, readRegistry)
 
@@ -57,7 +57,7 @@ writeTraceObjectsToFile registry loggingParams@LoggingParams{logRoot, logFormat}
           let subDirForLogs :: FilePath
               subDirForLogs = rootDirAbs </> T.unpack nodeName
 
-          createEmptyLogRotation currentLogLock key registry subDirForLogs
+          createEmptyLogRotationAndSymlink currentLogLock key registry subDirForLogs
           handles <- readRegistry registry
           let handle = fst (fromJust (Map.lookup key handles))
           BS8.hPutStr handle preparedLines

@@ -11,6 +11,7 @@ module Cardano.Tracer.Types
   , ProtocolsBrake
   , Registry (..)
   , HandleRegistry
+  , HandleRegistryMap
   , HandleRegistryKey
   ) where
 
@@ -65,8 +66,11 @@ type ProtocolsBrake = TVar Bool
 type    Registry :: Type -> Type -> Type
 newtype Registry a b = Registry { getRegistry :: MVar (Map a b) }
 
+type HandleRegistry :: Type
+type HandleRegistry = Registry HandleRegistryKey (Handle, FilePath)
+
 type HandleRegistryKey :: Type
 type HandleRegistryKey = (NodeName, LoggingParams)
 
-type HandleRegistry :: Type
-type HandleRegistry = Registry HandleRegistryKey (Handle, FilePath)
+type HandleRegistryMap :: Type
+type HandleRegistryMap = Map HandleRegistryKey (Handle, FilePath)
