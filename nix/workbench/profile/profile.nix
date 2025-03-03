@@ -30,6 +30,18 @@ let
                                          --argjson x '${x}'
                                        '' "$x";
 
+  ## This ports the (very minimal) config of the deprecated iohk-nix testnet environment to workbench, removing the dependency on it.
+  baseNodeConfigTestnet =
+    {
+      Protocol              = "Cardano";
+      RequiresNetworkMagic  = "RequiresMagic";
+
+      LastKnownBlockVersion-Major = 3;
+      LastKnownBlockVersion-Minor = 0;
+      LastKnownBlockVersion-Alt   = 0;
+    }
+    // workbenchNix.cardanoNodePackages.cardanoLib.defaultLogConfig;
+
   mkServices = { profile, nodeSpecs, backend }:
     rec {
       inherit
@@ -40,7 +52,7 @@ let
             inherit topologyFiles profiling;
             inherit workbenchNix;
             inherit jsonFilePretty;
-            baseNodeConfig = workbenchNix.cardanoNodePackages.cardanoLib.environments.testnet.nodeConfig;
+            baseNodeConfig = baseNodeConfigTestnet;
           })
         node-services;
 
