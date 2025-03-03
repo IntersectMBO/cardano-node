@@ -1,29 +1,36 @@
 #!/bin/env bash
-
-# https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail
 set -eo pipefail
 
 echo "Running the cardano node ..."
+
+[[ -n $DEBUG ]] && set -x
 
 # Define a few defaults
 CARDANO_CONFIG_BASE="/opt/cardano/config"
 
 if [[ -z $CARDANO_CONFIG ]]; then
-  CARDANO_CONFIG="$CARDANO_CONFIG_BASE/mainnet-config.json"
+  CARDANO_CONFIG="$CARDANO_CONFIG_BASE/mainnet/config.json"
 fi
 
 if [[ -z $CARDANO_TOPOLOGY ]]; then
-  CARDANO_TOPOLOGY="$CARDANO_CONFIG_BASE/mainnet-topology.json"
+  CARDANO_TOPOLOGY="$CARDANO_CONFIG_BASE/mainnet/topology.json"
 fi
 
+# Breaking change from the historical default of: /opt/cardano/data
+# in order to align both the "scripts" and "custom" modes of image operation.
+# Prefer root mountpoints for consistency via symlink /opt/cardano/data -> /data
 if [[ -z $CARDANO_DATABASE_PATH ]]; then
-  CARDANO_DATABASE_PATH="/opt/cardano/data"
+  CARDANO_DATABASE_PATH="/data/db"
 fi
 
+# Breaking change from the historical default of: /opt/cardano/ipc/socket
+# in order to align both the "scripts" and "custom" modes of image operation.
+# Prefer root mountpoints for consistency via symlink /opt/cardano/ipc -> /ipc
 if [[ -z $CARDANO_SOCKET_PATH ]]; then
-  CARDANO_SOCKET_PATH="/opt/cardano/ipc/socket"
+  CARDANO_SOCKET_PATH="/ipc/node.socket"
 fi
 
+# Prefer root mountpoints for consistency via symlink /opt/cardano/ipc -> /ipc
 if [[ -z $CARDANO_LOG_DIR ]]; then
   CARDANO_LOG_DIR="/opt/cardano/logs"
 fi
@@ -102,7 +109,12 @@ CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
 CNODE_HOSTNAME="$CARDANO_PUBLIC_IP"
 CNODE_PORT=$CARDANO_PORT
 CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
-GENESIS_JSON="$CARDANO_CONFIG_BASE/mainnet-shelley-genesis.json"
+
+# Breaking change from the historical default of:
+# $CARDANO_CONFIG_BASE/mainnet-shelley-genesis.json in order to align
+# with network organized configuration files.
+GENESIS_JSON="$CARDANO_CONFIG_BASE/mainnet/shelley-genesis.json"
+
 TOPOLOGY="$CARDANO_TOPOLOGY"
 LOG_DIR="$CARDANO_LOG_DIR"
 EOF
@@ -114,17 +126,19 @@ EOF
 #
 runRelayNode () {
 
-  effopts=(--config $CARDANO_CONFIG \
-    --topology $CARDANO_TOPOLOGY \
-    --database-path $CARDANO_DATABASE_PATH \
-    --socket-path $CARDANO_SOCKET_PATH \
-    --host-addr $CARDANO_BIND_ADDR \
-    --port $CARDANO_PORT)
+  effopts=(
+    "--config" "$CARDANO_CONFIG" \
+    "--topology" "$CARDANO_TOPOLOGY" \
+    "--database-path" "$CARDANO_DATABASE_PATH" \
+    "--socket-path" "$CARDANO_SOCKET_PATH" \
+    "--host-addr" "$CARDANO_BIND_ADDR" \
+    "--port" "$CARDANO_PORT"
+  )
 
-  effopts+=(${options[@]})
+  effopts+=("${options[@]}")
 
-  echo "cardano-node run ${effopts[@]}"
-  exec /usr/local/bin/cardano-node run ${effopts[@]}
+  echo "cardano-node run ${effopts[*]}"
+  exec /usr/local/bin/cardano-node run "${effopts[@]}"
 }
 
 #####################################################################
@@ -133,20 +147,22 @@ runRelayNode () {
 #
 runBlockProducerNode () {
 
-  effopts=(--config $CARDANO_CONFIG \
-    --topology $CARDANO_TOPOLOGY \
-    --database-path $CARDANO_DATABASE_PATH \
-    --socket-path $CARDANO_SOCKET_PATH \
-    --host-addr $CARDANO_BIND_ADDR \
-    --port $CARDANO_PORT \
-    --shelley-kes-key $CARDANO_SHELLEY_KES_KEY \
-    --shelley-vrf-key $CARDANO_SHELLEY_VRF_KEY \
-    --shelley-operational-certificate $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE)
+  effopts=(
+    "--config" "$CARDANO_CONFIG" \
+    "--topology" "$CARDANO_TOPOLOGY" \
+    "--database-path" "$CARDANO_DATABASE_PATH" \
+    "--socket-path" "$CARDANO_SOCKET_PATH" \
+    "--host-addr" "$CARDANO_BIND_ADDR" \
+    "--port" "$CARDANO_PORT" \
+    "--shelley-kes-key" "$CARDANO_SHELLEY_KES_KEY" \
+    "--shelley-vrf-key" "$CARDANO_SHELLEY_VRF_KEY" \
+    "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
+  )
 
-  effopts+=(${options[@]})
+  effopts+=("${options[@]}")
 
-  echo "cardano-node run ${effopts[@]}"
-  exec /usr/local/bin/cardano-node run ${effopts[@]}
+  echo "cardano-node run ${effopts[*]}"
+  exec /usr/local/bin/cardano-node run "${effopts[@]}"
 }
 
 # Shift the first option by one index
@@ -154,7 +170,7 @@ shift
 
 # Override default values with explicit options
 
-options=($@)
+options=("$@")
 
 for i in "${!options[@]}"
 do
@@ -187,9 +203,9 @@ printRunEnv
 writeRootEnv
 
 # The IPC socket dir is not created on demand
-mkdir -p `dirname ${CARDANO_SOCKET_PATH}`
+mkdir -p "$(dirname "$CARDANO_SOCKET_PATH")"
 
-if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
+if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
   runBlockProducerNode
 else
   runRelayNode
