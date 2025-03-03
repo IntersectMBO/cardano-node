@@ -67,10 +67,10 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: 15f2d3ee401ce891862ef971cef0d2ea2802312c
+  tag: e177c5d54f9c8b85d7d198ff7f52d8f07ec7bccf
   subdir:
     cardano-ping
     ouroboros-network
     ouroboros-network-framework
     network-mux
-  --sha256: sha256-MD/WHQnSAivhMT1QKclh1vvxDzFUExrcijURSygZMx8=
+  --sha256: sha256-tommf86ttcpBnnGInKGV+ncP2aMYgH4celTrbPnGIHE=
