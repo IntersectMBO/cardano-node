@@ -9,7 +9,9 @@ import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
 
 import           Prelude
 
+import           Control.Applicative
 import           Data.Default.Class
+import           Data.Foldable
 import           Data.Functor
 import qualified Data.List as L
 import           Data.Word (Word64)
@@ -28,7 +30,7 @@ optsTestnet envCli = CardanoTestnetCliOptions
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
-  <$> pNumSpoNodes
+  <$> pTestnetNodeOptions
   <*> pAnyShelleyBasedEra'
   <*> pMaxLovelaceSupply
   <*> OA.option auto
@@ -67,17 +69,21 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
     pAnyShelleyBasedEra' =
       pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
 
-pNumSpoNodes :: Parser [TestnetNodeOptions]
-pNumSpoNodes =
-  -- We don't support passing custom node configurations files on the CLI.
-  -- So we use a default node configuration for all nodes.
-  (`L.replicate` defaultSpoOptions) <$>
-    OA.option auto
-    (   OA.long "num-pool-nodes"
-    <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
-    <>  OA.metavar "COUNT"
-    <>  OA.showDefault
-    <>  OA.value 1)
+pTestnetNodeOptions :: Parser TestnetNodeOptions
+pTestnetNodeOptions =
+  asum [
+      AutomaticNodeOptions . (`L.replicate` defaultSpoOptions) <$>
+        OA.option auto
+        (   OA.long "num-pool-nodes"
+        <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
+        <>  OA.metavar "COUNT"
+        <>  OA.showDefault
+        <>  OA.value 1)
+    , UserNodeOptions
+        <$> strOption ( long "node-config"
+                        <> metavar "FILEPATH"
+                        <> help "Path to the node's configuration file. Generated if omitted.")
+    ]
   where
     defaultSpoOptions = SpoNodeOptions []
 
