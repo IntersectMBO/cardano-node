@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Cardano.Logging.TraceDispatcherMessage
   (
     UnknownNamespaceKind (..)

@@ -91,6 +91,3 @@ localTests = localOption (QuickCheckTests 10) $ testGroup "trace-dispatcher"
     , testProperty "reconfiguration stress test" $
         runScriptMultithreadedWithConstantReconfig 1.0 (\ _ _ -> property True)
     ]
-
-
-
