@@ -16,6 +16,7 @@ import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
+import           Cardano.Node.Tracing.HasIssuer (HasIssuer)
 import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
@@ -50,6 +51,7 @@ initTraceDispatcher ::
   , LogFormatting
     (TraceLabelPeer (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   , LogFormatting (TraceGsmEvent (Tip blk))
+  , HasIssuer blk
   )
   => NodeConfiguration
   -> SomeConsensusProtocol

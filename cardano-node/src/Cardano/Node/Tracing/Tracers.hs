@@ -23,6 +23,7 @@ import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.HasIssuer (HasIssuer)
 import           Cardano.Node.Tracing.Peers
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
@@ -81,6 +82,7 @@ mkDispatchTracers
       (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   , LogFormatting (TraceGsmEvent (Tip blk))
   , MetaTrace (TraceGsmEvent (Tip blk))
+  , HasIssuer blk
   )
   => NodeKernelData blk
   -> Trace IO FormattedMessage

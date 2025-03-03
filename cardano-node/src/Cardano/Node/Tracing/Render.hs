@@ -1,9 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Node.Tracing.Render
   ( renderChunkNo
@@ -44,7 +47,8 @@ import qualified Cardano.Ledger.SafeHash as SafeHash
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..))
 import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
-import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
+import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), Header,
+                   RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
@@ -62,6 +66,14 @@ import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Word (Word32)
+
+
+instance ConvertRawHash blk => ConvertRawHash (Header blk) where
+  toShortRawHash _ = toShortRawHash (Proxy @blk)
+  fromShortRawHash _ = fromShortRawHash (Proxy @blk)
+  hashSize :: proxy (Header blk) -> Word32
+  hashSize _ = hashSize (Proxy @blk)
 
 condenseT :: Condense a => a -> Text
 condenseT = Text.pack . condense
