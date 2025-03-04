@@ -14,7 +14,7 @@ set -o pipefail
 # One option to ensure you are running with repo matched cardano-cli and cardano-node
 # versions is to enter a nix shell: `nix shell .#cardano-cli .#cardano-node`
 #
-# There are three ways of triggering the transition to Shelley:
+# There are two ways of triggering the transition to Shelley:
 # 1. Trigger transition at protocol version 2.0.0 (as on mainnet).
 #    The system starts at 0.0.0, and we can only increase it by 1 in the major
 #    version, so this does require to:
@@ -24,24 +24,15 @@ set -o pipefail
 #    b) wait for the protocol to change (end of the epoch, or end of the last
 #       epoch if it's posted near the end of the epoch),
 #
-#    c) change configuration.yaml to have 'LastKnownBlockVersion-Major: 2',
-#       and restart the nodes
+#    c) post an update proposal and votes to transition to 2.0.0
 #
-#    d) post an update proposal and votes to transition to 2.0.0
+#    d) change configuration.yaml to have 'LastKnownBlockVersion-Major: 2',
+#       and restart the nodes
 #
 #    This is what will happen on the mainnet, so it's vital to test this, but
 #    it does contain some manual steps.
 #
-# 2. Trigger transition at protocol version 2.0.0.
-#    For testing purposes, we can also modify the system to do the transition to
-#    Shelley at protocol version 1.0.0, by uncommenting the line containing
-#    'TestShelleyHardForkAtVersion' below. Then, we just need to execute step a)
-#    above in order to trigger the transition.
-#
-#    This is still close to the procedure on the mainnet, and requires less
-#    manual steps.
-#
-# 3. Starting in a declared era.
+# 2. Starting in a declared era.
 #    If you want to start a node in a specific era epoch 0, supply the script
 #    with a shelley, allegra, mary, alonzo string argument. E.g
 #    mkfiles.sh mary. This is quite convenient, but it does not test that we
@@ -116,20 +107,6 @@ $SED -i "${ROOT}/configuration.yaml" \
     -e 's/RequiresNoMagic/RequiresMagic/' \
     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
     -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
-
-# To transition to Shelley with the default setup, we have to:
-#
-# - post an update proposal + votes to go to protocol version 1 using
-#   scripts/byron-to-alonzo/update-1.sh
-#
-# - post another update proposal + votes to go to protocol version 2 and change
-#   the configuration to have 'LastKnownBlockVersion-Major: 2' using
-#   scripts/byron-to-alonzo/update-2.sh, and finally restart the nodes
-#
-# To make it easier to trigger the transition to Shelley, uncomment the next
-# code line to trigger the hardfork with protocol version 1 and then
-# scripts/byron-to-alonzo/update-2.sh can be skipped:
-# echo "TestShelleyHardForkAtVersion: 1"  >> ${ROOT}/configuration.yaml
 
 # Create the node directories
 for NODE in ${ALL_NODES}; do
