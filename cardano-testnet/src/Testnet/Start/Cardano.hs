@@ -75,10 +75,15 @@ testMinimumConfigurationRequirements :: HasCallStack
                                         => MonadTest m
                                         => CardanoTestnetOptions -> m ()
 testMinimumConfigurationRequirements CardanoTestnetOptions{cardanoNodes} = withFrozenCallStack $ do
-  let nSpoNodes = length [ () | SpoNodeOptions{} <- cardanoNodes]
   when (nSpoNodes < 1) $ do
      H.note_ "Need at least one SPO node to produce blocks, but got none."
      H.failure
+  where
+    nSpoNodes =
+      case cardanoNodes of
+        UserNodeOptions _ -> 1
+        AutomaticNodeOptions nodesOptions ->
+          length [ () | SpoNodeOptions{} <- nodesOptions]
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
@@ -101,8 +106,9 @@ cardanoTestnetDefault testnetOptions shelleyOptions conf = do
   alonzoGenesis <- getDefaultAlonzoGenesis sbe
   shelleyGenesis <- getDefaultShelleyGenesis cardanoNodeEra cardanoMaxSupply shelleyOptions
   cardanoTestnet
-    testnetOptions conf UserNodeConfigNotSubmitted
+    testnetOptions
     (shelleyGenesis, DefaultedOrigin) (alonzoGenesis, DefaultedOrigin) (Defaults.defaultConwayGenesis, DefaultedOrigin)
+    conf
   where
     CardanoTestnetOptions{cardanoNodeEra, cardanoMaxSupply} = testnetOptions
 
@@ -195,16 +201,16 @@ getDefaultShelleyGenesis asbe maxSupply opts = do
 cardanoTestnet :: ()
   => HasCallStack
   => CardanoTestnetOptions -- ^ The options to use
-  -> Conf
-  -> UserNodeConfig -- ^ The node configuration file to use. If omitted it's generated.
   -> (ShelleyGenesis StandardCrypto, GenesisOrigin) -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
                                                     --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
   -> (AlonzoGenesis, GenesisOrigin)  -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> (ConwayGenesis StandardCrypto, GenesisOrigin) -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
+  -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnet
-  testnetOptions Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} mNodeConfigFile
-  shelleyPair@(shelleyGenesis, _) alonzoPair@(alonzoGenesis, _) conwayPair@(conwayGenesis, _) = do
+  testnetOptions 
+  shelleyPair@(shelleyGenesis, _) alonzoPair@(alonzoGenesis, _) conwayPair@(conwayGenesis, _)
+  Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
   let CardanoTestnetOptions
         { cardanoNodeEra=asbe
         , cardanoMaxSupply=maxSupply
@@ -221,12 +227,16 @@ cardanoTestnet
 
   H.note_ OS.os
 
-  -- Write specification files. Those are the same as the genesis files
-  -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
-  -- They are used by benchmarking: as templates to CLI commands,
-  -- as evidence of what was run, and as cache keys.
-  writeGenesisSpecFile "alonzo" alonzoGenesis
-  writeGenesisSpecFile "conway" conwayGenesis
+  case cardanoNodes of
+    AutomaticNodeOptions _ -> do
+      -- Write specification files. Those are the same as the genesis files
+      -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
+      -- They are used by benchmarking: as templates to CLI commands,
+      -- as evidence of what was run, and as cache keys.
+      writeGenesisSpecFile "alonzo" alonzoGenesis
+      writeGenesisSpecFile "conway" conwayGenesis
+    UserNodeOptions _ ->
+      pure ()
 
   _ <- createSPOGenesisAndFiles nPools nDReps maxSupply asbe shelleyPair alonzoPair conwayPair (TmpAbsolutePath tmpAbsPath)
 
@@ -266,21 +276,26 @@ cardanoTestnet
         }
       }
 
-  nodeConfigFile <- case mNodeConfigFile of
-    UserNodeConfigNotSubmitted -> do
+  nodeConfigFile <- case cardanoNodes of
+    AutomaticNodeOptions _ -> do
       configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
       -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
       config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
       H.evalIO $ LBS.writeFile configurationFile config
       return configurationFile
-    UserNodeConfig userSubmittedNodeConfigFile -> pure userSubmittedNodeConfigFile
+    UserNodeOptions userSubmittedNodeConfigFile ->
+      liftIO $ IO.makeAbsolute userSubmittedNodeConfigFile
 
-  execCli_
-    [ "debug", "check-node-configuration"
-    , "--node-configuration-file", nodeConfigFile
-    ]
+  portNumbersWithNodeOptions <-
+    case cardanoNodes of
+      UserNodeOptions _ -> do
+        -- Only one node
+        port <- H.randomPort testnetDefaultIpv4Address
+        return [(Nothing, port)]
+      AutomaticNodeOptions automatic -> do
+        -- Possibly multiple nodes
+        forM automatic (\a -> (Just a, ) <$> H.randomPort testnetDefaultIpv4Address)
 
-  portNumbersWithNodeOptions <- forM cardanoNodes $ \nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address
   let portNumbers = snd <$> portNumbersWithNodeOptions
 
   -- Byron related
@@ -291,6 +306,8 @@ cardanoTestnet
 
   -- Make Non P2P topology files
   forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do
+    -- TODO: if the user provided its own configuration file, and requested a P2P topology file,
+    -- we should generate a P2P topology file instead of a non-P2P one.
     let producers = flip map (filter (/= myPortNumber) portNumbers) $ \otherProducerPort ->
           RemoteAddress
             { raAddress = showIpv4Address testnetDefaultIpv4Address
@@ -308,18 +325,18 @@ cardanoTestnet
     H.note_ $ "Node name: " <> nodeName
     let (mKeys, spoNodeCliArgs) =
           case nodeOptions of
-            RelayNodeOptions{} -> (Nothing, [])
-            SpoNodeOptions{} -> do
-              let keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
-                  -- provide keys' locations for SPO nodes
-                  cliArgs =
-                    [ "--shelley-kes-key", nodePoolKeysDir </> "kes.skey"
-                    , "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
-                    , "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
-                    , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
-                    , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
-                    ]
-              (Just keys, cliArgs)
+            Just RelayNodeOptions{} -> (Nothing, [])
+            Just SpoNodeOptions{} -> (Just keys, shelleyCliArgs <> byronCliArgs)
+            Nothing -> (Just keys, shelleyCliArgs)
+          where
+            shelleyCliArgs = [ "--shelley-kes-key", nodePoolKeysDir </> "kes.skey"
+                             , "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
+                             , "--shelley-operational-certificate", nodePoolKeysDir </> "opcert.cert"
+                             ]
+            byronCliArgs = [ "--byron-delegation-certificate", nodePoolKeysDir </> "byron-delegation.cert"
+                           , "--byron-signing-key", nodePoolKeysDir </> "byron-delegate.key"
+                           ]
+            keys@SpoNodeKeys{poolNodeKeysVrf} = mkTestnetNodeKeyPaths i
 
     eRuntime <- runExceptT . retryOnAddressInUseError $
       startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port testnetMagic $
@@ -329,7 +346,7 @@ cardanoTestnet
         , "--database-path", nodeDataDir </> "db"
         ]
         <> spoNodeCliArgs
-        <> testnetNodeExtraCliArgs nodeOptions
+        <> maybe [] extraCliArgs nodeOptions
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
   let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
@@ -390,6 +407,10 @@ cardanoTestnet
   writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do
     genesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis." <> eraName <> ".spec.json"
     H.evalIO $ LBS.writeFile genesisJsonFile $ Aeson.encode toWrite
+  extraCliArgs =
+    \case
+      SpoNodeOptions args -> args
+      RelayNodeOptions args -> args
 
 -- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
 retryOnAddressInUseError

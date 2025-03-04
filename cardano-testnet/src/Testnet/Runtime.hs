@@ -142,16 +142,15 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
        left MaxSprocketLengthExceededError
 
     let socketAbsPath = H.sprocketSystemName sprocket
+        completeNodeCmd =  nodeCmd ++
+                             [ "--socket-path", H.sprocketArgumentName sprocket
+                             , "--port", show port
+                             , "--host-addr", showIpv4Address ipv4
+                             ]
 
-    nodeProcess
-      <- newExceptT . fmap (first ExecutableRelatedFailure) . try
-           $ procNode $ mconcat
-                         [ nodeCmd
-                         , [ "--socket-path", H.sprocketArgumentName sprocket
-                           , "--port", show port
-                           , "--host-addr", showIpv4Address ipv4
-                           ]
-                         ]
+    H.noteShow_ $ "Starting node with arguments: " <> unwords completeNodeCmd
+
+    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ procNode completeNodeCmd
 
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port

@@ -1,6 +1,6 @@
 Usage: cardano-testnet (cardano | version | help)
 
-Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
+Usage: cardano-testnet cardano [--num-pool-nodes COUNT | --node-config FILEPATH]
   [ --shelley-era
   | --allegra-era
   | --mary-era
