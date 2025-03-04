@@ -104,8 +104,14 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
-  GenesisBatch(shelleyGenesis', alonzoGenesis, conwayGenesis, _) <- getDefaultGenesisBatch fastTestnetOptions shelleyOptions
-  let conwayGenesisWithCommittee = conwayGenesis { L.cgCommittee = committee }
+  alonzoGenesis <- getDefaultAlonzoGenesis sbe
+  shelleyGenesis' <-
+    getDefaultShelleyGenesis
+      asbe
+      (cardanoMaxSupply fastTestnetOptions)
+      shelleyOptions
+  let conwayGenesisWithCommittee =
+        defaultConwayGenesis { L.cgCommittee = committee }
 
   TestnetRuntime
     { testnetMagic
@@ -114,8 +120,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
     , configurationFile
     } <- cardanoTestnet
            fastTestnetOptions
-           conf UserNodeConfigNotSubmitted
-           (GenesisBatch (shelleyGenesis', alonzoGenesis, conwayGenesisWithCommittee, UserProvidedOrigin))
+           conf UserNodeConfigNotSubmitted (shelleyGenesis', DefaultedOrigin)
 
   poolNode1 <- H.headM testnetNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolNode1
