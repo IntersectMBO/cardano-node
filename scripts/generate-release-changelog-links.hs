@@ -1,4 +1,4 @@
-#!/usr/bin/env -S cabal run --verbose=1 --index-state=2024-04-09T14:49:48Z
+#!/usr/bin/env -S cabal --verbose=1 --index-state=2024-04-09T14:49:48Z run --
 {- cabal:
   build-depends:
     base,
@@ -47,6 +47,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Version
 import qualified GitHub
@@ -65,10 +66,11 @@ import           Turtle
 main :: IO ()
 main = sh do
 
-  (planJsonFilePath, gitHubAccessToken) <-
-    options generateReleaseChangelogLinksDescription do
-      (,) <$> argPath "plan_json_path" "Path of the plan.json file"
-          <*> fmap (GitHubAccessToken . Text.encodeUtf8) (argText "github_access_token" "GitHub personal access token")
+  (outputPath, planJsonFilePath, gitHubAccessToken) <-
+    options generateReleaseChangelogLinksDescription $
+      (,,) <$> optPath "output" 'o' "Write the generated links to OUTPUT"
+           <*> argPath "plan_json_path" "Path of the plan.json file"
+           <*> fmap (GitHubAccessToken . Text.encodeUtf8) (argText "github_access_token" "GitHub personal access token")
 
   packagesMap <- getCHaPPackagesMap
 
@@ -97,7 +99,7 @@ main = sh do
   case pandocOutput of
     Left pandocError -> die $
       "Failed to render markdown with error " <> Pandoc.renderError pandocError
-    Right res -> printf (s%"\n") res
+    Right res -> liftIO . Text.writeFile outputPath $ format (s%"\n") res
 
 generateReleaseChangelogLinksDescription :: Description
 generateReleaseChangelogLinksDescription = Description $
