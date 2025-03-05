@@ -3,7 +3,7 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile (realize) where
+module Cardano.Benchmarking.Profile (realize, epochTimeline) where
 
 --------------------------------------------------------------------------------
 
