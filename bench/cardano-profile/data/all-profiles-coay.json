@@ -24611,7 +24611,29 @@
         "maxValueSize": 5000
       },
       "conway": {
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.51,
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "updateToConstitution": 0.51,
+          "hardForkInitiation": 0.51,
+          "ppNetworkGroup": 0.51,
+          "ppEconomicGroup": 0.51,
+          "ppTechnicalGroup": 0.51,
+          "ppGovGroup": 0.51,
+          "treasuryWithdrawal": 0.51
+        },
+        "committeeMinSize": 0,
+        "committeeMaxTermLength": 200,
+        "govActionLifetime": 10,
         "govActionDeposit": 100000,
+        "dRepDeposit": 2000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 0,
+        "committee": {
+          "members": {},
+          "threshold": 0
+        },
         "plutusV3CostModel": [
           100788,
           420,
@@ -57163,7 +57185,29 @@
         "maxValueSize": 5000
       },
       "conway": {
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.51,
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "updateToConstitution": 0.51,
+          "hardForkInitiation": 0.51,
+          "ppNetworkGroup": 0.51,
+          "ppEconomicGroup": 0.51,
+          "ppTechnicalGroup": 0.51,
+          "ppGovGroup": 0.51,
+          "treasuryWithdrawal": 0.51
+        },
+        "committeeMinSize": 0,
+        "committeeMaxTermLength": 200,
+        "govActionLifetime": 10,
         "govActionDeposit": 100000,
+        "dRepDeposit": 2000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 0,
+        "committee": {
+          "members": {},
+          "threshold": 0
+        },
         "plutusV3CostModel": [
           100788,
           420,
@@ -58105,7 +58149,29 @@
         "maxValueSize": 5000
       },
       "conway": {
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.51,
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "updateToConstitution": 0.51,
+          "hardForkInitiation": 0.51,
+          "ppNetworkGroup": 0.51,
+          "ppEconomicGroup": 0.51,
+          "ppTechnicalGroup": 0.51,
+          "ppGovGroup": 0.51,
+          "treasuryWithdrawal": 0.51
+        },
+        "committeeMinSize": 0,
+        "committeeMaxTermLength": 200,
+        "govActionLifetime": 10,
         "govActionDeposit": 100000,
+        "dRepDeposit": 2000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 0,
+        "committee": {
+          "members": {},
+          "threshold": 0
+        },
         "plutusV3CostModel": [
           100788,
           420,
@@ -59046,7 +59112,29 @@
         "maxValueSize": 5000
       },
       "conway": {
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.51,
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "updateToConstitution": 0.51,
+          "hardForkInitiation": 0.51,
+          "ppNetworkGroup": 0.51,
+          "ppEconomicGroup": 0.51,
+          "ppTechnicalGroup": 0.51,
+          "ppGovGroup": 0.51,
+          "treasuryWithdrawal": 0.51
+        },
+        "committeeMinSize": 0,
+        "committeeMaxTermLength": 200,
+        "govActionLifetime": 10,
         "govActionDeposit": 100000,
+        "dRepDeposit": 2000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 0,
+        "committee": {
+          "members": {},
+          "threshold": 0
+        },
         "plutusV3CostModel": [
           100788,
           420,
@@ -81908,7 +81996,29 @@
         "maxValueSize": 5000
       },
       "conway": {
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.51,
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "updateToConstitution": 0.51,
+          "hardForkInitiation": 0.51,
+          "ppNetworkGroup": 0.51,
+          "ppEconomicGroup": 0.51,
+          "ppTechnicalGroup": 0.51,
+          "ppGovGroup": 0.51,
+          "treasuryWithdrawal": 0.51
+        },
+        "committeeMinSize": 0,
+        "committeeMaxTermLength": 200,
+        "govActionLifetime": 10,
         "govActionDeposit": 100000,
+        "dRepDeposit": 2000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 0,
+        "committee": {
+          "members": {},
+          "threshold": 0
+        },
         "plutusV3CostModel": [
           100788,
           420,
@@ -82847,7 +82957,29 @@
         "maxValueSize": 5000
       },
       "conway": {
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.51,
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "updateToConstitution": 0.51,
+          "hardForkInitiation": 0.51,
+          "ppNetworkGroup": 0.51,
+          "ppEconomicGroup": 0.51,
+          "ppTechnicalGroup": 0.51,
+          "ppGovGroup": 0.51,
+          "treasuryWithdrawal": 0.51
+        },
+        "committeeMinSize": 0,
+        "committeeMaxTermLength": 200,
+        "govActionLifetime": 10,
         "govActionDeposit": 100000,
+        "dRepDeposit": 2000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 0,
+        "committee": {
+          "members": {},
+          "threshold": 0
+        },
         "plutusV3CostModel": [
           100788,
           420,
@@ -83785,7 +83917,29 @@
         "maxValueSize": 5000
       },
       "conway": {
+        "dRepVotingThresholds": {
+          "motionNoConfidence": 0.51,
+          "committeeNormal": 0.51,
+          "committeeNoConfidence": 0.51,
+          "updateToConstitution": 0.51,
+          "hardForkInitiation": 0.51,
+          "ppNetworkGroup": 0.51,
+          "ppEconomicGroup": 0.51,
+          "ppTechnicalGroup": 0.51,
+          "ppGovGroup": 0.51,
+          "treasuryWithdrawal": 0.51
+        },
+        "committeeMinSize": 0,
+        "committeeMaxTermLength": 200,
+        "govActionLifetime": 10,
         "govActionDeposit": 100000,
+        "dRepDeposit": 2000000,
+        "dRepActivity": 20,
+        "minFeeRefScriptCostPerByte": 0,
+        "committee": {
+          "members": {},
+          "threshold": 0
+        },
         "plutusV3CostModel": [
           100788,
           420,
