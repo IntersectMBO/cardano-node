@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,11 +18,14 @@ module Testnet.Components.Configuration
   , eraToString
   ) where
 
+import           Cardano.Api.Ledger (StandardCrypto)
 import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
@@ -54,8 +58,8 @@ import           System.FilePath.Posix (takeDirectory, (</>))
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
-import           Testnet.Start.Types (GenesisBatch (..), GenesisOrigin (..), NumDReps (..),
-                   NumPools (..), anyEraToString, anyShelleyBasedEraToString, eraToString)
+import           Testnet.Start.Types (GenesisOrigin (..), NumDReps (..), NumPools (..),
+                   anyEraToString, anyShelleyBasedEraToString, eraToString)
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -118,12 +122,14 @@ createSPOGenesisAndFiles
   -> NumDReps -- ^ The number of pools to make
   -> Word64 -- ^ The maximum supply
   -> AnyShelleyBasedEra -- ^ The era to use
-  -> GenesisBatch -- ^ The genesis to use, with their origin (whether they ar provided by the user or defaulted by 'cardano-testnet')
+  -> (ShelleyGenesis StandardCrypto, GenesisOrigin) -- ^ The shelley genesis to use.
+  -> (AlonzoGenesis, GenesisOrigin) -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
+  -> (ConwayGenesis StandardCrypto, GenesisOrigin) -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
 createSPOGenesisAndFiles
   nPoolNodes nDelReps maxSupply asbe@(AnyShelleyBasedEra sbe)
-  (GenesisBatch (shelleyGenesis, alonzoGenesis, conwayGenesis, genesisOrigin))
+  (shelleyGenesis, shelleyOrigin) (alonzoGenesis, alonzoOrigin) (conwayGenesis, conwayOrigin)
   (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
@@ -178,12 +184,9 @@ createSPOGenesisAndFiles
 
   -- Overwrite the genesis files created by create-testnet-data with the files
   -- specified by the user (if any)
-  case genesisOrigin of
-    DefaultedOrigin -> pure ()
-    UserProvidedOrigin -> do
-      overwriteCreateTestnetDataGenesis inputGenesisShelleyFp ShelleyEra
-      overwriteCreateTestnetDataGenesis inputGenesisAlonzoFp AlonzoEra
-      overwriteCreateTestnetDataGenesis inputGenesisConwayFp ConwayEra
+  overwriteCreateTestnetDataGenesis inputGenesisShelleyFp ShelleyEra shelleyOrigin
+  overwriteCreateTestnetDataGenesis inputGenesisAlonzoFp AlonzoEra alonzoOrigin
+  overwriteCreateTestnetDataGenesis inputGenesisConwayFp ConwayEra conwayOrigin
 
   -- Remove the input files. We don't need them anymore, since create-testnet-data wrote new versions.
   forM_ [inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp] (liftIO . System.removeFile)
@@ -197,9 +200,10 @@ createSPOGenesisAndFiles
     -- Overwrites the genesis file created by create-testnet-data with the one provided by the user
     overwriteCreateTestnetDataGenesis ::
       Pretty (eon era) => MonadTest m => MonadIO m =>
-      FilePath -> eon era -> m ()
-    overwriteCreateTestnetDataGenesis genesisFp e =
-        H.copyFile genesisFp (tempAbsPath </> eraToString e <> "-genesis.json")
+      FilePath -> eon era -> GenesisOrigin -> m ()
+    overwriteCreateTestnetDataGenesis genesisFp e = \case
+      DefaultedOrigin -> pure ()
+      UserProvidedOrigin -> H.copyFile genesisFp (tempAbsPath </> eraToString e <> "-genesis.json")
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
