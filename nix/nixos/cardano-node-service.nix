@@ -5,12 +5,14 @@
 
 with lib; with builtins;
 let
+  inherit (types) attrs attrsOf bool enum functionTo listOf package nullOr str;
+
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
   runtimeDir = i : if cfg.runtimeDir i == null then cfg.stateDir i else "${cfg.runDirBase}${removePrefix cfg.runDirBase (cfg.runtimeDir i)}";
   suffixDir = base: i: "${base}${optionalString (i != 0) "-${toString i}"}";
-  nullOrStr = types.nullOr types.str;
-  funcToOr = t: types.either t (types.functionTo t);
+  nullOrStr = nullOr str;
+  funcToOr = t: either t (functionTo t);
 
   newTopology = i: {
     localRoots = map (g: {
@@ -178,7 +180,7 @@ in {
   options = {
     services.cardano-node = {
       enable = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           Enable cardano-node, a node implementing ouroboros protocols;
@@ -187,7 +189,7 @@ in {
       };
 
       instances = mkOption {
-        type = types.int;
+        type = int;
         default = 1;
         description = ''
           Number of instances of the service to run.
@@ -195,12 +197,12 @@ in {
       };
 
       script = mkOption {
-        type = types.str;
+        type = str;
         default = mkScript cfg 0;
       };
 
       profiling = mkOption {
-        type = types.enum [
+        type = enum [
           "none"
           "space"
           "space-bio"
@@ -221,7 +223,7 @@ in {
       };
 
       eventlog = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           Whether to enable eventlog profiling.
@@ -229,7 +231,7 @@ in {
       };
 
       asserts = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           Whether to use an executable with asserts enabled.
@@ -237,7 +239,7 @@ in {
       };
 
       cardanoNodePackages = mkOption {
-        type = types.attrs;
+        type = attrs;
         default = pkgs.cardanoNodePackages or (import ../. { inherit (pkgs) system; }).cardanoNodePackages;
         defaultText = "cardano-node packages";
         description = ''
@@ -248,7 +250,7 @@ in {
       };
 
       package = mkOption {
-        type = types.package;
+        type = package;
         default = if (cfg.profiling != "none")
           then cfg.cardanoNodePackages.cardano-node.passthru.profiled
           else if cfg.asserts then cfg.cardanoNodePackages.cardano-node.passthru.asserted
@@ -260,7 +262,7 @@ in {
       };
 
       executable = mkOption {
-        type = types.str;
+        type = str;
         default = "exec ${cfg.package}/bin/cardano-node";
         defaultText = "cardano-node";
         description = ''
@@ -269,7 +271,7 @@ in {
       };
 
       environment = mkOption {
-        type = types.enum (attrNames cfg.environments);
+        type = enum (attrNames cfg.environments);
         default = "preview";
         description = ''
           The environment cardano-node will connect to.
@@ -277,7 +279,7 @@ in {
       };
 
       environments = mkOption {
-        type = types.attrs;
+        type = attrs;
         default = cfg.cardanoNodePackages.cardanoLib.environments;
         description = ''
           The environments cardano-node will possibly utilize.
@@ -285,7 +287,7 @@ in {
       };
 
       isProducer = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           Whether this node is intended to be a producer.
@@ -296,7 +298,7 @@ in {
       # Byron signing/delegation
 
       signingKey = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
           The signing key.
@@ -304,7 +306,7 @@ in {
       };
 
       delegationCertificate = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
           The delegation certificate.
@@ -314,14 +316,14 @@ in {
       # Shelley kes/vrf keys and operation cert
 
       kesKey = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
           The KES or key evolving signature key.
         '';
       };
       vrfKey = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
           The VRF or verifable random function key.
@@ -329,7 +331,7 @@ in {
       };
 
       operationalCertificate = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
           The operational certificate.
@@ -337,7 +339,7 @@ in {
       };
 
       hostAddr = mkOption {
-        type = types.str;
+        type = str;
         default = "127.0.0.1";
         description = ''
           The host address to bind to.
@@ -354,7 +356,7 @@ in {
       };
 
       additionalListenStream = mkOption {
-        type = types.functionTo (types.listOf types.str);
+        type = functionTo (listOf str);
         default = _: [];
         description = ''
           A List of additional sockets to listen to. Only available with `systemdSocketActivation`.
@@ -362,7 +364,7 @@ in {
       };
 
       stateDirBase = mkOption {
-        type = types.str;
+        type = str;
         default = "/var/lib/";
         description = ''
           The base directory to store blockchain data.
@@ -370,7 +372,7 @@ in {
       };
 
       stateDir = mkOption {
-        type = funcToOr types.str;
+        type = funcToOr str;
         default = "${cfg.stateDirBase}cardano-node";
         apply = x : if lib.isFunction x then x else i: x;
         description = ''
@@ -379,7 +381,7 @@ in {
       };
 
       runDirBase = mkOption {
-        type = types.str;
+        type = str;
         default = "/run/";
         description = ''
           The base runtime directory.
@@ -396,7 +398,7 @@ in {
       };
 
       databasePath = mkOption {
-        type = funcToOr types.str;
+        type = funcToOr str;
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''The node database path, for each instance.'';
@@ -413,7 +415,7 @@ in {
       };
 
       socketPath = mkOption {
-        type = funcToOr types.str;
+        type = funcToOr str;
         default = i : "${runtimeDir i}/node.socket";
         apply = x : if lib.isFunction x then x else _ : x;
         description = ''A local communication socket path, for each instance.'';
@@ -440,7 +442,7 @@ in {
       };
 
       socketGroup = mkOption {
-        type = types.str;
+        type = str;
         default = "cardano-node";
         description = ''
           The systemd socket group owner.
@@ -450,13 +452,13 @@ in {
       };
 
       systemdSocketActivation = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''Use systemd socket activation'';
       };
 
       extraServiceConfig = mkOption {
-        type = types.functionTo types.attrs
+        type = functionTo attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -467,7 +469,7 @@ in {
       };
 
       extraSocketConfig = mkOption {
-        type = types.functionTo types.attrs
+        type = functionTo attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -478,7 +480,7 @@ in {
       };
 
       dbPrefix = mkOption {
-        type = types.either types.str (types.functionTo types.str);
+        type = either str (functionTo str);
         default = suffixDir "db-${cfg.environment}";
         apply = x : if lib.isFunction x then x else suffixDir x;
         description = ''
@@ -488,7 +490,7 @@ in {
       };
 
       port = mkOption {
-        type = types.either types.int types.str;
+        type = either int str;
         default = 3001;
         description = ''
           The port number to listen on.
@@ -496,7 +498,7 @@ in {
       };
 
       shareIpv4port = mkOption {
-        type = types.bool;
+        type = bool;
         default = cfg.systemdSocketActivation;
         description = ''
           Whether instances on the same machine should share an ipv4 port.
@@ -506,7 +508,7 @@ in {
       };
 
       shareIpv6port = mkOption {
-        type = types.bool;
+        type = bool;
         default = cfg.systemdSocketActivation;
         description = ''
           Whether instances on the same machine should share an ipv6 port.
@@ -516,7 +518,7 @@ in {
       };
 
       nodeId = mkOption {
-        type = types.int;
+        type = int;
         default = 0;
         description = ''
           The ID for this node.
@@ -524,7 +526,7 @@ in {
       };
 
       publicProducers = mkOption {
-        type = types.listOf types.attrs;
+        type = listOf attrs;
         default = [];
         example = [{
           accessPoints = [{
@@ -540,7 +542,7 @@ in {
       };
 
       instancePublicProducers = mkOption {
-        type = types.functionTo (types.listOf types.attrs);
+        type = functionTo (listOf attrs);
         default = _: [];
         description = ''
           Routes to public peers. Only used if slot is less than
@@ -550,7 +552,7 @@ in {
       };
 
       producers = mkOption {
-        type = types.listOf types.attrs;
+        type = listOf attrs;
         default = [];
         example = [{
           accessPoints = [{
@@ -564,7 +566,7 @@ in {
       };
 
       instanceProducers = mkOption {
-        type = types.functionTo (types.listOf types.attrs);
+        type = functionTo (listOf attrs);
         default = _: [];
         description = ''
           Static routes to local peers, specific to a given instance when
@@ -573,7 +575,7 @@ in {
       };
 
       useNewTopology = mkOption {
-        type = types.bool;
+        type = bool;
         default = cfg.nodeConfig.EnableP2P or false;
         description = ''
           Use new, peer to peer and ledger peers compatible topology.
@@ -581,7 +583,7 @@ in {
       };
 
       useLegacyTracing = mkOption {
-        type = types.bool;
+        type = bool;
         default = true;
         description = ''
           Use the legacy tracing, based on iohk-monitoring-framework.
@@ -589,7 +591,7 @@ in {
       };
 
       useLedgerAfterSlot = mkOption {
-        type = types.nullOr types.int;
+        type = nullOr int;
         default = if cfg.kesKey != null then null
           else envConfig.useLedgerAfterSlot or null;
         description = ''
@@ -601,7 +603,7 @@ in {
       };
 
       bootstrapPeers = mkOption {
-        type = types.nullOr (types.listOf types.attrs);
+        type = nullOr (listOf attrs);
         default = map (e: {address = e.addr; inherit (e) port;}) envConfig.edgeNodes;
         description = ''
           If set, it will enable bootstrap peers. To disable, set this to null.
@@ -611,7 +613,7 @@ in {
       };
 
       topology = mkOption {
-        type = types.nullOr (types.either types.str types.path);
+        type = nullOr (either str path);
         default = null;
         description = ''
           The cluster topology. If not set the `producers` array is used to
@@ -620,7 +622,7 @@ in {
       };
 
       useSystemdReload = mkOption {
-        type = types.bool;
+        type = bool;
         default = false;
         description = ''
           If set, systemd will reload cardano-node service units instead of restarting them
@@ -635,7 +637,7 @@ in {
       };
 
       nodeConfig = mkOption {
-        type = types.attrs // {
+        type = attrs // {
           merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
         };
         default = envConfig.nodeConfig;
@@ -643,13 +645,13 @@ in {
       };
 
       targetNumberOfRootPeers = mkOption {
-        type = types.int;
+        type = int;
         default = cfg.nodeConfig.TargetNumberOfRootPeers or 100;
         description = "The target number of root peers the node will know about.";
       };
 
       targetNumberOfKnownPeers = mkOption {
-        type = types.int;
+        type = int;
         default = cfg.nodeConfig.TargetNumberOfKnownPeers or cfg.targetNumberOfRootPeers;
         description = ''
           The target number of known peers, counting root peers and peers known
@@ -658,7 +660,7 @@ in {
       };
 
       targetNumberOfEstablishedPeers = mkOption {
-        type = types.int;
+        type = int;
         default = cfg.nodeConfig.TargetNumberOfEstablishedPeers
           or (cfg.targetNumberOfKnownPeers / 2);
         description = ''
@@ -669,7 +671,7 @@ in {
       };
 
       targetNumberOfActivePeers = mkOption {
-        type = types.int;
+        type = int;
         default = cfg.nodeConfig.TargetNumberOfActivePeers or (2 * cfg.targetNumberOfEstablishedPeers / 5);
         description = ''
           Target number of peers the node is actively downloading headers and
@@ -679,7 +681,7 @@ in {
       };
 
       extraNodeConfig = mkOption {
-        type = types.attrs // {
+        type = attrs // {
           merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
         };
         default = {};
@@ -687,7 +689,7 @@ in {
       };
 
       extraNodeInstanceConfig = mkOption {
-        type = types.functionTo types.attrs
+        type = functionTo attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -702,7 +704,7 @@ in {
       };
 
       forceHardForks = mkOption {
-        type = types.attrsOf types.int;
+        type = attrsOf int;
         default = {};
         description = ''
           A developer-oriented dictionary option to force hard forks for given
@@ -712,7 +714,7 @@ in {
       };
 
       withUtxoHdLmdb = mkOption {
-        type = funcToOr types.bool;
+        type = funcToOr bool;
         default = false;
         apply = x: if lib.isFunction x then x else _: x;
         description = ''
@@ -722,19 +724,19 @@ in {
       };
 
       extraArgs = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = [];
         description = ''Extra CLI args for cardano-node.'';
       };
 
       rts_flags_override = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = [];
         description = ''RTS flags override from profile content.'';
       };
 
       rtsArgs = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = [ "-N2" "-I0" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
         apply = args: if (args != [] || cfg.profilingArgs != [] || cfg.rts_flags_override != []) then
           ["+RTS"] ++ cfg.profilingArgs ++ args ++ cfg.rts_flags_override ++ ["-RTS"]
@@ -743,7 +745,7 @@ in {
       };
 
       profilingArgs = mkOption {
-        type = types.listOf types.str;
+        type = listOf str;
         default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
           ++ optional (cfg.eventlog) "-l";
           in if cfg.profiling == "time" then ["-p"] ++ commonProfilingArgs
