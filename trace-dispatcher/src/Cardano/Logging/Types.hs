@@ -341,9 +341,10 @@ data FormattedMessage =
   deriving (Eq, Show)
 
 
-data PreFormatted a = PreFormatted {
-    pfMessage    :: !a
-  , pfForHuman   :: !(Maybe Text)
+data PreFormatted = PreFormatted {
+  --  pfMessage    :: !a
+  --, 
+    pfForHuman   :: !(Maybe Text)
   , pfForMachine :: !(AE.KeyMap AE.Value)
   , pfNamespace  :: ![Text]
   , pfTimestamp  :: !Text

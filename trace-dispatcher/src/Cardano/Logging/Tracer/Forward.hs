@@ -1,6 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
+-- TODO: pull in negotiated selection
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 
 module Cardano.Logging.Tracer.Forward
   (
@@ -9,6 +13,7 @@ module Cardano.Logging.Tracer.Forward
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
+import           Cardano.Logging.Version (ForwardingTraceSelector (..))
 
 import           Control.Monad.IO.Class
 import qualified Control.Tracer as T
@@ -24,18 +29,23 @@ forwardTracer :: forall m. (MonadIO m)
   => ForwardSink TraceObject
   -> Trace m FormattedMessage
 forwardTracer forwardSink =
-  Trace $ T.arrow $ T.emit $ uncurry (output forwardSink)
+  Trace $ T.arrow $ T.emit $ uncurry output
  where
+  writeSelection lo = case TraceSelectAll of
+    TraceSelectMachine -> writeToSink forwardSink lo{toHuman = Nothing}
+    TraceSelectAll     -> writeToSink forwardSink lo
+    TraceSelectHuman   -> writeToSink forwardSink lo{toMachine = ""}
+    TraceSelectNone    -> pure ()
+
   output ::
-       ForwardSink TraceObject
-    -> LoggingContext
+       LoggingContext
     -> Either TraceControl FormattedMessage
     -> m ()
-  output sink LoggingContext {} (Right (FormattedForwarder lo)) = liftIO $
-    writeToSink sink lo
-  output _sink LoggingContext {} (Left TCReset) = liftIO $ do
-    pure ()
-  output _sink lk (Left c@TCDocument {}) =
-    docIt Forwarder (lk, Left c)
-  output _sink LoggingContext {} (Right _)  = pure ()
-  output _sink LoggingContext {} _  = pure ()
+  output loggingContext = \case
+    Right (FormattedForwarder lo) -> liftIO $ writeSelection lo
+    Left c@(TCDocument{})         -> docIt Forwarder (loggingContext, Left c)
+
+    -- ignored:
+    -- * any other formatted message than the one formatted for forwarding
+    -- * any other in-band control message except TCDocument
+    _                             -> pure ()

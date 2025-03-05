@@ -30,7 +30,6 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isNothing)
 import qualified Data.Set as Set
 import           Data.Text hiding (map)
-import           Network.HostName (getHostName)
 
 
 -- | Construct a tracer according to the requirements for cardano node.
@@ -153,9 +152,7 @@ backendsAndFormat trStdout trForward mbBackends _ = do
                         | otherwise = Nothing
     case mbForwardTrace <> mbStdoutTrace of
       Nothing -> pure $ Trace T.nullTracer
-      Just tr -> do
-        hostname <- getHostName
-        preFormatted (humColoured || humUncoloured || forwarder) hostname tr
+      Just tr -> preFormatted (humColoured || humUncoloured || forwarder) tr
   where
     backends'     = fromMaybe
                     [Forwarder, Stdout MachineFormat]

@@ -7,8 +7,7 @@ module Cardano.Tracer.Acceptors.Server
   ) where
 
 import           Cardano.Logging (TraceObject)
-import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
-                   forwardingCodecCBORTerm, forwardingVersionCodec)
+import           Cardano.Logging.Version
 #if RTVIEW
 import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
                    prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
@@ -122,7 +121,7 @@ doListenToForwarder snocket address netMagic timeLimits app = do
       (HandshakeCallbacks acceptableVersion queryVersion)
       (simpleSingletonVersions
         ForwardingV_1
-        (ForwardingVersionData $ NetworkMagic netMagic)
+        (ForwardingVersionData (NetworkMagic netMagic) TraceSelectAll)
         (\_ -> SomeResponderApplication app)
       )
       nullErrorPolicies
