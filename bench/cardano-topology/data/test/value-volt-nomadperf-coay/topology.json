@@ -9,7 +9,9 @@
         "node-1",
         "node-2",
         "node-3",
-        "node-51"
+        "node-51",
+        "node-18",
+        "node-36"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -23,7 +25,9 @@
         "node-4",
         "node-5",
         "node-6",
-        "node-0"
+        "node-0",
+        "node-21",
+        "node-39"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -37,7 +41,9 @@
         "node-7",
         "node-8",
         "node-9",
-        "node-3"
+        "node-3",
+        "node-24",
+        "node-42"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -51,7 +57,9 @@
         "node-10",
         "node-11",
         "node-12",
-        "node-6"
+        "node-6",
+        "node-27",
+        "node-45"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -65,7 +73,9 @@
         "node-13",
         "node-14",
         "node-15",
-        "node-9"
+        "node-9",
+        "node-30",
+        "node-48"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -79,7 +89,9 @@
         "node-16",
         "node-17",
         "node-18",
-        "node-12"
+        "node-12",
+        "node-33",
+        "node-51"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -93,7 +105,9 @@
         "node-19",
         "node-20",
         "node-21",
-        "node-15"
+        "node-15",
+        "node-36",
+        "node-0"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -107,7 +121,9 @@
         "node-22",
         "node-23",
         "node-24",
-        "node-18"
+        "node-18",
+        "node-39",
+        "node-3"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -121,7 +137,9 @@
         "node-25",
         "node-26",
         "node-27",
-        "node-21"
+        "node-21",
+        "node-42",
+        "node-6"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -135,7 +153,9 @@
         "node-28",
         "node-29",
         "node-30",
-        "node-24"
+        "node-24",
+        "node-45",
+        "node-9"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -149,7 +169,9 @@
         "node-31",
         "node-32",
         "node-33",
-        "node-27"
+        "node-27",
+        "node-48",
+        "node-12"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -163,7 +185,9 @@
         "node-34",
         "node-35",
         "node-36",
-        "node-30"
+        "node-30",
+        "node-51",
+        "node-15"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -177,7 +201,9 @@
         "node-37",
         "node-38",
         "node-39",
-        "node-33"
+        "node-33",
+        "node-0",
+        "node-18"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -191,7 +217,9 @@
         "node-40",
         "node-41",
         "node-42",
-        "node-36"
+        "node-36",
+        "node-3",
+        "node-21"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -205,7 +233,9 @@
         "node-43",
         "node-44",
         "node-45",
-        "node-39"
+        "node-39",
+        "node-6",
+        "node-24"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -219,7 +249,9 @@
         "node-46",
         "node-47",
         "node-48",
-        "node-42"
+        "node-42",
+        "node-9",
+        "node-27"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -233,7 +265,9 @@
         "node-49",
         "node-50",
         "node-51",
-        "node-45"
+        "node-45",
+        "node-12",
+        "node-30"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -247,7 +281,9 @@
         "node-1",
         "node-2",
         "node-0",
-        "node-48"
+        "node-48",
+        "node-15",
+        "node-33"
       ],
       "region": "eu-central-1",
       "stakePool": true
@@ -261,7 +297,9 @@
         "node-2",
         "node-0",
         "node-4",
-        "node-49"
+        "node-49",
+        "node-16",
+        "node-34"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -275,7 +313,9 @@
         "node-5",
         "node-3",
         "node-7",
-        "node-1"
+        "node-1",
+        "node-19",
+        "node-37"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -289,7 +329,9 @@
         "node-8",
         "node-6",
         "node-10",
-        "node-4"
+        "node-4",
+        "node-22",
+        "node-40"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -303,7 +345,9 @@
         "node-11",
         "node-9",
         "node-13",
-        "node-7"
+        "node-7",
+        "node-25",
+        "node-43"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -317,7 +361,9 @@
         "node-14",
         "node-12",
         "node-16",
-        "node-10"
+        "node-10",
+        "node-28",
+        "node-46"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -331,7 +377,9 @@
         "node-17",
         "node-15",
         "node-19",
-        "node-13"
+        "node-13",
+        "node-31",
+        "node-49"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -345,7 +393,9 @@
         "node-20",
         "node-18",
         "node-22",
-        "node-16"
+        "node-16",
+        "node-34",
+        "node-1"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -359,7 +409,9 @@
         "node-23",
         "node-21",
         "node-25",
-        "node-19"
+        "node-19",
+        "node-37",
+        "node-4"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -373,7 +425,9 @@
         "node-26",
         "node-24",
         "node-28",
-        "node-22"
+        "node-22",
+        "node-40",
+        "node-7"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -387,7 +441,9 @@
         "node-29",
         "node-27",
         "node-31",
-        "node-25"
+        "node-25",
+        "node-43",
+        "node-10"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -401,7 +457,9 @@
         "node-32",
         "node-30",
         "node-34",
-        "node-28"
+        "node-28",
+        "node-46",
+        "node-13"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -415,7 +473,9 @@
         "node-35",
         "node-33",
         "node-37",
-        "node-31"
+        "node-31",
+        "node-49",
+        "node-16"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -429,7 +489,9 @@
         "node-38",
         "node-36",
         "node-40",
-        "node-34"
+        "node-34",
+        "node-1",
+        "node-19"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -443,7 +505,9 @@
         "node-41",
         "node-39",
         "node-43",
-        "node-37"
+        "node-37",
+        "node-4",
+        "node-22"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -457,7 +521,9 @@
         "node-44",
         "node-42",
         "node-46",
-        "node-40"
+        "node-40",
+        "node-7",
+        "node-25"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -471,7 +537,9 @@
         "node-47",
         "node-45",
         "node-49",
-        "node-43"
+        "node-43",
+        "node-10",
+        "node-28"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -485,7 +553,9 @@
         "node-50",
         "node-48",
         "node-1",
-        "node-46"
+        "node-46",
+        "node-13",
+        "node-31"
       ],
       "region": "us-east-1",
       "stakePool": true
@@ -499,7 +569,9 @@
         "node-0",
         "node-1",
         "node-5",
-        "node-50"
+        "node-50",
+        "node-17",
+        "node-35"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -513,7 +585,9 @@
         "node-3",
         "node-4",
         "node-8",
-        "node-2"
+        "node-2",
+        "node-20",
+        "node-38"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -527,7 +601,9 @@
         "node-6",
         "node-7",
         "node-11",
-        "node-5"
+        "node-5",
+        "node-23",
+        "node-41"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -541,7 +617,9 @@
         "node-9",
         "node-10",
         "node-14",
-        "node-8"
+        "node-8",
+        "node-26",
+        "node-44"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -555,7 +633,9 @@
         "node-12",
         "node-13",
         "node-17",
-        "node-11"
+        "node-11",
+        "node-29",
+        "node-47"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -569,7 +649,9 @@
         "node-15",
         "node-16",
         "node-20",
-        "node-14"
+        "node-14",
+        "node-32",
+        "node-50"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -583,7 +665,9 @@
         "node-18",
         "node-19",
         "node-23",
-        "node-17"
+        "node-17",
+        "node-35",
+        "node-2"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -597,7 +681,9 @@
         "node-21",
         "node-22",
         "node-26",
-        "node-20"
+        "node-20",
+        "node-38",
+        "node-5"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -611,7 +697,9 @@
         "node-24",
         "node-25",
         "node-29",
-        "node-23"
+        "node-23",
+        "node-41",
+        "node-8"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -625,7 +713,9 @@
         "node-27",
         "node-28",
         "node-32",
-        "node-26"
+        "node-26",
+        "node-44",
+        "node-11"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -639,7 +729,9 @@
         "node-30",
         "node-31",
         "node-35",
-        "node-29"
+        "node-29",
+        "node-47",
+        "node-14"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -653,7 +745,9 @@
         "node-33",
         "node-34",
         "node-38",
-        "node-32"
+        "node-32",
+        "node-50",
+        "node-17"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -667,7 +761,9 @@
         "node-36",
         "node-37",
         "node-41",
-        "node-35"
+        "node-35",
+        "node-2",
+        "node-20"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -681,7 +777,9 @@
         "node-39",
         "node-40",
         "node-44",
-        "node-38"
+        "node-38",
+        "node-5",
+        "node-23"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -695,7 +793,9 @@
         "node-42",
         "node-43",
         "node-47",
-        "node-41"
+        "node-41",
+        "node-8",
+        "node-26"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -709,7 +809,9 @@
         "node-45",
         "node-46",
         "node-50",
-        "node-44"
+        "node-44",
+        "node-11",
+        "node-29"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
@@ -723,7 +825,9 @@
         "node-48",
         "node-49",
         "node-2",
-        "node-47"
+        "node-47",
+        "node-14",
+        "node-32"
       ],
       "region": "ap-southeast-2",
       "stakePool": true
