@@ -161,6 +161,11 @@ EOF
            fi
            echo -ne "\b\b\b\b"
         done >&2
+        # Store the protocol parameters of each node.
+          cardano-cli query protocol-parameters       \
+              --testnet-magic 42                      \
+              --socket-path $socket                   \
+        > $dir/$node/protocol-parameters-queried.json
         echo " $node up (${i}s)" >&2
         ;;
 
