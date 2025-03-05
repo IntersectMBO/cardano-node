@@ -14,6 +14,8 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 data-files:             data/all-profiles-coay.json
+                        data/db-sync/epoch_param.json
+                        data/db-sync/cost_model.json
                         data/genesis/epoch-timeline.json
                         data/genesis/overlays/*.json
                         data/genesis/overlays/budget/block/memory/*.json
@@ -91,6 +93,16 @@ executable cardano-profile
                       , optparse-applicative-fork
                       , text
                       , cardano-profile
+
+executable cardano-timeline
+  import:               project-config
+  hs-source-dirs:       app/
+  main-is:              cardano-timeline.hs
+  build-depends:        aeson
+                      , aeson-pretty
+                      , text
+  other-modules:        Paths_cardano_profile
+  autogen-modules:      Paths_cardano_profile
 
 test-suite cardano-profile-test
   import:               project-config
