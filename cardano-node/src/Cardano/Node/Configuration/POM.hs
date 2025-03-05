@@ -11,8 +11,6 @@
 
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
-  , NetworkP2PMode (..)
-  , SomeNetworkP2PMode (..)
   , PartialNodeConfiguration(..)
   , TimeoutOverride (..)
   , defaultPartialNodeConfiguration
@@ -39,8 +37,7 @@ import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumbe
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..),
-                   pattern DoDiskSnapshotChecksum)
+import qualified Ouroboros.Consensus.Node as Consensus (pattern DoDiskSnapshotChecksum)
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag (..),
@@ -63,28 +60,6 @@ import           System.FilePath (takeDirectory, (</>))
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
-
-data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
-  deriving (Eq, Show, Generic)
-
-data SomeNetworkP2PMode where
-    SomeNetworkP2PMode :: forall p2p.
-                          Consensus.NetworkP2PMode p2p
-                       -> SomeNetworkP2PMode
-
-instance Eq SomeNetworkP2PMode where
-    (==) (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-         (SomeNetworkP2PMode Consensus.EnabledP2PMode)
-       = True
-    (==) (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-         (SomeNetworkP2PMode Consensus.DisabledP2PMode)
-       = True
-    (==) _ _
-       = False
-
-instance Show SomeNetworkP2PMode where
-    show (SomeNetworkP2PMode mode@Consensus.EnabledP2PMode)  = show mode
-    show (SomeNetworkP2PMode mode@Consensus.DisabledP2PMode) = show mode
 
 -- | Isomorphic to a `Maybe DiffTime`, but expresses what `Nothing` means, in
 -- this case that we want to /NOT/ override the default timeout.
@@ -178,9 +153,6 @@ data NodeConfiguration
          -- in Genesis mode
        , ncMinBigLedgerPeersForTrustedState :: NumberOfBigLedgerPeers
 
-         -- Enable experimental P2P mode
-       , ncEnableP2P :: SomeNetworkP2PMode
-
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
 
@@ -254,9 +226,6 @@ data PartialNodeConfiguration
 
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
-
-         -- Enable experimental P2P mode
-       , pncEnableP2P :: !(Last NetworkP2PMode)
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
@@ -359,14 +328,6 @@ instance FromJSON PartialNodeConfiguration where
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
-      -- Enable P2P switch
-      p2pSwitch <- v .:? "EnableP2P" .!= Just False
-      let pncEnableP2P =
-            case p2pSwitch of
-              Nothing    -> mempty
-              Just False -> Last $ Just DisabledP2PMode
-              Just True  -> Last $ Just EnabledP2PMode
-
       -- Peer Sharing
       -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
@@ -413,7 +374,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncSyncTargetOfActiveBigLedgerPeers
            , pncMinBigLedgerPeersForTrustedState
            , pncConsensusMode
-           , pncEnableP2P
            , pncPeerSharing
            , pncGenesisConfigFlags
            }
@@ -597,7 +557,6 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
     , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
     , pncConsensusMode = Last (Just defaultConsensusMode)
-    , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just defaultPeerSharing)
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
     }
@@ -685,9 +644,6 @@ makeNodeConfiguration pnc = do
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
-  enableP2P <-
-    lastToEither "Missing EnableP2P"
-    $ pncEnableP2P pnc
   ncChainSyncIdleTimeout <-
     Right
     $ maybe NoTimeoutOverride TimeoutOverride
@@ -755,9 +711,6 @@ makeNodeConfiguration pnc = do
              , ncSyncTargetOfEstablishedBigLedgerPeers
              , ncSyncTargetOfActiveBigLedgerPeers
              , ncMinBigLedgerPeersForTrustedState
-             , ncEnableP2P = case enableP2P of
-                 EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
-                 DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
              , ncConsensusMode
              , ncGenesisConfig

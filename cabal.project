@@ -68,33 +68,33 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
-  tag: f86d442fc9d91950d751538217269fb6f9e30e00
-  --sha256: sha256-9IywEDaH7kXRPDZRSZnAdikRF5eh3m/7AIoBZpnZnB4=
+  tag: ca5d788633c6c0ff9524b8aac9d90aff72966cb7
+  --sha256: sha256-/Ok7LjsMFY9PNW4BK3R5kTsrxvPacgsrr67A4RZcEb8=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 87bd45351689f1ac2606c410323c7cc991390e99
-  --sha256: sha256-jXipHbZuWc8VSuYUmoBJiTmXHvJQASmBIus4Xk4c8Bk=
+  tag: fa37bdb45188d1d84a91ef70457cdf399f18a9dc
+  --sha256: sha256-0DtPHoJycMw+nP91Sbh8eufJfN/ByKjqt6dTp1hhAss=
   subdir:
-    cardano-client
-    cardano-ping
-    monoidal-synchronisation
-    network-mux
-    ntp-client
-    ouroboros-network
-    ouroboros-network-api
-    ouroboros-network-framework
-    ouroboros-network-mock
-    ouroboros-network-protocols
-    ouroboros-network-testing
-    quickcheck-monoids
+      cardano-ping
+      monoidal-synchronisation
+      quickcheck-monoids
+      network-mux
+      ouroboros-network
+      ouroboros-network-api
+      ouroboros-network-framework
+      ouroboros-network-mock
+      ouroboros-network-protocols
+      ouroboros-network-testing
+      ntp-client
+      cardano-client
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: c531a62aa98f8c3003400b2bef879ab25127a633
-  --sha256: sha256-AouR8t1aaytqlENuC5XEfMKRCAgaGA3JkZKrrDJ/bGM=
+  tag: d7a627d56f23d9dc1bd160ef6648ee241131a5a8
+  --sha256: sha256-itTwFnW+xkCmjEJaQqCKoDIdRr0kywvvqiIXw9B469c=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -102,3 +102,77 @@ source-repository-package
     ouroboros-consensus-diffusion
     sop-extras
     strict-sop-core
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: b2cec3fbcde4bacb9c961e5510d5a1d3754c4e2b
+  --sha256: sha256-TDEBINZ3SkhpRNomMdt53bR3gdzgkWR9jIlAr8yrU6o=
+  subdir:
+      cardano-crypto-class
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  -- This tag is from Alexey's PR that is based on an older version
+  -- tag: 9d380ab7d6ae52ff66aae9a19dbb3036b1b13c94
+  -- This tag is before genIssuerKeys
+  -- tag: 4b2721c8abdf704c6f8de042e8fb1f3f6b3f1aed
+  -- This tag is before parameterising KeySpace and GenEnv over some (Crypto c)
+  -- tag: a0d93ad3134a8c5fe04ddaacffdaf39e1af8b8cf
+  tag: 0d750d882181b12fad62ff28de056ee85c7e0c0e
+  --sha256: sha256-LLp+FHSuVG2IsnXDv0aGMRaX19+trs5AT1gql6oji0U=
+  subdir:
+      eras/allegra/impl
+      eras/alonzo/impl
+      eras/alonzo/test-suite
+      eras/babbage/impl
+      eras/babbage/test-suite
+      eras/byron/chain/executable-spec
+      eras/byron/crypto
+      eras/byron/crypto/test
+      eras/byron/ledger/executable-spec
+      eras/byron/ledger/impl
+      eras/byron/ledger/impl/test
+      eras/conway/impl
+      eras/conway/test-suite
+      eras/mary/impl
+      eras/shelley/impl
+      eras/shelley-ma/test-suite
+      eras/shelley/test-suite
+      libs/cardano-data
+      libs/cardano-ledger-api
+      libs/cardano-ledger-binary
+      libs/cardano-ledger-core
+      libs/cardano-ledger-test
+      libs/cardano-protocol-tpraos
+      libs/constrained-generators
+      libs/non-integral
+      libs/set-algebra
+      libs/small-steps
+      libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: d07ac95c9d5cbc677eafd3f4747869f58dd3804d
+  --sha256: sha256-0wHj4qpNqDv4J/49dkZPKjWfmdfwmJRisWc0Y8DWsHQ=
+  subdir:
+    cardano-api
+    cardano-api-gen
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: 978382e635956decb10f063de071b1f1c7097cd7
+  --sha256: sha256-4NePMt1MHZHcmJk5glrr79uWc5ajC2/kwFag/sf6+io=
+  subdir:
+    cardano-cli
+
+allow-newer:
+  plutus-core:cardano-crypto-class,
+  cardano-submit-api:*,
+  cardano-node-chairman:cardano-crypto-class
+
+allow-older:
+  cardano-api:ouroboros-network-api

@@ -39,9 +39,9 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 10.6
+                      , cardano-api ^>= 10.9
                       , cardano-binary
-                      , cardano-cli ^>= 10.3
+                      , cardano-cli ^>= 10.4
                       , cardano-crypto-class ^>= 2.1.2
                       , http-media
                       , iohk-monitoring
@@ -72,7 +72,6 @@ library
                       , Cardano.TxSubmit.Rest.Parsers
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
-                      , Cardano.TxSubmit.Tracing.ToObjectOrphans
                       , Cardano.TxSubmit.Types
                       , Cardano.TxSubmit.Util
                       , Cardano.TxSubmit.Web

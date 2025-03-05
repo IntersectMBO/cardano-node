@@ -27,8 +27,8 @@ import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), Node
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), NetworkTopology (..), NodeSetup (..),
                    PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
-import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Cardano.Diffusion.Topology (CardanoNetworkTopology)
 import           Ouroboros.Network.NodeToNode.Version
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
@@ -50,14 +50,14 @@ import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Gen ()
 import qualified Hedgehog.Range as Range
 
-genNetworkTopology :: Gen NetworkTopology
+genNetworkTopology :: Gen CardanoNetworkTopology
 genNetworkTopology =
   Gen.choice
-    [ RealNodeTopology <$> genLocalRootPeersGroups
-                       <*> Gen.list (Range.linear 0 10) genPublicRootPeers
-                       <*> genUseLedgerPeers
-                       <*> genUseBootstrapPeers
-                       <*> genPeerSnapshotPath
+    [ NetworkTopology <$> genLocalRootPeersGroups
+                      <*> Gen.list (Range.linear 0 10) genPublicRootPeers
+                      <*> genUseLedgerPeers
+                      <*> genPeerSnapshotPath
+                      <*> genUseBootstrapPeers
     ]
 
 -- | Generate valid encodings of p2p topology files
@@ -178,14 +178,14 @@ genRootConfig = do
     <$> Gen.list (Range.linear 0 6) genRelayAddress
     <*> Gen.element [DoAdvertisePeer, DoNotAdvertisePeer]
 
-genLocalRootPeersGroup :: Gen LocalRootPeersGroup
+genLocalRootPeersGroup :: Gen (LocalRootPeersGroup PeerTrustable)
 genLocalRootPeersGroup = do
     ra <- genRootConfig
     hval <- Gen.int (Range.linear 0 (length (rootAccessPoints ra)))
     wval <- WarmValency <$> Gen.int (Range.linear 0 hval)
-    LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable <*> pure InitiatorAndResponderDiffusionMode
+    LocalRootPeersGroup ra (HotValency hval) wval InitiatorAndResponderDiffusionMode <$> genPeerTrustable
 
-genLocalRootPeersGroups :: Gen LocalRootPeersGroups
+genLocalRootPeersGroups :: Gen (LocalRootPeersGroups PeerTrustable)
 genLocalRootPeersGroups =
   LocalRootPeersGroups
     <$> Gen.list (Range.linear 0 6) genLocalRootPeersGroup
@@ -208,11 +208,11 @@ genUseBootstrapPeers = do
   domains <- Gen.list (Range.linear 0 6) genRelayAddress
   Gen.element [ DontUseBootstrapPeers , UseBootstrapPeers domains ]
 
-genPeerSnapshotPath :: Gen (Maybe PeerSnapshotFile)
+genPeerSnapshotPath :: Gen (Maybe FilePath)
 genPeerSnapshotPath =
   Gen.element
     [ Nothing
-    , Just . PeerSnapshotFile $ "dummy"
+    , Just "dummy"
     ]
 
 genPeerTrustable :: Gen PeerTrustable

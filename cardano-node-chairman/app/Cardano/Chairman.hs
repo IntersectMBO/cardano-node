@@ -14,6 +14,7 @@ module Cardano.Chairman (chairmanTest) where
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
+import           Cardano.Ledger.BaseTypes (unNonZero)
 import           Ouroboros.Consensus.Block.Abstract
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Config.SecurityParam
@@ -169,8 +170,8 @@ consensusCondition chains securityParam =
         -- If only one of len1, len2 is longer than the securityParam then it is
         -- still OK. That node can still recover by receiving a valid rollback
         -- instruction, but if both are longer, then we have a failure.
-        forkLen tip1 >  maxRollbacks securityParam &&
-        forkLen tip2 >  maxRollbacks securityParam
+        forkLen tip1 >  unNonZero (maxRollbacks securityParam) &&
+        forkLen tip2 >  unNonZero (maxRollbacks securityParam)
       where
         forkLen :: Anchor (Header blk) -> Word64
         forkLen tip =

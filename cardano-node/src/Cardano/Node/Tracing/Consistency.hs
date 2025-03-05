@@ -29,14 +29,13 @@ import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
+import qualified Ouroboros.Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
@@ -58,12 +57,12 @@ import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
-import qualified Ouroboros.Network.Diffusion.Common as Common
+import qualified Ouroboros.Network.Diffusion.Types as Network
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters)
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
@@ -82,10 +81,8 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuer
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
-import qualified Ouroboros.Network.Server2 as Server (Trace (..))
+import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.Subscription.Dns (DnsTrace (..), WithDomainName (..))
-import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
@@ -263,7 +260,7 @@ getAllNamespaces =
         dtDiffusionInitializationNS = map (nsGetTuple . nsReplacePrefix
                                             ["Startup", "DiffusionInit"])
                                           (allNamespaces :: [Namespace
-                                            (Common.DiffusionTracer Socket.SockAddr
+                                            (Network.DiffusionTracer Socket.SockAddr
                                                 LocalAddress)])
         dtLedgerPeersNS = map (nsGetTuple . nsReplacePrefix
                                ["Net", "Peers", "Ledger"])
@@ -281,15 +278,15 @@ getAllNamespaces =
         peerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Selection"])
                                (allNamespaces :: [Namespace
-                                          (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
+                                          (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
         debugPeerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Initiator"])
                                (allNamespaces :: [Namespace
-                                          (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
+                                          (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
         debugPeerSelectionResponderNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Responder"])
                                (allNamespaces :: [Namespace
-                                          (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
+                                          (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
         peerSelectionCountersNS = map (nsGetTuple . nsReplacePrefix
                                         ["Net", "PeerSelection", "Counters"])
                                       (allNamespaces :: [Namespace
@@ -343,28 +340,8 @@ getAllNamespaces =
                                         (InboundGovernor.Trace LocalAddress)])
 
 
--- -- DiffusionTracersExtra nonP2P
+-- -- DiffusionTracers
 
-        dtIpSubscriptionNS = map (nsGetTuple . nsReplacePrefix
-                                   ["Net", "Subscription", "IP"])
-                                 (allNamespaces :: [Namespace
-                                   (SubscriptionTrace Socket.SockAddr)])
-        dtDnsSubscriptionNS = map (nsGetTuple . nsReplacePrefix
-                                    ["Net", "Subscription", "DNS"])
-                                  (allNamespaces :: [Namespace
-                                    (WithDomainName (SubscriptionTrace Socket.SockAddr))])
-        dtDnsResolverNS = map (nsGetTuple . nsReplacePrefix
-                                ["Net", "DNSResolver"])
-                              (allNamespaces :: [Namespace
-                                (WithDomainName DnsTrace)])
-        dtErrorPolicyNS = map (nsGetTuple . nsReplacePrefix
-                                ["Net", "ErrorPolicy", "Remote"])
-                              (allNamespaces :: [Namespace
-                                 (WithAddr Socket.SockAddr ErrorPolicyTrace)])
-        dtLocalErrorPolicyNS = map (nsGetTuple . nsReplacePrefix
-                                     ["Net", "ErrorPolicy", "Local"])
-                                   (allNamespaces :: [Namespace
-                                     (WithAddr LocalAddress ErrorPolicyTrace)])
         dtAcceptPolicyNS = map (nsGetTuple . nsReplacePrefix
                                  ["Net", "AcceptPolicy"])
                                (allNamespaces :: [Namespace
@@ -413,7 +390,7 @@ getAllNamespaces =
             <> dtDiffusionInitializationNS
             <> dtLedgerPeersNS
 
--- DiffusionTracersExtra P2P
+-- DiffusionTracers
             <> localRootPeersNS
             <> publicRootPeersNS
             <> peerSelectionNS
@@ -430,12 +407,5 @@ getAllNamespaces =
             <> localConnectionManagerNS
             <> localServerNS
             <> localInboundGovernorNS
-
--- DiffusionTracersExtra nonP2P
-            <> dtIpSubscriptionNS
-            <> dtDnsSubscriptionNS
-            <> dtDnsResolverNS
-            <> dtErrorPolicyNS
-            <> dtLocalErrorPolicyNS
             <> dtAcceptPolicyNS
     in allNamespaces'

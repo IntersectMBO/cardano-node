@@ -16,7 +16,6 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
                    partialTraceSelectionToEither)
 import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
@@ -154,7 +153,6 @@ testPartialYamlConfig =
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
     , pncMinBigLedgerPeersForTrustedState = mempty
-    , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
@@ -202,7 +200,6 @@ testPartialCliConfig =
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
     , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
-    , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
@@ -256,7 +253,6 @@ eExpectedConfig = do
     , ncSyncTargetOfEstablishedBigLedgerPeers = 50
     , ncSyncTargetOfActiveBigLedgerPeers = 30
     , ncMinBigLedgerPeersForTrustedState = defaultNumberOfBigLedgerPeers
-    , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig

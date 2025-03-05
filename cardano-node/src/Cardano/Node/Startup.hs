@@ -38,9 +38,8 @@ import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig, WarmValency)
-import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
-import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig,
+                   WarmValency)
 
 import           Prelude
 
@@ -129,7 +128,6 @@ data StartupTrace blk =
   | BICommon BasicInfoCommon
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
-  | BINetwork BasicInfoNetwork
   | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
 
 data EnabledBlockForging = EnabledBlockForging
@@ -161,13 +159,6 @@ data BasicInfoByron = BasicInfoByron {
     bibSystemStartTime :: UTCTime
   , bibSlotLength      :: NominalDiffTime
   , bibEpochLength     :: Word64
-  }
-
-data BasicInfoNetwork = BasicInfoNetwork {
-    niAddresses     :: [SocketOrSocketInfo Socket.SockAddr Socket.SockAddr]
-  , niDiffusionMode :: DiffusionMode
-  , niDnsProducers  :: [DnsSubscriptionTarget]
-  , niIpProducers   :: IPSubscriptionTarget
   }
 
 data NodeInfo = NodeInfo

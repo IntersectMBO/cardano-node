@@ -42,9 +42,8 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
-import qualified Cardano.Ledger.SafeHash as Ledger
+import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
 import qualified Cardano.Ledger.UMap as UM
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))

@@ -63,17 +63,12 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..),
                    NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
-                   NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
+import           Ouroboros.Network.NodeToNode (NodeToNodeVersion (..),
+                   NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..), DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
-                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
-                   peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.PublicRootPeers (PublicRootPeers)
 import qualified Ouroboros.Network.PeerSelection.PublicRootPeers as PublicRootPeers
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
@@ -102,16 +97,13 @@ import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount 
 import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PeerSharing
 import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
-import           Ouroboros.Network.Server2 as Server
+import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
-                   SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
-                   WithIPList (..))
 import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
                    TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
-import           Control.Exception (Exception (..), SomeException (..))
+import           Control.Exception (Exception (..))
 import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
 import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
@@ -120,7 +112,6 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (first))
 import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
-import           Data.Functor.Identity (Identity (..))
 import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -135,10 +126,15 @@ import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 import Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers(..))
 import Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable(..))
 import Cardano.Network.Types (LedgerStateJudgement(..))
-import qualified Ouroboros.Network.Diffusion.Common as Common
-import Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
+import qualified Ouroboros.Network.Diffusion.Types as Network
+import Ouroboros.Network.PeerSelection.Governor.Types (TracePeerSelection (..), DebugPeerSelection (..), PeerSelectionCounters, PeerSelectionTargets (..), PeerSelectionState (..), PeerSelectionView (..), AssociationMode (..), DebugPeerSelectionState (..), peerSelectionStateToCounters)
+import qualified Ouroboros.Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.ExtraRootPeers as ExtraPeers
+import Ouroboros.Cardano.Network.PeerSelection.PublicRootPeers (CardanoPublicRootPeers)
+import qualified Ouroboros.Cardano.PeerSelection.Churn as Cardano
+import Ouroboros.Cardano.PeerSelection.Churn (TracerChurnMode)
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -147,11 +143,11 @@ import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Carda
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance HasPrivacyAnnotation (Common.DiffusionTracer ntnAddr ntcAddr)
-instance HasSeverityAnnotation (Common.DiffusionTracer ntnAddr ntcAddr) where
-  getSeverityAnnotation Common.SystemdSocketConfiguration {} = Warning
-  getSeverityAnnotation Common.UnsupportedLocalSystemdSocket {} = Warning
-  getSeverityAnnotation Common.DiffusionErrored {} = Critical
+instance HasPrivacyAnnotation (Network.DiffusionTracer ntnAddr ntcAddr)
+instance HasSeverityAnnotation (Network.DiffusionTracer ntnAddr ntcAddr) where
+  getSeverityAnnotation Network.SystemdSocketConfiguration {} = Warning
+  getSeverityAnnotation Network.UnsupportedLocalSystemdSocket {} = Warning
+  getSeverityAnnotation Network.DiffusionErrored {} = Critical
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion)
@@ -270,130 +266,6 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       UsingBigLedgerPeerSnapshot {}  -> Debug
 
 
-instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
-instance HasSeverityAnnotation (WithAddr addr ErrorPolicyTrace) where
-  getSeverityAnnotation (WithAddr _ ev) = case ev of
-    ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
-    ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
-    ErrorPolicyLocalNodeError {} -> Error
-    ErrorPolicyResumePeer {} -> Debug
-    ErrorPolicyKeepSuspended {} -> Debug
-    ErrorPolicyResumeConsumer {} -> Debug
-    ErrorPolicyResumeProducer {} -> Debug
-    ErrorPolicyUnhandledApplicationException {} -> Error
-    ErrorPolicyUnhandledConnectionException {} -> Error
-    ErrorPolicyAcceptException {} -> Error
-
-
-instance HasPrivacyAnnotation (WithDomainName DnsTrace)
-instance HasSeverityAnnotation (WithDomainName DnsTrace) where
-  getSeverityAnnotation (WithDomainName _ ev) = case ev of
-    DnsTraceLookupException {} -> Error
-    DnsTraceLookupAError {} -> Error
-    DnsTraceLookupAAAAError {} -> Error
-    DnsTraceLookupIPv6First -> Debug
-    DnsTraceLookupIPv4First -> Debug
-    DnsTraceLookupAResult {} -> Debug
-    DnsTraceLookupAAAAResult {} -> Debug
-
-
-instance HasPrivacyAnnotation (WithDomainName (SubscriptionTrace SockAddr))
-instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace SockAddr)) where
-  getSeverityAnnotation (WithDomainName _ ev) = case ev of
-    SubscriptionTraceConnectStart {} -> Notice
-    SubscriptionTraceConnectEnd {} -> Notice
-    SubscriptionTraceConnectException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Info
-    SubscriptionTraceSkippingPeer {} -> Info
-    SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
-    SubscriptionTraceSubscriptionFailed -> Warning
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
-    SubscriptionTraceStart {} -> Debug
-    SubscriptionTraceRestart {} -> Debug
-    SubscriptionTraceConnectionExist {} -> Info
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
-    SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Debug
-
-
-instance HasPrivacyAnnotation (WithIPList (SubscriptionTrace SockAddr))
-instance HasSeverityAnnotation (WithIPList (SubscriptionTrace SockAddr)) where
-  getSeverityAnnotation (WithIPList _ _ ev) = case ev of
-    SubscriptionTraceConnectStart _ -> Info
-    SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
-      ConnectSuccess -> Info
-      ConnectSuccessLast -> Notice
-      ConnectValencyExceeded -> Warning
-    SubscriptionTraceConnectException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Info
-    SubscriptionTraceSkippingPeer {} -> Info
-    SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
-    SubscriptionTraceSubscriptionFailed -> Error
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Notice
-    SubscriptionTraceStart {} -> Debug
-    SubscriptionTraceRestart {} -> Info
-    SubscriptionTraceConnectionExist {} -> Notice
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Error
-    SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Info
-
-
-instance HasPrivacyAnnotation (Identity (SubscriptionTrace LocalAddress))
-instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress)) where
-  getSeverityAnnotation (Identity ev) = case ev of
-    SubscriptionTraceConnectStart {} -> Notice
-    SubscriptionTraceConnectEnd {} -> Notice
-    SubscriptionTraceConnectException {} -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Notice
-    SubscriptionTraceSkippingPeer {} -> Info
-    SubscriptionTraceSubscriptionRunning -> Notice
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
-    SubscriptionTraceSubscriptionFailed -> Warning
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
-    SubscriptionTraceStart {} -> Notice
-    SubscriptionTraceRestart {} -> Notice
-    SubscriptionTraceConnectionExist {} -> Debug
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
-    SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException {} -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Debug
-
-
-instance Transformable Text IO (Identity (SubscriptionTrace LocalAddress)) where
-  trTransformer = trStructuredText
-instance HasTextFormatter (Identity (SubscriptionTrace LocalAddress)) where
-  formatText a _ = pack (show a)
-
-
-instance ToObject (Identity (SubscriptionTrace LocalAddress)) where
-  toObject _verb (Identity ev) =
-    mconcat [ "kind" .= ("SubscriptionTrace" :: String)
-             , "event" .= show ev
-             ]
-
-
 instance HasPrivacyAnnotation (Mux.WithBearer peer Mux.Trace)
 instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
   getSeverityAnnotation (Mux.WithBearer _ ev) = case ev of
@@ -436,8 +308,14 @@ instance HasPrivacyAnnotation TracePublicRootPeers
 instance HasSeverityAnnotation TracePublicRootPeers where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (TracePeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr)
-instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr) where
+instance HasPrivacyAnnotation Cardano.TracerChurnMode
+instance HasSeverityAnnotation Cardano.TracerChurnMode where
+  getSeverityAnnotation ev =
+    case ev of
+      Cardano.TraceChurnMode {} -> Info
+
+instance HasPrivacyAnnotation (TracePeerSelection extraDebugState extraFlags (Cardano.ExtraPeers addr) addr)
+instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags (Cardano.ExtraPeers addr) addr) where
   getSeverityAnnotation ev =
     case ev of
       TraceLocalRootPeersChanged {} -> Notice
@@ -470,7 +348,6 @@ instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags (C
       TraceDemoteLocalAsynchronous {} -> Warning
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
-      TraceChurnMode             {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -513,8 +390,8 @@ instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags (C
       TraceVerifyPeerSnapshot True  -> Info
       TraceVerifyPeerSnapshot False -> Error
 
-instance HasPrivacyAnnotation (DebugPeerSelection extraState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr)
-instance HasSeverityAnnotation (DebugPeerSelection extraState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr) where
+instance HasPrivacyAnnotation (DebugPeerSelection extraState extraFlags (Cardano.ExtraPeers addr) addr)
+instance HasSeverityAnnotation (DebugPeerSelection extraState extraFlags (Cardano.ExtraPeers addr) addr) where
   getSeverityAnnotation _ = Debug
 
 instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr lAddr)
@@ -614,9 +491,9 @@ instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance Transformable Text IO (Common.DiffusionTracer RemoteAddress LocalAddress) where
+instance Transformable Text IO (Network.DiffusionTracer RemoteAddress LocalAddress) where
   trTransformer = trStructuredText
-instance HasTextFormatter (Common.DiffusionTracer RemoteAddress LocalAddress) where
+instance HasTextFormatter (Network.DiffusionTracer RemoteAddress LocalAddress) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
@@ -744,30 +621,6 @@ instance HasTextFormatter TraceLedgerPeers where
   formatText _ = pack . show . toList
 
 
-instance Show addr => Transformable Text IO (WithAddr addr ErrorPolicyTrace) where
-  trTransformer = trStructuredText
-instance Show addr => HasTextFormatter (WithAddr addr ErrorPolicyTrace) where
-  formatText a _ = pack (show a)
-
-
-instance Transformable Text IO (WithDomainName (SubscriptionTrace SockAddr)) where
-  trTransformer = trStructuredText
-instance HasTextFormatter (WithDomainName (SubscriptionTrace SockAddr)) where
-  formatText a _ = pack (show a)
-
-
-instance Transformable Text IO (WithDomainName DnsTrace) where
-  trTransformer = trStructuredText
-instance HasTextFormatter (WithDomainName DnsTrace) where
-  formatText a _ = pack (show a)
-
-
-instance Transformable Text IO (WithIPList (SubscriptionTrace SockAddr)) where
-  trTransformer = trStructuredText
-instance HasTextFormatter (WithIPList (SubscriptionTrace SockAddr)) where
-  formatText a _ = pack (show a)
-
-
 instance (Show peer, ToObject peer)
       => Transformable Text IO (Mux.WithBearer peer Mux.Trace) where
   trTransformer = trStructuredText
@@ -788,14 +641,19 @@ instance Transformable Text IO TracePublicRootPeers where
 instance HasTextFormatter TracePublicRootPeers where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance Transformable Text IO TracerChurnMode where
   trTransformer = trStructuredText
-instance (Show extraDebugState, Show extraFlags, Show (Cardano.PublicRootPeers.ExtraPeers addr)) => HasTextFormatter (TracePeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) SockAddr) where
+instance HasTextFormatter TracerChurnMode where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance Transformable Text IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.ExtraPeers SockAddr) SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (DebugPeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance (Show extraDebugState, Show extraFlags, Show (Cardano.ExtraPeers addr)) => HasTextFormatter (TracePeerSelection extraDebugState extraFlags (Cardano.ExtraPeers addr) SockAddr) where
+  formatText a _ = pack (show a)
+
+instance Transformable Text IO (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.ExtraPeers SockAddr) SockAddr) where
+  trTransformer = trStructuredText
+instance HasTextFormatter (DebugPeerSelection extraDebugState extraFlags (Cardano.ExtraPeers SockAddr) SockAddr) where
   -- One can only change what is logged with respect to verbosity using json
   -- format.
   formatText _ obj = pack (show obj)
@@ -1169,72 +1027,72 @@ instance Aeson.ToJSON ConnectionManagerCounters where
                  ]
 
 -- TODO: use 'ToJSON' constraints
-instance (Show ntnAddr, Show ntcAddr) => ToObject (Common.DiffusionTracer ntnAddr ntcAddr) where
-  toObject _verb (Common.RunServer sockAddr) = mconcat
+instance (Show ntnAddr, Show ntcAddr) => ToObject (Network.DiffusionTracer ntnAddr ntcAddr) where
+  toObject _verb (Network.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
     ]
 
-  toObject _verb (Common.RunLocalServer localAddress) = mconcat
+  toObject _verb (Network.RunLocalServer localAddress) = mconcat
     [ "kind" .= String "RunLocalServer"
     , "localAddress" .= String (pack (show localAddress))
     ]
-  toObject _verb (Common.UsingSystemdSocket localAddress) = mconcat
+  toObject _verb (Network.UsingSystemdSocket localAddress) = mconcat
     [ "kind" .= String "UsingSystemdSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
 
-  toObject _verb (Common.CreateSystemdSocketForSnocketPath localAddress) = mconcat
+  toObject _verb (Network.CreateSystemdSocketForSnocketPath localAddress) = mconcat
     [ "kind" .= String "CreateSystemdSocketForSnocketPath"
     , "path" .= String (pack . show $ localAddress)
     ]
-  toObject _verb (Common.CreatedLocalSocket localAddress) = mconcat
+  toObject _verb (Network.CreatedLocalSocket localAddress) = mconcat
     [ "kind" .= String "CreatedLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
-  toObject _verb (Common.ConfiguringLocalSocket localAddress socket) = mconcat
+  toObject _verb (Network.ConfiguringLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ConfiguringLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (Common.ListeningLocalSocket localAddress socket) = mconcat
+  toObject _verb (Network.ListeningLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ListeningLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (Common.LocalSocketUp localAddress fd) = mconcat
+  toObject _verb (Network.LocalSocketUp localAddress fd) = mconcat
     [ "kind" .= String "LocalSocketUp"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show fd))
     ]
-  toObject _verb (Common.CreatingServerSocket socket) = mconcat
+  toObject _verb (Network.CreatingServerSocket socket) = mconcat
     [ "kind" .= String "CreatingServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (Common.ListeningServerSocket socket) = mconcat
+  toObject _verb (Network.ListeningServerSocket socket) = mconcat
     [ "kind" .= String "ListeningServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (Common.ServerSocketUp socket) = mconcat
+  toObject _verb (Network.ServerSocketUp socket) = mconcat
     [ "kind" .= String "ServerSocketUp"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (Common.ConfiguringServerSocket socket) = mconcat
+  toObject _verb (Network.ConfiguringServerSocket socket) = mconcat
     [ "kind" .= String "ConfiguringServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (Common.UnsupportedLocalSystemdSocket path) = mconcat
+  toObject _verb (Network.UnsupportedLocalSystemdSocket path) = mconcat
     [ "kind" .= String "UnsupportedLocalSystemdSocket"
     , "path" .= String (pack (show path))
     ]
-  toObject _verb Common.UnsupportedReadySocketCase = mconcat
+  toObject _verb Network.UnsupportedReadySocketCase = mconcat
     [ "kind" .= String "UnsupportedReadySocketCase"
     ]
-  toObject _verb (Common.DiffusionErrored exception) = mconcat
+  toObject _verb (Network.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
-  toObject _verb (Common.SystemdSocketConfiguration config) = mconcat
+  toObject _verb (Network.SystemdSocketConfiguration config) = mconcat
     [ "kand" .= String "SystemdSocketConfiguration"
     , "message" .= String (pack (show config))
     ]
@@ -1637,35 +1495,6 @@ instance ToObject TraceLedgerPeers where
       ]
 
 
-instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
-  toObject _verb (WithAddr addr ev) =
-    mconcat [ "kind" .= String "ErrorPolicyTrace"
-             , "address" .= show addr
-             , "event" .= show ev ]
-
-
-instance ToObject (WithIPList (SubscriptionTrace SockAddr)) where
-  toObject _verb (WithIPList localAddresses dests ev) =
-    mconcat [ "kind" .= String "WithIPList SubscriptionTrace"
-             , "localAddresses" .= show localAddresses
-             , "dests" .= show dests
-             , "event" .= show ev ]
-
-
-instance ToObject (WithDomainName DnsTrace) where
-  toObject _verb (WithDomainName dom ev) =
-    mconcat [ "kind" .= String "DnsTrace"
-             , "domain" .= show dom
-             , "event" .= show ev ]
-
-
-instance ToObject (WithDomainName (SubscriptionTrace SockAddr)) where
-  toObject _verb (WithDomainName dom ev) =
-    mconcat [ "kind" .= String "SubscriptionTrace"
-             , "domain" .= show dom
-             , "event" .= show ev ]
-
-
 instance ToObject peer => ToObject (Mux.WithBearer peer Mux.Trace) where
   toObject verb (Mux.WithBearer b ev) =
     mconcat [ "kind" .= String "Mux.Trace"
@@ -1812,13 +1641,13 @@ instance ToJSON PeerSelectionTargets where
                  , "targetActiveBigLedgerPeers" .= nActiveBigLedgerPeers
                  ]
 
-instance ToJSON peerAddr => ToJSON (PublicRootPeers (Cardano.PublicRootPeers.ExtraPeers peerAddr) peerAddr) where
+instance ToJSON peerAddr => ToJSON (CardanoPublicRootPeers peerAddr) where
   toJSON prp =
     Aeson.object [ "kind" .= String "PublicRootPeers"
-                 , "bootstrapPeers" .= PublicRootPeers.getBootstrapPeers prp
+                 , "bootstrapPeers" .= ExtraPeers.bootstrapPeers (PublicRootPeers.getExtraPeers prp)
                  , "ledgerPeers" .= PublicRootPeers.getLedgerPeers prp
                  , "bigLedgerPeers" .= PublicRootPeers.getBigLedgerPeers prp
-                 , "publicConfigPeers" .= Map.keysSet (PublicRootPeers.getPublicConfigPeers prp)
+                 , "publicConfigPeers" .= Map.keysSet (ExtraPeers.publicConfigPeers (PublicRootPeers.getExtraPeers prp))
                  ]
 
 instance ToJSON RepromoteDelay where
@@ -1828,7 +1657,12 @@ instance ToJSON addr => ToJSON (PeerSharingResult addr) where
   toJSON (PeerSharingResult addrs) = Aeson.toJSONList addrs
   toJSON PeerSharingNotRegisteredYet = String "PeerSharingNotRegisteredYet"
 
-instance ToObject (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance ToObject Cardano.TracerChurnMode where
+  toObject _verb (Cardano.TraceChurnMode c) =
+    mconcat [ "kind" .= String "ChurnMode"
+             , "event" .= show c ]
+
+instance ToObject (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.ExtraPeers SockAddr) SockAddr) where
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -2101,9 +1935,6 @@ instance ToObject (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrusta
     mconcat [ "kind" .= String "ChurnWait"
              , "diffTime" .= toJSON dt
              ]
-  toObject _verb (TraceChurnMode c) =
-    mconcat [ "kind" .= String "ChurnMode"
-             , "event" .= show c ]
   toObject _verb (TracePickInboundPeers targetNumberOfKnownPeers numberOfKnownPeers selected available) =
     mconcat [ "kind" .= String "PickInboundPeers"
             , "targetKnown" .= targetNumberOfKnownPeers
@@ -2226,7 +2057,7 @@ peerSelectionTargetsToObject
                , "activeBigLedgerPeers" .= targetNumberOfActiveBigLedgerPeers
                ]
 
-instance ToObject (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance ToObject (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.ExtraPeers SockAddr) SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
                    st@PeerSelectionState { targets })
       | verb <= NormalVerbosity =
@@ -2234,7 +2065,7 @@ instance ToObject (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
-             , "counters" .= toObject verb (peerSelectionStateToCounters toSet Cardano.cardanoPeerSelectionStatetoCounters st)
+             , "counters" .= toObject verb (peerSelectionStateToCounters ExtraPeers.toSet Cardano.cardanoPeerSelectionStatetoCounters st :: PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes SockAddr))
 
              ]
   toObject _ (TraceGovernorState blockedAt wakeupAfter ev) =

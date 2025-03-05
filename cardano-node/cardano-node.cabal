@@ -71,7 +71,6 @@ library
                         Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
                         Cardano.Node.Configuration.Socket
-                        Cardano.Node.Configuration.Topology
                         Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
                         Cardano.Node.Handlers.TopLevel
@@ -114,7 +113,6 @@ library
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
-                        Cardano.Node.Tracing.Tracers.NonP2P
                         Cardano.Node.Tracing.Tracers.P2P
                         Cardano.Node.Tracing.Tracers.Peer
                         Cardano.Node.Tracing.Tracers.Resources
@@ -145,7 +143,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.6
+                      , cardano-api ^>= 10.9
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -191,7 +189,7 @@ library
                       , ouroboros-consensus-diffusion ^>= 0.19
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.12
-                      , ouroboros-network ^>= 0.19.0.2
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion} ^>= 0.19.0.2
                       , ouroboros-network-framework
                       , ouroboros-network-protocols ^>= 0.13
                       , prettyprinter
@@ -251,7 +249,7 @@ test-suite cardano-node-test
                       , bytestring
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-api:{cardano-api, internal}
+                      , cardano-api
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting
@@ -265,7 +263,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
-                      , ouroboros-network
+                      , ouroboros-network:{ouroboros-network, cardano-diffusion}
                       , ouroboros-network-api
                       , strict-sop-core
                       , text

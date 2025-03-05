@@ -11,7 +11,8 @@
 -- The examples can be best viewed using a tool like 'jq'.
 module Test.Cardano.Tracing.OrphanInstances.HardFork (tests) where
 
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Api.Ledger (StandardCrypto)
+
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()

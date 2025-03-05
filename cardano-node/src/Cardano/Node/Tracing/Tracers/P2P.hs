@@ -22,7 +22,6 @@ module Cardano.Node.Tracing.Tracers.P2P
 import           Cardano.Logging
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
-import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
@@ -48,7 +47,7 @@ import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.Types ()
 import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..))
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
-import           Ouroboros.Network.Server2 as Server
+import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 
 import           Control.Exception (displayException)
@@ -63,11 +62,35 @@ import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
 import Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Network.Socket as Socket
+import qualified Data.IP as IP
+import qualified Ouroboros.Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.ExtraRootPeers as ExtraPeers
+import Ouroboros.Cardano.PeerSelection.Churn (TracerChurnMode (..))
 
+--------------------------------------------------------------------------------
+-- Addresses
+--------------------------------------------------------------------------------
 
+instance LogFormatting LocalAddress where
+    forMachine _dtal (LocalAddress path) =
+        mconcat ["path" .= path]
+
+instance LogFormatting NtN.RemoteAddress where
+    forMachine _dtal (Socket.SockAddrInet port addr) =
+        let ip = IP.fromHostAddress addr in
+        mconcat [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    forMachine _dtal (Socket.SockAddrInet6 port _ addr _) =
+        let ip = IP.fromHostAddress6 addr in
+        mconcat [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    forMachine _dtal (Socket.SockAddrUnix path) =
+        mconcat [ "path" .= show path ]
 
 --------------------------------------------------------------------------------
 -- LocalRootPeers Tracer
@@ -228,7 +251,12 @@ instance MetaTrace TracePublicRootPeers where
 -- PeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance LogFormatting TracerChurnMode where
+  forMachine _dtal (TraceChurnMode c) =
+    mconcat [ "kind" .= String "ChurnMode"
+             , "event" .= show c ]
+
+instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.ExtraPeers SockAddr) SockAddr) where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -501,9 +529,6 @@ instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerT
     mconcat [ "kind" .= String "ChurnWait"
              , "diffTime" .= toJSON dt
              ]
-  forMachine _dtal (TraceChurnMode c) =
-    mconcat [ "kind" .= String "ChurnMode"
-             , "event" .= show c ]
   forMachine _dtal (TracePickInboundPeers targetNumberOfKnownPeers numberOfKnownPeers selected available) =
     mconcat [ "kind" .= String "PickInboundPeers"
             , "targetKnown" .= targetNumberOfKnownPeers
@@ -572,6 +597,22 @@ instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerT
               (realToFrac duration)
     ]
   asMetrics _ = []
+
+instance MetaTrace TracerChurnMode where
+    namespaceFor TraceChurnMode {}             =
+      Namespace [] ["ChurnMode"]
+
+    severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace [] ["ChurnMode"]) = Just  ""
+    documentFor _ = Nothing
+
+    metricsDocFor _ = []
+
+    allNamespaces = [
+      Namespace [] ["ChurnMode"]
+                    ]
 
 instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers SockAddr) where
     namespaceFor TraceLocalRootPeersChanged {} =
@@ -668,8 +709,6 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       Namespace [] ["GovernorWakeup"]
     namespaceFor TraceChurnWait {}             =
       Namespace [] ["ChurnWait"]
-    namespaceFor TraceChurnMode {}             =
-      Namespace [] ["ChurnMode"]
     namespaceFor TracePickInboundPeers {} =
       Namespace [] ["PickInboundPeers"]
     namespaceFor TraceLedgerStateJudgementChanged {} =
@@ -719,7 +758,6 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     severityFor (Namespace [] ["DemoteLocalAsynchronous"]) _ = Just Warning
     severityFor (Namespace [] ["GovernorWakeup"]) _ = Just Info
     severityFor (Namespace [] ["ChurnWait"]) _ = Just Info
-    severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
     severityFor (Namespace [] ["PickInboundPeers"]) _ = Just Info
     severityFor (Namespace [] ["OutboundGovernorCriticalFailure"]) _ = Just Error
     severityFor (Namespace [] ["ChurnAction"]) _ = Just Info
@@ -777,7 +815,6 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     documentFor (Namespace [] ["DemoteLocalAsynchronous"]) = Just  ""
     documentFor (Namespace [] ["GovernorWakeup"]) = Just  ""
     documentFor (Namespace [] ["ChurnWait"]) = Just  ""
-    documentFor (Namespace [] ["ChurnMode"]) = Just  ""
     documentFor (Namespace [] ["PickInboundPeers"]) = Just
       "An inbound connection was added to known set of outbound governor"
     documentFor (Namespace [] ["OutboundGovernorCriticalFailure"]) = Just
@@ -827,7 +864,6 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       , Namespace [] ["DemoteLocalAsynchronous"]
       , Namespace [] ["GovernorWakeup"]
       , Namespace [] ["ChurnWait"]
-      , Namespace [] ["ChurnMode"]
       , Namespace [] ["PickInboundPeers"]
       , Namespace [] ["OutboundGovernorCriticalFailure"]
       , Namespace [] ["DebugState"]
@@ -838,14 +874,14 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
+instance LogFormatting (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.ExtraPeers SockAddr) SockAddr) where
   forMachine dtal@DNormal (TraceGovernorState blockedAt wakeupAfter
                    st@PeerSelectionState { targets }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
-             , "counters" .= forMachine dtal (peerSelectionStateToCounters Cardano.PublicRootPeers.toSet Cardano.cardanoPeerSelectionStatetoCounters st)
+             , "counters" .= forMachine dtal (peerSelectionStateToCounters ExtraPeers.toSet Cardano.cardanoPeerSelectionStatetoCounters st)
              ]
   forMachine _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"

@@ -248,13 +248,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "message" .= String "enabled development network protocols"
                , "versions" .= String (showT ntcVersions)
                ]
-  forMachine _dtal (BINetwork BasicInfoNetwork {..}) =
-      mconcat [ "kind" .= String "BasicInfoNetwork"
-               , "addresses" .= String (showT niAddresses)
-               , "diffusionMode"  .= String (showT niDiffusionMode)
-               , "dnsProducers" .= String (showT niDnsProducers)
-               , "ipProducers" .= String (showT niIpProducers)
-               ]
   forMachine _dtal (BIByron BasicInfoByron {..}) =
       mconcat [ "kind" .= String "BasicInfoByron"
                , "systemStartTime" .= String (showT bibSystemStartTime)
@@ -333,8 +326,6 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["ShelleyBased"]
   namespaceFor BIByron {}  =
     Namespace [] ["Byron"]
-  namespaceFor BINetwork {}  =
-    Namespace [] ["Network"]
 
   severityFor (Namespace _ ["SocketConfigError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdate"]) _ = Just Notice
@@ -551,12 +542,6 @@ ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
 ppStartupInfoTrace (WarningDevelopmentNodeToClientVersions ntcVersions) =
      "enabled development node-to-client versions: "
   <> showT ntcVersions
-
-ppStartupInfoTrace (BINetwork BasicInfoNetwork {..}) =
-  "Addresses " <> showT niAddresses
-  <> ", DiffusionMode " <> showT niDiffusionMode
-  <> ", DnsProducers " <> showT niDnsProducers
-  <> ", IpProducers " <> showT niIpProducers
 
 ppStartupInfoTrace (BIByron BasicInfoByron {..}) =
   "Era Byron"
