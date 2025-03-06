@@ -123,6 +123,7 @@ launchForwardersSimple' ts iomgr mode p connSize disconnSize = do
       , EKGF.acceptorEndpoint = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest = const $ return ()
+      , EKGF.useDummyForwarder = False
       }
 
   tfConfig :: TOF.ForwarderConfiguration TraceObject

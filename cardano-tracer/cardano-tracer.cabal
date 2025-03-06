@@ -170,7 +170,7 @@ library
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward >= 0.8
+                      , ekg-forward >= 0.9
                       , ekg-wai
                       , extra
                       , filepath
