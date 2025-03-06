@@ -13,7 +13,6 @@ module Cardano.Logging.Tracer.Forward
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
-import           Cardano.Logging.Version (ForwardingTraceSelector (..))
 
 import           Control.Monad.IO.Class
 import qualified Control.Tracer as T
@@ -31,21 +30,24 @@ forwardTracer :: forall m. (MonadIO m)
 forwardTracer forwardSink =
   Trace $ T.arrow $ T.emit $ uncurry output
  where
-  writeSelection lo = case TraceSelectAll of
-    TraceSelectMachine -> writeToSink forwardSink lo{toHuman = Nothing}
-    TraceSelectAll     -> writeToSink forwardSink lo
-    TraceSelectHuman   -> writeToSink forwardSink lo{toMachine = ""}
-    TraceSelectNone    -> pure ()
 
   output ::
        LoggingContext
     -> Either TraceControl FormattedMessage
     -> m ()
   output loggingContext = \case
-    Right (FormattedForwarder lo) -> liftIO $ writeSelection lo
+    Right (FormattedForwarder lo) -> liftIO $ writeToSink forwardSink lo
     Left c@(TCDocument{})         -> docIt Forwarder (loggingContext, Left c)
 
     -- ignored:
     -- * any other formatted message than the one formatted for forwarding
     -- * any other in-band control message except TCDocument
     _                             -> pure ()
+
+{-
+  writeSelection lo = case TraceSelectAll of
+    TraceSelectMachine -> writeToSink forwardSink lo{toHuman = Nothing}
+    TraceSelectAll     -> writeToSink forwardSink lo
+    TraceSelectHuman   -> writeToSink forwardSink lo{toMachine = ""}
+    TraceSelectNone    -> pure ()
+-}

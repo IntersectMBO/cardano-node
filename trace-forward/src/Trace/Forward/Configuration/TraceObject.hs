@@ -1,12 +1,14 @@
 module Trace.Forward.Configuration.TraceObject
   ( AcceptorConfiguration (..)
   , ForwarderConfiguration (..)
+  , ForwardingTraceSelector (..)
   ) where
 
 import           Ouroboros.Network.Driver (TraceSendRecv)
 
 import           Control.Concurrent.STM.TVar (TVar)
 import           Control.Tracer (Tracer)
+import           Data.Typeable (Typeable)
 
 import           Trace.Forward.Protocol.TraceObject.Type
 
@@ -42,4 +44,15 @@ data ForwarderConfiguration lo = ForwarderConfiguration
     --   and tracing items are already forwarded to it. We switch to small
     --   queue to reduce memory usage in the node.
   , connectedQueueSize :: !Word
+
+  , traceSelectForward :: !ForwardingTraceSelector
   }
+
+-- | This value is part of forwarding protocol negotiation, as the forwarder ("node") is
+--   unaware of the subscriber's ("cardano-tracer") config - and what it will eventually need
+data ForwardingTraceSelector
+  = TraceSelectAll            -- ^ forward all trace message renderings
+  | TraceSelectMachine        -- ^ forward machine-readable only: LogFormatting(forMachine)
+  | TraceSelectHuman          -- ^ forward human-readable only: LogFormatting(forHuman)
+  | TraceSelectNone           -- ^ do not forward trace messages; the forwarding protocol can still transport metrics and datapoints
+  deriving (Eq, Show, Typeable)

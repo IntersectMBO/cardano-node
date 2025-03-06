@@ -9,6 +9,7 @@ module Cardano.Logging.Version
   , ForwardingTraceSelector (..)
   , forwardingVersionCodec
   , forwardingCodecCBORTerm
+  , module FTS
   ) where
 
 import           Ouroboros.Network.CodecCBORTerm
@@ -21,6 +22,9 @@ import           Data.Bits
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Typeable (Typeable)
+
+import           Trace.Forward.Configuration.TraceObject as FTS (ForwardingTraceSelector (..))
+
 
 data ForwardingVersion
   = ForwardingV_1
@@ -45,16 +49,8 @@ forwardingVersionCodec = CodecCBORTerm { encodeTerm, decodeTerm }
 data ForwardingVersionData = ForwardingVersionData
   { networkMagic      :: NetworkMagic
   , selectForward     :: ForwardingTraceSelector
+  , selectMetrics     :: Bool
   } deriving (Eq, Show, Typeable)
-
--- | This value is part of forwarding protocol negotiation, as the forwarder ("node") is
---   unaware of the subscriber's ("cardano-tracer") config - and what it will eventually need
-data ForwardingTraceSelector
-  = TraceSelectAll            -- ^ forward all trace message renderings
-  | TraceSelectMachine        -- ^ forward machine-readable only: LogFormatting(forMachine)
-  | TraceSelectHuman          -- ^ forward human-readable only: LogFormatting(forHuman)
-  | TraceSelectNone           -- ^ do not forward trace messages; the forwarding protocol can still transport metrics and datapoints
-  deriving (Eq, Show, Typeable)
 
 -- To avoid bumping the protocol version and still be downwards compatible,
 -- negotiating required trace message renderings for forwarding works such that:
@@ -65,7 +61,7 @@ data ForwardingTraceSelector
 
 encodeAsInt :: ForwardingVersionData -> Int
 encodeAsInt ForwardingVersionData{..} =
-  shiftL 32 bitmask .|. fromIntegral (unNetworkMagic networkMagic)
+  shiftL bitmask 32 .|. fromIntegral (unNetworkMagic networkMagic)
   where
     -- this could be done with an Enum instance - but I want the code to be _very_ explicit
     bitmask = case selectForward of
@@ -77,7 +73,8 @@ encodeAsInt ForwardingVersionData{..} =
 decodeFromInt :: Int -> ForwardingVersionData
 decodeFromInt i = ForwardingVersionData
   { networkMagic  = NetworkMagic $ fromIntegral $ i .&. 0xffffffff
-  , selectForward = selector $ 0b11 .&. shiftR 32 i
+  , selectForward = selector $ 0b11 .&. shiftR i 32
+  , selectMetrics = True
   }
   where
     -- this could be done with an Enum instance - but I want the code to be _very_ explicit

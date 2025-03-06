@@ -4,8 +4,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Forwarding
-  (
-    initForwarding
+  ( ForwardingRole (..)
+  , initForwarding
   , initForwardingDelayed
   ) where
 
@@ -53,15 +53,29 @@ import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
 
+
+-- | The role a peer participating in the forwarding protocol (FP) has:
+--   * Producers are typically the applications that emits trace messages and metrics (e.g., cardano-node)
+--     Their incentive is to transmit as little as possible over the FP.
+--   * Consumers subscribe to the trace messages and metrics, and process then (e.g., cardano-tracer)
+--     Their incentive is to request as much as needed over the FP.
+--   The exact amount of forwarded data is negotiated during peer handshake, as neither is aware of the other's configuration.
+data ForwardingRole
+  = ForwardingProducer                            -- ^ This role for the application (cardano-node, ...)
+  | ForwardingConsumer ForwardingTraceSelector    -- ^ This role for the consuming service (cardano-tracer), having evaluated needs based on config
+  deriving (Eq, Show)
+
+
 initForwarding :: forall m. (MonadIO m)
   => IOManager
   -> TraceOptionForwarder
   -> NetworkMagic
+  -> ForwardingRole
   -> Maybe EKG.Store
   -> Maybe (FilePath, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore)
-initForwarding iomgr config magic ekgStore tracerSocketMode = do
-  (a, b, kickoffForwarder) <- initForwardingDelayed iomgr config magic ekgStore tracerSocketMode
+initForwarding iomgr config magic role ekgStore tracerSocketMode = do
+  (a, b, kickoffForwarder) <- initForwardingDelayed iomgr config magic role ekgStore tracerSocketMode
   liftIO kickoffForwarder
   pure (a, b)
 
@@ -71,10 +85,11 @@ initForwardingDelayed :: forall m. (MonadIO m)
   => IOManager
   -> TraceOptionForwarder
   -> NetworkMagic
+  -> ForwardingRole
   -> Maybe EKG.Store
   -> Maybe (FilePath, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore, IO ())
-initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
+initForwardingDelayed iomgr config magic role ekgStore tracerSocketMode = liftIO $ do
   forwardSink <- initForwardSink tfConfig handleOverflow
   dpStore <- initDataPointStore
   let
@@ -112,6 +127,7 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       , TF.acceptorEndpoint      = p
       , TF.disconnectedQueueSize = disconnSize
       , TF.connectedQueueSize    = connSize
+      , TF.traceSelectForward    = case role of {ForwardingConsumer select -> select; ForwardingProducer -> TraceSelectNone}
       }
 
   dpfConfig :: DPF.ForwarderConfiguration
@@ -216,11 +232,12 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     configureSocket
     (simpleSingletonVersions
        ForwardingV_1
-       (ForwardingVersionData magic TraceSelectAll)
-       (const $ forwarderApp [ (forwardEKGMetricsRun,                      1)
-                             , (forwardTraceObjectsInit tfConfig  sink,    2)
-                             , (forwardDataPointsInit   dpfConfig dpStore, 3)
-                             ]
+       (ForwardingVersionData magic (TF.traceSelectForward tfConfig) True)
+       (\ForwardingVersionData{} -> forwarderApp 
+          [ (forwardEKGMetricsRun,                      1)
+          , (forwardTraceObjectsInit tfConfig  sink,    2)
+          , (forwardDataPointsInit   dpfConfig dpStore, 3)
+          ]
        )
     )
     Nothing
@@ -288,8 +305,8 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
             (HandshakeCallbacks acceptableVersion queryVersion)
             (simpleSingletonVersions
                ForwardingV_1
-               (ForwardingVersionData magic TraceSelectAll)
-               (const $ SomeResponderApplication $
+               (ForwardingVersionData magic (TF.traceSelectForward tfConfig) True)
+               (\ForwardingVersionData{} -> SomeResponderApplication $
                  forwarderApp [ (forwardEKGMetricsRespRun,                  1)
                               , (forwardTraceObjectsResp tfConfig  sink,    2)
                               , (forwardDataPointsResp   dpfConfig dpStore, 3)

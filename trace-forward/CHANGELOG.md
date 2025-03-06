@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.3.0 - Mar 2025
+
+* New value of type `ForwardingTraceSelector` in `ForwarderConfiguration`.
+
 ## 2.2.10 - Feb 2025
 
 * Updated to `ouroboros-network-framework-0.16`
