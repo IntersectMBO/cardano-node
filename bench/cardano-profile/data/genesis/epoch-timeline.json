@@ -817,7 +817,6 @@
     "epoch": 507,
     "description": "Conway era - new cost models, protocol version 9",
     "alonzo": {
-      "coinsPerUTxOByte": 4310,
       "costModels": {
         "PlutusV1": {
           "addInteger-cpu-arguments-intercept": 100788,

@@ -1839,7 +1839,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -2712,7 +2711,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -3588,7 +3586,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -4461,7 +4458,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -5337,7 +5333,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -6210,7 +6205,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -13409,7 +13403,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -14039,7 +14032,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -14669,7 +14661,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -15285,7 +15276,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -15922,7 +15912,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -16801,7 +16790,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -18977,7 +18965,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -24223,7 +24210,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -28092,7 +28078,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -28707,7 +28692,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -29328,7 +29312,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -34568,7 +34551,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -38984,7 +38966,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -39597,7 +39578,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -40210,7 +40190,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -40823,7 +40802,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -41436,7 +41414,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -43722,7 +43699,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -44356,7 +44332,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -45000,7 +44975,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -45449,7 +45423,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -45898,7 +45871,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -46511,7 +46483,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -47124,7 +47095,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -49009,7 +48979,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -49628,7 +49597,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -50251,7 +50219,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -50874,7 +50841,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -51497,7 +51463,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -52120,7 +52085,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -52743,7 +52707,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -53374,7 +53337,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -54007,7 +53969,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -54641,7 +54602,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -55274,7 +55234,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -55897,7 +55856,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -56775,7 +56733,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -57717,7 +57674,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -58658,7 +58614,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -59600,7 +59555,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -60221,7 +60175,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -60656,7 +60609,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -61091,7 +61043,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -61722,7 +61673,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -62171,7 +62121,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -62620,7 +62569,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -63251,7 +63199,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -63700,7 +63647,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -64149,7 +64095,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -64786,7 +64731,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -65705,7 +65649,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -66632,7 +66575,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -67575,7 +67517,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -68476,7 +68417,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -69377,7 +69317,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -73189,7 +73128,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -73817,7 +73755,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -74443,7 +74380,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -75063,7 +74999,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -75683,7 +75618,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -76303,7 +76237,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -76923,7 +76856,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -77543,7 +77475,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -78162,7 +78093,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -78787,7 +78717,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -79407,7 +79336,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -80027,7 +79955,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -80645,7 +80572,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -81520,7 +81446,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -82459,7 +82384,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -83397,7 +83321,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {

@@ -5,7 +5,6 @@
     }
   },
   "alonzo": {
-    "coinsPerUTxOByte": 4310,
     "costModels": {
       "PlutusV1": {
         "addInteger-cpu-arguments-intercept": 205665,
