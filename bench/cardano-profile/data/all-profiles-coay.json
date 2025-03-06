@@ -378,7 +378,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -796,7 +796,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -1215,7 +1215,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -1641,7 +1641,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -2511,7 +2511,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -3384,7 +3384,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -4260,7 +4260,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -5133,7 +5133,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -6009,7 +6009,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -6882,7 +6882,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -7309,7 +7309,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -7732,7 +7732,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -8155,7 +8155,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -8578,7 +8578,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -9003,7 +9003,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -9426,7 +9426,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -9849,7 +9849,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -10268,7 +10268,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -10685,7 +10685,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -11103,7 +11103,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -11526,7 +11526,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -11948,7 +11948,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -12366,7 +12366,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -12787,7 +12787,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -13206,7 +13206,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -13825,7 +13825,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -14455,7 +14455,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -15085,7 +15085,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -15701,7 +15701,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -16593,7 +16593,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -17520,7 +17520,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -17938,7 +17938,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -18356,7 +18356,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -18777,7 +18777,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -19393,7 +19393,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -19816,7 +19816,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -20238,7 +20238,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -20656,7 +20656,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -21077,7 +21077,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -21496,7 +21496,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -21922,7 +21922,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -22340,7 +22340,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -22760,7 +22760,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -23182,7 +23182,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -23606,7 +23606,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -24026,7 +24026,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -24944,7 +24944,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -25376,7 +25376,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -25796,7 +25796,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -26219,7 +26219,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -26638,7 +26638,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -27061,7 +27061,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -27478,7 +27478,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -27895,7 +27895,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -28508,7 +28508,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -29123,7 +29123,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -29744,7 +29744,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -30165,7 +30165,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -30584,7 +30584,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -31003,7 +31003,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -31429,7 +31429,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -31846,7 +31846,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -32263,7 +32263,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -32682,7 +32682,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -33101,7 +33101,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -33521,7 +33521,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -33945,7 +33945,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -34368,7 +34368,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -34984,7 +34984,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -35403,7 +35403,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -35823,7 +35823,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -36247,7 +36247,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -36667,7 +36667,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -37090,7 +37090,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -37514,7 +37514,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -37937,7 +37937,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -38361,7 +38361,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -38784,7 +38784,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -39400,7 +39400,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -40013,7 +40013,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -40626,7 +40626,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -41239,7 +41239,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -41852,7 +41852,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -42271,7 +42271,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -42689,7 +42689,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -43107,7 +43107,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -43525,7 +43525,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -44138,7 +44138,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -44772,7 +44772,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -45234,7 +45234,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -45683,7 +45683,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -46314,7 +46314,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -46927,7 +46927,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -47540,7 +47540,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -47960,7 +47960,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -48383,7 +48383,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -48808,7 +48808,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -49425,7 +49425,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -50045,7 +50045,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -50668,7 +50668,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -51291,7 +51291,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -51914,7 +51914,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -52537,7 +52537,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -53160,7 +53160,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -53790,7 +53790,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -54424,7 +54424,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -55057,7 +55057,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -55691,7 +55691,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -56569,7 +56569,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -57497,7 +57497,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -58439,7 +58439,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -59380,7 +59380,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -60017,7 +60017,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -60455,7 +60455,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -60890,7 +60890,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -61507,7 +61507,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -61956,7 +61956,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -62405,7 +62405,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -63036,7 +63036,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -63485,7 +63485,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -63934,7 +63934,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -64565,7 +64565,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -65505,7 +65505,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -66424,7 +66424,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -67351,7 +67351,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -68249,7 +68249,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -69150,7 +69150,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -70049,7 +70049,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -70470,7 +70470,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -70888,7 +70888,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -71307,7 +71307,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -71726,7 +71726,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -72145,7 +72145,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -72563,7 +72563,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -72983,7 +72983,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -73606,7 +73606,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -74234,7 +74234,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -74860,7 +74860,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -75480,7 +75480,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -76100,7 +76100,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -76720,7 +76720,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -77340,7 +77340,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -77960,7 +77960,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -78579,7 +78579,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -79204,7 +79204,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -79824,7 +79824,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -80444,7 +80444,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -81317,7 +81317,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -82242,7 +82242,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -83181,7 +83181,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -84119,7 +84119,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 170000000,
-          "minUTxOValue": 4310,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {

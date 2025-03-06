@@ -116,7 +116,7 @@ ciTestBage = Types.Profile {
         , ("minFeeA", Aeson.Number 44.0)
         , ("minFeeB", Aeson.Number 155381.0)
         , ("minPoolCost", Aeson.Number 3.4e8)
-        , ("minUTxOValue", Aeson.Number 34482.0)
+        , ("minUTxOValue", Aeson.Number 0)
         , ("nOpt", Aeson.Number 500.0)
         , ("poolDeposit", Aeson.Number 5.0e8)
         , ("protocolVersion", Aeson.Object (KeyMap.fromList [

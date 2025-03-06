@@ -50,7 +50,7 @@
         "maxBlockHeaderSize": 1100,
         "minFeeA": 44,
         "minFeeB": 155381,
-        "minUTxOValue": 34482,
+        "minUTxOValue": 0,
         "poolDeposit": 500000000,
         "minPoolCost": 340000000,
         "keyDeposit": 2000000,

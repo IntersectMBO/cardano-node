@@ -325,7 +325,7 @@
       "protocolVersion": {
         "major": 5
       },
-      "minUTxOValue": 34482
+      "minUTxOValue": 0
     },
     "alonzo": {
       "lovelacePerUTxOWord": 34482,
@@ -595,8 +595,7 @@
     "shelley": {
       "protocolVersion": {
         "major": 7
-      },      
-      "minUTxOValue": 4310
+      }
     },
     "alonzo": {
       "lovelacePerUTxOWord": 4310
