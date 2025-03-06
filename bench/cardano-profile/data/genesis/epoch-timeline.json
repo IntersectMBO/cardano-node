@@ -41,11 +41,67 @@
       "decentralisationParam": 0.8
     }
   },
+  "213": {
+    "epoch": 213,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.78
+    }
+  },
+  "214": {
+    "epoch": 214,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.76
+    }
+  },
+  "215": {
+    "epoch": 215,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.74
+    }
+  },
+  "216": {
+    "epoch": 216,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.72
+    }
+  },
   "217": {
     "epoch": 217,
     "description": "Further decentralisation",
     "shelley": {
       "decentralisationParam": 0.7
+    }
+  },
+  "218": {
+    "epoch": 218,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.68
+    }
+  },
+  "219": {
+    "epoch": 219,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.66
+    }
+  },
+  "220": {
+    "epoch": 220,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.64
+    }
+  },
+  "221": {
+    "epoch": 221,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.62
     }
   },
   "222": {
@@ -55,11 +111,67 @@
       "decentralisationParam": 0.6
     }
   },
+  "223": {
+    "epoch": 223,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.58
+    }
+  },
+  "224": {
+    "epoch": 224,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.56
+    }
+  },
+  "225": {
+    "epoch": 225,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.54
+    }
+  },
+  "226": {
+    "epoch": 226,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.52
+    }
+  },
   "227": {
     "epoch": 227,
     "description": "Further decentralisation",
     "shelley": {
       "decentralisationParam": 0.5
+    }
+  },
+  "228": {
+    "epoch": 228,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.48
+    }
+  },
+  "229": {
+    "epoch": 229,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.46
+    }
+  },
+  "230": {
+    "epoch": 230,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.44
+    }
+  },
+  "231": {
+    "epoch": 231,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.42
     }
   },
   "232": {
@@ -69,10 +181,18 @@
       "decentralisationParam": 0.4
     }
   },
+  "233": {
+    "epoch": 233,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.38
+    }
+  },
   "234": {
     "epoch": 234,
     "description": "Incentive adjusted towards more decentralisation",
     "shelley": {
+      "decentralisationParam": 0.32,
       "nOpt": 500
     }
   },
@@ -92,6 +212,34 @@
       "decentralisationParam": 0.3
     }
   },
+  "243": {
+    "epoch": 243,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.28
+    }
+  },
+  "244": {
+    "epoch": 244,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.26
+    }
+  },
+  "245": {
+    "epoch": 245,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.24
+    }
+  },
+  "246": {
+    "epoch": 246,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.22
+    }
+  },
   "247": {
     "epoch": 247,
     "description": "Further decentralisation",
@@ -99,10 +247,32 @@
       "decentralisationParam": 0.2
     }
   },
+  "248": {
+    "epoch": 248,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.18
+    }
+  },
+  "249": {
+    "epoch": 249,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.16
+    }
+  },
+  "250": {
+    "epoch": 250,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.14
+    }
+  },
   "251": {
     "epoch": 251,
     "description": "Mary era",
     "shelley": {
+      "decentralisationParam": 0.12,
       "protocolVersion": {
         "major": 4
       }
@@ -113,6 +283,27 @@
     "description": "Further decentralisation",
     "shelley": {
       "decentralisationParam": 0.1
+    }
+  },
+  "253": {
+    "epoch": 253,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.08
+    }
+  },
+  "254": {
+    "epoch": 254,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.06
+    }
+  },
+  "256": {
+    "epoch": 256,
+    "description": "Further decentralisation",
+    "shelley": {
+      "decentralisationParam": 0.02
     }
   },
   "257": {
@@ -404,7 +595,7 @@
     "shelley": {
       "protocolVersion": {
         "major": 7
-      },
+      },      
       "minUTxOValue": 4310
     },
     "alonzo": {
