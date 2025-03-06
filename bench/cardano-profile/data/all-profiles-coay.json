@@ -2008,9 +2008,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -2880,9 +2880,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -3755,9 +3755,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -4627,9 +4627,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -5502,9 +5502,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -6374,9 +6374,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -13572,9 +13572,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -14201,9 +14201,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -14830,9 +14830,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -15445,9 +15445,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -15929,8 +15929,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -16084,9 +16084,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -16807,8 +16807,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -16962,9 +16962,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -19134,9 +19134,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -24227,8 +24227,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -24382,9 +24382,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -28247,9 +28247,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -28861,9 +28861,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -29481,9 +29481,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -34720,9 +34720,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -39135,9 +39135,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -39747,9 +39747,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -40359,9 +40359,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -40971,9 +40971,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -41583,9 +41583,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -43868,9 +43868,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -44501,9 +44501,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -46040,9 +46040,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -46652,9 +46652,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -47264,9 +47264,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -49148,9 +49148,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -49766,9 +49766,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -50388,9 +50388,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -51010,9 +51010,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -51632,9 +51632,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -52254,9 +52254,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -52876,9 +52876,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -53506,9 +53506,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -54138,9 +54138,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -54771,9 +54771,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -55403,9 +55403,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -55873,8 +55873,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -56028,9 +56028,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -56750,8 +56750,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -56905,9 +56905,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -57691,8 +57691,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -57846,9 +57846,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -58631,8 +58631,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -58786,9 +58786,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -59724,9 +59724,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -61212,9 +61212,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -62738,9 +62738,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -64264,9 +64264,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -64748,8 +64748,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -64903,9 +64903,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -65666,8 +65666,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -65821,9 +65821,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -66592,8 +66592,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -66747,9 +66747,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -67534,8 +67534,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -67689,9 +67689,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -68434,8 +68434,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -68589,9 +68589,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -69334,8 +69334,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -69489,9 +69489,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -73297,9 +73297,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -73924,9 +73924,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -74549,9 +74549,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -75168,9 +75168,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -75787,9 +75787,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -76406,9 +76406,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -77025,9 +77025,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -77644,9 +77644,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -78262,9 +78262,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -78886,9 +78886,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -79505,9 +79505,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -80124,9 +80124,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
             "verifyEd25519Signature-cpu-arguments-slope": 1021,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -80589,8 +80589,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -80744,9 +80744,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -81463,8 +81463,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -81618,9 +81618,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -82401,8 +82401,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -82556,9 +82556,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -83338,8 +83338,8 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 117366,
+            "blake2b-cpu-arguments-slope": 10475,
             "blake2b-memory-arguments": 4,
             "blake2b_256-cpu-arguments-intercept": 201305,
             "blake2b_256-cpu-arguments-slope": 8356,
@@ -83493,9 +83493,9 @@
             "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
             "verifyEd25519Signature-cpu-arguments-slope": 14333,
             "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
