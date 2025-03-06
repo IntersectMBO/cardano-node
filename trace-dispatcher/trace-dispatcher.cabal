@@ -56,7 +56,7 @@ library
                       , deepseq
                       , ekg-wai
                       , ekg-core
-                      , ekg-forward >= 0.8
+                      , ekg-forward >= 0.9
                       , hostname
                       , network
                       , network-mux

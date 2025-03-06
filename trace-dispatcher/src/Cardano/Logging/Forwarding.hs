@@ -108,6 +108,7 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       , EKGF.acceptorEndpoint   = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest    = const $ pure ()
+      , EKGF.useDummyForwarder  = False
       }
 
   tfConfig :: TF.ForwarderConfiguration TraceObject
