@@ -31,6 +31,9 @@ calibrate15x =
         ("maxTxExUnits", Aeson.Object $ KeyMap.fromList [
           ("exUnitsMem", Aeson.Number 23250000)
         ])
+      , ("maxBlockExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsSteps", Aeson.Number 20625739876)
+        ])
       ])
     ])
   , ("generator", Aeson.Object $ KeyMap.fromList [
@@ -48,10 +51,13 @@ calibrate2x =
         ("maxTxExUnits", Aeson.Object $ KeyMap.fromList [
           ("exUnitsMem", Aeson.Number 31000000)
         ])
+      , ("maxBlockExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsSteps", Aeson.Number 27500804996)
+        ])
       ])
     ])
   , ("generator", Aeson.Object $ KeyMap.fromList [
-      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":2463202,"kind":"FeeTooSmallUTxO","minimum":2463246}
+      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":2463246}
       ("tx_fee", Aeson.Number 2463246)
     ])
   ]
