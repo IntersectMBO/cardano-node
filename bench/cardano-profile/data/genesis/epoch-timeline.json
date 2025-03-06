@@ -787,6 +787,13 @@
       }
     }
   },
+  "445": {
+    "epoch": 445,
+    "description": "Lower min_pool_cost / minPoolCost",
+    "shelley": {
+      "minPoolCost": 170000000
+    }
+  },
   "492": {
     "epoch": 492,
     "description": "V2 Cost Model - new mandatory parameters - speculative/not yet deployed",
