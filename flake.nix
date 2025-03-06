@@ -27,7 +27,7 @@
     };
     utils.url = "github:numtide/flake-utils";
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/jl/new-tracing";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     ops-lib = {
@@ -255,7 +255,7 @@
               (mkFlakeAttrs (pkgs.extend (prev: final: { cardanoNodeProject = p; }))).ciJobs
             ) project.projectVariants;
             ciJobs = {
-              cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet preview preprod shelley_qa; };
+              cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet preview preprod; };
             } // optionalAttrs (system == "x86_64-linux") {
               native = packages // {
                 shells = devShells;
@@ -424,6 +424,10 @@
         cardano-submit-api = { pkgs, lib, ... }: {
           imports = [ ./nix/nixos/cardano-submit-api-service.nix ];
           services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+        };
+        cardano-tracer = { pkgs, lib, ... }: {
+          imports = [ ./nix/nixos/cardano-tracer-service.nix ];
+          services.cardano-tracer.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
         };
       };
     };

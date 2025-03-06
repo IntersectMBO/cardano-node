@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-
-set -e
-# set -x
+set -euo pipefail
 
 # This script will initiate the transition to protocol version 3 (Allegra).
 
@@ -16,24 +14,27 @@ set -e
 # Also, you need to restart the nodes after running this script in order for the
 # update to be endorsed by the nodes.
 
-if [ ! "$1" ]; then echo "update-3.sh: expects an <N> epoch argument"; exit; fi
+[ -n "${DEBUG:-}" ] && set -x
+
+[ ! "${1:-}" ] && { echo "update-3.sh: expects an <N> epoch argument"; exit; }
 
 EPOCH=$1
 VERSION=3
 
 ROOT=example
-COINS_IN_INPUT=1000000000
+SPLIT_OUTPUT_ALLOC=1000000000
 
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 TXID0=$(cardano-cli byron transaction txid --tx tx0.tx)
 TXID1=$(cardano-cli byron transaction txid --tx tx1.tx)
 
-cardano-cli governance create-update-proposal \
+cardano-cli shelley governance action create-protocol-parameters-update \
             --out-file update-proposal-allegra \
-            --epoch ${EPOCH} \
+            --epoch "${EPOCH}" \
             --genesis-verification-key-file shelley/genesis-keys/genesis1.vkey \
             --genesis-verification-key-file shelley/genesis-keys/genesis2.vkey \
             --protocol-major-version ${VERSION} \
@@ -60,15 +61,31 @@ cardano-cli key convert-byron-key \
 #  4. delegate from the user1 stake address to the stake pool
 # We'll include the update proposal
 
-cardano-cli transaction build-raw \
-            --shelley-era \
+# Obtain the input lovelace dynamically to reduce change calc complexity
+TOTAL_INPUT_LOVELACE=$(
+  cardano-cli query utxo --whole-utxo --output-json \
+    | jq -er '[to_entries[] | select(.value.value | length == 1) | .value.value.lovelace] | add')
+
+# Slight over-estimate on the fee
+FEE=300000
+STAKE_KEY_DEPOSIT=400000
+STAKEPOOL_DEPOSIT=0
+CHANGE=$((
+  + TOTAL_INPUT_LOVELACE
+  - SPLIT_OUTPUT_ALLOC
+  - STAKEPOOL_DEPOSIT
+  - 2 * STAKE_KEY_DEPOSIT
+  - FEE
+))
+
+cardano-cli shelley transaction build-raw \
             --invalid-hereafter 100000 \
-            --fee 231501 \
-            --tx-in ${TXID0}#0\
-            --tx-in ${TXID1}#0\
-            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
-            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
-            --tx-out $(cat addresses/user1.addr)+9017768499 \
+            --fee "$FEE" \
+            --tx-in "${TXID0}#0" \
+            --tx-in "${TXID1}#0" \
+            --tx-out "$(cat addresses/user1.addr)+$((SPLIT_OUTPUT_ALLOC / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+$((SPLIT_OUTPUT_ALLOC / 2))" \
+            --tx-out "$(cat addresses/user1.addr)+$CHANGE" \
             --certificate-file addresses/pool-owner1-stake.reg.cert \
             --certificate-file node-pool1/registration.cert \
             --certificate-file addresses/user1-stake.reg.cert \
@@ -83,7 +100,7 @@ cardano-cli transaction build-raw \
 # 4. the pool1 operator key, due to the pool registration cert
 # 5. the genesis delegate keys, due to the update proposal
 
-cardano-cli transaction sign \
+cardano-cli shelley transaction sign \
             --signing-key-file shelley/utxo-keys/utxo1.skey \
             --signing-key-file addresses/user1-stake.skey \
             --signing-key-file node-pool1/owner.skey \
@@ -94,16 +111,14 @@ cardano-cli transaction sign \
             --signing-key-file shelley/delegate-keys/delegate2.skey \
             --signing-key-file byron/payment-keys.000-converted.key \
             --signing-key-file byron/payment-keys.001-converted.key \
-            --testnet-magic 42 \
             --tx-body-file  tx2.txbody \
             --out-file      tx2.tx
 
 
-cardano-cli transaction submit --tx-file tx2.tx --testnet-magic 42
+cardano-cli shelley transaction submit --tx-file tx2.tx
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 2/LastKnownBlockVersion-Major: 3/' \
-
 
 popd
 
