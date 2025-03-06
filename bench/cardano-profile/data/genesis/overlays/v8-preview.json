@@ -5,7 +5,6 @@
     }
   },
   "alonzo": {
-    "coinsPerUTxOByte": 4310,
     "costModels": {
       "PlutusV1": {
         "addInteger-cpu-arguments-intercept": 205665,
@@ -105,10 +104,7 @@
         "unConstrData-cpu-arguments": 32696,
         "unIData-cpu-arguments": 43357,
         "unListData-cpu-arguments": 32247,
-        "unMapData-cpu-arguments": 38314,
-        "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-        "verifyEd25519Signature-cpu-arguments-slope": 1021,
-        "verifyEd25519Signature-memory-arguments": 10
+        "unMapData-cpu-arguments": 38314
       },
       "PlutusV2": {
         "verifyEd25519Signature-cpu-arguments-intercept": 57996947,
