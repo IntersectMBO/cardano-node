@@ -1,15 +1,8 @@
 {
-  "bootstrapPeers": [
-    {
-      "address": "shelley-qa-node.play.dev.cardano.org",
-      "port": 3001
-    }
-  ],
   "localRoots": [
     {
       "accessPoints": [],
       "advertise": false,
-      "trustable": false,
       "valency": 1
     }
   ],
@@ -19,5 +12,5 @@
       "advertise": false
     }
   ],
-  "useLedgerAfterSlot": 31348805
+  "useLedgerAfterSlot": -1
 }
