@@ -139,14 +139,14 @@ backendsAndFormat ::
 backendsAndFormat trStdout trForward mbBackends _ = do
     let mbForwardTrace  = if forwarder
                             then Just $ filterTraceByPrivacy (Just Public)
-                                (forwardFormatter' Nothing trForward)
+                                (forwardFormatter' trForward)
                             else Nothing
         mbStdoutTrace   | humColoured
-                        = Just (humanFormatter' True Nothing trStdout)
+                        = Just (humanFormatter' True trStdout)
                         | humUncoloured
-                        = Just (humanFormatter' False Nothing trStdout)
+                        = Just (humanFormatter' False trStdout)
                         | Stdout MachineFormat `L.elem` backends'
-                        = Just (machineFormatter' Nothing trStdout)
+                        = Just (machineFormatter' trStdout)
                         | otherwise = Nothing
     case mbForwardTrace <> mbStdoutTrace of
       Nothing -> pure $ Trace T.nullTracer

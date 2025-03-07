@@ -349,7 +349,7 @@ data PreFormatted = PreFormatted {
   , pfNamespace  :: ![Text]
   , pfTimestamp  :: !Text
   , pfTime       :: !UTCTime
-  , pfHostname   :: !HostName
+  , pfHostname   :: !Text
   , pfThreadId   :: !Text
 }
 
@@ -361,7 +361,7 @@ data TraceObject = TraceObject {
   , toSeverity  :: !SeverityS
   , toDetails   :: !DetailLevel
   , toTimestamp :: !UTCTime
-  , toHostname  :: !HostName
+  , toHostname  :: !Text
   , toThreadId  :: !Text
 } deriving (Eq, Show)
 

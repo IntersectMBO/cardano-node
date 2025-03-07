@@ -70,7 +70,7 @@ preFormatted ::
   -> Trace m PreFormatted
   -> m (Trace m a)
 preFormatted withForHuman tr = do
-  hostname <- liftIO getHostName
+  hostname <- T.pack <$> liftIO getHostName
   contramapM tr
     (\case
       (lc, Right msg) -> do
@@ -98,19 +98,15 @@ preFormatted withForHuman tr = do
 forwardFormatter'
   :: forall m .
      MonadIO m
-  => Maybe Text
-  -> Trace m FormattedMessage
+  => Trace m FormattedMessage
   -> Trace m PreFormatted
-forwardFormatter' condPrefix (Trace tr) = Trace $
+forwardFormatter' (Trace tr) = Trace $
   contramap
     (\ case
       (lc, Right v) ->
-            let ns = case condPrefix of
-                                  Just app -> app : pfNamespace v
-                                  Nothing -> pfNamespace v
-                machineObj = AE.pairs $
+            let machineObj = AE.pairs $
                       "at"       .= pfTime v
-                    <> "ns"      .= ns
+                    <> "ns"      .= intercalate "." (pfNamespace v)
                     <> "data"    .= pfForMachine v
                     <> "sev"     .= fromMaybe Info (lcSeverity lc)
                     <> "thread"  .= pfThreadId v
@@ -118,7 +114,7 @@ forwardFormatter' condPrefix (Trace tr) = Trace $
                 to = TraceObject {
                     toHuman     = pfForHuman v
                   , toMachine   = encodingToText machineObj
-                  , toNamespace = ns
+                  , toNamespace = pfNamespace v
                   , toSeverity  = fromMaybe Info (lcSeverity lc)
                   , toDetails   = fromMaybe DNormal (lcDetails lc)
                   , toTimestamp = pfTime v
@@ -133,19 +129,15 @@ forwardFormatter' condPrefix (Trace tr) = Trace $
 machineFormatter'
   :: forall m .
      MonadIO m
-  => Maybe Text
-  -> Trace m FormattedMessage
+  => Trace m FormattedMessage
   -> Trace m PreFormatted
-machineFormatter' condPrefix (Trace tr) = Trace $
+machineFormatter' (Trace tr) = Trace $
   contramap
     (\ case
       (lc, Right v) ->
-        let ns = case condPrefix of
-                                  Just app -> app : pfNamespace v
-                                  Nothing -> pfNamespace v
-            machineObj = AE.pairs $
+        let machineObj = AE.pairs $
                    "at"      .= pfTime v
-                <> "ns"      .= intercalate "." ns
+                <> "ns"      .= intercalate "." (pfNamespace v)
                 <> "data"    .= pfForMachine v
                 <> "sev"     .= fromMaybe Info (lcSeverity lc)
                 <> "thread"  .= pfThreadId v
@@ -159,22 +151,17 @@ humanFormatter'
   :: forall m .
      MonadIO m
   => Bool
-  -> Maybe Text
   -> Trace m FormattedMessage
   -> Trace m PreFormatted
-humanFormatter' withColor condPrefix (Trace tr) =
+humanFormatter' withColor (Trace tr) =
   Trace $
       contramap
         (\ case
           (lc, Right v) ->
               let sev      = fromMaybe Info (lcSeverity lc)
-                  ns       = fromString (pfHostname v)
+                  ns       = fromText (pfHostname v)
                                 <> singleton ':'
-                                <> fromText
-                                    (intercalate "."
-                                      (case condPrefix of
-                                          Just app -> app : pfNamespace v
-                                          Nothing  ->pfNamespace v))
+                                <> fromText (intercalate "." (pfNamespace v))
                   prePart  = squareBrackets (fromText (pfTimestamp v))
                                 <> squareBrackets ns
                                 <> roundBrackets
@@ -230,31 +217,25 @@ humanFormatter
      MonadIO m
   => LogFormatting a
   => Bool
-  -> Maybe Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
-humanFormatter withColor condPrefix tr =
-    let tr' = humanFormatter' withColor condPrefix tr
-    in preFormatted True tr'
+humanFormatter withColor =
+  preFormatted True . humanFormatter' withColor
 
 machineFormatter
   :: forall a m .
      (MonadIO m
   ,  LogFormatting a)
-  => Maybe Text
-  -> Trace m FormattedMessage
+  => Trace m FormattedMessage
   -> m (Trace m a)
-machineFormatter condPrefix tr =
-    let tr' = machineFormatter' condPrefix tr
-    in preFormatted False tr'
+machineFormatter =
+  preFormatted False . machineFormatter'
 
 forwardFormatter
   :: forall a m .
      MonadIO m
   => LogFormatting a
-  => Maybe Text
-  -> Trace m FormattedMessage
+  => Trace m FormattedMessage
   -> m (Trace m a)
-forwardFormatter condPrefix tr =
-    let tr' = forwardFormatter' condPrefix tr
-    in preFormatted True tr'
+forwardFormatter =
+  preFormatted True . forwardFormatter'

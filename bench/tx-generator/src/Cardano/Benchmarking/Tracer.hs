@@ -69,10 +69,10 @@ generatorTracer ::
 generatorTracer tracerName mbTrStdout mbTrForward = do
   forwardTrace <- case mbTrForward of
                         Nothing -> mempty
-                        Just trForward -> forwardFormatter Nothing trForward
+                        Just trForward -> forwardFormatter trForward
   stdoutTrace  <- case mbTrStdout of
                         Nothing -> mempty
-                        Just trForward -> machineFormatter Nothing trForward
+                        Just trForward -> machineFormatter trForward
   let tr = forwardTrace <> stdoutTrace
   tr'  <- withDetailsFromConfig tr
   pure $ withInnerNames $ appendPrefixName tracerName tr'
