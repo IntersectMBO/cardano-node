@@ -3,6 +3,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Logging.Formatter (
     metricsFormatter
   , preFormatted
@@ -23,6 +25,8 @@ import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
+import qualified Data.ByteString.Lazy as LBS (ByteString)
+import qualified Data.ByteString.Builder as LBS (lazyByteString)
 import           Data.Functor.Contravariant
 import           Data.Maybe (fromMaybe)
 import           Data.Text as T (Text, intercalate, null, pack)
@@ -36,6 +40,11 @@ import           Network.HostName
 encodingToText :: AE.Encoding -> Text
 {-# INLINE encodingToText #-}
 encodingToText = toStrict . decodeUtf8 . AE.encodingToLazyByteString
+
+-- reuse previously serialized data as Aeson.Encoding
+instance AE.ToJSON LBS.ByteString where
+  toJSON     = error "ToJSON(Lazy.ByteString): must never be called"
+  toEncoding = AE.unsafeToEncoding . LBS.lazyByteString
 
 -- | Format this trace as metrics
 metricsFormatter
@@ -71,12 +80,10 @@ preFormatted withForHuman tr = do
             threadTextShortened = T.pack $ drop 9 $ show threadId       -- drop "ThreadId " prefix
             details = fromMaybe DNormal (lcDetails lc)
             condForHuman = let txt = forHuman msg in if T.null txt then Nothing else Just txt
-            machineFormatted = forMachine details msg
+            machineFormatted = AE.encodingToLazyByteString $ AE.toEncoding $ forMachine details msg
 
         pure (lc, Right (PreFormatted
-                          { -- pfMessage = msg
-                            --, 
-                            pfForHuman = if withForHuman then condForHuman else Nothing
+                          { pfForHuman = if withForHuman then condForHuman else Nothing
                           , pfForMachine = machineFormatted
                           , pfTimestamp = timeFormatted time
                           , pfTime = time
@@ -215,7 +222,6 @@ colorBySeverity withColor severity' msg =
     blue = colorize "34"
     colorize c msg' = "\ESC[" <> c <> "m" <> msg' <> "\ESC[0m"
 
--- TODO: bench against formatting package
 timeFormatted :: UTCTime -> Text
 timeFormatted = pack . formatTime defaultTimeLocale "%F %H:%M:%S%4QZ"
 
