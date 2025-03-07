@@ -110,12 +110,15 @@ addUnusedDefaults p =
 shelleyAlonzoConway :: Types.Profile -> Types.Profile
 shelleyAlonzoConway profile =
   let epochNumber  = getEpochNumber profile
-      epochParams  = unsafePerformIO $ epochTimeline epochNumber
-      epochParams' = unsafePerformIO $ foldM
+      -- Collect all the genesis properties from "epoch-timeline.json".
+      genesisParams  = unsafePerformIO $ epochTimeline epochNumber
+      -- Apply the genesis overlays ("pparamsOverlays").
+      genesisParams' = unsafePerformIO $ foldM
         (flip genesisOverlay)
-        epochParams
+        genesisParams
         (Types.pparamsOverlays $ Types.genesis profile)
       genesis f p = p {Types.genesis = f (Types.genesis p)}
+  -- Fill the profile's genesis field.
   in genesis (\g -> g {
       Types.pparamsEpoch = epochNumber
     , Types.shelley =
@@ -125,22 +128,34 @@ shelleyAlonzoConway profile =
              , ("securityParam", Aeson.Number $ fromInteger $ Types.parameter_k g)
              , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
              , ("protocolParams",
-                 case KeyMap.lookup "shelley" epochParams' of
+                 case KeyMap.lookup "shelley" genesisParams' of
                    (Just shey) -> shey
-                   _ -> error "Obtained no \"shelley\" from epoch-timeline.json"
+                   _ -> error "No \"shelley\" JSON object in epoch-timeline.json"
                )
              ]
         -- Any property that was set before by the user takes precedence.
         in KeyMap.unionWithKey unionWithKey shey' (Types.shelley g)
     , Types.alonzo  =
-        case KeyMap.lookup "alonzo" epochParams' of
+        case KeyMap.lookup "alonzo" genesisParams' of
           (Just (Aeson.Object alzo)) -> alzo
-          _ -> error "Obtained no \"alonzo\" from epoch-timeline.json"
+          _ -> error "No \"alonzo\" JSON object in epoch-timeline.json"
     -- The only "optional" genesis property.
     , Types.conway  =
-        case KeyMap.lookup "conway" epochParams' of
-          (Just (Aeson.Object coay)) -> Just coay
-          _ -> Nothing
+        case KeyMap.lookup "conway" genesisParams' of
+          (Just (Aeson.Object coay)) -> Just $
+            -- If "plutusV3CostModel" is a JSON object like "PlutusV1" and
+            -- "PlutusV2" convert it to an array with just the values (numbers).
+            KeyMap.mapWithKey
+              (\k v ->
+                case (k,v) of
+                  ("plutusV3CostModel", Aeson.Object namedV3) ->
+                    Aeson.toJSON $ KeyMap.elems namedV3
+                  _ -> v
+              )
+              coay
+          (Just Aeson.Null) -> Nothing
+          Nothing -> Nothing
+          _ -> error "\"conway\" is not a JSON object in epoch-timeline.json"
     }) profile
 
 getEpochNumber :: HasCallStack => Types.Profile -> Integer
@@ -152,24 +167,37 @@ getEpochNumber profile =
 
 -- Collects all properties from epochs lower or equal than the desired one.
 epochTimeline :: Integer -> IO (KeyMap.KeyMap Aeson.Value)
-epochTimeline epochNumber = do
+epochTimeline upToEpochNumber = do
   fp <- Paths.getDataFileName "data/genesis/epoch-timeline.json"
   eitherValue <- Aeson.eitherDecodeFileStrict fp
   return $ case eitherValue of
     (Right (Aeson.Object keyMap)) -> foldl
-      (\acc key ->
-        -- TODO: It will fail if the number used as string key is above 999.
-        if key <= read ("\"" ++ show epochNumber ++ "\"")
-        then case KeyMap.lookup key keyMap of
-          (Just (Aeson.Object obj)) ->
+      (\acc (epochNumber, epochKey, epochValue) ->
+        if epochNumber <= upToEpochNumber
+        then case epochValue of
+          (Aeson.Object obj) ->
             -- Right-biased merge of both JSON objects at all depths.
             KeyMap.unionWithKey unionWithKey acc obj
-          _ -> error "Key not an Aeson Object: \"data/epoch-timeline.json\""
+          _ -> error $ "Epoch " ++ show epochKey ++ " not a JSON object: " ++ fp
         else acc
       )
       mempty
-      (sort $ KeyMap.keys keyMap)
-    _ -> error "Not an Aeson Object: \"data/epoch-timeline.json\""
+      -- Get the epochs sorted by number (the "epoch" numeric property).
+      (sort $ KeyMap.elems $ KeyMap.mapMaybeWithKey
+        (\k v ->
+          case v of
+            (Aeson.Object epochKeyMap) ->
+              case KeyMap.lookup "epoch" epochKeyMap of
+                (Just (Aeson.Number epochNumberSC)) ->
+                  case (Scientific.floatingOrInteger epochNumberSC :: Either Double Integer) of
+                    (Right epochNumber) -> Just (epochNumber, k, v)
+                    _ -> error $ "\"epoch\" property is a floating number: " ++ fp
+                _ -> error $ "\"epoch\" property not a number: " ++ fp
+            _ -> error $ "Epoch " ++ show k ++ " not a JSON object: " ++ fp
+        )
+        keyMap
+      )
+    _ -> error "Not an JSON object: \"data/genesis/epoch-timeline.json\""
 
 -- The genesis overlay files are applied to the "genesis" property and the ones
 -- available are defined as functions in `Primitives`.
