@@ -25,8 +25,8 @@ import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
-import qualified Data.ByteString.Lazy as LBS (ByteString)
 import qualified Data.ByteString.Builder as LBS (lazyByteString)
+import qualified Data.ByteString.Lazy as LBS (ByteString)
 import           Data.Functor.Contravariant
 import           Data.Maybe (fromMaybe)
 import           Data.Text as T (Text, intercalate, null, pack)
@@ -35,6 +35,7 @@ import           Data.Text.Lazy.Builder as TB
 import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Time (UTCTime, defaultTimeLocale, formatTime, getCurrentTime)
 import           Network.HostName
+import           System.IO.Unsafe (unsafePerformIO)
 
 
 encodingToText :: AE.Encoding -> Text
@@ -61,6 +62,11 @@ metricsFormatter (Trace tr) = Trace $
              (lc, Left ctrl))
       tr
 
+
+hostname :: Text
+hostname = unsafePerformIO (T.pack <$> getHostName)
+{-# NOINLINE hostname #-}
+
 -- | Transform this trace to a preformatted message, so that double serialization
 -- is avoided
 preFormatted ::
@@ -69,8 +75,8 @@ preFormatted ::
   => Bool
   -> Trace m PreFormatted
   -> m (Trace m a)
-preFormatted withForHuman tr = do
-  hostname <- T.pack <$> liftIO getHostName
+preFormatted withForHuman tr = -- do
+  -- hostname <- T.pack <$> liftIO getHostName
   contramapM tr
     (\case
       (lc, Right msg) -> do
