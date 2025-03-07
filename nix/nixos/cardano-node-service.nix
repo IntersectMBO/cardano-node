@@ -5,7 +5,7 @@
 
 with lib; with builtins;
 let
-  inherit (types) attrs attrsOf bool enum functionTo listOf package nullOr str;
+  inherit (types) attrs attrsOf bool either enum functionTo int listOf package nullOr str;
 
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
