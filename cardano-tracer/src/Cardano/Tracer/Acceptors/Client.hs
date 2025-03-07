@@ -107,7 +107,7 @@ doConnectToForwarder snocket address netMagic timeLimits app = do
     mempty -- LocalSocket does not require to be configured
     (simpleSingletonVersions
        ForwardingV_1
-       (ForwardingVersionData (NetworkMagic netMagic) TraceSelectAll)
+       (ForwardingVersionData (NetworkMagic netMagic) TraceSelectAll True)
        (const app)
     )
     Nothing

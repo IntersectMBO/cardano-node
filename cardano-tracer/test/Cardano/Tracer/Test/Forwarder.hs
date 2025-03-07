@@ -132,6 +132,7 @@ launchForwardersSimple' ts iomgr mode p connSize disconnSize = do
       , TOF.acceptorEndpoint = p
       , TOF.disconnectedQueueSize = disconnSize
       , TOF.connectedQueueSize = connSize
+      , TOF.traceSelectForward = TraceSelectAll
       }
 
   dpfConfig :: DPF.ForwarderConfiguration
@@ -166,7 +167,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       mempty
       (simpleSingletonVersions
          ForwardingV_1
-         (ForwardingVersionData (unI tsNetworkMagic) TraceSelectAll)
+         (ForwardingVersionData (unI tsNetworkMagic) TraceSelectAll True)
          (const $ forwarderApp [ (forwardEKGMetrics ekgConfig store,       1)
                                , (forwardTraceObjectsInit tfConfig sink,   2)
                                , (forwardDataPointsInit dpfConfig dpStore, 3)
@@ -238,7 +239,7 @@ doListenToAcceptor TestSetup{..}
               (HandshakeCallbacks acceptableVersion queryVersion)
               (simpleSingletonVersions
                  ForwardingV_1
-                 (ForwardingVersionData (unI tsNetworkMagic) TraceSelectAll)
+                 (ForwardingVersionData (unI tsNetworkMagic) TraceSelectAll True)
                  (const $ SomeResponderApplication $
                     forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
                                  , (forwardTraceObjectsResp tfConfig sink,   2)
