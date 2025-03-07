@@ -53,6 +53,7 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
             traceWith teTracer TracerStartedReforwarder
             initForwarding iomgr forwConf
                                  (NetworkMagic networkMagic)
+                                 ForwardingProducer
                                  Nothing
                                  (Just (socket, Log.Responder))
           pure $ Just ( filteredWriteToSink

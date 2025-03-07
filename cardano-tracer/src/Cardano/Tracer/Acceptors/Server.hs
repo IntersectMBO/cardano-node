@@ -121,7 +121,7 @@ doListenToForwarder snocket address netMagic timeLimits app = do
       (HandshakeCallbacks acceptableVersion queryVersion)
       (simpleSingletonVersions
         ForwardingV_1
-        (ForwardingVersionData (NetworkMagic netMagic) TraceSelectAll)
+        (ForwardingVersionData (NetworkMagic netMagic) TraceSelectAll True)
         (\_ -> SomeResponderApplication app)
       )
       nullErrorPolicies
