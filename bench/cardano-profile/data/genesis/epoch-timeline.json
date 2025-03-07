@@ -1106,10 +1106,7 @@
           "unListData-cpu-arguments": 25933,
           "unListData-memory-arguments": 32,
           "unMapData-cpu-arguments": 24623,
-          "unMapData-memory-arguments": 32,
-          "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-          "verifyEd25519Signature-cpu-arguments-slope": 14333,
-          "verifyEd25519Signature-memory-arguments": 10
+          "unMapData-memory-arguments": 32
         },
         "PlutusV2": {
           "addInteger-cpu-arguments-intercept": 100788,
