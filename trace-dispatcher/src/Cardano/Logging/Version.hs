@@ -61,7 +61,7 @@ data ForwardingVersionData = ForwardingVersionData
 
 encodeAsInt :: ForwardingVersionData -> Int
 encodeAsInt ForwardingVersionData{..} =
-  shiftL 32 bitmask .|. fromIntegral (unNetworkMagic networkMagic)
+  shiftL bitmask 32 .|. fromIntegral (unNetworkMagic networkMagic)
   where
     -- this could be done with an Enum instance - but I want the code to be _very_ explicit
     bitmask = case selectForward of
@@ -73,7 +73,7 @@ encodeAsInt ForwardingVersionData{..} =
 decodeFromInt :: Int -> ForwardingVersionData
 decodeFromInt i = ForwardingVersionData
   { networkMagic  = NetworkMagic $ fromIntegral $ i .&. 0xffffffff
-  , selectForward = selector $ 0b11 .&. shiftR 32 i
+  , selectForward = selector $ 0b11 .&. shiftR i 32
   , selectMetrics = True
   }
   where
