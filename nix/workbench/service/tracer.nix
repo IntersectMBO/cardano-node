@@ -56,14 +56,16 @@ let
           };
         in evalModules {
           prefix = [];
-          modules =    import ../../nixos/module-list.nix
-                    ++ [
-                         (import ../../nixos/cardano-tracer-service.nix pkgs)
-                           systemdCompat
-                           extra
-                           { config._module.args = { inherit pkgs; }; }
-                       ]
-                    ++ [ backend.service-modules.tracer or {} ]
+         modules = [
+                     (import ../../nixos/cardano-node-service.nix)
+                     (import ../../nixos/cardano-submit-api-service.nix)
+                     # (import ../../nixos/cardano-tracer-service.nix)
+                     (import ../../nixos/cardano-tracer-service-legacy.nix pkgs)
+                     systemdCompat
+                     extra
+                     { config._module.args = { inherit pkgs; }; }
+                   ]
+                   ++ [ backend.service-modules.tracer or {} ]
           ;
           # args = { inherit pkgs; };
         }
