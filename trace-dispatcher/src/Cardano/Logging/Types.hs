@@ -61,7 +61,7 @@ import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
-import qualified Data.ByteString.Lazy as LBS (ByteString)
+-- import qualified Data.ByteString.Lazy as LBS (ByteString)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map.Strict (Map)
@@ -345,7 +345,8 @@ data FormattedMessage =
 
 data PreFormatted = PreFormatted {
     pfForHuman   :: !(Maybe Text)
-  , pfForMachine :: !LBS.ByteString
+  -- , pfForMachine :: !LBS.ByteString
+  , pfForMachine :: !AE.Encoding
   , pfNamespace  :: ![Text]
   , pfTimestamp  :: !Text
   , pfTime       :: !UTCTime

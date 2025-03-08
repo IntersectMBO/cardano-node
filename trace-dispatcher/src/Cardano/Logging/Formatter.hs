@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -47,6 +49,10 @@ instance AE.ToJSON LBS.ByteString where
   toJSON     = error "ToJSON(Lazy.ByteString): must never be called"
   toEncoding = AE.unsafeToEncoding . LBS.lazyByteString
 
+instance AE.ToJSON AE.Encoding where
+  toJSON     = error "ToJSON(Aeson.Encoding): must never be called"
+  toEncoding = id
+
 -- | Format this trace as metrics
 metricsFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
@@ -86,7 +92,9 @@ preFormatted withForHuman tr = -- do
             threadTextShortened = T.pack $ drop 9 $ show threadId       -- drop "ThreadId " prefix
             details = fromMaybe DNormal (lcDetails lc)
             condForHuman = let txt = forHuman msg in if T.null txt then Nothing else Just txt
-            machineFormatted = AE.encodingToLazyByteString $ AE.toEncoding $ forMachine details msg
+            machineFormatted = AE.toEncoding $ forMachine details msg
+            -- machineFormatted = AE.encodingToLazyByteString $ AE.toEncoding $ forMachine details msg
+
 
         pure (lc, Right (PreFormatted
                           { pfForHuman = if withForHuman then condForHuman else Nothing
