@@ -1,5 +1,13 @@
 # Revision history for trace-dispatcher
 
+## NEXT
+
+* New `PrometheusSimple` backend which runs a simple TCP server for direct exposition of metrics, without forwarding.
+* Optimize formatters by enabling data sharing of an `aeson` `Encoding` instead of a `KeyMap Value`.
+* Remove unused optional namespace prefix argument from formatters.
+* Updated to use `ekg-forward-0.9`.
+* Remove `ekg-wai` from dependencies.
+
 ## 2.8.1 -- Feb 2025
 
 * Updated to `ouroboros-network-framework-0.16`
