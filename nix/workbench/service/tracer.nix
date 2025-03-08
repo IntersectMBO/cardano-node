@@ -9,6 +9,9 @@
 with pkgs.lib;
 
 let
+  # For testing legacy to new cardano-tracer-service transition
+  # useLegacyTracerService = true;
+  useLegacyTracerService = false;
 
   ## Given an env config, evaluate it and produce the service.
   ##
@@ -18,17 +21,12 @@ let
     let
       tracerConfig =
         {
+          enable = true;
           ## In both the local and remote scenarios, it's most frequently
           ## convenient to act as an acceptor.
           acceptingSocket = "tracer.socket";
           networkMagic = profile.genesis.network_magic;
-          dsmPassthrough = {
-            # rtsOpts = ["-xc"];
-          } // optionalAttrs (profile.tracer.withresources or false) {
-            rtsOpts = [ "-scardano-tracer.gcstats" ];
-          };
           configFile     = "config.json";
-          logRoot        = ".";
           metricsHelp    = "../../../cardano-tracer/configuration/metrics_help.json";
         } // optionalAttrs backend.useCabalRun {
           executable     = "cardano-tracer";
@@ -39,6 +37,25 @@ let
           };
         } // optionalAttrs (profile.tracer.withresources or false) {
           resourceFreq = 1000;
+        } // optionalAttrs useLegacyTracerService {
+          dsmPassthrough = {
+            # rtsOpts = ["-xc"];
+          } // optionalAttrs (profile.tracer.withresources or false) {
+            rtsOpts = [ "-scardano-tracer.gcstats" ];
+          };
+          logRoot    = ".";
+        } // optionalAttrs (!useLegacyTracerService) {
+          logging = [
+            {
+              logRoot    = ".";
+              logMode    = "FileMode";
+              logFormat  = "ForMachine";
+            }
+          ];
+          rtsArgs =
+            # ["-xc"] ++
+            optionals (profile.tracer.withresources or false) ["-scardano-tracer.gcstats"];
+          stateDir = null;
         }
       ;
       systemdCompat.options = {
@@ -48,27 +65,25 @@ let
         assertions = mkOption {};
         environment = mkOption {};
       };
-      eval =
-        let
-          extra = {
-            services.cardano-tracer = {
-              enable = true;
-            } // tracerConfig;
-          };
-        in evalModules {
-          prefix = [];
-          modules =    import ../../nixos/module-list.nix
-                    ++ [
-                         (import ../../nixos/cardano-tracer-service.nix pkgs)
-                           systemdCompat
-                           extra
-                           { config._module.args = { inherit pkgs; }; }
-                       ]
-                    ++ [ backend.service-modules.tracer or {} ]
+      eval = evalModules {
+        prefix = [];
+
+        modules = [
+          (import ../../nixos/cardano-node-service.nix)
+          (import ../../nixos/cardano-submit-api-service.nix)
+          { config._module.args = { inherit pkgs; }; }
+          { services.cardano-tracer = tracerConfig; }
+          systemdCompat
+        ]
+          ++ [ backend.service-modules.tracer or {} ]
+          ++ optionals useLegacyTracerService
+            [ (import ../../nixos/cardano-tracer-service-legacy.nix pkgs) ]
+          ++ optionals (!useLegacyTracerService)
+            [ (import ../../nixos/cardano-tracer-service.nix) ]
           ;
-          # args = { inherit pkgs; };
-        }
-      ;
+
+        # args = { inherit pkgs; };
+      };
     in
       eval.config.services.cardano-tracer;
 
@@ -79,7 +94,9 @@ let
     (nodeSpecs:
     let
       nixosServiceConfig    = tracerConfigServiceConfig;
-      execConfig            = nixosServiceConfig.configJSONfn nixosServiceConfig;
+        execConfig          = if useLegacyTracerService
+                              then nixosServiceConfig.configJSONfn nixosServiceConfig
+                              else nixosServiceConfig.tracerConfig;
     in {
       start = rec {
         value = ''
@@ -90,7 +107,7 @@ let
         JSON = pkgs.writeScript "startup-tracer.sh" value;
       };
 
-      config = rec {
+      config = {
         value = execConfig;
         JSON  = jsonFilePretty "config.json" (__toJSON execConfig);
       };
