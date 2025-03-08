@@ -69,12 +69,6 @@ TraceOptions:
   TxSubmission.Remote:
     detail:   DMinimal
 
-# Options for the trace forwarder
-TraceOptionForwarder:
-    address:
-      filePath: /tmp/forwarder.sock
-    mode: Initiator
-
 TraceOptionPeerFrequency: 2000
 
 TraceOptionResourceFrequency: 5000
