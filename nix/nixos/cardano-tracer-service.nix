@@ -109,6 +109,7 @@ with builtins; let
     echo "..or, once again, in a single line:"
     echo "${toString cmd}"
 
+    trap 'RC="$?"; echo "Service binary 'cardano-tracer' returned status: $RC" >&2; exit $RC' EXIT
     ${toString cmd}
   '';
 in {
@@ -244,7 +245,7 @@ in {
 
       executable = mkOption {
         type = str;
-        default = "exec ${cfg.package}/bin/cardano-tracer";
+        default = "${cfg.package}/bin/cardano-tracer";
         defaultText = "cardano-node";
         description = ''
           The cardano-tracer executable invocation to use.
@@ -359,7 +360,7 @@ in {
       };
 
       metricsComp = mkOption {
-        type = nullOr (attrsOf str);
+        type = nullOr (either str (attrsOf str));
         default = null;
         description = ''
           Passing metric compatability mapping to cardano-tracer can be done as
@@ -369,10 +370,8 @@ in {
           original name and mapped name.  Only one mapping per message is
           supported.
 
-          If such a set is already available as JSON, this also can be imported:
-
-            services.cardano-tracer.metricsComp =
-              builtins.fromJSON (builtins.readFile $PATH);
+          If such a set is already available as JSON in a file, this option can
+          be declared as a string of the path to such file.
 
           Any metrics prefix name declared with `TraceOptionMetricsPrefix` in
           cardano-node config should not be included in the attribute name.
@@ -386,7 +385,7 @@ in {
       };
 
       metricsHelp = mkOption {
-        type = nullOr (attrsOf str);
+        type = nullOr (either str (attrsOf str));
         default = null;
         description = ''
           Passing metric help annotations to cardano-tracer can be done as a an
@@ -394,10 +393,8 @@ in {
           cardano-tracer's internal metric names have to be used as attribute
           names.
 
-          If such a set is already available as JSON, this also can be imported:
-
-            services.cardano-tracer.metricsHelp =
-              builtins.fromJSON (builtins.readFile $PATH);
+          If such a set is already available as JSON in a file, this option can
+          be declared as a string of the path to such file.
 
           Any metrics prefix name declared with `TraceOptionMetricsPrefix` in
           cardano-node config should not be included in the attribute name.
@@ -690,13 +687,26 @@ in {
         '';
       };
 
-      stateDir = mkOption {
+      script = mkOption {
         type = str;
+        default = mkScript;
+        internal = true;
+        description = ''
+          The default nixos generated shell script used in workbench profile
+          generation.
+        '';
+      };
+
+      stateDir = mkOption {
+        type = nullOr str;
         default = "${cfg.stateDirBase}cardano-tracer";
         description = ''
           The directory to store any cardano-tracer process related data.
 
           RTView if enabled will save its state in this directory.
+
+          For non-systemd use cases, this can be set to null or any other
+          string path.
         '';
       };
 
@@ -705,6 +715,16 @@ in {
         default = "/var/lib/";
         description = ''
           The base state directory for cardano-tracer.
+        '';
+      };
+
+      tracerConfig = mkOption {
+        type = attrs;
+        default = tracerConfig;
+        internal = true;
+        description = ''
+          The default nixos tracerConfig attribute set used in workbench
+          profile generation.
         '';
       };
 
