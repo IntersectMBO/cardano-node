@@ -1,5 +1,14 @@
 # Revision history for trace-dispatcher
 
+## NEXT (2.9) -- Mar 2025
+
+* New `PrometheusSimple` backend which runs a simple TCP server for direct exposition of metrics, without forwarding.
+* New `maxReconnectDelay` config option in `TraceOptionForwarder`: Specifies maximum delay (seconds) between (re-)connection attempts of a forwarder (default: 60s).
+* Optimize data sharing in formatters.
+* Remove unused optional namespace prefix argument from formatters.
+* Updated to use `ekg-forward-0.9`.
+* Remove `ekg-wai` from dependencies.
+
 ## 2.8.1 -- Feb 2025
 
 * Updated to `ouroboros-network-framework-0.16`

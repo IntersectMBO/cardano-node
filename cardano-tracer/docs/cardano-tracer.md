@@ -296,7 +296,7 @@ In this example, `subdirForNode0` is a subdirectory containing log files with it
 
 The field `logMode` specifies logging mode. There are two possible modes: `FileMode` and `JournalMode`. `FileMode` is for storing logs to the files, `JournalMode` is for storing them in `systemd`'s journal. Please note that if you choose `JournalMode`, the field `logRoot` will be ignored.
 
-The field `logFormat` specifies the format of logs. There are two possible modes: `ForMachine` and `ForHuman`. `ForMachine` is for JSON format, `ForHuman` is for human-friendly text format.
+The field `logFormat` specifies the format of logs. There are two possible modes: `ForMachine` and `ForHuman`. `ForMachine` is for JSON format, `ForHuman` is for human-friendly text format. The latter also implies the file endings change to `.log`, and the symbolic link is named `node.log`.  
 
 Please note that `logging` field accepts the list, so you can specify more than one logging section. For example, for both log formats:
 
