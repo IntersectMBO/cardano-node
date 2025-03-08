@@ -67,12 +67,8 @@ generatorTracer ::
   -> Maybe (Trace IO FormattedMessage)
   -> IO (Trace IO a)
 generatorTracer tracerName mbTrStdout mbTrForward = do
-  forwardTrace <- case mbTrForward of
-                        Nothing -> mempty
-                        Just trForward -> forwardFormatter trForward
-  stdoutTrace  <- case mbTrStdout of
-                        Nothing -> mempty
-                        Just trForward -> machineFormatter trForward
+  forwardTrace <- maybe mempty forwardFormatter mbTrForward
+  stdoutTrace  <- maybe mempty machineFormatter mbTrStdout
   let tr = forwardTrace <> stdoutTrace
   tr'  <- withDetailsFromConfig tr
   pure $ withInnerNames $ appendPrefixName tracerName tr'
