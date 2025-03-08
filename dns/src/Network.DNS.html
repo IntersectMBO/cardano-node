@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | A thread-safe DNS library for both clients and servers written</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--   in pure Haskell.</span><span>
+</span><span id="line-3"></span><span class="hs-comment">--   The Network.DNS module re-exports all other exposed modules for</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--   convenience.</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--   Applications will most likely use the high-level interface, while</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--   library/daemon authors may need to use the lower-level one.</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--   EDNS and TCP fallback are supported.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--   Examples:</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--   &gt;&gt;&gt; :set -XOverloadedStrings</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupA resolver &quot;192.0.2.1.nip.io&quot;</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--   Right [192.0.2.1]</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.DNS</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><span class="hs-comment">-- * High level</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html"><span class="hs-identifier">Network.DNS.Lookup</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-comment">-- | This module contains simple functions to</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-comment">--   perform various DNS lookups. If you simply want to resolve a</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-comment">--   hostname ('lookupA'), or find a domain's MX record</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-comment">--   ('lookupMX'), this is the easiest way to do it.</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.Resolver.html"><span class="hs-identifier">Network.DNS.Resolver</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Resolver related data types.</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.Types.html"><span class="hs-identifier">Network.DNS.Types</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="hs-comment">-- | All of the types that the other modules use.</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.Utils.html"><span class="hs-identifier">Network.DNS.Utils</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-comment">-- | This module contains utility functions used</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-comment">--   for processing DNS data.</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Middle level</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.LookupRaw.html"><span class="hs-identifier">Network.DNS.LookupRaw</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- | This provides the 'lookup', 'lookupAuth', 'lookupRaw' and</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">--   'lookupRawCtl' functions for any resource records.</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Low level</span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.Encode.html"><span class="hs-identifier">Network.DNS.Encode</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Encoding a query or response.</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.Decode.html"><span class="hs-identifier">Network.DNS.Decode</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Decoding a qurey or response.</span></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Network.DNS.IO.html"><span class="hs-identifier">Network.DNS.IO</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Sending and receiving.</span></span><span>
+</span><span id="line-47"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Decode.html"><span class="hs-identifier">Network.DNS.Decode</span></a></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Encode.html"><span class="hs-identifier">Network.DNS.Encode</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.IO.html"><span class="hs-identifier">Network.DNS.IO</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html"><span class="hs-identifier">Network.DNS.Lookup</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.LookupRaw.html"><span class="hs-identifier">Network.DNS.LookupRaw</span></a></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Resolver.html"><span class="hs-identifier">Network.DNS.Resolver</span></a></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Types.html"><span class="hs-identifier">Network.DNS.Types</span></a></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Utils.html"><span class="hs-identifier">Network.DNS.Utils</span></a></span><span>
+</span><span id="line-57"></span></pre></body></html>
