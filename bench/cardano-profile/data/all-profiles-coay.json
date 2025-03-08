@@ -378,7 +378,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -796,7 +796,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -1215,7 +1215,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -1641,7 +1641,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -1839,7 +1839,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -2006,12 +2005,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -2510,8 +2506,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -2712,7 +2708,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -2879,12 +2874,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -3383,8 +3375,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -3588,7 +3580,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -3755,12 +3746,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -4259,8 +4247,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -4461,7 +4449,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -4628,12 +4615,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -5132,8 +5116,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -5337,7 +5321,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -5504,12 +5487,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -6008,8 +5988,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -6210,7 +6190,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -6377,12 +6356,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -6881,8 +6857,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -7309,7 +7285,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -7732,7 +7708,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -8155,7 +8131,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -8578,7 +8554,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -9003,7 +8979,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -9426,7 +9402,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -9849,7 +9825,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -10268,7 +10244,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -10685,7 +10661,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -11103,7 +11079,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -11526,7 +11502,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -11948,7 +11924,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -12366,7 +12342,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -12787,7 +12763,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -13206,7 +13182,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -13409,7 +13385,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -13576,12 +13551,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -13824,8 +13796,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -14039,7 +14011,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -14206,12 +14177,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -14454,8 +14422,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -14669,7 +14637,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -14836,12 +14803,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -15084,8 +15048,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -15285,7 +15249,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -15452,12 +15415,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -15700,8 +15660,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -15922,7 +15882,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -15940,12 +15899,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -16092,12 +16048,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -16592,8 +16545,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -16801,7 +16754,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -16819,12 +16771,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -16971,12 +16920,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -17519,8 +17465,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -17938,7 +17884,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -18356,7 +18302,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -18777,7 +18723,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -18977,7 +18923,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -19144,12 +19089,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -19392,8 +19334,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -19816,7 +19758,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -20238,7 +20180,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -20656,7 +20598,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -21077,7 +21019,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -21496,7 +21438,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -21922,7 +21864,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -22340,7 +22282,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -22760,7 +22702,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -23182,7 +23124,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -23606,7 +23548,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -24026,7 +23968,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -24223,7 +24165,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -24241,12 +24182,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -24393,12 +24331,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -24943,8 +24878,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -25376,7 +25311,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -25796,7 +25731,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -26219,7 +26154,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -26638,7 +26573,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -27061,7 +26996,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -27478,7 +27413,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -27895,7 +27830,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -28092,7 +28027,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -28259,12 +28193,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -28507,8 +28438,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -28707,7 +28638,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -28874,12 +28804,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -29122,8 +29049,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -29328,7 +29255,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -29495,12 +29421,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -29743,8 +29666,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -30165,7 +30088,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -30584,7 +30507,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -31003,7 +30926,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -31429,7 +31352,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -31846,7 +31769,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -32263,7 +32186,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -32682,7 +32605,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -33101,7 +33024,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -33521,7 +33444,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -33945,7 +33868,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -34368,7 +34291,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -34568,7 +34491,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -34735,12 +34657,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -34983,8 +34902,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -35403,7 +35322,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -35823,7 +35742,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -36247,7 +36166,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -36667,7 +36586,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -37090,7 +37009,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -37514,7 +37433,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -37937,7 +37856,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -38361,7 +38280,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -38784,7 +38703,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -38984,7 +38903,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -39151,12 +39069,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -39399,8 +39314,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -39597,7 +39512,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -39764,12 +39678,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -40012,8 +39923,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -40210,7 +40121,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -40377,12 +40287,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -40625,8 +40532,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -40823,7 +40730,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -40990,12 +40896,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -41238,8 +41141,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -41436,7 +41339,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -41603,12 +41505,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -41851,8 +41750,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -42271,7 +42170,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -42689,7 +42588,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -43107,7 +43006,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -43525,7 +43424,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -43722,7 +43621,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -43889,12 +43787,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -44137,8 +44032,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -44356,7 +44251,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -44523,12 +44417,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -44771,8 +44662,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -45000,7 +44891,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -45167,9 +45057,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -45234,7 +45121,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -45449,7 +45336,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -45616,9 +45502,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -45683,7 +45566,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -45898,7 +45781,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -46065,12 +45947,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -46313,8 +46192,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -46511,7 +46390,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -46678,12 +46556,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -46926,8 +46801,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -47124,7 +46999,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -47291,12 +47165,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -47539,8 +47410,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -47960,7 +47831,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -48383,7 +48254,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -48808,7 +48679,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -49009,7 +48880,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -49176,12 +49046,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -49424,8 +49291,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -49628,7 +49495,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -49795,12 +49661,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -50044,8 +49907,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -50251,7 +50114,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -50418,12 +50280,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -50667,8 +50526,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -50874,7 +50733,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -51041,12 +50899,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -51290,8 +51145,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -51497,7 +51352,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -51664,12 +51518,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -51913,8 +51764,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -52120,7 +51971,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -52287,12 +52137,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -52536,8 +52383,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -52743,7 +52590,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -52910,12 +52756,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -53159,8 +53002,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -53374,7 +53217,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -53541,12 +53383,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -53789,8 +53628,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -54007,7 +53846,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -54174,12 +54012,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -54423,8 +54258,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -54641,7 +54476,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -54808,12 +54642,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -55056,8 +54887,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -55274,7 +55105,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -55441,12 +55271,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -55690,8 +55517,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -55897,7 +55724,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -55915,12 +55741,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -56067,12 +55890,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -56568,8 +56388,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -56775,7 +56595,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -56793,12 +56612,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -56945,12 +56761,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -57496,8 +57309,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -57717,7 +57530,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -57735,12 +57547,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -57887,12 +57696,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -58438,8 +58244,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -58658,7 +58464,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -58676,12 +58481,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -58828,12 +58630,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -59379,8 +59178,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -59600,7 +59399,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -59767,12 +59565,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -60016,8 +59811,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -60221,7 +60016,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -60388,9 +60182,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -60455,7 +60246,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -60656,7 +60447,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -60823,9 +60613,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -60890,7 +60677,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -61091,7 +60878,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -61258,12 +61044,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -61506,8 +61289,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -61722,7 +61505,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -61889,9 +61671,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -61956,7 +61735,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -62171,7 +61950,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -62338,9 +62116,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -62405,7 +62180,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -62620,7 +62395,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -62787,12 +62561,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -63035,8 +62806,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -63251,7 +63022,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -63418,9 +63188,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -63485,7 +63252,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -63700,7 +63467,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -63867,9 +63633,6 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
             "verifySignature-cpu-arguments-intercept": 3345831,
             "verifySignature-cpu-arguments-slope": 1,
             "verifySignature-memory-arguments": 1
@@ -63934,7 +63697,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -64149,7 +63912,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -64316,12 +64078,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -64564,8 +64323,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -64786,7 +64545,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -64804,12 +64562,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -64956,12 +64711,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -65504,8 +65256,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -65705,7 +65457,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -65723,12 +65474,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -65875,12 +65623,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -66423,8 +66168,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -66632,7 +66377,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -66650,12 +66394,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -66802,12 +66543,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -67350,8 +67088,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -67575,7 +67313,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -67593,12 +67330,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -67745,12 +67479,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -68248,8 +67979,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -68476,7 +68207,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -68494,12 +68224,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -68646,12 +68373,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -69149,8 +68873,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -69377,7 +69101,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -69395,12 +69118,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -69547,12 +69267,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -70048,8 +69765,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -70470,7 +70187,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -70888,7 +70605,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -71307,7 +71024,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -71726,7 +71443,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -72145,7 +71862,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -72563,7 +72280,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -72983,7 +72700,7 @@
           "minFeeA": 44,
           "minFeeB": 155381,
           "minPoolCost": 340000000,
-          "minUTxOValue": 34482,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -73189,7 +72906,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -73356,12 +73072,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -73605,8 +73318,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -73817,7 +73530,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -73984,12 +73696,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -74233,8 +73942,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -74443,7 +74152,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -74610,12 +74318,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -74859,8 +74564,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -75063,7 +74768,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -75230,12 +74934,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -75479,8 +75180,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -75683,7 +75384,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -75850,12 +75550,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -76099,8 +75796,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -76303,7 +76000,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -76470,12 +76166,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -76719,8 +76412,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -76923,7 +76616,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -77090,12 +76782,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -77339,8 +77028,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -77543,7 +77232,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -77710,12 +77398,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -77959,8 +77644,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -78162,7 +77847,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -78329,12 +78013,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -78578,8 +78259,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -78787,7 +78468,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -78954,12 +78634,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -79203,8 +78880,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -79407,7 +79084,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -79574,12 +79250,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -79823,8 +79496,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -80027,7 +79700,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -80194,12 +79866,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 38314,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-            "verifyEd25519Signature-cpu-arguments-slope": 1021,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 57996947,
+            "verifySignature-cpu-arguments-slope": 18975,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 205665,
@@ -80443,8 +80112,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -80645,7 +80314,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -80663,12 +80331,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -80815,12 +80480,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -81316,8 +80978,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -81520,7 +81182,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -81538,12 +81199,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -81690,12 +81348,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -82241,8 +81896,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -82459,7 +82114,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -82477,12 +82131,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -82629,12 +82280,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -83180,8 +82828,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
@@ -83397,7 +83045,6 @@
     "genesis": {
       "active_slots_coeff": 0.05,
       "alonzo": {
-        "coinsPerUTxOByte": 4310,
         "collateralPercentage": 150,
         "costModels": {
           "PlutusV1": {
@@ -83415,12 +83062,9 @@
             "appendString-memory-arguments-slope": 1,
             "bData-cpu-arguments": 11183,
             "bData-memory-arguments": 32,
-            "blake2b-cpu-arguments-intercept": 2477736,
-            "blake2b-cpu-arguments-slope": 29175,
+            "blake2b-cpu-arguments-intercept": 201305,
+            "blake2b-cpu-arguments-slope": 8356,
             "blake2b-memory-arguments": 4,
-            "blake2b_256-cpu-arguments-intercept": 201305,
-            "blake2b_256-cpu-arguments-slope": 8356,
-            "blake2b_256-memory-arguments": 4,
             "cekApplyCost-exBudgetCPU": 16000,
             "cekApplyCost-exBudgetMemory": 100,
             "cekBuiltinCost-exBudgetCPU": 16000,
@@ -83567,12 +83211,9 @@
             "unListData-memory-arguments": 32,
             "unMapData-cpu-arguments": 24623,
             "unMapData-memory-arguments": 32,
-            "verifyEd25519Signature-cpu-arguments-intercept": 53384111,
-            "verifyEd25519Signature-cpu-arguments-slope": 14333,
-            "verifyEd25519Signature-memory-arguments": 10,
-            "verifySignature-cpu-arguments-intercept": 3345831,
-            "verifySignature-cpu-arguments-slope": 1,
-            "verifySignature-memory-arguments": 1
+            "verifySignature-cpu-arguments-intercept": 53384111,
+            "verifySignature-cpu-arguments-slope": 14333,
+            "verifySignature-memory-arguments": 10
           },
           "PlutusV2": {
             "addInteger-cpu-arguments-intercept": 100788,
@@ -84118,8 +83759,8 @@
           "maxTxSize": 16384,
           "minFeeA": 44,
           "minFeeB": 155381,
-          "minPoolCost": 340000000,
-          "minUTxOValue": 4310,
+          "minPoolCost": 170000000,
+          "minUTxOValue": 0,
           "nOpt": 500,
           "poolDeposit": 500000000,
           "protocolVersion": {
