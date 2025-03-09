@@ -55,6 +55,7 @@ config1 = TraceConfig {
         tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
       , tofVerbosity = Minimum
+      , tofMaxReconnectDelay = 60
       }
     , tcNodeName = Nothing
     , tcPeerFrequency = Nothing
@@ -73,6 +74,7 @@ config2 = TraceConfig {
         tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
       , tofVerbosity = Minimum
+      , tofMaxReconnectDelay = 60
       }
     , tcNodeName = Just "node-1"
     , tcPeerFrequency = Nothing
