@@ -332,6 +332,7 @@ TraceOptionForwarder: # Configure the forwarder
     address:
       filePath: /tmp/forwarder.sock
     mode: Initiator
+    maxReconnectDelay: 20
 
 # Frequency of Peer messages set to two seconds
 TraceOptionPeerFrequency: 2000
@@ -368,6 +369,7 @@ The same in JSON looks like this:
       "filePath": "/tmp/forwarder.sock"
     },
     "mode": "Initiator"
+    "maxReconnectDelay": 30
   },
   "TraceOptionPeerFrequency": 2000,
   "TraceOptionMetricsPrefix": "cardano.node"
