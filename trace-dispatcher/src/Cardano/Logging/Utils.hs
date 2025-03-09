@@ -15,13 +15,13 @@ import           GHC.Conc (labelThread, myThreadId)
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
-runInLoop :: IO () -> FilePath -> Word -> IO ()
-runInLoop action localSocket prevDelayInSecs =
+runInLoop :: IO () -> FilePath -> Word -> Word -> IO ()
+runInLoop action localSocket prevDelayInSecs maxReconnectDelay =
   tryJust excludeAsyncExceptions action >>= \case
     Left e -> do
       logTrace $ "connection with " <> show localSocket <> " failed: " <> show e
       threadDelay . fromIntegral $ currentDelayInSecs * 1000000
-      runInLoop action localSocket currentDelayInSecs
+      runInLoop action localSocket currentDelayInSecs maxReconnectDelay
     Right _ -> return ()
  where
   excludeAsyncExceptions e =
@@ -32,9 +32,7 @@ runInLoop action localSocket prevDelayInSecs =
   logTrace = traceWith stdoutTracer
 
   currentDelayInSecs =
-    if prevDelayInSecs < 60
-      then prevDelayInSecs * 2
-      else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
+    min (prevDelayInSecs * 2) maxReconnectDelay
 
 -- | Convenience function for a Show instance to be converted to text immediately
 {-# INLINE showT #-}
@@ -45,6 +43,7 @@ showT = T.pack . show
 showTHex :: Integral a => a -> T.Text
 showTHex = TL.toStrict . T.toLazyText . T.hexadecimal
 
+{-# INLINE showTReal #-}
 showTReal :: RealFloat a => a -> T.Text
 showTReal = TL.toStrict . T.toLazyText . T.realFloat
 

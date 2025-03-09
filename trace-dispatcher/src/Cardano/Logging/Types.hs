@@ -462,9 +462,10 @@ instance AE.FromJSON Verbosity where
                                     <> "Unknown Verbosity: " <> show other
 
 data TraceOptionForwarder = TraceOptionForwarder {
-    tofConnQueueSize    :: Word
-  , tofDisconnQueueSize :: Word
-  , tofVerbosity        :: Verbosity
+    tofConnQueueSize       :: Word
+  , tofDisconnQueueSize    :: Word
+  , tofVerbosity           :: Verbosity
+  , tofMaxReconnectDelay   :: Word
 } deriving (Eq, Generic, Ord, Show, AE.ToJSON)
 
 -- A word regarding queue sizes:
@@ -485,17 +486,19 @@ data TraceOptionForwarder = TraceOptionForwarder {
 instance AE.FromJSON TraceOptionForwarder where
     parseJSON (AE.Object obj) =
       TraceOptionForwarder
-        <$> obj AE..:? "connQueueSize"    AE..!= 1024
-        <*> obj AE..:? "disconnQueueSize" AE..!= 2048
-        <*> obj AE..:? "verbosity"        AE..!= Minimum
+        <$> obj AE..:? "connQueueSize"      AE..!= 1024
+        <*> obj AE..:? "disconnQueueSize"   AE..!= 2048
+        <*> obj AE..:? "verbosity"          AE..!= Minimum
+        <*> obj AE..:? "maxReconnectDelay"  AE..!= 60
     parseJSON _ = mempty
 
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
-    tofConnQueueSize    = 1024
-  , tofDisconnQueueSize = 2048
-  , tofVerbosity        = Minimum
+    tofConnQueueSize       = 1024
+  , tofDisconnQueueSize    = 2048
+  , tofVerbosity           = Minimum
+  , tofMaxReconnectDelay   = 60
 }
 
 instance AE.FromJSON ForwarderMode where
