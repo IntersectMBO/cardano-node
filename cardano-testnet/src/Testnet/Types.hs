@@ -194,7 +194,7 @@ getStartTime
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
     decodeNodeConfiguration configurationFile >>= \case
-      NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ ->
+      NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ _ ->
         pure $ unGenesisFile npcByronGenesisFile
   let byronGenesisFilePath = tempRootPath </> byronGenesisFile
   G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath

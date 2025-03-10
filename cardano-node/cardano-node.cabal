@@ -82,6 +82,7 @@ library
                         Cardano.Node.Protocol.Alonzo
                         Cardano.Node.Protocol.Byron
                         Cardano.Node.Protocol.Cardano
+                        Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types

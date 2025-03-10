@@ -325,6 +325,7 @@ instance FromJSON PartialNodeConfiguration where
                 <*> parseAlonzoProtocol v
                 <*> parseConwayProtocol v
                 <*> parseHardForkProtocol v
+                <*> parseCheckpoints v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
       -- Network timeouts
@@ -543,6 +544,14 @@ instance FromJSON PartialNodeConfiguration where
 
           , npcTestConwayHardForkAtEpoch
           , npcTestConwayHardForkAtVersion
+          }
+
+      parseCheckpoints v = do
+        npcCheckpointsFile     <- v .:? "CheckpointsFile"
+        npcCheckpointsFileHash <- v .:? "CheckpointsFileHash"
+        pure NodeCheckpointsConfiguration
+          { npcCheckpointsFile
+          , npcCheckpointsFileHash
           }
 
 -- | Default configuration is mainnet
