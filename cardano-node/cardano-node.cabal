@@ -62,8 +62,7 @@ library
 
   if os(linux) && flag(systemd)
     cpp-options:        -DSYSTEMD
-    build-depends:      lobemo-scribe-systemd
-                      , systemd >= 2.3.0
+    build-depends:      systemd >= 2.3.0
 
   hs-source-dirs:       src
 
@@ -155,7 +154,6 @@ library
                       , deepseq
                       , directory
                       , dns
-                      , ekg-wai
                       , ekg-core
                       , filepath
                       , formatting
@@ -163,7 +161,6 @@ library
                       , hostname
                       , io-classes >= 1.4
                       , iproute
-                      , mtl
                       , network
                       , network-mux >= 0.5
                       , nothunks
@@ -176,13 +173,10 @@ library
                       , ouroboros-network ^>= 0.19
                       , ouroboros-network-framework
                       , ouroboros-network-protocols ^>= 0.13
-                      , plutus-ledger-api
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
                       , resource-registry
-                      , safe-exceptions
-                      , scientific
                       , si-timers
                       , sop-core
                       -- avoid stm-2.5.2 https://github.com/haskell/stm/issues/76
