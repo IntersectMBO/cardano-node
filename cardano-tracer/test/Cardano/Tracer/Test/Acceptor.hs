@@ -117,6 +117,7 @@ launchAcceptorsSimple mode localSock dpName = do
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
+    , ekgRequestFull = Nothing
     }
 
 -- | To be able to ask any 'DataPoint' by the name without knowing the actual type,

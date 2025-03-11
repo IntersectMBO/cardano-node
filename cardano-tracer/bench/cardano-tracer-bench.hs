@@ -152,6 +152,7 @@ main = do
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
+    , ekgRequestFull = Nothing
     }
 
   generate :: Int -> IO [TraceObject]
