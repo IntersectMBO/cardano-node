@@ -16,8 +16,8 @@ import           Cardano.Api.Byron (VerificationKey (ByronVerificationKey))
 import           Cardano.Api.Shelley (VerificationKey (StakePoolVerificationKey))
 
 import qualified Cardano.Chain.Block as Byron
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
+import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock, Header (..))
 import           Ouroboros.Consensus.HardFork.Combinator (HardForkBlock, Header (..),
                    OneEraHeader (..))
@@ -69,8 +69,8 @@ instance
       -- We don't support a "block issuer" key role in @cardano-api@, so we'll
       -- just convert it to a stake pool key.
       toStakePoolKey
-        :: Shelley.VKey 'Shelley.BlockIssuer era
-        -> Shelley.VKey 'Shelley.StakePool era
+        :: Shelley.VKey 'Shelley.BlockIssuer
+        -> Shelley.VKey 'Shelley.StakePool
       toStakePoolKey vk = Shelley.VKey (Shelley.unVKey vk)
 
       issuer = pHeaderIssuer (shelleyHeaderRaw shelleyBlkHdr)

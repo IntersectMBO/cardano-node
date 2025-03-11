@@ -64,3 +64,112 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: b2cec3fbcde4bacb9c961e5510d5a1d3754c4e2b
+  --sha256: sha256-TDEBINZ3SkhpRNomMdt53bR3gdzgkWR9jIlAr8yrU6o=
+  subdir:
+      cardano-crypto-class
+      cardano-slotting
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/plutus
+  tag: be9ccfc7f8ecc6ebc577dcf3374a30530ecdb168
+  --sha256: sha256-R7t5Luc1d9l2tXKg5Jgqye+vQAEONwCrQ9/JDkFCu9M=
+  subdir:
+    plutus-core
+    plutus-ledger-api
+    plutus-tx
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: f5b35692b4d92d664187781a98b7af3fab445bad
+  --sha256: sha256-krYzn7ct6S52bGLC8vs5/pL421UbP0+jVjxwUhOcbcA=
+  subdir:
+      eras/allegra/impl
+      eras/alonzo/impl
+      eras/alonzo/test-suite
+      eras/babbage/impl
+      eras/babbage/test-suite
+      eras/byron/chain/executable-spec
+      eras/byron/crypto
+      eras/byron/crypto/test
+      eras/byron/ledger/executable-spec
+      eras/byron/ledger/impl
+      eras/byron/ledger/impl/test
+      eras/conway/impl
+      eras/conway/test-suite
+      eras/mary/impl
+      eras/shelley/impl
+      eras/shelley-ma/test-suite
+      eras/shelley/test-suite
+      libs/cardano-data
+      libs/cardano-ledger-api
+      libs/cardano-ledger-binary
+      libs/cardano-ledger-core
+      libs/cardano-ledger-test
+      libs/cardano-protocol-tpraos
+      libs/constrained-generators
+      libs/non-integral
+      libs/set-algebra
+      libs/small-steps
+      libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 588130b5f0494a42c19da3bd44211ff7607b5831
+  --sha256: sha256-5/kbjSYdWpTrOZD/eCPrMQVu6Lo03KdeuAy3bhtTH0c=
+  subdir:
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-protocols
+    ouroboros-network-framework
+    cardano-ping
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: 1e2c0fed8e81c15575bf3cd3aaa9b6efde328d8d
+  --sha256: sha256-osyNYXxJqg4MS6ISXtEneuYRb0xBIr5ztGmxvMyGTL4=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api
+  tag: de211cac855cf7e9e1bcd668a86bc121057efcc1
+  --sha256: sha256-PX/NITXB65xIIS1enOeHbVZCq0CAksVM1kq24Uco1pg=
+  subdir:
+    cardano-api
+    cardano-api-gen
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-cli
+  tag: 9006b84a459c62e5b278e1fe23228ba2601da714
+  --sha256: sha256-4uHXUTCH/cvqAkCcCBqA5RzCZNItsE4FOqGBTVVvLVQ=
+  subdir:
+    cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward.git
+  -- tag: bd3755833f57084daa11016b1f3b4dc2bd6863c9
+  tag: e372f6d8b6bc493ec64c1fbee8a1d2fcfa41b056
+  --sha256: sha256-BMIPujr/MH3V+DUlgZ0Bev4H4eDtK1wmX5tZSfmdeko=
+  subdir:
+    .
+
+allow-newer: none
+
+constraints:
+  io-classes ==1.5.0.0, ekg-forward >=0.9, cardano-slotting ==0.2.0.0
