@@ -56,7 +56,7 @@
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
 
-    std.url = "github:divnix/std";
+    incl.url = "github:divnix/incl";
 
     cardano-automation = {
       url = "github:input-output-hk/cardano-automation";
@@ -77,7 +77,7 @@
     , iohkNix
     , ops-lib
     , cardano-mainnet-mirror
-    , std
+    , incl
     , cardano-automation
     , em
     , ...
@@ -407,8 +407,7 @@
       overlay = final: prev: {
         cardanoNodeProject = (import ./nix/haskell.nix {
           inherit (final) haskell-nix;
-          inherit (std) incl;
-          inherit CHaP;
+          inherit CHaP incl;
           macOS-security = macOS-security (final.pkgs);
         }).appendModule [
           customConfig.haskellNix
