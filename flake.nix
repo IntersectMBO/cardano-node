@@ -7,52 +7,6 @@
   };
 
   inputs = {
-    # IMPORTANT: report any change to nixpkgs channel in nix/default.nix:
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
-    hackageNix = {
-      url = "github:input-output-hk/hackage.nix";
-      flake = false;
-    };
-    haskellNix = {
-      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
-      # Unpin this once we no longer need GHC 8.10.7.
-      url = "github:input-output-hk/haskell.nix/cb139fa956158397aa398186bb32dd26f7318784";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.hackage.follows = "hackageNix";
-    };
-    CHaP = {
-      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
-      flake = false;
-    };
-    utils.url = "github:numtide/flake-utils";
-    iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    flake-compat = {
-      url = "github:input-output-hk/flake-compat/fixes";
-      flake = false;
-    };
-    em = {
-      url = "github:deepfire/em";
-      flake = false;
-    };
-
-    # Custom user config (default: empty), eg.:
-    # { outputs = {...}: {
-    #   # Cutomize listeming port of node scripts:
-    #   nixosModules.cardano-node = {
-    #     services.cardano-node.port = 3002;
-    #   };
-    # };
-    customConfig.url = "github:input-output-hk/empty-flake";
-
-    empty-flake.url = "github:input-output-hk/empty-flake";
-
-    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
-
-    incl.url = "github:divnix/incl";
-
     cardano-automation = {
       url = "github:input-output-hk/cardano-automation";
       inputs = {
@@ -60,19 +14,69 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
+
+    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
+
+    # Custom user config (default: empty), eg:
+    # { outputs = {...}: {
+    #   # Customize listening port of node scripts:
+    #   nixosModules.cardano-node.services.cardano-node.port = 3002;
+    # };
+    customConfig.url = "github:input-output-hk/empty-flake";
+
+    CHaP = {
+      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      flake = false;
+    };
+
+    em = {
+      url = "github:deepfire/em";
+      flake = false;
+    };
+
+    empty-flake.url = "github:input-output-hk/empty-flake";
+
+    flake-compat = {
+      url = "github:input-output-hk/flake-compat/fixes";
+      flake = false;
+    };
+
+    hackageNix = {
+      url = "github:input-output-hk/hackage.nix";
+      flake = false;
+    };
+
+    haskellNix = {
+      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
+      # Unpin this once we no longer need GHC 8.10.7.
+      url = "github:input-output-hk/haskell.nix/cb139fa956158397aa398186bb32dd26f7318784";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.hackage.follows = "hackageNix";
+    };
+
+    incl.url = "github:divnix/incl";
+
+    iohkNix = {
+      url = "github:input-output-hk/iohk-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+
+    utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
-    { self
-    , nixpkgs
-    , utils
-    , haskellNix
-    , CHaP
-    , iohkNix
+    { cardano-automation
     , cardano-mainnet-mirror
-    , incl
-    , cardano-automation
+    , CHaP
     , em
+    , haskellNix
+    , incl
+    , iohkNix
+    , nixpkgs
+    , self
+    , utils
     , ...
     }@input:
     let
