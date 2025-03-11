@@ -86,7 +86,7 @@
     removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
 
     macOS-security = pkgs:
-    # make `/usr/bin/security` available in `PATH`, which is needed for stack
+    # Make `/usr/bin/security` available in `PATH`, which is needed for stack
     # on darwin which calls this binary to find certificates
       pkgs.writeScriptBin "security" ''exec /usr/bin/security "$@"'';
 
@@ -98,7 +98,7 @@
       input.customConfig;
 
     overlays = [
-      # crypto needs to come before haskell.nix.
+      # Crypto needs to come before haskell.nix.
       # FIXME: _THIS_IS_BAD_
       iohkNix.overlays.crypto
       haskellNix.overlay
@@ -128,13 +128,13 @@
     collectExes = project: let
       set-git-rev = import ./nix/set-git-rev.nix {inherit (project) pkgs;};
     in
-      # take all executables from the project local packages
+      # Take all executables from the project local packages
       project.exes
       // (with project.hsPkgs; {
-        # add some executables from other relevant packages
+        # Add some executables from other relevant packages
         inherit (bech32.components.exes) bech32;
         inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
-        # add cardano-node and cardano-cli with their git revision stamp
+        # Add cardano-node and cardano-cli with their git revision stamp
         cardano-node = set-git-rev project.exes.cardano-node;
         cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
       });
@@ -178,7 +178,7 @@
         (optionalAttrs hostPlatform.isLinux (
           prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) nixosTests)
         ))
-        # checks run on default system only;
+        # Checks run on default system only:
         // (optionalAttrs (system == defaultSystem) {
           hlint = pkgs.callPackage pkgs.hlintCheck {
             inherit (project.args) src;
@@ -198,7 +198,7 @@
             inherit (project) benchmarks;
           });
 
-      # The parametrisable workbench.
+      # The parameterisable workbench.
       inherit (pkgs) workbench;
 
       packages =
@@ -222,7 +222,7 @@
           "dockerImage/node" = pkgs.dockerImage;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
 
-          ## This is a very light profile, no caching&pinning needed.
+          # This is a very light profile, no caching and pinning needed.
           workbench-ci-test = workbenchTest {
             profileName = "ci-test-hydra-coay";
             workbenchStartArgs = ["--create-testnet-data"];
@@ -347,7 +347,7 @@
             native =
               lib.filterAttrs
               (n: _:
-                # only build docker images once on linux:
+                # Only build docker images once on linux:
                   !(lib.hasPrefix "dockerImage" n))
               packages
               // {
@@ -367,20 +367,20 @@
           };
         nonRequiredPaths =
           [
-            #FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
+            # FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
             "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
-            #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
+            # FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
             "windows\\.(.*\\.)?tx-generator.*"
-            #FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
+            # FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
             "musl\\.(.*\\.)?tx-generator.*"
             "musl\\.(.*\\.)?gen-plutus.*"
             # hlint required status is controled via the github action:
             "native\\.(.*\\.)?checks/hlint"
-            #system-tests are build and run separately:
+            # system-tests are build and run separately:
             "native\\.(.*\\.)?system-tests"
           ]
           ++ lib.optionals (system == "x86_64-darwin") [
-            #FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
+            # FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
             "native\\.variants\\..*"
             "native\\.checks/cardano-testnet/cardano-testnet-test"
           ];
@@ -406,7 +406,7 @@
         legacyPackages =
           pkgs
           // {
-            # allows access to hydraJobs without specifying <arch>:
+            # Allows access to hydraJobs without specifying <arch>:
             hydraJobs = ciJobs;
           };
 
@@ -438,7 +438,7 @@
               ciJobs =
                 lib.mapAttrs (_: lib.getAttr "required") flake.ciJobs
                 // {
-                  # ensure hydra notify:
+                  # Ensure hydra notify:
                   gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
                 };
             })
@@ -446,7 +446,7 @@
             ;
         });
 
-      # allows precise paths (avoid fallbacks) with nix build/eval:
+      # Allows precise paths (avoid fallbacks) with nix build/eval:
       outputs = self;
 
       overlay = final: prev: {
