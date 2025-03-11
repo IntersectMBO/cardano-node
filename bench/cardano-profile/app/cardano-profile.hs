@@ -84,6 +84,7 @@ data Cli =
   | ByName PrettyPrint String
   | LibMK
   | NodeSpecs FilePath FilePath
+  | EpochTimeline Integer
   | ToJson String
   | FromJson String
 
@@ -174,6 +175,10 @@ main = do
                         error $ "Not a valid topology: " ++ errorMsg
                       (Right value) -> value
       BSL8.putStrLn $ Aeson.encode $ NodeSpecs.nodeSpecs profile topology
+    (EpochTimeline upToEpochNumber) -> do
+      genesisAeson <- Profile.epochTimeline upToEpochNumber
+      let prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
+      BSL8.putStrLn $ Aeson.encodePretty' prettyConf genesisAeson
     -- Print a single profiles, with an optional overlay.
     (ToJson filePath) -> print filePath
 --      str <- readFile filePath
@@ -254,6 +259,12 @@ cliParser = OA.hsubparser $
             <*> OA.argument OA.str (OA.metavar "TOPOLOGY-JSON-FILEPATH")
           )
           (OA.fullDesc <> OA.header "node-specs" <> OA.progDesc "Create the profile's node-specs.json file")
+        )
+  <>
+      OA.command "epoch-timeline"
+        (OA.info
+          (EpochTimeline <$> OA.argument OA.auto (OA.metavar "EPOCH-NUMBER"))
+          (OA.fullDesc <> OA.header "epoch-timeline" <> OA.progDesc "Construct the genesis object")
         )
   <>
       OA.command "to-json"
