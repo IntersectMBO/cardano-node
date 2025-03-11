@@ -106,6 +106,7 @@ let
     packages = _: [];
 
     nativeBuildInputs = with cardanoNodePackages; [
+      alejandra
       nix
       cardano-cli
       bech32
