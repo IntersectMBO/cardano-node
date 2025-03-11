@@ -3,12 +3,11 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile (realize, epochTimeline) where
+module Cardano.Benchmarking.Profile (realize) where
 
 --------------------------------------------------------------------------------
 
 import           Prelude
-import           Data.List (sort)
 import           Control.Monad (foldM)
 import           System.IO.Unsafe (unsafePerformIO)
 import           GHC.Stack (HasCallStack)
@@ -20,6 +19,7 @@ import qualified Data.Text            as Text
 -- Package: scientific.
 import qualified Data.Scientific as Scientific
 -- Package: self.
+import qualified Cardano.Benchmarking.Profile.Genesis as Genesis
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Paths_cardano_profile as Paths
 
@@ -110,37 +110,53 @@ addUnusedDefaults p =
 shelleyAlonzoConway :: Types.Profile -> Types.Profile
 shelleyAlonzoConway profile =
   let epochNumber  = getEpochNumber profile
-      epochParams  = unsafePerformIO $ epochTimeline epochNumber
-      epochParams' = unsafePerformIO $ foldM
+      -- Collects all the genesis properties from "epoch-timeline.json".
+      epoch  = unsafePerformIO $ Genesis.epochTimeline epochNumber
+      -- Apply the genesis overlays ("pparamsOverlays").
+      epoch' = unsafePerformIO $ foldM
         (flip genesisOverlay)
-        epochParams
+        epoch
         (Types.pparamsOverlays $ Types.genesis profile)
+      -- Any property that was set before by the user takes precedence.
+      epoch'' = (<>)
+                  epoch'
+                  (Genesis.Epoch
+                    (Just $ Types.shelley $ Types.genesis profile)
+                    (Just $ Types.alonzo  $ Types.genesis profile)
+                    (       Types.conway  $ Types.genesis profile)
+                  )
       genesis f p = p {Types.genesis = f (Types.genesis p)}
+  -- Fill the profile's genesis field.
   in genesis (\g -> g {
       Types.pparamsEpoch = epochNumber
     , Types.shelley =
-        let shey' = KeyMap.fromList [
-               ("slotLength", Aeson.Number $ realToFrac $ Types.slot_duration g)
-             , ("epochLength", Aeson.Number $ fromInteger $ Types.epoch_length g)
-             , ("securityParam", Aeson.Number $ fromInteger $ Types.parameter_k g)
-             , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
-             , ("protocolParams",
-                 case KeyMap.lookup "shelley" epochParams' of
-                   (Just shey) -> shey
-                   _ -> error "Obtained no \"shelley\" from epoch-timeline.json"
-               )
-             ]
-        -- Any property that was set before by the user takes precedence.
-        in KeyMap.unionWithKey unionWithKey shey' (Types.shelley g)
+        -- The "shelley" object in "epoch-timeline.json" entries is directly the
+        -- "protocolParams" object used in the node's "shelley-genesis.json".
+        -- We have to add "slotLength", "epochLength", "securityParam" and
+        -- "activeSlotsCoeff" that are treated as first class citizens in this
+        -- library, instead of JSON/KeyMap.
+        case Genesis.shelley epoch'' of
+          (Just sheyKeyMap) -> foldl
+            (\acc (k,v) -> KeyMap.insert k v acc)
+            sheyKeyMap
+            [
+              ("slotLength", Aeson.Number $ realToFrac $ Types.slot_duration g)
+            , ("epochLength", Aeson.Number $ fromInteger $ Types.epoch_length g)
+            , ("securityParam", Aeson.Number $ fromInteger $ Types.parameter_k g)
+            , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
+            , ("protocolParams",
+                case KeyMap.lookup "protocolParams" sheyKeyMap of
+                  (Just shey) -> shey
+                  Nothing -> error "No \"protocolParams\" JSON object in \"shelley\" property"
+              )
+            ]
+          Nothing -> error "No \"shelley\" JSON object from epoch-timeline.json"
     , Types.alonzo  =
-        case KeyMap.lookup "alonzo" epochParams' of
-          (Just (Aeson.Object alzo)) -> alzo
-          _ -> error "Obtained no \"alonzo\" from epoch-timeline.json"
+        case Genesis.alonzo epoch'' of
+          (Just alzo) -> alzo
+          Nothing -> error "No \"alonzo\" JSON object from epoch-timeline.json"
     -- The only "optional" genesis property.
-    , Types.conway  =
-        case KeyMap.lookup "conway" epochParams' of
-          (Just (Aeson.Object coay)) -> Just coay
-          _ -> Nothing
+    , Types.conway = Genesis.conway epoch''
     }) profile
 
 getEpochNumber :: HasCallStack => Types.Profile -> Integer
@@ -150,39 +166,17 @@ getEpochNumber profile =
      then error $ "Profile \"" ++ Types.name profile ++ "\" has epoch number = " ++ show number
      else number
 
--- Collects all properties from epochs lower or equal than the desired one.
-epochTimeline :: Integer -> IO (KeyMap.KeyMap Aeson.Value)
-epochTimeline epochNumber = do
-  fp <- Paths.getDataFileName "data/genesis/epoch-timeline.json"
-  eitherValue <- Aeson.eitherDecodeFileStrict fp
-  return $ case eitherValue of
-    (Right (Aeson.Object keyMap)) -> foldl
-      (\acc key ->
-        -- TODO: It will fail if the number used as string key is above 999.
-        if key <= read ("\"" ++ show epochNumber ++ "\"")
-        then case KeyMap.lookup key keyMap of
-          (Just (Aeson.Object obj)) ->
-            -- Right-biased merge of both JSON objects at all depths.
-            KeyMap.unionWithKey unionWithKey acc obj
-          _ -> error "Key not an Aeson Object: \"data/epoch-timeline.json\""
-        else acc
-      )
-      mempty
-      (sort $ KeyMap.keys keyMap)
-    _ -> error "Not an Aeson Object: \"data/epoch-timeline.json\""
-
 -- The genesis overlay files are applied to the "genesis" property and the ones
 -- available are defined as functions in `Primitives`.
-genesisOverlay :: String -> KeyMap.KeyMap Aeson.Value -> IO (KeyMap.KeyMap Aeson.Value)
+genesisOverlay :: String -> Genesis.Epoch -> IO Genesis.Epoch
 genesisOverlay overlayName epochParams = do
   let dataFileName = "data/genesis/overlays/" ++ overlayName ++ ".json"
   fp <- Paths.getDataFileName dataFileName
   eitherValue <- Aeson.eitherDecodeFileStrict fp
   return $ case eitherValue of
-    (Right (Aeson.Object keyMap)) ->
-      -- Right-biased merge of both JSON objects at all depths.
-      KeyMap.unionWithKey unionWithKey epochParams keyMap
-    _ -> error $ "Not an Aeson Object: \"" ++ fp ++ "\""
+    -- Right-biased merge of both JSON objects at all depths.
+    (Right epoch) -> epochParams <> epoch
+    (Left e) -> error $ "\"" ++ fp ++ "\": " ++ e
 
 -- Step 3.
 --------------------------------------------------------------------------------

@@ -64,6 +64,7 @@ library
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly
                       , Cardano.Benchmarking.Profile.Extra.Scaling
                       , Cardano.Benchmarking.Profile.Extra.Voting
+                      , Cardano.Benchmarking.Profile.Genesis
                       , Cardano.Benchmarking.Profile.NodeSpecs
                       , Cardano.Benchmarking.Profile.Playground
                       , Cardano.Benchmarking.Profile.Primitives
@@ -101,6 +102,7 @@ executable cardano-timeline
   build-depends:        aeson
                       , aeson-pretty
                       , text
+                      , cardano-profile
   other-modules:        Paths_cardano_profile
   autogen-modules:      Paths_cardano_profile
 
