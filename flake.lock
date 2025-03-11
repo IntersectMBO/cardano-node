@@ -1203,22 +1203,6 @@
         "type": "github"
       }
     },
-    "ops-lib": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1713366514,
-        "narHash": "sha256-0hNlv+grFTE+TeXIbxSY97QoEEaUupOKMusZ4PesdrQ=",
-        "owner": "input-output-hk",
-        "repo": "ops-lib",
-        "rev": "19d83fa8eab1c0b7765f736eb4e8569d84d3e39d",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "ops-lib",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "CHaP": "CHaP",
@@ -1230,16 +1214,12 @@
         "flake-compat": "flake-compat_2",
         "hackageNix": "hackageNix",
         "haskellNix": "haskellNix",
-        "hostNixpkgs": [
-          "nixpkgs"
-        ],
         "incl": "incl",
         "iohkNix": "iohkNix",
         "nixpkgs": [
           "haskellNix",
           "nixpkgs-unstable"
         ],
-        "ops-lib": "ops-lib",
         "utils": "utils_2"
       }
     },

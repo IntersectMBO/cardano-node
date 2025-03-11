@@ -9,7 +9,6 @@
   inputs = {
     # IMPORTANT: report any change to nixpkgs channel in nix/default.nix:
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
-    hostNixpkgs.follows = "nixpkgs";
     hackageNix = {
       url = "github:input-output-hk/hackage.nix";
       flake = false;
@@ -29,10 +28,6 @@
     iohkNix = {
       url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    ops-lib = {
-      url = "github:input-output-hk/ops-lib";
-      flake = false;
     };
     flake-compat = {
       url = "github:input-output-hk/flake-compat/fixes";
@@ -70,12 +65,10 @@
   outputs =
     { self
     , nixpkgs
-    , hostNixpkgs
     , utils
     , haskellNix
     , CHaP
     , iohkNix
-    , ops-lib
     , cardano-mainnet-mirror
     , incl
     , cardano-automation
@@ -123,7 +116,7 @@
         })
         (import ./nix/pkgs.nix)
         self.overlay
-      ] ++ (import ops-lib.outPath {}).overlays;
+      ];
 
       collectExes = project:
         let set-git-rev = import ./nix/set-git-rev.nix { inherit (project) pkgs; };
