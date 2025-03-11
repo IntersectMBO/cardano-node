@@ -19,6 +19,7 @@ import qualified Data.Map.Strict as Map
 import qualified Options.Applicative as OA
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile as Profile
+import qualified Cardano.Benchmarking.Profile.Genesis as Genesis
 import qualified Cardano.Benchmarking.Profile.NodeSpecs as NodeSpecs
 import qualified Cardano.Benchmarking.Profile.Types as Types
 -- Profiles to export!
@@ -176,7 +177,7 @@ main = do
                       (Right value) -> value
       BSL8.putStrLn $ Aeson.encode $ NodeSpecs.nodeSpecs profile topology
     (EpochTimeline upToEpochNumber) -> do
-      genesisAeson <- Profile.epochTimeline upToEpochNumber
+      genesisAeson <- Genesis.epochTimeline upToEpochNumber
       let prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
       BSL8.putStrLn $ Aeson.encodePretty' prettyConf genesisAeson
     -- Print a single profiles, with an optional overlay.
