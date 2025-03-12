@@ -1,8 +1,9 @@
-# The legacy cardano-tracer module requires commonLib from the overlay
-# which makes a simple non-flake service module import convoluted
-# and also requires knowledge of the cardano-node commonLib functions to use.
-# This makes this legacy module suitable for internal purposes, but not ideal
-# for a general purpose single import cardano-tracer module.
+# This workbench cardano-tracer service module requires commonLib from the
+# cardano-node flake overlay which prevents a simple non-flake service module
+# import and also requires knowledge of the commonLib functions to use.
+#
+# This makes this workbench service module suitable for internal purposes, but
+# not for a general purpose single import cardano-tracer service module.
 #
 # The module at nix/nixos/cardano-tracer-service.nix is the preferred module
 # for general purpose use.
