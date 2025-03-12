@@ -278,6 +278,10 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "commit" .= String biCommit
                , "nodeStartTime" .= biNodeStartTime
                ]
+  forMachine _dtal (MovedTopLevelOption opt) =
+      mconcat [ "kind" .= String "MovedTopLevelOption"
+              , "option" .= opt
+              ]
 
   asMetrics (BlockForgingUpdate b) =
     [ IntM "forging_enabled"
@@ -335,6 +339,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["Byron"]
   namespaceFor BINetwork {}  =
     Namespace [] ["Network"]
+  namespaceFor MovedTopLevelOption {} =
+    Namespace [] ["MovedTopLevelOption"]
 
   severityFor (Namespace _ ["SocketConfigError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdate"]) _ = Just Notice
@@ -345,6 +351,7 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
+  severityFor (Namespace _ ["MovedTopLevelOption"]) _ = Just Warning
   severityFor _ _ = Just Info
 
   documentFor (Namespace [] ["Info"]) = Just
@@ -408,6 +415,8 @@ instance MetaTrace  (StartupTrace blk) where
     , "\n_niDnsProducers_: shows the list of domain names to subscribe to. "
     , "\n_niIpProducers_: shows the list of ip subscription addresses."
     ]
+  documentFor (Namespace [] ["MovedTopLevelOption"]) = Just $
+    "An option was moved from the top level of the config file to a subsection"
   documentFor _ns = Nothing
 
   metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
@@ -439,6 +448,7 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["ShelleyBased"]
     , Namespace [] ["Byron"]
     , Namespace [] ["Network"]
+    , Namespace [] ["MovedTopLevelOption"]
     ]
 
 nodeToClientVersionToInt :: NodeToClientVersion -> Int
@@ -575,6 +585,11 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
   <> ", Version " <> showT biVersion
   <> ", Commit " <> showT biCommit
   <> ", Node start time " <> showT biNodeStartTime
+
+ppStartupInfoTrace (MovedTopLevelOption opt) =
+  "Option `" <> showT opt
+  <> "` was moved to the `LedgerDB` section. Parsing it at the top level "
+  <> " will be removed in a future version."
 
 nonP2PWarningMessage :: Text
 nonP2PWarningMessage =

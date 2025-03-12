@@ -428,45 +428,47 @@ instance FromJSON PartialNodeConfiguration where
               Nothing -> return Nothing
 
       parseLedgerDbConfig v = do
-        maybeString :: Maybe Value <- v .:? "LedgerDB"
-        case maybeString of
+        let snapInterval x = fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> x .:? "SnapshotInterval"
+            snapNum x      = fmap RequestedNumOfDiskSnapshots <$> x .:? "NumOfDiskSnapshots"
+            doChecksum x   = fmap Flag <$> x .:? "DoDiskSnapshotChecksum"
+
+        mTopLevelSnapInterval <- snapInterval v
+        mTopLevelSnapNum <- snapNum v
+        mTopLevelDoChecksum <- doChecksum v
+
+        let topLevelOptionsSet =
+                   zip [ const () <$> mTopLevelSnapInterval
+                       , const () <$> mTopLevelSnapNum
+                       , const () <$> mTopLevelSnapNum]
+                       ["SnapshotInterval", "NumOfDiskSnapshots", "DoDiskSnapshotChecksum"]
+            deprecatedOpts = DeprecatedOptions [ y | (x, y) <- topLevelOptionsSet, isJust x ]
+
+        mLedgerDB <- v .:? "LedgerDB"
+        case mLedgerDB of
            Nothing -> do
-             -- This is here just to ensure that we also try to read the SnapshotInterval from the toplevel config. as it was the case before UTxO-HD
-             -- It is needed for the pre-emptive cluster runs
-             si <- (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> v .:? "SnapshotInterval") .!= DefaultSnapshotInterval
-             snapNum <- (fmap RequestedNumOfDiskSnapshots <$> v .:? "NumOfDiskSnapshots") .!= DefaultNumOfDiskSnapshots
-             doChecksum <- (fmap Flag <$> v .:? "DoDiskSnapshotChecksum") .!= DoDiskSnapshotChecksum
-             return $ Just $ LedgerDbConfiguration snapNum si DefaultQueryBatchSize V2InMemory doChecksum
-           Just vv -> withObject "LedgerDB" (\o -> do
-             snapNum <-
-                   (fmap RequestedNumOfDiskSnapshots <$> o .:? "NumOfDiskSnapshots")
-               .!= DefaultNumOfDiskSnapshots
-             doChecksum <- (fmap Flag <$> o .:? "DoDiskSnapshotChecksum") .!= DoDiskSnapshotChecksum
-             snapInterval <- do
-                   ov <- (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> o .:? "SnapshotInterval") .!= DefaultSnapshotInterval
-                   case ov of
-                      DefaultSnapshotInterval -> do
-                         -- This is here just to ensure that we also try to read the SnapshotInterval from the toplevel config. as it was the case before UTxO-HD
-                         -- It is needed for the pre-emptive cluster runs
-                         (fmap (RequestedSnapshotInterval . secondsToDiffTime) <$> v .:? "SnapshotInterval") .!= DefaultSnapshotInterval
-                      _ -> pure ov
-             qsize <-
-                   (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize")
-               .!= DefaultQueryBatchSize
-             backend <- o .:? "Backend" .!= "V2InMemory"
-             selector <- case backend of
+             let si = fromMaybe DefaultSnapshotInterval mTopLevelSnapInterval
+                 sn = fromMaybe DefaultNumOfDiskSnapshots mTopLevelSnapNum
+                 dc = fromMaybe DoDiskSnapshotChecksum mTopLevelDoChecksum
+             return $ Just $ LedgerDbConfiguration sn si DefaultQueryBatchSize V2InMemory dc deprecatedOpts
+           Just ledgerDB -> flip (withObject "LedgerDB") ledgerDB (\o -> do
+             ldbSnapInterval <- (getLast . (Last mTopLevelSnapInterval <>) . Last <$> snapInterval o) .!= DefaultSnapshotInterval
+             ldbSnapNum      <- (getLast . (Last mTopLevelSnapNum <>) . Last <$> snapNum o)           .!= DefaultNumOfDiskSnapshots
+             ldbDoChecksum   <- (getLast . (Last mTopLevelDoChecksum <>) . Last <$> doChecksum o)     .!= DoDiskSnapshotChecksum
+             qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
+             backend         <- o .:? "Backend" .!= "V2InMemory"
+             selector        <- case backend of
                "V1InMemory" -> do
-                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency") .!= DefaultFlushFrequency
+                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
                  return $ V1InMemory flush
                "V1LMDB"     -> do
-                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency") .!= DefaultFlushFrequency
+                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
                  mapSize :: Maybe Gigabytes <- o .:? "MapSize"
                  lmdbPath :: Maybe FilePath <- o .:? "LiveTablesPath"
                  return $ V1LMDB flush lmdbPath mapSize
                "V2InMemory" -> return V2InMemory
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
-             pure $ Just $ LedgerDbConfiguration snapNum snapInterval qsize selector doChecksum
-             ) vv
+             pure $ Just $ LedgerDbConfiguration ldbSnapNum ldbSnapInterval qsize selector ldbDoChecksum deprecatedOpts
+             )
 
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"
@@ -615,6 +617,7 @@ defaultPartialNodeConfiguration =
             DefaultQueryBatchSize
             V2InMemory
             DoDiskSnapshotChecksum
+            noDeprecatedOptions
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
     , pncAcceptedConnectionsLimit =

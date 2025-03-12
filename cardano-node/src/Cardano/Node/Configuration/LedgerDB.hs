@@ -5,9 +5,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Configuration.LedgerDB (
-    LedgerDbConfiguration (..)
+    DeprecatedOptions (..)
+  , LedgerDbConfiguration (..)
   , LedgerDbSelectorFlag(..)
   , Gigabytes
+  , noDeprecatedOptions
   , selectorToArgs
   ) where
 
@@ -47,6 +49,15 @@ data LedgerDbSelectorFlag =
   | V2InMemory
   deriving (Eq, Show)
 
+-- | Some options that existed in the TopLevel were now moved to a
+-- subsection. We use this field to propagate the results from parsing those
+-- into the monadic part of the node so that we can emit warnings.
+newtype DeprecatedOptions = DeprecatedOptions [String]
+  deriving (Eq, Show)
+
+noDeprecatedOptions :: DeprecatedOptions
+noDeprecatedOptions = DeprecatedOptions []
+
 data LedgerDbConfiguration =
     LedgerDbConfiguration
       NumOfDiskSnapshots
@@ -54,6 +65,7 @@ data LedgerDbConfiguration =
       QueryBatchSize
       LedgerDbSelectorFlag
       (Flag "DoDiskSnapshotChecksum")
+      DeprecatedOptions
   deriving (Eq, Show)
 
 -- | A number of gigabytes.

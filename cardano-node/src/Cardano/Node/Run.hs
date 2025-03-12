@@ -372,6 +372,8 @@ handleSimpleNode
 handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
   logStartupWarnings
 
+  logDeprecatedLedgerDBOptions
+
   traceWith (startupTracer tracers)
     =<< StartupTime <$> getCurrentTime
 
@@ -657,6 +659,14 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                    (WarningDevelopmentNodeToClientVersions
                      developmentNtcVersions)
 
+
+  logDeprecatedLedgerDBOptions :: IO ()
+  logDeprecatedLedgerDBOptions =
+    case deprecatedOpts of
+      DeprecatedOptions [] -> pure ()
+      DeprecatedOptions opts ->
+        mapM_ (traceWith (startupTracer tracers) . MovedTopLevelOption) opts
+
   limitToLatestReleasedVersion :: forall k v.
        Ord k
     => ((Maybe NodeToNodeVersion, Maybe NodeToClientVersion) -> Maybe k)
@@ -669,7 +679,13 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         Nothing       -> id
         Just version_ -> Map.takeWhileAntitone (<= version_)
 
-  LedgerDbConfiguration snapInterval numSnaps queryBatchSize ldbBackend doChecksum = ncLedgerDbConfig nc
+  LedgerDbConfiguration
+    snapInterval
+    numSnaps
+    queryBatchSize
+    ldbBackend
+    doChecksum
+    deprecatedOpts = ncLedgerDbConfig nc
 
   snapshotPolicyArgs :: SnapshotPolicyArgs
   snapshotPolicyArgs = SnapshotPolicyArgs numSnaps snapInterval doChecksum
