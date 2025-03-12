@@ -42,9 +42,9 @@ import           Cardano.Api
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
+import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
-import           Ouroboros.Network.ConsensusMode (ConsensusMode (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 import           Control.Exception

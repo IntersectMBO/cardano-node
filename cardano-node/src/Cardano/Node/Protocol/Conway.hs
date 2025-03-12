@@ -26,7 +26,6 @@ import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Default.Class as DefaultClass
@@ -47,7 +46,7 @@ import           Data.Word
 readGenesisMaybe :: Maybe GenesisFile
                  -> Maybe GenesisHash
                  -> ExceptT GenesisReadError IO
-                            (Conway.ConwayGenesis StandardCrypto, GenesisHash)
+                            (Conway.ConwayGenesis, GenesisHash)
 readGenesisMaybe (Just genFp) mHash = readGenesis genFp mHash
 readGenesisMaybe Nothing _ = do
   case L.mkCostModelsLenient plutusV3CostModel >>= Map.lookup L.PlutusV3 . L.costModelsValid of
@@ -80,7 +79,7 @@ plutusV3ExampleValues =
   , 85902, 36, 33012864, 36, 388443360, 1, 401885761, 72, 2331379, 72, 1927926, 82523
   , 4, 117366, 10475, 4, 1292075, 24469, 74, 0, 1, 936157, 49601, 237, 0, 1
   ]
-emptyConwayGenesis :: L.CostModel -> ConwayGenesis StandardCrypto
+emptyConwayGenesis :: L.CostModel -> ConwayGenesis
 emptyConwayGenesis cm =
   let upgradePParamsDef :: (UpgradeConwayPParams Identity) -- TODO: need to define values
   -- the default instance is for StrictMaybe
@@ -107,10 +106,10 @@ emptyConwayGenesis cm =
 readGenesis :: GenesisFile
             -> Maybe GenesisHash
             -> ExceptT GenesisReadError IO
-                       (Conway.ConwayGenesis StandardCrypto, GenesisHash)
+                       (Conway.ConwayGenesis, GenesisHash)
 readGenesis = readGenesisAny
 
-validateGenesis :: Conway.ConwayGenesis StandardCrypto
+validateGenesis :: Conway.ConwayGenesis
                 -> ExceptT ConwayProtocolInstantiationError IO ()
 validateGenesis _ = return () --TODO conway: do the validation
 

@@ -332,6 +332,14 @@ instance LogFormatting (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) w
     mconcat [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
+  forMachine _dtal (Simple.AnyMessageAndAgency stok LTM.MsgGetMeasures {}) =
+    mconcat [ "kind" .= String "MsgGetMeasures"
+            , "agency" .= String (pack $ show stok)
+            ]
+  forMachine _dtal (Simple.AnyMessageAndAgency stok LTM.MsgReplyGetMeasures {}) =
+    mconcat [ "kind" .= String "MsgReplyMeasures"
+            , "agency" .= String (pack $ show stok)
+            ]
 
 instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
     namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgAcquire {}) =
@@ -356,6 +364,10 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
       Namespace [] ["Release"]
     namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgDone {}) =
       Namespace [] ["Done"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgGetMeasures {}) =
+      Namespace [] ["GetMeasures"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgReplyGetMeasures {}) =
+      Namespace [] ["ReplyGetMeasures"]
 
     severityFor (Namespace _ ["Acquire"]) _ = Just Info
     severityFor (Namespace _ ["Acquired"]) _ = Just Info

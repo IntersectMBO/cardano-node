@@ -35,7 +35,7 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 10.8
+                      , cardano-api ^>= 10.10
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.4
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -49,7 +49,7 @@ library
                       , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.7
+                      , cardano-ping ^>= 0.8
                       , contra-tracer
                       , containers
                       , data-default-class
@@ -71,7 +71,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.19
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -220,7 +220,7 @@ test-suite cardano-testnet-test
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api:{cardano-api, internal}
+                      , cardano-api
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib}
                       , cardano-crypto-class
                       , cardano-ledger-conway

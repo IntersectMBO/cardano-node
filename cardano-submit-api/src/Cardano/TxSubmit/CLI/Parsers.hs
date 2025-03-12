@@ -10,7 +10,7 @@ module Cardano.TxSubmit.CLI.Parsers
 import           Cardano.Api (File (..), SocketPath)
 
 import           Cardano.CLI.Environment (EnvCli (..))
-import           Cardano.CLI.EraBased.Options.Common
+import           Cardano.CLI.EraBased.Common.Option
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
 

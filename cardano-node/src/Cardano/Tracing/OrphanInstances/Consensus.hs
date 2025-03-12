@@ -83,7 +83,6 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
-import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
 import           Data.Function (on)
 import           Data.Text (Text, pack)
@@ -174,7 +173,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.TookSnapshot {} -> Info
     LedgerDB.DeletedSnapshot {} -> Debug
     LedgerDB.InvalidSnapshot {} -> Error
-    LedgerDB.SnapshotMissingChecksum {} -> Warning
+    LedgerDB.SnapshotMissingChecksum {} -> Error
 
   getSeverityAnnotation (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB {} -> Debug
@@ -604,8 +603,6 @@ instance ( ConvertRawHash blk
                    " This is most likely an expected change in the serialization format,"
                 <> " which currently requires a chain replay"
               _ -> ""
-        LedgerDB.SnapshotMissingChecksum snap ->
-          "Checksum file is missing for snapshot " <> showT snap
 
         LedgerDB.TookSnapshot snap pt RisingEdge ->
           "Taking ledger snapshot " <> showT snap <>
@@ -616,6 +613,8 @@ instance ( ConvertRawHash blk
           ", duration: " <> showT t
         LedgerDB.DeletedSnapshot snap ->
           "Deleted old snapshot " <> showT snap
+        LedgerDB.SnapshotMissingChecksum snap ->
+          "Missing snapshot checksum " <> showT snap
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmutableDB pt ->
           "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
@@ -1061,7 +1060,7 @@ instance ( ConvertRawHash blk
                , "snapshot" .= toObject verb snap
                , "failure" .= show failure ]
     LedgerDB.SnapshotMissingChecksum snap ->
-      mconcat [ "kind" .= String "TraceSnapshotEvent.SnapshotMissingChecksum"
+      mconcat [ "kind" .= String "TraceSnapshotEvent.InvalidSnapshot"
                , "snapshot" .= toObject verb snap
                ]
 

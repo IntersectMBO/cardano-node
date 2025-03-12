@@ -3,7 +3,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Node.Tracing.Render
   ( renderChunkNo
@@ -39,8 +38,7 @@ import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsItem
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.SafeHash as SafeHash
+import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..))
 import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
@@ -178,25 +176,25 @@ trimHashTextForDetails dtal =
     DMinimal  -> Text.take 7
     _         -> id
 
-renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
+renderScriptIntegrityHash :: Maybe Alonzo.ScriptIntegrityHash -> Aeson.Value
 renderScriptIntegrityHash (Just witPPDataHash) =
-  Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
+  Aeson.String . Crypto.hashToTextAsHex $ Hashes.extractHash witPPDataHash
 renderScriptIntegrityHash Nothing = Aeson.Null
 
 
 renderMissingRedeemers :: forall era. ()
   => Api.ShelleyBasedEra era
-  -> [(PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash StandardCrypto)]
+  -> [(PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash)]
   -> Aeson.Value
 renderMissingRedeemers sbe scripts = Aeson.object $ map renderTuple  scripts
   where
     renderTuple :: ()
-      => (PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash StandardCrypto)
+      => (PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash)
       -> Aeson.Pair
     renderTuple (scriptPurpose, sHash) =
       Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose sbe scriptPurpose
 
-renderScriptHash :: Ledger.ScriptHash StandardCrypto -> Text
+renderScriptHash :: Ledger.ScriptHash -> Text
 renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
 renderScriptPurpose :: ()
@@ -213,7 +211,7 @@ renderScriptPurpose =
     )
 
 renderAlonzoPlutusPurpose :: ()
-  => (Ledger.EraCrypto era ~ StandardCrypto, Aeson.ToJSON (Ledger.TxCert era))
+  => Aeson.ToJSON (Ledger.TxCert era)
   => AlonzoPlutusPurpose AsItem era
   -> Aeson.Value
 renderAlonzoPlutusPurpose = \case
@@ -227,7 +225,7 @@ renderAlonzoPlutusPurpose = \case
     Aeson.object ["certifying" .= Aeson.toJSON cert]
 
 renderConwayPlutusPurpose :: ()
-  => (Ledger.EraCrypto era ~ StandardCrypto, Ledger.EraPParams era, Aeson.ToJSON (Ledger.TxCert era))
+  => (Ledger.EraPParams era, Aeson.ToJSON (Ledger.TxCert era))
   => ConwayPlutusPurpose AsItem era
   -> Aeson.Value
 renderConwayPlutusPurpose = \case

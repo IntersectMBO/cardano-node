@@ -8,11 +8,11 @@ module Cardano.Node.TraceConstraints (TraceConstraints) where
 
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Ledger.Credential
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
+import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
                    GetHeader, HasHeader, Header)
@@ -70,6 +70,6 @@ type TraceConstraints blk =
     , LogFormatting (ValidationErr (BlockProtocol blk))
     , LogFormatting (CannotForge blk)
     , LogFormatting (ForgeStateUpdateError blk)
-    , LogFormatting (Set (Credential 'Staking StandardCrypto))
-    , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking StandardCrypto))
+    , LogFormatting (Set (Credential 'Staking))
+    , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking))
     )

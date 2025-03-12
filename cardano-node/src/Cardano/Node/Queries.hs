@@ -42,9 +42,8 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
-import qualified Cardano.Ledger.SafeHash as Ledger
+import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
 import qualified Cardano.Ledger.UMap as UM
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -80,6 +79,7 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP
 import           Data.Word (Word64)
+import           Lens.Micro ((^.))
 
 --
 -- * TxId -> ByteString projection
@@ -240,7 +240,7 @@ instance LedgerQueries Byron.ByronBlock where
   ledgerDRepCount    _ = 0
   ledgerDRepMapSize  _ = 0
 
-instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
+instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
       (\(Shelley.UTxO xs)-> Map.size xs)
     . Shelley.utxosUtxo
@@ -252,7 +252,7 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
       UM.size
     . UM.SPoolUView
     . Shelley.dsUnified
-    . Shelley.certDState
+    . (^. Shelley.certDStateL)
     . Shelley.lsCertState
     . Shelley.esLState
     . Shelley.nesEs
@@ -260,7 +260,7 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerDRepCount =
       Map.size
     . Shelley.vsDReps
-    . Shelley.certVState
+    . (^. Shelley.certVStateL)
     . Shelley.lsCertState
     . Shelley.esLState
     . Shelley.nesEs
@@ -269,7 +269,7 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
       UM.size
     . UM.DRepUView
     . Shelley.dsUnified
-    . Shelley.certDState
+    . (^. Shelley.certDStateL)
     . Shelley.lsCertState
     . Shelley.esLState
     . Shelley.nesEs

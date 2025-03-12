@@ -27,7 +27,6 @@ import           Cardano.Api.Shelley hiding (FileError)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import           Cardano.Node.Protocol.Types
@@ -36,6 +35,7 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types
+import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -91,7 +91,7 @@ genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
 readGenesis :: GenesisFile
             -> Maybe GenesisHash
             -> ExceptT GenesisReadError IO
-                       (ShelleyGenesis StandardCrypto, GenesisHash)
+                       (ShelleyGenesis, GenesisHash)
 readGenesis = readGenesisAny
 
 readGenesisAny :: FromJSON genesis
@@ -116,7 +116,7 @@ checkExpectedGenesisHash genesisBytes mExpected = do
       throwError (GenesisHashMismatch actual expected)
   pure actual
 
-validateGenesis :: ShelleyGenesis StandardCrypto
+validateGenesis :: ShelleyGenesis
                 -> ExceptT GenesisValidationError IO ()
 validateGenesis genesis =
     firstExceptT GenesisValidationErrors . hoistEither $

@@ -93,6 +93,7 @@ import           System.Metrics.Label (Label)
 import qualified System.Remote.Monitoring.Wai as EKG
 
 import           Paths_cardano_node (version)
+import Ouroboros.Consensus.Byron.ByronHFC (byronLedgerConfig)
 
 --------------------------------
 -- Layer
