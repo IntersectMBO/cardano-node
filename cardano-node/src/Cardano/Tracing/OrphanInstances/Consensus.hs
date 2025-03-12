@@ -83,7 +83,6 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
-import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
 import           Data.Function (on)
 import           Data.Text (Text, pack)

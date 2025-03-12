@@ -29,11 +29,11 @@ import           Cardano.Node.Startup
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
+import           Ouroboros.Consensus.Byron.ByronHFC (byronLedgerConfig)
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
                    fromByronSlotLength, genesisSlotLength)
 import           Ouroboros.Consensus.Cardano.Block (HardForkLedgerConfig (..))
-import           Ouroboros.Consensus.Cardano.CanHardFork (ByronPartialLedgerConfig (..),
-                   ShelleyPartialLedgerConfig (..))
+import           Ouroboros.Consensus.Cardano.CanHardFork (ShelleyPartialLedgerConfig (..))
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLedgerConfig (..))

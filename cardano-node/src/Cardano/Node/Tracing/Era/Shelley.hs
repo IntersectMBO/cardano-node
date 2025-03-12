@@ -30,22 +30,20 @@ import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure, AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import qualified Cardano.Ledger.AuxiliaryData as Ledger
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe, Mismatch (..))
+import           Cardano.Ledger.BaseTypes (Mismatch (..), activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Crypto as Ledger
-import qualified Cardano.Ledger.SafeHash as SafeHash
+import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Logging
 import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
                    renderScriptIntegrityHash)
+import qualified Cardano.Protocol.Crypto as Ledger
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
@@ -95,13 +93,13 @@ instance
         ( "txid" .= txId tx )
       : [ "tx"   .= condense tx | dtal == DDetailed ]
 
-instance LogFormatting (Set (Credential 'Staking StandardCrypto)) where
+instance LogFormatting (Set (Credential 'Staking)) where
   forMachine _dtal creds =
     mconcat [ "kind" .= String "StakeCreds"
              , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
 
-instance LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking StandardCrypto)) where
+instance LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking)) where
   forMachine _dtal keyHashes =
     mconcat [ "kind" .= String "StakingKeyHashes"
              , "stakeKeyHashes" .= toJSON keyHashes
@@ -225,17 +223,16 @@ instance
       , "actual" .= coreNodeVRFHash
       ]
 
-
 instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (ShelleyUTXO era))
   , LogFormatting (PredicateFailure (ShelleyUTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "BBODY" era))
-  ) => LogFormatting (ShelleyLedgerError era) where
-  forMachine dtal (BBodyError (BlockTransitionError fs)) =
-    mconcat [ "kind" .= String "BBodyError"
-             , "failures" .= fmap (forMachine dtal) fs
-             ]
+  ) => LogFormatting (BlockTransitionError era) where
+  forMachine dtal (BlockTransitionError fs) =
+    mconcat [ "kind" .= String "BlockTransitionError"
+            , "failures" .= fmap (forMachine dtal) fs
+            ]
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -280,7 +277,7 @@ instance LogFormatting ChainPredicateFailure where
           , "protocol version."
           ]
 
-instance LogFormatting (PrtlSeqFailure crypto) where
+instance LogFormatting PrtlSeqFailure where
   forMachine _dtal (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
     mconcat [ "kind" .= String "WrongSlotInterval"
              , "lastSlot" .= lastSlot
@@ -304,14 +301,14 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGERS" era))
   ) => LogFormatting (ShelleyBbodyPredFailure era) where
-  forMachine _dtal (WrongBlockBodySizeBBODY (Mismatch { mismatchSupplied = actualBodySz
-                                                      , mismatchExpected = claimedBodySz })) =
+  forMachine _dtal (WrongBlockBodySizeBBODY Mismatch { mismatchSupplied = actualBodySz
+                                                      , mismatchExpected = claimedBodySz }) =
     mconcat [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
              , "claimedBlockBodySize" .= claimedBodySz
              ]
-  forMachine _dtal (InvalidBodyHashBBODY (Mismatch { mismatchSupplied = actualHash
-                                                   , mismatchExpected = claimedHash })) =
+  forMachine _dtal (InvalidBodyHashBBODY Mismatch { mismatchSupplied = actualHash
+                                                   , mismatchExpected = claimedHash }) =
     mconcat [ "kind" .= String "InvalidBodyHashBBODY"
              , "actualBodyHash" .= textShow actualHash
              , "claimedBodyHash" .= textShow claimedHash
@@ -330,7 +327,6 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , ToJSON (Ledger.AuxiliaryDataHash (Ledger.EraCrypto era))
   , LogFormatting (PredicateFailure (ShelleyUTXO era))
   , LogFormatting (PredicateFailure (ShelleyUTXOW era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "DELEGS" era))
@@ -344,7 +340,6 @@ instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Consensus.ShelleyBasedEra ledgerera
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , LogFormatting (Ledger.EraRuleFailure "PPUP" ledgerera)
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   ) => LogFormatting (AlonzoUtxowPredFailure ledgerera) where
@@ -356,9 +351,9 @@ instance
              ]
   forMachine _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
-             , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+             , "required" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                  (Set.toList required)
-             , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+             , "received" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                  (Set.toList received)
              ]
   forMachine _ (PPViewHashesDontMatch Mismatch {mismatchSupplied, mismatchExpected}) =
@@ -392,8 +387,6 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , Ledger.EraCrypto era ~ StandardCrypto
-  , ToJSON (Ledger.AuxiliaryDataHash (Ledger.EraCrypto era))
   , LogFormatting (PredicateFailure (ShelleyUTXO era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
   ) => LogFormatting (ShelleyUtxowPredFailure era) where
@@ -426,8 +419,8 @@ instance
     mconcat [ "kind" .= String "MissingTxMetadata"
              , "txBodyMetadataHash" .= txBodyMetadataHash
              ]
-  forMachine _dtal (ConflictingMetadataHash (Mismatch { mismatchSupplied = txBodyMetadataHash
-                                                      , mismatchExpected = fullMetadataHash })) =
+  forMachine _dtal (ConflictingMetadataHash Mismatch { mismatchSupplied = txBodyMetadataHash
+                                                      , mismatchExpected = fullMetadataHash }) =
     mconcat [ "kind" .= String "ConflictingMetadataHash"
              , "txBodyMetadataHash" .= txBodyMetadataHash
              , "fullMetadataHash" .= fullMetadataHash
@@ -453,8 +446,8 @@ instance
     mconcat [ "kind" .= String "ExpiredUTxO"
              , "ttl"  .= mismatchSupplied
              , "slot" .= mismatchExpected ]
-  forMachine _dtal (MaxTxSizeUTxO (Mismatch { mismatchSupplied = txsize
-                                            , mismatchExpected = maxtxsize })) =
+  forMachine _dtal (MaxTxSizeUTxO Mismatch { mismatchSupplied = txsize
+                                            , mismatchExpected = maxtxsize }) =
     mconcat [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
@@ -477,8 +470,8 @@ instance
   forMachine _dtal InputSetEmptyUTxO =
     mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
   -- TODO are these arguments in the right order?
-  forMachine _dtal (FeeTooSmallUTxO (Mismatch { mismatchSupplied = minfee
-                                              , mismatchExpected = txfee })) =
+  forMachine _dtal (FeeTooSmallUTxO Mismatch { mismatchSupplied = minfee
+                                              , mismatchExpected = txfee }) =
     mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= txfee ]
@@ -566,7 +559,7 @@ instance
              , "error" .= String "Too many asset ids in the tx output"
              ]
 
-renderBadInputsUTxOErr ::  Set (TxIn era) -> Value
+renderBadInputsUTxOErr ::  Set TxIn -> Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
@@ -575,12 +568,10 @@ renderValueNotConservedErr :: Show val => val -> val -> Value
 renderValueNotConservedErr consumed produced = String $
     "This transaction consumed " <> textShow consumed <> " but produced " <> textShow produced
 
-instance
-  ( Ledger.Crypto (Ledger.EraCrypto era)
-  ) => LogFormatting (ShelleyPpupPredFailure era) where
+instance LogFormatting (ShelleyPpupPredFailure era) where
   -- TODO are these arguments in the right order?
-  forMachine _dtal (NonGenesisUpdatePPUP (Mismatch { mismatchSupplied = proposalKeys
-                                                   , mismatchExpected = genesisKeys })) =
+  forMachine _dtal (NonGenesisUpdatePPUP Mismatch { mismatchSupplied = proposalKeys
+                                                  , mismatchExpected = genesisKeys }) =
     mconcat [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
   forMachine _dtal (PPUpdateWrongEpoch currEpoch intendedEpoch votingPeriod) =
@@ -613,14 +604,11 @@ instance
 instance
   ( LogFormatting (PredicateFailure (Ledger.EraRule "POOL" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "DELEG" era))
-  , Crypto.HashAlgorithm (Ledger.HASH (Ledger.EraCrypto era))
   ) => LogFormatting (ShelleyDelplPredFailure era) where
   forMachine dtal (PoolFailure f)  = forMachine dtal f
   forMachine dtal (DelegFailure f) = forMachine dtal f
 
-instance
-  ( Crypto.HashAlgorithm (Ledger.HASH (Ledger.EraCrypto era))
-  ) => LogFormatting (ShelleyDelegPredFailure era) where
+instance LogFormatting (ShelleyDelegPredFailure era) where
   forMachine _dtal (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
     mconcat [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
@@ -703,17 +691,17 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
   forMachine _dtal (StakePoolRetirementWrongEpochPOOL
                    -- inspired by Ledger's Test.Cardano.Ledger.Generic.PrettyCore
                    -- but is it correct here?
-                    (Mismatch { mismatchExpected = currentEpoch })
-                    (Mismatch { mismatchSupplied = intendedRetireEpoch
-                              , mismatchExpected = maxRetireEpoch})) =
+                    Mismatch { mismatchExpected = currentEpoch }
+                    Mismatch { mismatchSupplied = intendedRetireEpoch
+                              , mismatchExpected = maxRetireEpoch}) =
     mconcat [ "kind" .= String "StakePoolRetirementWrongEpochPOOL"
              , "currentEpoch" .= String (textShow currentEpoch)
              , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
              , "maxEpochForRetirement" .= String (textShow maxRetireEpoch)
              ]
   -- TODO are these supplied in the right order?
-  forMachine _dtal (StakePoolCostTooLowPOOL (Mismatch { mismatchSupplied = certCost
-                                                      , mismatchExpected = protCost })) =
+  forMachine _dtal (StakePoolCostTooLowPOOL Mismatch { mismatchSupplied = certCost
+                                                      , mismatchExpected = protCost }) =
     mconcat [ "kind" .= String "StakePoolCostTooLowPOOL"
              , "certificateCost" .= String (textShow certCost)
              , "protocolParCost" .= String (textShow protCost)
@@ -726,8 +714,8 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "error" .= String "The stake pool metadata hash is too large"
              ]
 
-  forMachine _dtal (WrongNetworkPOOL (Mismatch { mismatchSupplied = networkId
-                                               , mismatchExpected = listedNetworkId }) poolId) =
+  forMachine _dtal (WrongNetworkPOOL Mismatch { mismatchSupplied = networkId
+                                               , mismatchExpected = listedNetworkId } poolId) =
     mconcat [ "kind" .= String "WrongNetworkPOOL"
              , "networkId" .= String (textShow networkId)
              , "listedNetworkId" .= String (textShow listedNetworkId)
@@ -842,7 +830,7 @@ instance
   forMachine dtal (OcertFailure f) = forMachine dtal f
 
 
-instance LogFormatting (OcertPredicateFailure crypto) where
+instance LogFormatting OcertPredicateFailure where
   forMachine _dtal (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
     mconcat [ "kind" .= String "KESBeforeStartOCERT"
             , "opCertKESStartPeriod" .= String (textShow oCertstart)
@@ -1060,7 +1048,6 @@ instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Ledger.Era ledgerera
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , ShelleyBasedEra ledgerera
   , LogFormatting (Ledger.EraRuleFailure "PPUP" ledgerera)
   , LogFormatting (ShelleyUtxowPredFailure ledgerera)
@@ -1098,8 +1085,6 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
-  , LogFormatting (Set (Credential 'Staking (Ledger.EraCrypto era)))
-  , LogFormatting (NonEmpty.NonEmpty (KeyHash 'Staking (Ledger.EraCrypto era)))
   ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
   forMachine _ (Conway.ConwayTxRefScriptsSizeTooBig  Mismatch {mismatchSupplied, mismatchExpected}) =
@@ -1348,7 +1333,6 @@ instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Consensus.ShelleyBasedEra ledgerera
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" ledgerera))
   ) => LogFormatting (Conway.ConwayUtxoPredFailure ledgerera) where
   forMachine dtal = \case
@@ -1463,7 +1447,6 @@ instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Consensus.ShelleyBasedEra ledgerera
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   ) => LogFormatting (Conway.ConwayUtxowPredFailure ledgerera) where
    forMachine dtal = \case
@@ -1510,9 +1493,9 @@ instance
               ]
     Conway.MissingRequiredDatums required received ->
       mconcat [ "kind" .= String "MissingRequiredDatums"
-              , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+              , "required" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                       (Set.toList required)
-              , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+              , "received" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                       (Set.toList received)
               ]
     Conway.NotAllowedSupplementalDatums disallowed acceptable ->
@@ -1552,7 +1535,7 @@ instance
 -- Helper functions
 --------------------------------------------------------------------------------
 
-showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
+showLastAppBlockNo :: WithOrigin LastAppliedBlock -> Text
 showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
                      Nothing  -> "Genesis Block"
                      Just blk -> textShow . unBlockNo $ labBlockNo blk

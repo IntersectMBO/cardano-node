@@ -203,6 +203,12 @@ instance LogFormatting Mux.Trace where
       , "miniProtocolNum" .= String (showT mid)
       , "miniProtocolDir" .= String (showT dir)
       ]
+    forMachine _dtal (Mux.TraceStartOnDemandAny mid dir) = mconcat
+      [ "kind" .= String "Mux.TraceStartOnDemandAny"
+      , "msg"  .= String "Preparing to start"
+      , "miniProtocolNum" .= String (showT mid)
+      , "miniProtocolDir" .= String (showT dir)
+      ]
     forMachine _dtal (Mux.TraceStartedOnDemand mid dir) = mconcat
       [ "kind" .= String "Mux.TraceStartedOnDemand"
       , "msg"  .= String "Started on demand"
@@ -385,6 +391,8 @@ instance MetaTrace Mux.Trace where
       Namespace [] ["StartEagerly"]
     namespaceFor Mux.TraceStartOnDemand {}         =
       Namespace [] ["StartOnDemand"]
+    namespaceFor Mux.TraceStartOnDemandAny {}      =
+      Namespace [] ["StartOnDemandAny"]
     namespaceFor Mux.TraceStartedOnDemand {}       =
       Namespace [] ["StartedOnDemand"]
     namespaceFor Mux.TraceStartOnDemandAny {}      =
