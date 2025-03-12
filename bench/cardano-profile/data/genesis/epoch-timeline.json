@@ -1,7 +1,15 @@
 {
+  "0": {
+    "epoch": 0,
+    "description": "Byron phase"
+  },
+  "176": {
+    "epoch": 176,
+    "description": "Protocol version 1.0 / Ouroboros BFT"
+  },
   "208": {
     "epoch": 208,
-    "description": "Shelley era",
+    "description": "Shelley era (protocol version 2.0)",
     "shelley": {
       "protocolVersion": {
         "minor": 0,
@@ -198,7 +206,7 @@
   },
   "236": {
     "epoch": 236,
-    "description": "Allegra era",
+    "description": "Goguen Phase / Allegra era (protocol version 3.0)",
     "shelley": {
       "protocolVersion": {
         "major": 3
@@ -270,7 +278,7 @@
   },
   "251": {
     "epoch": 251,
-    "description": "Mary era",
+    "description": "Mary era (protocol version 4.0)",
     "shelley": {
       "decentralisationParam": 0.12,
       "protocolVersion": {
@@ -320,7 +328,7 @@
   },
   "290": {
     "epoch": 290,
-    "description": "Alonzo era",
+    "description": "Alonzo era (protocol version 5.0)",
     "shelley": {
       "protocolVersion": {
         "major": 5
@@ -524,7 +532,7 @@
   },
   "298": {
     "epoch": 298,
-    "description": "???",
+    "description": "Intra-era hardfork (protocol version 6.0)",
     "shelley": {
       "protocolVersion": {
         "major": 6
@@ -554,7 +562,7 @@
   },
   "319": {
     "epoch": 319,
-    "description": "Block size and per-tx exunit bump",
+    "description": "Block size and per-tx exUnitsMem bump",
     "shelley": {
       "maxBlockBodySize": 81920
     },
@@ -566,7 +574,7 @@
   },
   "321": {
     "epoch": 321,
-    "description": "Per-block execution unit ceiling bump",
+    "description": "Bump per-block exUnitsMem",
     "alonzo": {
       "maxBlockExUnits": {
         "exUnitsMem": 56000000
@@ -575,7 +583,7 @@
   },
   "328": {
     "epoch": 328,
-    "description": "Another per-block execution unit ceiling bump",
+    "description": "Another per-block exUnitsMem bump",
     "alonzo": {
       "maxBlockExUnits": {
         "exUnitsMem": 62000000
@@ -591,7 +599,7 @@
   },
   "365": {
     "epoch": 365,
-    "description": "Babbage era",
+    "description": "Babbage era / Vasil HF (protocol version 7.0)",
     "shelley": {
       "protocolVersion": {
         "major": 7
@@ -603,7 +611,7 @@
   },
   "366": {
     "epoch": 366,
-    "description": "Plutus V2 Cost Model",
+    "description": "Vasil HF - Plutus Cost Models",
     "alonzo": {
       "costModels": {
         "PlutusV1": {
@@ -890,7 +898,7 @@
   },
   "394": {
     "epoch": 394,
-    "description": "Plutus Cost Models",
+    "description": "Valentine HF (protocol version 8.0)",
     "shelley": {
       "protocolVersion": {
         "major": 8
@@ -946,7 +954,7 @@
   },
   "507": {
     "epoch": 507,
-    "description": "Conway era - new cost models, protocol version 9",
+    "description": "Conway era / Chang HF (protocol version 9.0)",
     "alonzo": {
       "costModels": {
         "PlutusV1": {
