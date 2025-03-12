@@ -20,6 +20,7 @@ with builtins; let
       inherit
         (cfg)
         ekgRequestFreq
+        ekgRequestFull
         loRequestNum
         logging
         metricsComp
@@ -202,6 +203,21 @@ in {
         default = 12788;
         description = ''
           The port to listen on if EKG is enabled.
+        '';
+      };
+
+      ekgRequestFull = mkOption {
+        type = nullOr bool;
+        default = null;
+        description = ''
+          When recieving forwarded metrics, cardano-tracer can request a full
+          set of EKG metrics, or a delta from the previous request.
+
+          If true, a full set of metrics will be sent on each request.
+          Otherwise, on false, only a metrics delta to the previous request
+          will be sent.
+
+          If null cardano-tracer will set a default: false.
         '';
       };
 
