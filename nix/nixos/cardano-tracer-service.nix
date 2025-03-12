@@ -23,7 +23,6 @@ with builtins; let
         ekgRequestFull
         loRequestNum
         logging
-        metricsComp
         metricsHelp
         networkMagic
         resourceFreq
@@ -368,36 +367,11 @@ in {
 
       minLogSeverity = mkOption {
         type = nullOr (enum ["Debug" "Info" "Notice" "Warning" "Error" "Critical" "Alert" "Emergency"]);
-        default = null;
+        default = "Info";
         description = ''
-          Setting this will cause cardano-tracer to drop log messages less
-          severe than the level declared.
+          Setting this will cause cardano-tracer to drop its own log messages
+          that are less severe than the level declared.
         '';
-      };
-
-      metricsComp = mkOption {
-        type = nullOr (either str (attrsOf str));
-        default = null;
-        description = ''
-          Passing metric compatability mapping to cardano-tracer can be done as
-          a an attribute set of strings from metric name to mapped metric names
-          where cardano-tracer's internal metric names have to be used as
-          attribute names.  The metrics are then available with both the
-          original name and mapped name.  Only one mapping per message is
-          supported.
-
-          If such a set is already available as JSON in a file, this option can
-          be declared as a string of the path to such file.
-
-          Any metrics prefix name declared with `TraceOptionMetricsPrefix` in
-          cardano-node config should not be included in the attribute name.
-          Similarly metric type suffixes, such as `.int` or `.real` should also
-          not be included.
-        '';
-        example = {
-          "Mempool.TxsInMempool" = "Mempool.TxsInMempool.Mapped";
-          "ChainDB.SlotNum" = "ChainDB.SlotNum.Mapped";
-        };
       };
 
       metricsHelp = mkOption {
@@ -520,15 +494,20 @@ in {
 
       prometheusPort = mkOption {
         type = port;
-        default = 12798;
+        default = 12808;
         description = ''
           The port to listen on if prometheus is enabled.
+
+          Defaults to the legacy prometheus listening port, 12798, plus 10.
+
+          This avoids a conflict with the cardano-node default metrics port
+          binding when PrometheusSimple backend is in use.
         '';
       };
 
       resourceFreq = mkOption {
         type = nullOr ints.positive;
-        default = 1000;
+        default = null;
         description = ''
           The period for tracing cardano-tracer resource usage in milliseconds.
           The frequency will be 1/resourceFreq times per millisecond.  If null
