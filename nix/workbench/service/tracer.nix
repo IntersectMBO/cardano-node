@@ -9,9 +9,10 @@
 with pkgs.lib;
 
 let
-  # For testing legacy to new cardano-tracer-service transition
-  # useLegacyTracerService = true;
-  useLegacyTracerService = false;
+  # For testing the transition from cardano-tracer-service-workbench to
+  # cardano-tracer-service.
+  # useWorkbenchTracerService = true;
+  useWorkbenchTracerService = false;
 
   ## Given an env config, evaluate it and produce the service.
   ##
@@ -37,14 +38,14 @@ let
           };
         } // optionalAttrs (profile.tracer.withresources or false) {
           resourceFreq = 1000;
-        } // optionalAttrs useLegacyTracerService {
+        } // optionalAttrs useWorkbenchTracerService {
           dsmPassthrough = {
             # rtsOpts = ["-xc"];
           } // optionalAttrs (profile.tracer.withresources or false) {
             rtsOpts = [ "-scardano-tracer.gcstats" ];
           };
           logRoot    = ".";
-        } // optionalAttrs (!useLegacyTracerService) {
+        } // optionalAttrs (!useWorkbenchTracerService) {
           logging = [
             {
               logRoot    = ".";
@@ -76,9 +77,9 @@ let
           systemdCompat
         ]
           ++ [ backend.service-modules.tracer or {} ]
-          ++ optionals useLegacyTracerService
-            [ (import ../../nixos/cardano-tracer-service-legacy.nix pkgs) ]
-          ++ optionals (!useLegacyTracerService)
+          ++ optionals useWorkbenchTracerService
+            [ (import ../../nixos/cardano-tracer-service-workbench.nix pkgs) ]
+          ++ optionals (!useWorkbenchTracerService)
             [ (import ../../nixos/cardano-tracer-service.nix) ]
           ;
 
@@ -94,7 +95,7 @@ let
     (nodeSpecs:
     let
       nixosServiceConfig    = tracerConfigServiceConfig;
-        execConfig          = if useLegacyTracerService
+        execConfig          = if useWorkbenchTracerService
                               then nixosServiceConfig.configJSONfn nixosServiceConfig
                               else nixosServiceConfig.tracerConfig;
     in {
