@@ -37,7 +37,6 @@ import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profi
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
-import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 -- Dynamic profiles.
 import           Cardano.Benchmarking.Profile.Playground                  (profilesNoEraPlayground)
 
@@ -69,7 +68,6 @@ performanceAndTracingProfiles =
   -- Extra modules
   ++ profilesNoEraScalingLocal
   ++ profilesNoEraScalingCloud
-  ++ profilesNoEraVoting
 
 -- Have fun!
 playgroundProfiles :: [Types.Profile]
