@@ -1754,37 +1754,37 @@ instance ( tx ~ GenTx blk
           ])
 
 
-  asMetrics (TraceStartLeadershipCheck slot) =
-    [IntM "Forge.about-to-lead" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceSlotIsImmutable slot _tipPoint _tipBlkNo) =
-    [IntM "Forge.slot-is-immutable" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceBlockFromFuture slot _slotNo) =
-    [IntM "Forge.block-from-future" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceNoLedgerState slot _) =
-    [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceNoLedgerView slot _) =
-    [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
+  asMetrics (TraceStartLeadershipCheck _slot) =
+    [CounterM "Forge.about-to-lead" Nothing]
+  asMetrics (TraceSlotIsImmutable _slot _tipPoint _tipBlkNo) =
+    [CounterM "Forge.slot-is-immutable" Nothing]
+  asMetrics (TraceBlockFromFuture _slot _slotNo) =
+    [CounterM "Forge.block-from-future" Nothing]
+  asMetrics (TraceNoLedgerState _slot _) =
+    [CounterM "Forge.could-not-forge"Nothing]
+  asMetrics (TraceNoLedgerView _slot _) =
+    [CounterM "Forge.could-not-forge" Nothing]
   asMetrics (TraceLedgerView _) = []
   asMetrics TraceBlockContext {} = []
   asMetrics (TraceLedgerState _ _) = []
-  asMetrics (TraceNodeCannotForge slot _reason) =
-    [IntM "Forge.could-not-forge" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceNodeNotLeader slot) =
-    [IntM "Forge.node-not-leader" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceNodeIsLeader slot) =
-    [IntM "Forge.node-is-leader" (fromIntegral $ unSlotNo slot)]
+  asMetrics (TraceNodeCannotForge _slot _reason) =
+    [CounterM "Forge.could-not-forge" Nothing]
+  asMetrics (TraceNodeNotLeader _slot) =
+    [CounterM "Forge.node-not-leader" Nothing]
+  asMetrics (TraceNodeIsLeader _slot) =
+    [CounterM "Forge.node-is-leader" Nothing]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
-  asMetrics (TraceForgedBlock slot _ _ _) =
-    [IntM "Forge.forged" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceDidntAdoptBlock slot _) =
-    [IntM "Forge.didnt-adopt" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceForgedInvalidBlock slot _ _) =
-    [IntM "Forge.forged-invalid" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceAdoptedBlock slot _ _) =
-    [IntM "Forge.adopted" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceAdoptionThreadDied slot _) =
-    [IntM "Forge.adoption-thread-died" (fromIntegral $ unSlotNo slot)]
+  asMetrics (TraceForgedBlock _slot _ _ _) =
+    [CounterM "Forge.forged" Nothing]
+  asMetrics (TraceDidntAdoptBlock _slot _) =
+    [CounterM "Forge.didnt-adopt" Nothing]
+  asMetrics (TraceForgedInvalidBlock _slot _ _) =
+    [CounterM "Forge.forged-invalid" Nothing]
+  asMetrics (TraceAdoptedBlock _slot _ _) =
+    [CounterM "Forge.adopted" Nothing]
+  asMetrics (TraceAdoptionThreadDied _slot _) =
+    [CounterM "Forge.adoption-thread-died" Nothing]
 
 instance MetaTrace (TraceForgeEvent blk) where
   namespaceFor TraceStartLeadershipCheck {} =
