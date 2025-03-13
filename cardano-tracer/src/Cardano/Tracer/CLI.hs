@@ -38,6 +38,6 @@ parseTracerParams = TracerParams
         ( option auto
             (    long "min-log-severity"
               <> metavar "SEVERITY"
-              <> help "Drop messages less severe than this.  One of: Debug. Info. Notice. Warning. Error. Critical. Alert. Emergency."
+              <> help "Drop messages less severe than this. <Debug|Info|Notice|Warning|Error|Critical|Alert|Emergency> (default: Info)"
             )
         )
