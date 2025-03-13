@@ -35,7 +35,6 @@ import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profi
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
-import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 
 --------------------------------------------------------------------------------
 
@@ -498,7 +497,6 @@ profiles = Map.fromList $ map
     -- Extra modules
     ++ profilesNoEraScalingLocal
     ++ profilesNoEraScalingCloud
-    ++ profilesNoEraVoting
   )
 
 -- Check all builtin profiles (no overlay) with "data/all-profiles.json".
