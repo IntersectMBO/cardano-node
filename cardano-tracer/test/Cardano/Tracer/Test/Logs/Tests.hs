@@ -82,7 +82,7 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
                          , rpKeepFilesNum  = 10
                          }
     , verbosity      = Just Minimum
-    , metricsComp    = Nothing
+    , metricsNoSuffix = Nothing
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
@@ -114,7 +114,7 @@ propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Just Minimum
-    , metricsComp    = Nothing
+    , metricsNoSuffix = Nothing
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
@@ -146,7 +146,7 @@ propMultiResp ts@TestSetup{..} format rootDir localSock = do
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Just Minimum
-    , metricsComp    = Nothing
+    , metricsNoSuffix = Nothing
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing

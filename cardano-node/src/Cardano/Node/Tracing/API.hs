@@ -100,7 +100,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
     ekgTrace <- ekgTracer trConfig ekgStore
 
     forM_ prometheusSimple $
-      uncurry (runPrometheusSimple ekgStore)
+      runPrometheusSimple ekgStore
 
     stdoutTrace <- standardTracer
 
@@ -133,12 +133,12 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
    where
     -- This backend can only be used globally, i.e. will always apply to the namespace root.
     -- Multiple definitions, especially with differing ports, are considered a *misconfiguration*.
-    prometheusSimple :: Maybe (Maybe HostName, PortNumber)
+    prometheusSimple :: Maybe (Bool, Maybe HostName, PortNumber)
     prometheusSimple =
-      listToMaybe [ (mHost, portNo)
-                    | options                       <- Map.elems (tcOptions trConfig)
-                    , ConfBackend backends'         <- options
-                    , PrometheusSimple mHost portNo <- backends'
+      listToMaybe [ (noSuff, mHost, portNo)
+                    | options                              <- Map.elems (tcOptions trConfig)
+                    , ConfBackend backends'                <- options
+                    , PrometheusSimple noSuff mHost portNo <- backends'
                     ]
 
     forwarderBackendEnabled =
