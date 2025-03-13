@@ -6,7 +6,7 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
   ( runPrometheusServer
   ) where
 
-import           Cardano.Logging.Prometheus.Exposition (MetricName, renderExpositionFromSampleWith)
+import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSampleWith)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
@@ -17,7 +17,6 @@ import           Prelude hiding (head)
 import qualified Data.ByteString as ByteString
 import           Data.ByteString.Builder (stringUtf8)
 import           Data.Functor ((<&>))
-import           Data.Map.Strict (Map)
 import           Data.Text (Text)
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Builder (Builder)
@@ -72,20 +71,22 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
     { ttPrometheusEndpoint = endpoint
     }
   runSettings (setEndpoint endpoint defaultSettings) do
-    renderPrometheus computeRoutes_autoUpdate metricsComp teMetricsHelp where
+    renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp
+  where
+    TracerEnv
+      { teTracer
+      , teConfig = TracerConfig { metricsNoSuffix }
+      , teMetricsHelp
+      } = tracerEnv
 
-  TracerEnv
-    { teTracer
-    , teConfig = TracerConfig { metricsComp }
-    , teMetricsHelp
-    } = tracerEnv
+    noSuffix = or @Maybe metricsNoSuffix
 
 renderPrometheus
   :: IO RouteDictionary
-  -> Maybe (Map Text Text)
+  -> Bool
   -> [(Text, Builder)]
   -> Application
-renderPrometheus computeRoutes_autoUpdate metricsComp helpTextDict request send = do
+renderPrometheus computeRoutes_autoUpdate noSuffix helpTextDict request send = do
   routeDictionary :: RouteDictionary <-
     computeRoutes_autoUpdate
 
@@ -105,7 +106,7 @@ renderPrometheus computeRoutes_autoUpdate metricsComp helpTextDict request send 
 
     route:_
       | Just (store :: EKG.Store, _) <- lookup route (getRouteDictionary routeDictionary)
-     -> do metrics <- getMetricsFromNode metricsComp helpTextDict store
+     -> do metrics <- getMetricsFromNode noSuffix helpTextDict store
            send $ responseBuilder status200
             (if wantsOpenMetrics then contentHdrOpenMetrics else contentHdrUtf8Text)
             (TL.encodeUtf8Builder metrics)
@@ -116,9 +117,9 @@ renderPrometheus computeRoutes_autoUpdate metricsComp helpTextDict request send 
           <> stringUtf8 (show route)
 
 getMetricsFromNode
-  :: Maybe (Map MetricName MetricName)
+  :: Bool
   -> [(Text, Builder)]
   -> EKG.Store
   -> IO TL.Text
-getMetricsFromNode metricsComp helpTextDict ekgStore =
-  sampleAll ekgStore <&> renderExpositionFromSampleWith metricsComp helpTextDict
+getMetricsFromNode noSuffix helpTextDict ekgStore =
+  sampleAll ekgStore <&> renderExpositionFromSampleWith helpTextDict noSuffix

@@ -5,10 +5,10 @@ module Cardano.Logging.Prometheus.Exposition
   ) where
 
 import           Data.Char
+import           Data.Foldable (asum)
 import qualified Data.HashMap.Strict as HM
 import           Data.List (find)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
+import           Data.Maybe
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -21,16 +21,16 @@ import           System.Metrics (Sample, Value (..))
 type MetricName = Text
 
 
-renderExpositionFromSample :: Sample -> TL.Text
-renderExpositionFromSample = renderExpositionFromSampleWith Nothing []
+renderExpositionFromSample :: Bool -> Sample -> TL.Text
+renderExpositionFromSample = renderExpositionFromSampleWith []
 
 renderExpositionFromSampleWith
-  :: Maybe (Map MetricName MetricName)
-  -> [(MetricName, Builder)]
+  :: [(MetricName, Builder)]
+  -> Bool
   -> Sample
   -> TL.Text
-renderExpositionFromSampleWith renameMap helpTextDict =
-  TB.toLazyText . (`mappend` buildEOF) . HM.foldlWithKey' buildMetric mempty
+renderExpositionFromSampleWith helpTextDict noSuffixes =
+  TB.toLazyText . (<> buildEOF) . HM.foldlWithKey' buildMetric mempty
   where
     buildHelpText :: MetricName -> (Builder -> Builder)
     buildHelpText name = maybe
@@ -38,12 +38,12 @@ renderExpositionFromSampleWith renameMap helpTextDict =
       (buildHelp . snd)
       (find ((`T.isInfixOf` name) . fst) helpTextDict)
 
-    -- implements the metricsComp config option
-    replaceName :: MetricName -> MetricName
-    replaceName =
-      case renameMap of
-        Nothing   -> Prelude.id
-        Just mmap -> \name -> M.findWithDefault name name mmap
+    -- implements the metricsNoSuffix config option
+    -- must strip all suffixes as per: trace-dispatcher/src/Cardano/Logging/Tracer/EKG.hs > ekgTracer > setIt
+    stripSuffix :: MetricName -> MetricName
+    stripSuffix
+      | noSuffixes = \name -> fromMaybe name $ asum $ map (`T.stripSuffix` name) ["_int", "_counter", "_real"]
+      | otherwise  = id
 
     prepareName :: MetricName -> MetricName
     prepareName =
@@ -55,37 +55,39 @@ renderExpositionFromSampleWith renameMap helpTextDict =
     -- the help annotation line
     buildHelp :: Builder -> Builder -> Builder
     buildHelp h n =
-      TB.fromText "# HELP " `mappend` (n `mappend` (space `mappend` (h `mappend` newline)))
+      TB.fromText "# HELP " <> n <> space <> h <> newline
 
     buildMetric :: TB.Builder -> MetricName -> Value -> TB.Builder
     buildMetric acc mName mValue =
-      acc `mappend` case mValue of
-        Counter c -> annotate buildCounter `mappend` buildVal space  (TB.decimal c)
-        Gauge g   -> annotate buildGauge   `mappend` buildVal space  (TB.decimal g)
+      acc <> case mValue of
+        Counter c -> annotate buildCounter <> buildVal space  (TB.decimal c)
+        Gauge g   -> annotate buildGauge   <> buildVal space  (TB.decimal g)
         Label l
           | Just ('{', _) <- T.uncons l
-                  -> annotate buildInfo    `mappend` buildVal mempty (TB.fromText l)
+                  -> annotate buildInfo    <> buildVal mempty (TB.fromText l)
           | otherwise
-                  -> helpAnnotation        `mappend` buildVal space  (TB.fromText l)
-        _         ->                                 mempty
+                  -> helpAnnotation        <> buildVal space  (TB.fromText l)
+        _         -> mempty
       where
-        helpAnnotation = buildHelpText mName buildName
+        helpAnnotation =
+          buildHelpText mName buildName
 
         -- annotates a metric in the order TYPE, UNIT, HELP
         -- TODO: UNIT annotation
         annotate annType =
-          buildTypeAnn annType `mappend` helpAnnotation
+          buildTypeAnn annType <> helpAnnotation
 
-        -- the name for exposition
-        buildName = TB.fromText $ prepareName $ replaceName mName
+        -- the metric name for exposition
+        buildName =
+          TB.fromText $ prepareName $ stripSuffix mName
 
         -- the type annotation line
         buildTypeAnn t =
-          TB.fromText "# TYPE " `mappend` (buildName `mappend` (t `mappend` newline))
+          TB.fromText "# TYPE " <> buildName <> t <> newline
 
         -- the actual metric line, optional spacing after name, because of labels: 'metric_name{label_value="foo"} 1'
         buildVal spacing v =
-          buildName `mappend` (spacing `mappend` (v `mappend` newline))
+          buildName <> spacing <> v <> newline
 
 buildGauge, buildCounter, buildInfo, buildEOF, newline, space :: Builder
 buildGauge    = TB.fromText " gauge"
