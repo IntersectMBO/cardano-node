@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-01-01T23:24:19Z
-  , cardano-haskell-packages 2025-02-11T21:18:23Z
+  , hackage.haskell.org 2025-03-13T00:45:00Z
+  , cardano-haskell-packages 2025-03-13T02:33:54Z
 
 packages:
   cardano-node
@@ -64,3 +64,30 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+if impl (ghc >= 9.12)
+  allow-newer:
+    -- https://github.com/phadej/vec/issues/118
+    , bin:base
+    , fin:base
+    , ral:base
+
+    -- https://github.com/haskellari/tree-diff/issues/97
+    , tree-diff:base
+
+    -- https://github.com/kapralVV/Unique/issues/11
+    , Unique:hashable
+
+    -- https://github.com/fizruk/http-api-data/pull/146
+    , http-api-data:base
+
+    -- https://github.com/ocharles/libsystemd-journal/pull/32
+    , libsystemd-journal:base
+
+    -- https://github.com/Gabriella439/Haskell-Pipes-Safe-Library/pull/70
+    , pipes-safe:base
+
+    -- https://github.com/haskell-servant/servant/pull/1810
+    , servant:base
+    , servant-server:base
+
