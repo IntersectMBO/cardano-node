@@ -44,6 +44,7 @@ executable cardano-node-chairman
   build-depends:        cardano-api
                       , cardano-crypto-class
                       , cardano-git-rev ^>= 0.2.2
+                      , cardano-ledger-core ^>= 1.17
                       , cardano-node ^>= 10.2
                       , cardano-prelude
                       , containers

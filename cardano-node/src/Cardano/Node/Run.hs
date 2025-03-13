@@ -152,6 +152,7 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 import           Paths_cardano_node (version)
+import Ouroboros.Network.Mux (noBindForkPolicy)
 
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -1005,6 +1006,8 @@ mkP2PArguments NodeConfiguration {
               Cardano.PublicRoots.getPublicConfigPeers = publicRoots,
               Cardano.PublicRoots.getBootstrapPeers = Set.empty
             }
+      , P2P.daMuxForkPolicy = noBindForkPolicy
+      , P2P.daLocalMuxForkPolicy = noBindForkPolicy
       }
   where
     peerSelectionTargets = Configuration.defaultDeadlineTargets {

@@ -196,6 +196,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
@@ -257,6 +258,7 @@ doListenToAcceptor TestSetup{..}
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }

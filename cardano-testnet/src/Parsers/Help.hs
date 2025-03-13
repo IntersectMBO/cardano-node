@@ -5,7 +5,7 @@ module Parsers.Help
   , runHelpOptions
   ) where
 
-import           Cardano.CLI.EraBased.Options.Common
+import           Cardano.CLI.EraBased.Common.Option (command')
 
 import           Control.Monad (forM_)
 import qualified Data.List as List

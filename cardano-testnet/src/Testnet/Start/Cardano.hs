@@ -26,7 +26,6 @@ module Testnet.Start.Cardano
 
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (StandardCrypto)
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Node.Configuration.Topology
@@ -115,7 +114,7 @@ getDefaultShelleyGenesis :: ()
   => AnyShelleyBasedEra
   -> Word64 -- ^ The max supply
   -> GenesisOptions
-  -> m (ShelleyGenesis StandardCrypto)
+  -> m ShelleyGenesis
 getDefaultShelleyGenesis asbe maxSupply opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime

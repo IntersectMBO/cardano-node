@@ -22,8 +22,6 @@ import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Cardano.Network.PeerSelection.Bootstrap
 import           Cardano.Network.PeerSelection.PeerTrustable
 import qualified Cardano.Node.Configuration.Topology as NonP2P

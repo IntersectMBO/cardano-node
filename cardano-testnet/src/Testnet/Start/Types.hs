@@ -35,7 +35,6 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
-import           Cardano.Api.Ledger (StandardCrypto)
 
 import           Cardano.Ledger.Alonzo.Genesis
 import           Cardano.Ledger.Conway.Genesis
@@ -152,7 +151,7 @@ data GenesisOrigin =
   | DefaultedOrigin -- ^ Genesis file provided by @cardano-testnet@ itself
 
 -- | Type to bundle all genesis files, whether provided by the user or defaulted by @cardano-testnet@.
-newtype GenesisBatch = GenesisBatch (ShelleyGenesis StandardCrypto, AlonzoGenesis, ConwayGenesis StandardCrypto, GenesisOrigin)
+newtype GenesisBatch = GenesisBatch (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, GenesisOrigin)
 
 -- | Get extra CLI arguments passed to the node executable
 testnetNodeExtraCliArgs :: TestnetNodeOptions -> [String]

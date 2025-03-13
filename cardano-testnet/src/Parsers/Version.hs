@@ -6,7 +6,7 @@ module Parsers.Version
   , runVersionOptions
   ) where
 
-import           Cardano.CLI.EraBased.Options.Common
+import           Cardano.CLI.EraBased.Common.Option (command')
 import           Cardano.Git.Rev (gitRev)
 
 import qualified Data.Text as T

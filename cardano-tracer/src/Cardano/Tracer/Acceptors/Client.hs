@@ -78,6 +78,7 @@ runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) 
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = protocol
          }

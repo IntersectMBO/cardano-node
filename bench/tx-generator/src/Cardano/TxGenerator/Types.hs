@@ -17,7 +17,6 @@ import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters)
 
 import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
 
@@ -26,7 +25,7 @@ import           GHC.Natural
 import           Prettyprinter
 
 -- convenience alias for use trhougout the API
-type ShelleyGenesis       = Ledger.ShelleyGenesis StandardCrypto
+type ShelleyGenesis       = Ledger.ShelleyGenesis
 
 -- some type aliases to keep compatibility with code in Cardano.Benchmarking
 type NumberOfInputsPerTx  = Int

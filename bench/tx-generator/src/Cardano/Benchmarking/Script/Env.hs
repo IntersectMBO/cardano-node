@@ -71,7 +71,6 @@ import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, S
                    SigningKey)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Logging
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
@@ -101,7 +100,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- wrapped by 'ProtocolParameterMode' which itself is
                  -- a sort of custom 'Maybe'.
                  protoParams :: Maybe ProtocolParameterMode
-               , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
+               , envGenesis :: Maybe ShelleyGenesis
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
@@ -190,7 +189,7 @@ setBenchTracers val = do
   liftIO $ STM.atomically do STM.writeTVar btTVar $ Just val
 
 -- | Write accessor for `envGenesis`.
-setEnvGenesis :: ShelleyGenesis StandardCrypto -> ActionM ()
+setEnvGenesis :: ShelleyGenesis -> ActionM ()
 setEnvGenesis val = modifyEnv (\e -> e { envGenesis = Just val })
 
 -- | Write accessor for `envKeys`.
@@ -266,7 +265,7 @@ getBenchTracers = do
       pure $ error errMsg
 
 -- | Read accessor for `envGenesis`.
-getEnvGenesis :: ActionM (ShelleyGenesis StandardCrypto)
+getEnvGenesis :: ActionM ShelleyGenesis
 getEnvGenesis = getEnvVal envGenesis "Genesis"
 
 -- | Read accessor for `envKeys`.
