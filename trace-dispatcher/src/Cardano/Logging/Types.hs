@@ -61,6 +61,7 @@ import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
+import           Data.Bool (bool)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map.Strict (Map)
@@ -380,7 +381,7 @@ data BackendConfig =
   | Stdout FormatLogging
   | EKGBackend
   | DatapointBackend
-  | PrometheusSimple (Maybe HostName) PortNumber
+  | PrometheusSimple Bool (Maybe HostName) PortNumber   -- boolean: drop suffixes like "_int" in exposition; default: False
   deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON BackendConfig where
@@ -388,7 +389,10 @@ instance AE.ToJSON BackendConfig where
   toJSON DatapointBackend = AE.String "DatapointBackend"
   toJSON EKGBackend = AE.String "EKGBackend"
   toJSON (Stdout f) = AE.String $ "Stdout " <> (pack . show) f
-  toJSON (PrometheusSimple h p) = AE.String $ "PrometheusSimple " <> maybe mempty ((<> " ") . pack) h <> (pack . show) p
+  toJSON (PrometheusSimple s h p) = AE.String $ "PrometheusSimple "
+    <> bool mempty "nosuffix" s
+    <> maybe mempty ((<> " ") . pack) h
+    <> (pack . show) p
 
 instance AE.FromJSON BackendConfig where
   parseJSON = AE.withText "BackendConfig" $ \case
@@ -402,10 +406,18 @@ instance AE.FromJSON BackendConfig where
 
 parsePrometheusString :: Text -> Either String BackendConfig
 parsePrometheusString t = case T.words t of
-  ["PrometheusSimple", portNo_]       -> parsePort portNo_ >>= Right . PrometheusSimple Nothing
-  ["PrometheusSimple", host, portNo_] -> parsePort portNo_ >>= Right . PrometheusSimple (Just $ unpack host)
-  _ -> Left $ "unknown backend: " ++ show t
+  ["PrometheusSimple", portNo_] ->
+    parsePort portNo_ >>= Right . PrometheusSimple False Nothing
+  ["PrometheusSimple", arg, portNo_] ->
+    parsePort portNo_ >>= Right . if validSuffix arg then PrometheusSimple (isNoSuffix arg) Nothing else PrometheusSimple False (Just $ unpack arg)
+  ["PrometheusSimple", noSuff, host, portNo_]
+    | validSuffix noSuff  -> parsePort portNo_ >>= Right . PrometheusSimple (isNoSuffix noSuff) (Just $ unpack host)
+    | otherwise           -> Left $ "invalid modifier for PrometheusSimple: " ++ show noSuff
+  _
+    -> Left $ "unknown backend: " ++ show t
   where
+    validSuffix s = s == "suffix" || s == "nosuffix"
+    isNoSuffix    = (== "nosuffix")
     parsePort p = case T.decimal p of
       Right (portNo :: Word, rest)
         | T.null rest && 0 < portNo && portNo < 65536 -> Right $ fromIntegral portNo
