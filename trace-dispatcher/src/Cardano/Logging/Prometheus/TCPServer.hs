@@ -24,11 +24,11 @@ import           System.Posix.Types (EpochTime)
 import           System.PosixCompat.Time (epochTime)
 
 
-runPrometheusSimple :: EKG.Store -> Maybe HostName -> PortNumber -> IO ()
-runPrometheusSimple ekgStore mHost portNo =
+runPrometheusSimple :: EKG.Store -> (Bool, Maybe HostName, PortNumber) -> IO ()
+runPrometheusSimple ekgStore (noSuffixes, mHost, portNo) =
   async serveListener >>= link
   where
-    getCurrentExposition = renderExpositionFromSample <$> sampleAll ekgStore
+    getCurrentExposition = renderExpositionFromSample noSuffixes <$> sampleAll ekgStore
     serveListener =
       runTCPServer (defaultRunParams "PrometheusSimple") mHost portNo (serveAccepted getCurrentExposition)
 

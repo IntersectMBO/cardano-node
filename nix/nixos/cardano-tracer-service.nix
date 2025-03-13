@@ -37,14 +37,6 @@ let serviceConfigToJSON =
           epHost    = "127.0.0.1";
           epPort    = 3200; ## supervisord.portShiftPrometheus
         } // (cfg.prometheus or {});
-        # Just an example for metrics compatibility mapping.
-        # An entry means the first entry has the second entry as alias.
-        # The Metrics is then avalable, both with the original and the mapped name.
-        # Only one mapping per message is supported.
-        # metricsComp = {
-        #     "Mempool.TxsInMempool" = "Mempool.TxsInMempool.Mapped";
-        #     "ChainDB.SlotNum" = "ChainDB.SlotNum.Mapped";
-        # };
       } // pkgs.lib.optionalAttrs ((cfg.RTView or {}) != {})
       {
         hasRTView = cfg.RTView;
@@ -76,6 +68,7 @@ in pkgs.commonLib.defServiceModule
         prometheus      = opt    attrs {}      "Prometheus overrides: see cardano-tracer documentation.";
         resourceFreq    = mayOpt int           "Frequency (1/ms) for tracing resource usage.";
         metricsHelp     = mayOpt str           "JSON file containing metrics help annotations for Prometheus";
+        metricsNoSuffix = mayOpt bool          "Drop suffixes like '_int' in Prometheus exposition, increasing similiarity with legacy system names.";
 
         ### Here be dragons, on the other hand..
         configFile      = mayOpt str
