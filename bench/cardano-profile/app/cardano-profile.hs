@@ -19,6 +19,7 @@ import qualified Data.Map.Strict as Map
 import qualified Options.Applicative as OA
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile as Profile
+import qualified Cardano.Benchmarking.Profile.Genesis as Genesis
 import qualified Cardano.Benchmarking.Profile.NodeSpecs as NodeSpecs
 import qualified Cardano.Benchmarking.Profile.Types as Types
 -- Profiles to export!
@@ -36,7 +37,6 @@ import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profi
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
-import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 -- Dynamic profiles.
 import           Cardano.Benchmarking.Profile.Playground                  (profilesNoEraPlayground)
 
@@ -68,7 +68,6 @@ performanceAndTracingProfiles =
   -- Extra modules
   ++ profilesNoEraScalingLocal
   ++ profilesNoEraScalingCloud
-  ++ profilesNoEraVoting
 
 -- Have fun!
 playgroundProfiles :: [Types.Profile]
@@ -84,6 +83,7 @@ data Cli =
   | ByName PrettyPrint String
   | LibMK
   | NodeSpecs FilePath FilePath
+  | EpochTimeline Integer
   | ToJson String
   | FromJson String
 
@@ -174,6 +174,10 @@ main = do
                         error $ "Not a valid topology: " ++ errorMsg
                       (Right value) -> value
       BSL8.putStrLn $ Aeson.encode $ NodeSpecs.nodeSpecs profile topology
+    (EpochTimeline upToEpochNumber) -> do
+      genesisAeson <- Genesis.epochTimeline upToEpochNumber
+      let prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
+      BSL8.putStrLn $ Aeson.encodePretty' prettyConf genesisAeson
     -- Print a single profiles, with an optional overlay.
     (ToJson filePath) -> print filePath
 --      str <- readFile filePath
@@ -254,6 +258,12 @@ cliParser = OA.hsubparser $
             <*> OA.argument OA.str (OA.metavar "TOPOLOGY-JSON-FILEPATH")
           )
           (OA.fullDesc <> OA.header "node-specs" <> OA.progDesc "Create the profile's node-specs.json file")
+        )
+  <>
+      OA.command "epoch-timeline"
+        (OA.info
+          (EpochTimeline <$> OA.argument OA.auto (OA.metavar "EPOCH-NUMBER"))
+          (OA.fullDesc <> OA.header "epoch-timeline" <> OA.progDesc "Construct the genesis object")
         )
   <>
       OA.command "to-json"

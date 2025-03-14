@@ -1,5 +1,7 @@
 {
   "shelley": {
-    "maxBlockBodySize": 65536
+    "protocolParams": {
+      "maxBlockBodySize": 65536
+    }
   }
 }

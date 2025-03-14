@@ -35,7 +35,6 @@ import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profi
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
 import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
 import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
-import           Cardano.Benchmarking.Profile.Extra.Voting                (profilesNoEraVoting)
 
 --------------------------------------------------------------------------------
 
@@ -116,7 +115,7 @@ ciTestBage = Types.Profile {
         , ("minFeeA", Aeson.Number 44.0)
         , ("minFeeB", Aeson.Number 155381.0)
         , ("minPoolCost", Aeson.Number 3.4e8)
-        , ("minUTxOValue", Aeson.Number 34482.0)
+        , ("minUTxOValue", Aeson.Number 0)
         , ("nOpt", Aeson.Number 500.0)
         , ("poolDeposit", Aeson.Number 5.0e8)
         , ("protocolVersion", Aeson.Object (KeyMap.fromList [
@@ -498,7 +497,6 @@ profiles = Map.fromList $ map
     -- Extra modules
     ++ profilesNoEraScalingLocal
     ++ profilesNoEraScalingCloud
-    ++ profilesNoEraVoting
   )
 
 -- Check all builtin profiles (no overlay) with "data/all-profiles.json".
@@ -531,7 +529,7 @@ testGroupMap = Tasty.testGroup
               (Map.keys $ Map.map Types.name profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Scenario type.
+          -- Show first profile with differences in the Scenario type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -543,7 +541,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.scenario profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Composition type.
+          -- Show first profile with differences in the Composition type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -555,7 +553,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.composition profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Era type.
+          -- Show first profile with differences in the Era type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -567,19 +565,71 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.era profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Genesis type.
+          -- Show first profile with differences in the Genesis type (main).
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
-              ("Profile == (decode \"" ++ fp ++ "\") - Genesis")
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (main)")
             )
             -- Map.Map to keep the key / profile name.
             (zip
-              (Map.assocs $ Map.map Types.genesis allProfiles)
-              (Map.assocs $ Map.map Types.genesis profiles)
+              -- Everything except "shelley", "alonzo" and "conway".
+              (Map.assocs $ Map.map
+                (\p -> (Types.genesis p) {
+                  Types.shelley = mempty
+                , Types.alonzo = mempty
+                , Types.conway = mempty
+                })
+                allProfiles
+              )
+              -- Everything except "shelley", "alonzo" and "conway".
+              (Map.assocs $ Map.map
+                (\p -> (Types.genesis p) {
+                  Types.shelley = mempty
+                , Types.alonzo = mempty
+                , Types.conway = mempty
+                })
+                profiles
+              )
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the ChainDB type.
+          -- Show first profile with differences in the Genesis type (Shelley).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Shelley)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.shelley . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.shelley . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the Genesis type (Alonzo).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Alonzo)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.alonzo . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.alonzo . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the Genesis type (Conway).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Conway)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.conway . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.conway . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the ChainDB type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -591,7 +641,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.chaindb profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Node type.
+          -- Show first profile with differences in the Node type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -603,7 +653,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.node profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Generator type.
+          -- Show first profile with differences in the Generator type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -615,7 +665,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.generator profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Workloads list.
+          -- Show first profile with differences in the Workloads list.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -627,7 +677,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.workloads profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Tracer type.
+          -- Show first profile with differences in the Tracer type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -639,7 +689,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.tracer profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Cluster type.
+          -- Show first profile with differences in the Cluster type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -651,7 +701,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.cluster profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Analysis type.
+          -- Show first profile with differences in the Analysis type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -663,7 +713,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.analysis profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Derived type.
+          -- Show first profile with differences in the Derived type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -675,7 +725,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.derived profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the CliArgs type.
+          -- Show first profile with differences in the CliArgs type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -687,7 +737,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.cli_args profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in "preset".
+          -- Show first profile with differences in "preset".
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -699,7 +749,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.preset profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in "overlay".
+          -- Show first profile with differences in "overlay".
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
