@@ -36,7 +36,7 @@ hprop_cardano_testnet_executable = integrationWorkspace "cardano-testnet-executa
   liftIO $ forM_ allFiles $ \file -> copyFile (referenceInputsFileDir </> file) (tempAbsBasePath </> file)
 
   -- Alright, all files are in place, let's start the cluster:
-  let cmd = ("cabal", [ "run", "cardano-testnet", "--", "cardano"
+  let cmd = ("cardano-testnet", [ "cardano"
                       , "--node-config", tempAbsBasePath </> "configuration.json"
                       , "--output-dir", tempAbsBasePath
                       , "--testnet-magic", "42"])
