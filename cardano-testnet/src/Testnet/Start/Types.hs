@@ -7,6 +7,7 @@
 module Testnet.Start.Types
   ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
+  , InputNodeConfigFile(..)
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
@@ -18,8 +19,7 @@ module Testnet.Start.Types
   , eraToString
 
   , TestnetNodeOptions(..)
-  , testnetNodeExtraCliArgs
-  , isSpoNodeOptions
+  , AutomaticNodeOption(..)
   , isRelayNodeOptions
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
@@ -64,9 +64,9 @@ instance Default CardanoTestnetCliOptions where
 -- | Options which, contrary to 'GenesisOptions' are not implemented
 -- by tuning the genesis files.
 data CardanoTestnetOptions = CardanoTestnetOptions
-  { -- | List of node options. Each option will result in a single node being
-    -- created.
-    cardanoNodes :: [TestnetNodeOptions]
+  { -- | Options controlling how many nodes to create and whether to use user-provided
+    -- configuration files, or to generate them automatically.
+    cardanoNodes :: TestnetNodeOptions
   , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
@@ -77,13 +77,23 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   } deriving (Eq, Show)
 
+-- | Path to the configuration file of the node, specified by the user
+newtype InputNodeConfigFile = InputNodeConfigFile FilePath
+  deriving (Eq, Show)
+
 cardanoNumPools :: CardanoTestnetOptions -> NumPools
 cardanoNumPools CardanoTestnetOptions{cardanoNodes} =
-  NumPools . length $ filter isSpoNodeOptions cardanoNodes
+  NumPools $
+    case cardanoNodes of
+      UserProvidedNodeOptions _ -> 1
+      AutomaticNodeOptions opts -> length $ filter isSpoNodeOptions opts
 
 cardanoNumRelays :: CardanoTestnetOptions -> NumRelays
 cardanoNumRelays CardanoTestnetOptions{cardanoNodes} =
-  NumRelays . length $ filter isRelayNodeOptions cardanoNodes
+  NumRelays $
+    case cardanoNodes of
+      UserProvidedNodeOptions _ -> 1
+      AutomaticNodeOptions opts -> length $ filter isRelayNodeOptions opts
 
 -- | Number of stake pool nodes
 newtype NumPools = NumPools Int
@@ -125,12 +135,20 @@ instance Default GenesisOptions where
     , genesisActiveSlotsCoeff = 0.05
     }
 
--- | Specify a SPO (Shelley era onwards only) or a Relay node
-data TestnetNodeOptions
-  = SpoNodeOptions [String]
+data TestnetNodeOptions =
+  UserProvidedNodeOptions FilePath
+  -- ^ Value used when the user specifies the node configuration file. We start one single SPO node.
+  | AutomaticNodeOptions [AutomaticNodeOption]
+  -- ^ Value used when @cardano-testnet@ controls the node configuration files.
+  -- We start a custom number of nodes.
+  deriving (Eq, Show)
+
+-- | Type used when the user doesn't specify the node configuration file. We start
+-- a custom number of nodes. The '@String' arguments will be appended to the default
+-- options when starting the node.
+data AutomaticNodeOption =
+    SpoNodeOptions [String]
   | RelayNodeOptions [String]
-    -- ^ These arguments will be appended to the default set of CLI options when
-    -- starting the node.
   deriving (Eq, Show)
 
 -- | Type used to track whether the user is providing its data (node configuration file path, genesis file, etc.)
@@ -139,25 +157,20 @@ data UserProvidedData a =
     UserProvidedData a
   | NoUserProvidedData
 
--- | Get extra CLI arguments passed to the node executable
-testnetNodeExtraCliArgs :: TestnetNodeOptions -> [String]
-testnetNodeExtraCliArgs (SpoNodeOptions args) = args
-testnetNodeExtraCliArgs (RelayNodeOptions args) = args
-
-isSpoNodeOptions :: TestnetNodeOptions -> Bool
+isSpoNodeOptions :: AutomaticNodeOption -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True
 isSpoNodeOptions RelayNodeOptions{} = False
 
-isRelayNodeOptions :: TestnetNodeOptions -> Bool
+isRelayNodeOptions :: AutomaticNodeOption -> Bool
 isRelayNodeOptions SpoNodeOptions{} = False
 isRelayNodeOptions RelayNodeOptions{} = True
 
-cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
+cardanoDefaultTestnetNodeOptions :: TestnetNodeOptions
 cardanoDefaultTestnetNodeOptions =
-  [ SpoNodeOptions []
-  , RelayNodeOptions []
-  , RelayNodeOptions []
-  ]
+  AutomaticNodeOptions [ SpoNodeOptions []
+                       , RelayNodeOptions []
+                       , RelayNodeOptions []
+                       ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
