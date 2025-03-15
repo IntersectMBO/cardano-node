@@ -15,6 +15,7 @@ import           Cardano.Tracer.Types (HandleRegistry, HandleRegistryKey)
 import           Cardano.Tracer.Utils (modifyRegistry_)
 
 import           Control.Concurrent.Extra (Lock, withLock)
+import           Control.Exception (Handler (..), IOException, catches, throwIO)
 import           Data.Foldable (for_)
 import qualified Data.Map as Map
 import           Data.Maybe (isJust)
@@ -22,9 +23,11 @@ import qualified Data.Text as T
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
-import           System.Directory (createDirectoryIfMissing)
+import           System.Directory
 import           System.FilePath (takeBaseName, takeExtension, takeFileName, (<.>), (</>))
 import           System.IO (IOMode (WriteMode), hClose, openFile)
+import           System.IO.Error (isDoesNotExistError)
+
 
 logPrefix :: String
 logPrefix = "node-"
@@ -32,6 +35,9 @@ logPrefix = "node-"
 logExtension :: LogFormat -> String
 logExtension ForHuman   = ".log"
 logExtension ForMachine = ".json"
+
+symLinkName :: LogFormat -> FilePath
+symLinkName format = "node" <.> logExtension format
 
 -- | An example of the valid log name: 'node-2021-11-29T09-55-04.json'.
 isItLog :: LogFormat -> FilePath -> Bool
@@ -71,8 +77,21 @@ createOrUpdateEmptyLog currentLogLock key@(_, LoggingParams{logFormat = format})
         hClose handle
 
       newHandle <- openFile pathToLog WriteMode
+      updateSymlinkAtomically format subDirForLogs pathToLog
       let newMap = Map.insert key (newHandle, pathToLog) handles
       pure newMap
+
+-- this should be part of the atomical section that opens a new file;
+-- thus, updating the symlink becomes atomical, too.
+updateSymlinkAtomically :: LogFormat -> FilePath -> FilePath -> IO ()
+updateSymlinkAtomically format subDirForLogs pathToLog = do
+  removeFile symlinkTmp
+    `catches` [ Handler $ \(e :: IOException) -> if isDoesNotExistError e then pure () else throwIO e ] -- in case the temp file isn't there, don't rethrow
+  createFileLink pathToLog symlinkTmp
+  renamePath symlinkTmp symlink
+  where
+    symlink     = subDirForLogs </> symLinkName format
+    symlinkTmp  = symlink <.> "tmp"
 
 getTimeStampFromLog :: FilePath -> Maybe UTCTime
 getTimeStampFromLog pathToLog =

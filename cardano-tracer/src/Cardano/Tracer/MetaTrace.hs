@@ -23,11 +23,10 @@ module Cardano.Tracer.MetaTrace
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Types (NodeId(..), NodeName)
+import           Cardano.Tracer.Types (NodeId (..), NodeName)
 
 import           Data.Aeson hiding (Error)
 import qualified Data.Aeson as AE
-import           Data.Function
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -198,11 +197,7 @@ instance LogFormatting TracerTrace where
       , "Enable with `-f +rtview`."
       ]
   forHuman t = T.pack (show t)
-
-  forMachine DMinimal  _ = mempty
-  forMachine DNormal   _ = mempty
-  forMachine DDetailed t = forMachine DMaximum t
-  forMachine DMaximum  t = case AE.toJSON t of
+  forMachine _ t = case AE.toJSON t of
                              AE.Object x -> x
                              _ -> error "Impossible"
 
@@ -230,6 +225,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerError {} = Namespace [] ["Error"]
     namespaceFor TracerResource {} = Namespace [] ["Resource"]
 
+    severityFor (Namespace _ ["BuildInfo"]) _ = Just Info
     severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
     severityFor (Namespace _ ["ConfigIs"]) _ = Just Warning
     severityFor (Namespace _ ["InitStart"]) _ = Just Info
@@ -256,7 +252,8 @@ instance MetaTrace TracerTrace where
     documentFor _ = Just ""
 
     allNamespaces = [
-        Namespace [] ["ParamsAre"]
+        Namespace [] ["BuildInfo"]
+      , Namespace [] ["ParamsAre"]
       , Namespace [] ["ConfigIs"]
       , Namespace [] ["InitStart"]
       , Namespace [] ["EventQueues"]
@@ -283,40 +280,23 @@ stderrShowTracer :: Trace IO TracerTrace
 stderrShowTracer =  contramapM'
     (either (const $ pure ()) (Sys.hPrint Sys.stderr) . snd)
 
-stderrTracer :: Trace IO FormattedMessage
-stderrTracer =
-  contramapM'
-    (either (const $ pure ()) (Sys.hPutStrLn Sys.stderr . T.unpack . render) . snd)
- where
-   render = \case
-      FormattedHuman _ x -> x
-      FormattedMachine x -> x
-      _ -> ""
-
 mkTracerTracer :: SeverityF -> IO (Trace IO TracerTrace)
 mkTracerTracer defSeverity = do
-  base     :: Trace IO FormattedMessage <- standardTracer
-  metaBase :: Trace IO TracerTrace      <-
-    machineFormatter Nothing base
-    >>= withDetailsFromConfig
-  let tr = metaBase
-           & withInnerNames
-           & appendPrefixName "Tracer"
-           & withSeverity
+  standardTracer
+    >>= machineFormatter
+    >>= filterSeverityFromConfig
+    >>= \t ->
+          let finalTracer = withNames ["Tracer"] (withSeverity t)
+          in configTracerTracer defSeverity finalTracer >> pure finalTracer
+
+configTracerTracer :: SeverityF -> Trace IO TracerTrace -> IO ()
+configTracerTracer defSeverity tr = do
   configReflection <- emptyConfigReflection
   configureTracers configReflection initialTraceConfig [tr]
-  pure tr
  where
    initialTraceConfig :: TraceConfig
    initialTraceConfig =
-     TraceConfig
-     { tcForwarder         = Nothing
-     , tcNodeName          = Nothing
-     , tcPeerFrequency     = Nothing
-     , tcResourceFrequency = Nothing
-     , tcMetricsPrefix     = Nothing
-     , tcOptions = Map.fromList
-                   [ ([],         [ConfSeverity defSeverity])
-                   , (["Tracer"], [ConfDetail DMaximum])
-                   ]
+     emptyTraceConfig
+     {
+      tcOptions = Map.fromList [([], [ConfSeverity defSeverity])]
      }

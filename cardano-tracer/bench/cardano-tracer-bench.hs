@@ -148,10 +148,11 @@ main = do
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Nothing
-    , metricsComp    = Nothing
+    , metricsNoSuffix = Nothing
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
+    , ekgRequestFull = Nothing
     }
 
   generate :: Int -> IO [TraceObject]

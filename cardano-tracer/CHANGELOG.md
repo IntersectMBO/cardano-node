@@ -1,5 +1,13 @@
 # ChangeLog
 
+## NEXT (0.3.2) (March xx, 2025)
+
+* When requesting forwarded metrics, ask for delta to previous request only. New config option `ekgRequestFull` defaults to `false`; set to `true` to revert this behavior.
+* Add up-to-date symlink for each log rotation, pointing to the most recent file (`node.json` or `node.log`, depending on the log format).
+* Fix: CLI option `--min-log-severity` is now observed correctly.
+* Add `metricsNoSuffix` to configuration, which when set removes suffixes like `_int` from metrics names, making them more similar to those in the old system (optional boolean; default: `false`).
+* Remove `metricsComp` metric name remapping from configuration.
+
 ## 0.3.1 (January 22, 2025)
 
 * Fix race condition when querying `NodeInfo` data point, occasionally resulting in fallback `NodeName`s instead of proper ones.

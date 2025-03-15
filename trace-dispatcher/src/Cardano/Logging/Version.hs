@@ -1,6 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Cardano.Logging.Version
   ( ForwardingVersion (..)
   , ForwardingVersionData (..)

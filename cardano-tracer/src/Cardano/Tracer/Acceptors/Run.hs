@@ -45,14 +45,15 @@ runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
           (runAcceptorsClient tracerEnv tracerEnvRTView p $ acceptorsConfigs p)
           verbosity p initialPauseInSec
  where
-  TracerConfig{network, ekgRequestFreq, verbosity} = teConfig tracerEnv
+  TracerConfig{network, ekgRequestFreq, verbosity, ekgRequestFull} = teConfig tracerEnv
+  ekgUseFullRequests = fromMaybe False ekgRequestFull
 
   acceptorsConfigs p =
     ( EKGF.AcceptorConfiguration
         { EKGF.acceptorTracer    = mkVerbosity verbosity
         , EKGF.forwarderEndpoint = EKGF.LocalPipe p
         , EKGF.requestFrequency  = secondsToNominalDiffTime $ fromMaybe 1.0 ekgRequestFreq
-        , EKGF.whatToRequest     = EKGF.GetAllMetrics
+        , EKGF.whatToRequest     = if ekgUseFullRequests then EKGF.GetAllMetrics else EKGF.GetUpdatedMetrics
         , EKGF.shouldWeStop      = teProtocolsBrake tracerEnv
         }
     , TOF.AcceptorConfiguration
