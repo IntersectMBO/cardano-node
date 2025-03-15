@@ -221,7 +221,9 @@
                               workbenchStartArgs = [ "--create-testnet-data" "--trace" ];
                             };
 
-            inherit (pkgs) all-profiles-json profile-data-nomadperf;
+            # inherit (pkgs) all-profiles-json profile-data-nomadperf;
+            # Test reduced eval time:
+            inherit (pkgs) all-profiles-json;
 
             system-tests = pkgs.writeShellApplication {
               name = "system-tests";
