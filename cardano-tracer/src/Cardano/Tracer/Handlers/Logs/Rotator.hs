@@ -7,8 +7,7 @@ module Cardano.Tracer.Handlers.Logs.Rotator
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.Utils (createOrUpdateEmptyLog, getTimeStampFromLog,
-                   isItLog)
+import           Cardano.Tracer.Handlers.Logs.Utils
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types (HandleRegistry, HandleRegistryKey, NodeName)
 import           Cardano.Tracer.Utils (showProblemIfAny, readRegistry)
@@ -134,7 +133,7 @@ checkIfCurrentLogIsFull
   -> IO ()
 checkIfCurrentLogIsFull currentLogLock handle key registry maxSizeInBytes subDirForLogs =
   whenM logIsFull do
-     createOrUpdateEmptyLog currentLogLock key registry subDirForLogs
+     createEmptyLogRotationAndUpdateSymlink currentLogLock key registry subDirForLogs
 
  where
   logIsFull :: IO Bool
