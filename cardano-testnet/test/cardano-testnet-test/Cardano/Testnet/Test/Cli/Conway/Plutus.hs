@@ -8,6 +8,7 @@
 
 module Cardano.Testnet.Test.Cli.Conway.Plutus
   ( hprop_plutus_v3
+  , hprop_tx_two_script_certs_v2
   ) where
 
 import           Cardano.Api
@@ -19,15 +20,14 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Data.Default.Class
-import qualified Data.Text as Text
+import qualified Data.Text as T
 import           System.FilePath ((</>))
-import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.SPO
-import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
@@ -47,7 +47,6 @@ import qualified Hedgehog.Extras as H
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV3/"'@
 hprop_plutus_v3 :: Property
 hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
@@ -71,7 +70,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   poolSprocket1 <- H.noteShow $ nodeSprocket node
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
+  let utxoAddr = T.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
       utxoSKeyFile2 = signingKeyFp $ paymentKeyInfoPair wallet1
       socketPath = nodeSocketPath node
@@ -80,7 +79,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
-  H.writeFile plutusScript $ Text.unpack plutusV3SupplementalDatumScript
+  H.writeFile plutusScript $ T.unpack plutusV3SupplementalDatumScript
 
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
@@ -125,8 +124,8 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   --    Register script stake address
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--change-address", T.unpack $ paymentKeyInfoAddr wallet0
+    , "--tx-in", T.unpack $ renderTxIn txin1
     , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
     , "--tx-out-datum-hash", scriptdatumhash
     , "--out-file", sendAdaToScriptAddressTxBody
@@ -148,7 +147,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   -- 2. Successfully spend conway spending script
   txinCollateral <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
   plutusScriptTxIn <- fmap fst . retryUntilJustM epochStateView (WaitForBlocks 3) $
-    findLargestUtxoWithAddress epochStateView sbe $ Text.pack plutusSpendingScriptAddr
+    findLargestUtxoWithAddress epochStateView sbe $ T.pack plutusSpendingScriptAddr
 
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
       spendScriptUTxOTx = work </> "spend-script-utxo-tx"
@@ -160,9 +159,9 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
 
   void $ execCli' execConfig
     [ anyEraToString anyEra, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-    , "--tx-in-collateral", Text.unpack $ renderTxIn txinCollateral
-    , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn
+    , "--change-address", T.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
+    , "--tx-in", T.unpack $ renderTxIn plutusScriptTxIn
     , "--tx-in-script-file", plutusScript
     , "--tx-in-datum-value", "0"
     , "--tx-in-redeemer-value", "0"
@@ -173,7 +172,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--certificate-script-file", plutusScript
     , "--certificate-redeemer-value", "0"
     , "--tx-out", txout
-    , "--tx-out", txoutWithSupplementalDatum 
+    , "--tx-out", txoutWithSupplementalDatum
     , "--tx-out-datum-embed-file", supplementalDatumJsonFile
     , "--out-file", spendScriptUTxOTxBody
     ]
@@ -188,6 +187,110 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   void $ execCli' execConfig
     [ "latest", "transaction", "submit"
     , "--tx-file", spendScriptUTxOTx
+    ]
+
+  H.success
+
+
+-- |
+-- Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV2 Create transaction with two script certs/"'@
+hprop_tx_two_script_certs_v2 :: Property
+hprop_tx_two_script_certs_v2 = integrationWorkspace "create-transaction-two-script-certs" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let tempAbsPath' = unTmpAbsPath tempAbsPath
+  work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
+
+  let
+    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
+    ceo = ConwayEraOnwardsConway
+    sbe = convert ceo
+    era = toCardanoEra sbe
+    anyEra = AnyCardanoEra era
+    options = def { cardanoNodeEra = AnyShelleyBasedEra sbe }
+
+  TestnetRuntime
+    { configurationFile
+    , testnetMagic
+    , testnetNodes
+    , wallets=wallet0:_
+    } <- cardanoTestnetDefault options def conf
+
+  node <- H.headM testnetNodes
+  SpoNodeKeys{poolNodeKeysCold=KeyPair{verificationKey=spoKeyCold}} <- H.nothingFail $ poolKeys node
+  poolSprocket1 <- H.noteShow $ nodeSprocket node
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  H.noteShow_ wallet0
+  let utxoAddr = T.unpack $ paymentKeyInfoAddr wallet0
+      utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
+      socketPath = nodeSocketPath node
+
+  epochStateView <- getEpochStateView configurationFile socketPath
+  txin <- T.unpack . renderTxIn <$> findLargestUtxoForPaymentKey epochStateView sbe wallet0
+
+  plutusScript <- H.note $ work </> "always-succeeds-script.plutusV2"
+  H.writeFile plutusScript $ T.unpack plutusV2StakeScript
+
+  scriptStakeRegistrationCertificate
+    <- H.note $ work </> "script-stake-registration-certificate"
+
+  keyDeposit <- fromIntegral . L.unCoin <$> getKeyDeposit epochStateView ceo
+
+  -- Create script stake registration and certificates
+  createScriptStakeRegistrationCertificate
+    tempAbsPath
+    anyEra
+    plutusScript
+    keyDeposit
+    scriptStakeRegistrationCertificate
+
+  scriptStakeDelegationCertificate
+    <- H.note $ work </> "script-stake-delegation-certificate"
+
+  createScriptStakeDelegationCertificate
+    tempAbsPath
+    anyEra
+    plutusScript
+    spoKeyCold
+    scriptStakeDelegationCertificate
+
+  let txbody = work </> "two-certs-tx-body"
+      tx = work </> "two-certs-tx"
+      txout = mconcat [ utxoAddr, "+", show @Int 2_000_000 ]
+
+  let txBuildArgs =
+        [ anyEraToString anyEra, "transaction", "build"
+        , "--change-address", T.unpack $ paymentKeyInfoAddr wallet0
+        , "--tx-in-collateral", txin
+        , "--tx-in", txin
+        , "--certificate-file", scriptStakeRegistrationCertificate
+        , "--certificate-script-file", plutusScript
+        , "--certificate-redeemer-value", "{\"int\":42}"
+        , "--certificate-file", scriptStakeDelegationCertificate
+        , "--certificate-script-file", plutusScript
+        , "--certificate-redeemer-value", "{\"int\":42}"
+        , "--tx-out", txout
+        , "--witness-override", "1"
+        ]
+
+  (_,_, stderr1') <- execCliAny execConfig $
+    txBuildArgs <> [ "--calculate-plutus-script-cost", "/dev/stderr" ]
+  H.note_ stderr1'
+
+  (_,_, stderr2') <- execCliAny execConfig $
+    txBuildArgs <> [  "--out-file", txbody ]
+  H.note_ stderr2'
+
+  void $ execCli' execConfig
+    [ "latest", "transaction", "sign"
+    , "--tx-body-file", txbody
+    , "--signing-key-file", utxoSKeyFile
+    , "--out-file", tx
+    ]
+
+  void $ execCli' execConfig
+    [ "latest", "transaction", "submit"
+    , "--tx-file", tx
     ]
 
   H.success
