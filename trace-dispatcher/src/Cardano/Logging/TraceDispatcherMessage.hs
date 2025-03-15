@@ -12,8 +12,9 @@ import           Cardano.Logging.Types
 import           Data.Aeson hiding (Error)
 import           Data.ByteString.Lazy (toStrict)
 import qualified Data.Map as Map
-import           Data.Text
-import           Data.Text.Encoding
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 data UnknownNamespaceKind =
     UKFSeverity
@@ -51,20 +52,20 @@ data TraceDispatcherMessage =
 instance LogFormatting TraceDispatcherMessage where
   forHuman (StartLimiting txt) = "Start of frequency limiting for " <> txt
   forHuman (StopLimiting txt num) = "Stop of frequency limiting for " <> txt <>
-    ". Suppressed " <> pack (show num) <> " messages."
+    ". Suppressed " <> textShow num <> " messages."
   forHuman (RememberLimiting txt num) = "Frequency limiting still active for " <> txt <>
-    ". Suppressed so far " <> pack (show num) <> " messages."
+    ". Suppressed so far " <> textShow num <> " messages."
   forHuman (UnknownNamespace nsPrefixNS nsInnerNS qk) = "Unknown namespace detected "
-    <> intercalate (singleton '.') (nsPrefixNS ++ nsInnerNS)
-    <> ". Used for querying " <> (pack . show) qk <> "."
+    <> Text.intercalate (Text.singleton '.') (nsPrefixNS ++ nsInnerNS)
+    <> ". Used for querying " <> textShow qk <> "."
   forHuman (TracerInfo silent noMetrics allTracers) = "The tracing system has silent the following tracer,"
     <> " as they will never have any output according to the current config: "
-    <> intercalate (singleton ' ') silent <> ". The following tracers will not emit metrics "
-    <> intercalate (singleton ' ') noMetrics <> ". Here is a complete list of all tracers: "
-    <> intercalate (singleton ' ') allTracers <> "."
-  forHuman (MetricsInfo mmap) = "Number of metrics delivered, " <> (pack . show) mmap
-  forHuman (TracerConsistencyWarnings errs) = "Consistency check found error:  " <> (pack . show) errs
-  forHuman (TracerInfoConfig tc) = "Effective Tracer config is:  " <> decodeUtf8 (toStrict (encode tc))
+    <> Text.intercalate (Text.singleton ' ') silent <> ". The following tracers will not emit metrics "
+    <> Text.intercalate (Text.singleton ' ') noMetrics <> ". Here is a complete list of all tracers: "
+    <> Text.intercalate (Text.singleton ' ') allTracers <> "."
+  forHuman (MetricsInfo mmap) = "Number of metrics delivered, " <> textShow mmap
+  forHuman (TracerConsistencyWarnings errs) = "Consistency check found error:  " <> textShow errs
+  forHuman (TracerInfoConfig tc) = "Effective Tracer config is:  " <> Text.decodeUtf8 (toStrict (encode tc))
 
 
   forMachine _dtl StartLimiting {} = mconcat
@@ -80,23 +81,23 @@ instance LogFormatting TraceDispatcherMessage where
         ]
   forMachine _dtl (UnknownNamespace nsun nsleg query) = mconcat
         [ "kind" .= String "UnknownNamespace"
-        , "unknownNamespace" .= String (intercalate (singleton '.') nsun)
-        , "legalNamespace" .= String (intercalate (singleton '.') nsleg)
-        , "querying" .= String ((pack . show) query)
+        , "unknownNamespace" .= String (Text.intercalate (Text.singleton '.') nsun)
+        , "legalNamespace" .= String (Text.intercalate (Text.singleton '.') nsleg)
+        , "querying" .= String (textShow query)
         ]
   forMachine _dtl (TracerInfo silent noMetrics allTracers) = mconcat
         [ "kind" .= String "TracerMeta"
-        , "silentTracers" .= String (intercalate (singleton ' ') silent)
-        , "noMetrics" .= String (intercalate (singleton ' ') noMetrics)
-        , "allTracers" .= String (intercalate (singleton ' ') allTracers)
+        , "silentTracers" .= String (Text.intercalate (Text.singleton ' ') silent)
+        , "noMetrics" .= String (Text.intercalate (Text.singleton ' ') noMetrics)
+        , "allTracers" .= String (Text.intercalate (Text.singleton ' ') allTracers)
         ]
   forMachine _dtl (MetricsInfo mmap) = mconcat
         [ "kind" .= String "MetricsInfo"
-        , "metrics count" .= String ((pack . show) mmap)
+        , "metrics count" .= String (textShow mmap)
         ]
   forMachine _dtl (TracerConsistencyWarnings errs) = mconcat
         [ "kind" .= String "TracerConsistencyWarnings"
-        , "errors" .= String ((pack . show) errs)
+        , "errors" .= String (textShow errs)
         ]
   forMachine _dtl (TracerInfoConfig tc) = mconcat
         [ "conf" .= toJSON tc
@@ -182,3 +183,8 @@ instance MetaTrace TraceDispatcherMessage where
       , Namespace [] ["TracerConsistencyWarnings"]
       , Namespace [] ["TracerConfigInfo"]
       ]
+
+-- `text-2.1.2` provides `Text.show` which can replace this when
+-- the lower bound for `text` is high enough.
+textShow :: Show a => a -> Text
+textShow = Text.pack . show

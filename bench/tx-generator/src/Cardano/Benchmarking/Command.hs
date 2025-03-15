@@ -34,8 +34,8 @@ import           Data.Aeson (fromJSON)
 import           Data.ByteString.Lazy as BSL
 import           Data.Foldable (for_)
 import           Data.Maybe (catMaybes)
-import           Data.Text as T
-import           Data.Text.IO as T
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           Options.Applicative as Opt
 import           Ouroboros.Network.NodeToClient (IOManager, withIOManager)
 
@@ -148,7 +148,7 @@ runCommand' iocp = do
                                        , show sigInfo ]
               errorToThrow :: IOError
               errorToThrow = userError labelStr
-              tag = TraceBenchTxSubError . T.pack
+              tag = TraceBenchTxSubError . Text.pack
               traceWith' msg = do
                 mBenchTracer <- STM.atomically do readTVar benchTracers
                 case mBenchTracer of
@@ -257,4 +257,4 @@ commandParser
   versionCmd = pure VersionCmd
 
 runVersionCommand :: IO ()
-runVersionCommand = T.putStrLn $ multilineVersionMsg txGeneratorVersion
+runVersionCommand = Text.putStrLn $ multilineVersionMsg txGeneratorVersion
