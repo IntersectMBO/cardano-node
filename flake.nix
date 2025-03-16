@@ -42,7 +42,7 @@
     };
 
     hackageNix = {
-      url = "github:input-output-hk/hackage.nix";
+      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
       flake = false;
     };
 
