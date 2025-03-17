@@ -50,32 +50,37 @@ import qualified Hedgehog.Extras as H
 -- | Command line options for the @cardano-testnet@ executable. They are used
 -- in the parser, and then get split into 'CardanoTestnetOptions' and
 -- 'GenesisOptions'
-data CardanoTestnetCliOptions = CardanoTestnetCliOptions
-  { cliTestnetOptions :: CardanoTestnetOptions
-  , cliGenesisOptions :: GenesisOptions
-  } deriving (Eq, Show)
+data CardanoTestnetCliOptions = CardanoTestnetCliOptions {
+    -- First options that are common to both the automatic and user-provided cases
+    cardanoNodeLoggingFormat :: NodeLoggingFormat
+  , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
+  , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.   commonOptions :: CardanoTestnetCommonOptions
+  -- Then onto options that depend on the scenario
+  , nodeOptions :: Either AutomaticNodeOptions [InputNodeConfigFile]
+  }
+
+-- | The kind of options used when the user doesn't provide the
+-- nodes' configuration files (nor the genesis files) and instead
+-- relies on @cardano-testnet@ to generate them
+data AutomaticNodeOptions = AutomaticNodeOptions
+  { cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forward to shelley genesis)
+  , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
+  , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
+  , individualNodeOptions :: AutomaticNodeOption -- ^ The number of nodes to create, and whether to create a SPO or relay node
+  , genesisEpochLength :: Int -- ^ An epoch's duration, in number of slots
+  , genesisSlotLength :: Double -- ^ Slot length, in seconds
+  , genesisActiveSlotsCoeff :: Double
+  , genesisTestnetMagic :: Int -- TODO Use the NetworkMagic type from API
+  }
+  deriving (Eq, Show)
+
+data AutomaticNodeOption = AutomaticNodeOption
+  { isSpoOrRelayNode :: Bool
+  , enableP2P :: Bool
+  }
 
 instance Default CardanoTestnetCliOptions where
-  def = CardanoTestnetCliOptions
-    { cliTestnetOptions = def
-    , cliGenesisOptions = def
-    }
-
--- | Options which, contrary to 'GenesisOptions' are not implemented
--- by tuning the genesis files.
-data CardanoTestnetOptions = CardanoTestnetOptions
-  { -- | Options controlling how many nodes to create and whether to use user-provided
-    -- configuration files, or to generate them automatically.
-    cardanoNodes :: [TestnetNodeOptions]
-  , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
-  , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
-                               -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
-  , cardanoEnableP2P :: Bool
-  , cardanoNodeLoggingFormat :: NodeLoggingFormat
-  , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
-  , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
-  , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
-  } deriving (Eq, Show)
+  def = undefined
 
 -- | Path to the configuration file of the node, specified by the user
 newtype InputNodeConfigFile = InputNodeConfigFile FilePath
@@ -108,47 +113,7 @@ newtype NumDReps = NumDReps Int
   deriving (Show, Read, Eq, Enum, Ord, Num, Real, Integral) via Int
 
 instance Default CardanoTestnetOptions where
-  def = CardanoTestnetOptions
-    { cardanoNodes = cardanoDefaultTestnetNodeOptions
-    , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraBabbage
-    , cardanoMaxSupply = 100_000_020_000_000 -- 100 000 billions Lovelace, so 100 millions ADA. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
-    , cardanoEnableP2P = False
-    , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
-    , cardanoNumDReps = 3
-    , cardanoEnableNewEpochStateLogging = True
-    , cardanoOutputDir = Nothing
-    }
-
--- | Options that are implemented by writing fields in the Shelley genesis file.
-data GenesisOptions = GenesisOptions
-  { genesisTestnetMagic :: Int -- TODO Use the NetworkMagic type from API
-  , genesisEpochLength :: Int -- ^ An epoch's duration, in number of slots
-  , genesisSlotLength :: Double -- ^ Slot length, in seconds
-  , genesisActiveSlotsCoeff :: Double
-  } deriving (Eq, Show)
-
-instance Default GenesisOptions where
-  def = GenesisOptions
-    { genesisTestnetMagic = 42
-    , genesisEpochLength = 500
-    , genesisSlotLength = 0.1
-    , genesisActiveSlotsCoeff = 0.05
-    }
-
-data TestnetNodeOptions =
-  UserProvidedNodeOptions FilePath
-  -- ^ Value used when the user specifies the node configuration file. We start one single SPO node.
-  | SpoNodeOptions [String]
-    -- ^ Value used to start a SPO node and let @cardano-testnet@ create its configuration
-  | RelayNodeOptions [String]
-    -- ^ Value used to start a relay node and let @cardano-testnet@ create its configuration
-  deriving (Eq, Show)
-
--- | Type used to track whether the user is providing its data (node configuration file path, genesis file, etc.)
--- or whether it needs to be programmatically generated by @cardanoTestnet@ and friends.
-data UserProvidedData a =
-    UserProvidedData a
-  | NoUserProvidedData
+  def = undefined
 
 isSpoNodeOptions :: AutomaticNodeOption -> Bool
 isSpoNodeOptions SpoNodeOptions{} = True

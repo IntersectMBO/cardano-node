@@ -152,16 +152,11 @@ numSeededUTxOKeys = 3
 
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => CardanoTestnetOptions -- ^ The options to use
-  -> GenesisOptions
-  -> UserProvidedData (ShelleyGenesis StandardCrypto)
-  -> UserProvidedData AlonzoGenesis
-  -> UserProvidedData (ConwayGenesis StandardCrypto)
+  => Either AutomaticNodeOptions [InputNodeConfigFile]
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
 createSPOGenesisAndFiles
-  testnetOptions genesisOptions@GenesisOptions{genesisTestnetMagic}
-  mShelleyGenesis mAlonzoGenesis mConwayGenesis
+  testnetOptions
   (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   AnyShelleyBasedEra sbe <- pure cardanoNodeEra
 
