@@ -66,7 +66,7 @@ instance Default CardanoTestnetCliOptions where
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | Options controlling how many nodes to create and whether to use user-provided
     -- configuration files, or to generate them automatically.
-    cardanoNodes :: TestnetNodeOptions
+    cardanoNodes :: [TestnetNodeOptions]
   , cardanoNodeEra :: AnyShelleyBasedEra -- ^ The era to start at
   , cardanoMaxSupply :: Word64 -- ^ The amount of Lovelace you are starting your testnet with (forwarded to shelley genesis)
                                -- TODO move me to GenesisOptions when https://github.com/IntersectMBO/cardano-cli/pull/874 makes it to cardano-node
@@ -138,17 +138,10 @@ instance Default GenesisOptions where
 data TestnetNodeOptions =
   UserProvidedNodeOptions FilePath
   -- ^ Value used when the user specifies the node configuration file. We start one single SPO node.
-  | AutomaticNodeOptions [AutomaticNodeOption]
-  -- ^ Value used when @cardano-testnet@ controls the node configuration files.
-  -- We start a custom number of nodes.
-  deriving (Eq, Show)
-
--- | Type used when the user doesn't specify the node configuration file. We start
--- a custom number of nodes. The '@String' arguments will be appended to the default
--- options when starting the node.
-data AutomaticNodeOption =
-    SpoNodeOptions [String]
+  | SpoNodeOptions [String]
+    -- ^ Value used to start a SPO node and let @cardano-testnet@ create its configuration
   | RelayNodeOptions [String]
+    -- ^ Value used to start a relay node and let @cardano-testnet@ create its configuration
   deriving (Eq, Show)
 
 -- | Type used to track whether the user is providing its data (node configuration file path, genesis file, etc.)

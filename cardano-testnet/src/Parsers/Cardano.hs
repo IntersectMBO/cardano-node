@@ -71,7 +71,7 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
     pAnyShelleyBasedEra' =
       pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
 
-pTestnetNodeOptions :: Parser TestnetNodeOptions
+pTestnetNodeOptions :: Parser [TestnetNodeOptions]
 pTestnetNodeOptions =
   asum' [
       AutomaticNodeOptions . (`L.replicate` defaultSpoOptions) <$>
