@@ -90,8 +90,9 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
     , logging        = NE.fromList [LoggingParams rootDir FileMode ForHuman]
     , rotation       = Nothing
     , verbosity      = Just Minimum
-    , metricsComp    = Nothing
+    , metricsNoSuffix = Nothing
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
+    , ekgRequestFull = Nothing
     }

@@ -66,7 +66,7 @@ testAggregation :: IO [Text]
 testAggregation = do
     testTracerRef <- newIORef []
     simpleTracer <- testTracer testTracerRef
-    formTracer <- machineFormatter Nothing simpleTracer
+    formTracer <- machineFormatter simpleTracer
     tracer <- foldTraceM calculate emptyStats (contramap unfold formTracer)
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [formTracer]
