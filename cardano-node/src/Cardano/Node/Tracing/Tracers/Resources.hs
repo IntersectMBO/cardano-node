@@ -13,7 +13,6 @@ import           Control.Monad.Class.MonadAsync (link)
 import           GHC.Conc (labelThread, myThreadId)
 
 import           "contra-tracer" Control.Tracer
-import           GHC.Conc (labelThread, myThreadId)
 
 -- | Starts a background thread to periodically trace resource statistics.
 -- The thread reads resource stats and traces them using the given tracer.

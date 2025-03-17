@@ -37,24 +37,16 @@ import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..), pattern DoDiskSnapshotChecksum)
+import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags, defaultGenesisConfigFlags, mkGenesisConfig)
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..), Flag (..))
-import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
-import           Ouroboros.Network.Diffusion.Configuration
-                   (AcceptedConnectionsLimit (..), ConsensusMode (..), DiffusionMode (..),
-                   PeerSelectionTargets (..), PeerSharing (..))
-import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
-import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
-import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags (..),
-                   defaultGenesisConfigFlags, mkGenesisConfig)
-import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..), Flag (..))
+import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
+import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
+import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Ouroboros.Consensus.Node (pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 

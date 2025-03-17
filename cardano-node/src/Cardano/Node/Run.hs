@@ -63,7 +63,7 @@ import           Cardano.Tracing.Tracers
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
+import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..), NetworkP2PMode (..),
                    NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
                    SnapshotPolicyArgs (..), StdRunNodeArgs (..))

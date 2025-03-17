@@ -93,6 +93,7 @@ import           Data.Word (Word32)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core
 import           Numeric (showFFloat)
+import Data.Proxy
 
 
 {- HLINT ignore "Use const" -}
