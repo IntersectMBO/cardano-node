@@ -35,13 +35,6 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   <$> pTestnetNodeOptions
   <*> pAnyShelleyBasedEra'
   <*> pMaxLovelaceSupply
-  <*> OA.option auto
-      (   OA.long "enable-p2p"
-      <>  OA.help "Enable P2P"
-      <>  OA.metavar "BOOL"
-      <>  OA.showDefault
-      <>  OA.value (cardanoEnableP2P def)
-      )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
       <>  OA.help "Node logging format (json|text)"
