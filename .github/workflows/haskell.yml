@@ -38,7 +38,7 @@ jobs:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
         # TODO add 9.8 again to the versions list when GHC-9.8 gets released with stm > 2.5.2,
         # see https://github.com/haskell/stm/issues/76
-        ghc: ["9.6", "9.10"]
+        ghc: ["9.6", "9.12"]
         cabal: ["3.12"]
         sys:
           - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }

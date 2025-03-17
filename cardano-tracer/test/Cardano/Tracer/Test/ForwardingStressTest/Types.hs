@@ -17,7 +17,7 @@ import           Control.Monad (guard)
 import           Data.Aeson (FromJSON (..), Object, Value (..), withObject, (.=))
 import           Data.Aeson.Types (Parser, parseFail, -- parseEither,
                                    parseField)
-import           Data.Text hiding (empty, length, reverse)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -63,7 +63,7 @@ parseFromObjInner :: Object -> Parser Message
 parseFromObjInner obj = do
   messageId_ <- parseField obj "mid"
   messageId <- maybe (parseFail "parseFromObjInner: No `mid' field found.") pure
-    (stripBrackets messageId_ >>= readMaybe @MessageID . unpack)
+    (stripBrackets messageId_ >>= readMaybe @MessageID . Text.unpack)
 
   kind     <- parseField @String obj "kind"
   workload <- parseField @String obj "workload"
@@ -73,7 +73,7 @@ parseFromObjInner obj = do
         Just workloadInt -> pure $ Message1 messageId workloadInt
         Nothing -> parseFail ("FromJSON Message: Could not parse 'workload' field: " ++ workload ++ "\n  + " ++ show obj)
     "Message2" ->
-      pure $ Message2 messageId (pack workload)
+      pure $ Message2 messageId (Text.pack workload)
     "Message3" ->
       case readMaybe @Double workload of
         Just workloadDouble -> pure $ Message3 messageId workloadDouble
