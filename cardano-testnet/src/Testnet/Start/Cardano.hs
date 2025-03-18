@@ -162,17 +162,7 @@ cardanoTestnetDefault testnetOptions genesisOptions conf = do
 -- > └── module
 cardanoTestnet :: ()
   => HasCallStack
-  => CardanoTestnetOptions -- ^ The options to use
-  -> GenesisOptions
-  -> UserProvidedData (ShelleyGenesis StandardCrypto)
-  -- ^ The shelley genesis to use, One possible way to provide this value is to use 'getDefaultShelleyGenesis'
-  -- and customize it. Generated if omitted.
-  -> UserProvidedData AlonzoGenesis
-  -- ^ The alonzo genesis to use. One possible way to provide this value is to use 'getDefaultAlonzoGenesis'
-  -- and customize it. Generated if omitted.
-  -> UserProvidedData (ConwayGenesis StandardCrypto)
-  -- ^ The conway genesis to use. One possible way to provide this value is to use 'defaultConwayGenesis'
-  -- and customize it. Generated if omitted.
+  => CardanoTestnetCliOptions -- ^ The options to use
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnet
