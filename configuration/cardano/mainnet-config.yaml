@@ -87,231 +87,152 @@ TurnOnLogging: True
 # be directed to the logs or monitoring backends.
 TurnOnLogMetrics: True
 
-# Use legacy tracing
-UseTraceDispatcher: False
+# Use the modern tracing system instead of the legacy tracing system.
+UseTraceDispatcher: True
 
-# Global logging severity filter. Messages must have at least this severity to
-# pass. Typical values would be Warning, Notice, Info or Debug.
-minSeverity: Info
+# Match the metrics prefix of the legacy tracing system to minimize breaking
+# changes.
+TraceOptionMetricsPrefix: "cardano.node.metrics."
 
-# Log items can be rendered with more or less verbose detail.
-# Verbosity ranges from MinimalVerbosity, NormalVerbosity to MaximalVerbosity
-TracingVerbosity: NormalVerbosity
+# Optional node name.  Defaults to hostname if left unset. Ideally this is
+# set in downstream code where the node's name is known.
+# TraceOptionNodeName:
 
-# The system supports a number of backends for logging and monitoring.
-# This setting lists the backends that will be available to use in the
-# configuration below. The logging backend is called Katip.
-setupBackends:
-  - KatipBK
+# The frequency of peer messages.
+TraceOptionPeerFrequency: 2000
 
-# This specifies the default backends that trace output is sent to if it
-# is not specifically configured to be sent to other backends.
-defaultBackends:
-  - KatipBK
+# The frequency of resource messages.
+TraceOptionResourceFrequency: 1000
 
-# EKG is a simple metrics monitoring system. Uncomment the following to enable
-# this backend and listen on the given local port and point your web browser to
-# http://localhost:12788/
-hasEKG: 12788
-
-# The Prometheus monitoring system exports EKG metrics. Uncomment the following
-# to listen on the given port. Output is provided on
-# http://localhost:12789/metrics
-# hasPrometheus:
-#   - "127.0.0.1"
-#   - 12789
-
-# To enable the legacy 'TraceForwarder' backend, uncomment the following setting. Log
-# items are then forwarded based on an entry in 'mapBackends' to a separate
-# process running a 'TraceAcceptor'.
-# Example using UNIX pipes:
-# traceForwardTo:
-#   tag: RemotePipe
-#   contents: "logs/pipe"
+# Queue size control:
+# In case of a missing forwarding service consumer, trace messages will be
+# buffered. This mitigates short forwarding interruptions, or delays at
+# startup time.
 #
-# Example using Windows named pipes:
-# traceForwardTo:
-#   tag: RemotePipe
-#   contents: "\\\\.\\pipe\\acceptor"
+# The queue capacity should thus correlate to the expected log lines per
+# second given a particular tracing configuration to avoid unnecessarily
+# increasing memory footprint.
 #
-# Example using network socket:
-# traceForwardTo:
-#   tag: RemoteSocket
-#   contents:
-#     - "127.0.0.1"
-#     - "2997"
+# The maxReconnectDelay config option specifies the maximum delay in seconds
+# between (re-)connection attempts of a forwarder.
+TraceOptionForwarder:
+  connQueueSize: 64
+  disconnQueueSize: 128
+  maxReconnectDeplay: 30
 
-# For the Katip logging backend we must set up outputs (called scribes)
-# The available types of scribe are:
-#   FileSK for files
-#   StdoutSK/StderrSK for stdout/stderr
-#   JournalSK for systemd's journal system
-#   DevNullSK ignores all output
-# The scribe output format can be ScText or ScJson. Log rotation settings can
-# be specified in the defaults below or overridden on a per-scribe basis here.
-setupScribes:
-  - scKind: StdoutSK
-    scName: stdout
-    scFormat: ScText
-    scRotation: null
+# Tracing options for node
+TraceOptions:
+  # The default tracer configuration
+  '':
+    backends:
+    # None, any combination, or all of the following backends can be
+    # enabled, where `EKGBackend` forwards EKG resource status to
+    # cardano-tracer, `Forwarder` forwards message traces and
+    # `PrometheusSimple` serves cardano-node metrics directly from
+    # cardano-node and defaults to use of the same port as in the legacy
+    # tracing system.
+    - EKGBackend
+    - Forwarder
 
-# For the Katip logging backend this specifies the default scribes that trace
-# output is sent to if it is not configured to be sent to other scribes.
-defaultScribes:
-  - - StdoutSK
-    - stdout
+    # Only one of the following can be enabled, which determines for format
+    # of node logging to stdout.
+    - PrometheusSimple suffix 127.0.0.1 12798
+    - Stdout HumanFormatColoured
 
-# The default file rotation settings for katip scribes, unless overridden
-# in the setupScribes above for specific scribes.
-rotation:
-  rpLogLimitBytes: 5000000
-  rpKeepFilesNum:  10
-  rpMaxAgeHours:   24
+    # Each tracer can specify the level of details for printing messages.
+    # Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If
+    # no implementation is given, `DNormal` is chosen.
+    detail: DNormal
 
+    # The severity levels, ranging from the least severe (`Debug`) to the
+    # most severe (`Emergency`), provide a framework for ignoring messages
+    # with severity levels below a globally configured severity cutoff.
+    #
+    # The full list of severities are:
+    # `Debug`, `Info`, `Notice`, `Warning`, `Error`, `Critical`, `Alert` and
+    # `Emergency`.
+    #
+    # To enhance severity filtering, there is also the option of `Silence`
+    # which allows for the unconditional silencing of a specific trace,
+    # essentially representing the deactivation of tracers -- a semantic
+    # continuation of the functionality in the legacy system.
+    severity: Notice
 
-##### Coarse grained logging control #####
+  # The following tracer configurations are configured to closely match the
+  # default logging seen in the legacy cardano-node tracing system.
+  BlockFetch.Client.CompletedBlockFetch:
+    # A frequency limit for the number of messages per second may also be
+    # provided for any tracer.
+    maxFrequency: 2
 
-# Trace output from whole subsystems can be enabled/disabled using the following
-# settings. This provides fairly coarse grained control, but it is relatively
-# efficient at filtering out unwanted trace output.
+  BlockFetch.Decision:
+    severity: Silence
 
-TraceAcceptPolicy: True
+  ChainDB:
+    severity: Info
 
-# Trace BlockFetch client.
-TraceBlockFetchClient: False
+  ChainDB.AddBlockEvent.AddBlockValidation:
+    severity: Silence
 
-# Trace BlockFetch decisions made by the BlockFetch client.
-TraceBlockFetchDecisions: False
+  ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+    maxFrequency: 2
 
-# Trace BlockFetch protocol messages.
-TraceBlockFetchProtocol: False
+  ChainDB.AddBlockEvent.AddedBlockToQueue:
+    maxFrequency: 2
 
-# Serialised Trace BlockFetch protocol messages.
-TraceBlockFetchProtocolSerialised: False
+  ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
+    maxFrequency: 2
 
-# Trace BlockFetch server.
-TraceBlockFetchServer: False
+  ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
+    maxFrequency: 2
 
-# Trace BlockchainTime.
-# TraceBlockchainTime: False
+  ChainSync.Client:
+    severity: Warning
 
-# Verbose tracer of ChainDB
-TraceChainDb: True
+  Forge.Loop:
+    severity: Info
 
-# Trace ChainSync client.
-TraceChainSyncClient: False
+  Forge.StateInfo:
+    severity: Info
 
-# Trace ChainSync server (blocks).
-TraceChainSyncBlockServer: False
+  Mempool:
+    severity: Silence
 
-# Trace ChainSync server (headers).
-TraceChainSyncHeaderServer: False
+  Net.ConnectionManager.Remote:
+    severity: Info
 
-# Trace ChainSync protocol messages.
-TraceChainSyncProtocol: False
+  Net.ConnectionManager.Remote.ConnectionManagerCounters:
+    severity: Silence
 
-TraceConnectionManager: True
+  Net.ErrorPolicy:
+    severity: Info
 
-# Trace DNS Resolver messages.
-TraceDNSResolver: True
+  Net.ErrorPolicy.Local:
+    severity: Info
 
-# Trace DNS Subscription messages.
-TraceDNSSubscription: True
+  Net.InboundGovernor:
+    severity: Warning
 
-TraceDiffusionInitialization: True
+  Net.InboundGovernor.Remote:
+    severity: Info
 
-# Trace error policy resolution.
-TraceErrorPolicy: True
+  Net.Mux.Remote:
+    severity: Info
 
-# Trace local error policy resolution.
-TraceLocalErrorPolicy: True
+  Net.PeerSelection:
+    severity: Silence
 
-# Trace block forging.
-TraceForge: True
+  Net.Subscription.DNS:
+    severity: Info
 
-# Trace Handshake protocol messages.
-TraceHandshake: True
+  Net.Subscription.IP:
+    severity: Info
 
-# Trace IP Subscription messages.
-TraceIpSubscription: True
+  Resources:
+    severity: Silence
 
-TraceLedgerPeers: True
-
-TraceLocalRootPeers: True
-
-TraceInboundGovernor: True
-
-TracePeerSelection: True
-
-TracePeerSelectionActions: True
-
-TracePublicRootPeers: True
-
-TraceServer: True
-
-
-# Trace local ChainSync protocol messages.
-TraceLocalChainSyncProtocol: False
-
-# Trace local connection manager messages.
-TraceLocalConnectionManager: True
-
-# Trace local Handshake protocol messages.
-TraceLocalHandshake: True
-
-# Trace local TxSubmission protocol messages.
-TraceLocalTxSubmissionProtocol: False
-
-# Trace local TxSubmission server.
-TraceLocalTxSubmissionServer: False
-
-# Trace mempool.
-TraceMempool: False
-
-# Trace Mux Events.
-TraceMux: False
-
-# Trace TxSubmission server (inbound transactions).
-TraceTxInbound: False
-
-# Trace TxSubmission client (outbound transactions).
-TraceTxOutbound: False
-
-# Trace TxSubmission protocol messages.
-TraceTxSubmissionProtocol: False
-
-##### Fine grained logging control #####
-
-# It is also possible to have more fine grained control over filtering of
-# trace output, and to match and route trace output to particular backends.
-# This is less efficient than the coarse trace filters above but provides
-# much more precise control.
-
-options:
-
-  # This routes metrics matching specific names to particular backends.
-  # This overrides the 'defaultBackends' listed above. And note that it is
-  # an override and not an extension so anything matched here will not
-  # go to the default backend, only to the explicitly listed backends.
-  mapBackends:
-    cardano.node.metrics:
-      - EKGViewBK
-
-    cardano.node.resources:
-      - EKGViewBK
-
-  # # redirects traced values to a specific scribe which is identified by its
-  # # type and its name, separated by "::":
-  # mapScribes:
-  #   cardano.node.metrics:
-  #     - "FileSK::logs/mainnet.log"
-  mapSubtrace:
-    cardano.node.metrics:
-      subtrace: Neutral
-
-hasPrometheus:
-  - 127.0.0.1
-  - 12798
+  Startup.DiffusionInit:
+    severity: Info
 
 # Set or unset the mempool capacity override in number of bytes.
 #

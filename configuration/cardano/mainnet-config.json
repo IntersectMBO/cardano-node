@@ -34,10 +34,10 @@
   "TargetNumberOfEstablishedPeers": 40,
   "TargetNumberOfKnownPeers": 150,
   "TargetNumberOfRootPeers": 60,
-  "TraceMempool": false,
   "TraceOptionForwarder": {
     "connQueueSize": 64,
-    "disconnQueueSize": 128
+    "disconnQueueSize": 128,
+    "maxReconnectDeplay": 30
   },
   "TraceOptionMetricsPrefix": "cardano.node.metrics.",
   "TraceOptionPeerFrequency": 2000,
@@ -45,9 +45,10 @@
   "TraceOptions": {
     "": {
       "backends": [
-        "Stdout HumanFormatColoured",
         "EKGBackend",
-        "Forwarder"
+        "Forwarder",
+        "PrometheusSimple suffix 127.0.0.1 12798",
+        "Stdout HumanFormatColoured"
       ],
       "detail": "DNormal",
       "severity": "Notice"
@@ -86,7 +87,7 @@
       "severity": "Info"
     },
     "Mempool": {
-      "severity": "Info"
+      "severity": "Silence"
     },
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
