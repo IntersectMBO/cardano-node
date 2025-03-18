@@ -24,6 +24,7 @@ with builtins; let
         loRequestNum
         logging
         metricsHelp
+        metricsNoSuffix
         networkMagic
         resourceFreq
         verbosity
@@ -367,10 +368,12 @@ in {
 
       minLogSeverity = mkOption {
         type = nullOr (enum ["Debug" "Info" "Notice" "Warning" "Error" "Critical" "Alert" "Emergency"]);
-        default = "Info";
+        default = null;
         description = ''
           Setting this will cause cardano-tracer to drop its own log messages
           that are less severe than the level declared.
+
+          If null cardano-tracer will set a default: Info.
         '';
       };
 
@@ -390,11 +393,28 @@ in {
           cardano-node config should not be included in the attribute name.
           Similarly metric type suffixes, such as `.int` or `.real` should also
           not be included.
+
+          The effect of this option applies to prometheus metrics only, ie: not
+          EKG.
         '';
         example = {
           "Mem.resident" = "Kernel-reported RSS (resident set size)";
           "RTS.gcMajorNum" = "Major GCs";
         };
+      };
+
+      metricsNoSuffix = mkOption {
+        type = nullOr bool;
+        default = null;
+        description = ''
+          If set true, metrics name suffixes, like "_int", will be dropped,
+          increases similiarity with old system names.
+
+          The effect of this option applies to prometheus metrics only, ie: not
+          EKG.
+
+          If null cardano-tracer will set a default: false.
+        '';
       };
 
       networkMagic = mkOption {
@@ -500,8 +520,8 @@ in {
 
           Defaults to the legacy prometheus listening port, 12798, plus 10.
 
-          This avoids a conflict with the cardano-node default metrics port
-          binding when PrometheusSimple backend is in use.
+          This avoids a conflict with the cardano-node default metrics port binding
+          when PrometheusSimple backend is in use.
         '';
       };
 
