@@ -124,7 +124,8 @@
     },
     "Startup.DiffusionInit": {
       "severity": "Info"
-    }
+    },
+    "minSeverity": "Critical"
   },
   "TurnOnLogMetrics": true,
   "TurnOnLogging": true,

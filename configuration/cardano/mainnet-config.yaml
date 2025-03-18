@@ -234,6 +234,10 @@ TraceOptions:
   Startup.DiffusionInit:
     severity: Info
 
+# Required by the legacy tracing system, this key is still required for
+# cardano-node to start.
+minSeverity = "Critical";
+
 # Set or unset the mempool capacity override in number of bytes.
 #
 # This is intended for testing, and for low-resource machines to run with a smaller mempool.
