@@ -27,7 +27,8 @@
   "ShelleyGenesisHash": "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81",
   "TraceOptionForwarder": {
     "connQueueSize": 64,
-    "disconnQueueSize": 128
+    "disconnQueueSize": 128,
+    "maxReconnectDeplay": 30
   },
   "TraceOptionMetricsPrefix": "cardano.node.metrics.",
   "TraceOptionPeerFrequency": 2000,
@@ -35,9 +36,10 @@
   "TraceOptions": {
     "": {
       "backends": [
-        "Stdout HumanFormatColoured",
         "EKGBackend",
-        "Forwarder"
+        "Forwarder",
+        "PrometheusSimple suffix 127.0.0.1 12798",
+        "Stdout HumanFormatColoured"
       ],
       "detail": "DNormal",
       "severity": "Notice"
@@ -76,7 +78,7 @@
       "severity": "Info"
     },
     "Mempool": {
-      "severity": "Info"
+      "severity": "Silence"
     },
     "Net.ConnectionManager.Remote": {
       "severity": "Info"
