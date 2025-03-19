@@ -42,6 +42,8 @@ library
                       Cardano.Logging.Tracer.Forward
                       Cardano.Logging.Tracer.Composed
                       Cardano.Logging.Types
+                      Cardano.Logging.Types.NodeInfo
+                      Cardano.Logging.Types.NodePeers
                       Cardano.Logging.Utils
                       Cardano.Logging.Version
                       Control.Tracer.Arrow

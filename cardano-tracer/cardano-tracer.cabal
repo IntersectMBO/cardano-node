@@ -164,14 +164,13 @@ library
   if (flag(systemd) && os(linux)) || flag(rtview)
     build-depends:      unordered-containers
 
-  build-depends:        aeson
+  build-depends:        aeson >= 2.1.0.0
                       , async
                       , auto-update
                       , bimap
                       , blaze-html
                       , bytestring
-                      , cardano-node
-                      , cborg
+                      , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
                       , directory
@@ -182,21 +181,22 @@ library
                       , filepath
                       , http-types
                       , mime-mail
-                      , network-mux
+                      , network-mux >= 0.5
                       , optparse-applicative
                       , ouroboros-network ^>= 0.20
-                      , ouroboros-network-api
+                      , ouroboros-network-api ^>= 0.13
                       , ouroboros-network-framework
                       , signal
                       , slugify
                       , smtp-mail ^>= 0.5
-                      , stm
+                      , stm <2.5.2 || >=2.5.3
                       , string-qq
                       , text
                       , time
-                      , trace-dispatcher
-                      , trace-forward
-                      , trace-resources
+                      , trace-dispatcher ^>= 2.8.1
+                      , trace-forward ^>= 2.2.10
+                      , trace-resources ^>= 0.2.3
+                      , unordered-containers
                       , wai ^>= 3.2
                       , warp ^>= 3.4
                       , yaml
@@ -250,13 +250,13 @@ library demo-forwarder-lib
                       , filepath
                       , generic-data
                       , network-mux
-                      , optparse-applicative-fork
-                      , ouroboros-network-api
+                      , optparse-applicative-fork >= 0.18.1
+                      , ouroboros-network-api ^>= 0.12
                       , ouroboros-network-framework
                       , tasty-quickcheck
                       , time
-                      , trace-dispatcher
-                      , trace-forward
+                      , trace-dispatcher ^>= 2.8.1
+                      , trace-forward ^>= 2.2.10
                       , vector
                       , vector-algorithms
                       , QuickCheck
@@ -293,12 +293,12 @@ library demo-acceptor-lib
                       , extra
                       , filepath
                       , generic-data
-                      , optparse-applicative-fork
-                      , ouroboros-network-api
-                      , stm
+                      , optparse-applicative-fork >= 0.18.1
+                      , ouroboros-network-api ^>= 0.12
+                      , stm <2.5.2 || >=2.5.3
                       , text
                       , tasty-quickcheck
-                      , trace-forward
+                      , trace-forward ^>= 2.2.10
                       , vector
                       , vector-algorithms
                       , QuickCheck
@@ -352,16 +352,16 @@ test-suite cardano-tracer-test
                       , filepath
                       , generic-data
                       , network-mux
-                      , optparse-applicative-fork
-                      , ouroboros-network-api
+                      , optparse-applicative-fork >= 0.18.1
+                      , ouroboros-network-api ^>= 0.12
                       , ouroboros-network-framework
-                      , stm
+                      , stm <2.5.2 || >=2.5.3
                       , tasty
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher
-                      , trace-forward
+                      , trace-dispatcher ^>= 2.8.1
+                      , trace-forward ^>= 2.2.10
                       , unix-compat
                       , vector
                       , vector-algorithms
@@ -411,9 +411,9 @@ test-suite cardano-tracer-test-ext
                       , generic-data
                       , Glob
                       , network-mux
-                      , optparse-applicative-fork
-                      , ouroboros-network
-                      , ouroboros-network-api
+                      , optparse-applicative-fork >= 0.18.1
+                      , ouroboros-network ^>= 0.19.0.3
+                      , ouroboros-network-api ^>= 0.12
                       , ouroboros-network-framework
                       , process
                       , QuickCheck
@@ -421,8 +421,8 @@ test-suite cardano-tracer-test-ext
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher
-                      , trace-forward
+                      , trace-dispatcher ^>= 2.8.1
+                      , trace-forward ^>= 2.2.10
                       , unix-compat
                       , vector
                       , vector-algorithms
@@ -440,7 +440,7 @@ benchmark cardano-tracer-bench
   main-is:              cardano-tracer-bench.hs
 
   if flag(rtview)
-    build-depends:      stm
+    build-depends:      stm <2.5.2 || >=2.5.3
   build-depends:        cardano-tracer
                       , criterion
                       , directory
@@ -448,7 +448,7 @@ benchmark cardano-tracer-bench
                       , extra
                       , filepath
                       , time
-                      , trace-dispatcher
+                      , trace-dispatcher ^>= 2.8.1
 
   ghc-options:          -threaded
                         -rtsopts
