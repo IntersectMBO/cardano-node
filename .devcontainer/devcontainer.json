@@ -1,0 +1,13 @@
+{
+    "image":"ghcr.io/input-output-hk/devx-devcontainer:ghc8107-iog",
+    "customizations":{
+       "vscode":{
+          "extensions":[
+             "haskell.haskell"
+          ],
+          "settings":{
+             "haskell.manageHLS":"PATH"
+          }
+       }
+    }
+ }
