@@ -1,5 +1,11 @@
 # Revision history for trace-dispatcher
 
+
+## 2.8.2 (March 31, 2025)
+* Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo` from
+  `cardano-tracer:Cardano.Node.Startup`to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`, and `NodePeers` from
+  `cardano-node:Cardano.Node.Tracing.Peers` to `trace-dispatcher:Cardano.Logging.Types.NodePeers`.
+
 ## 2.8.1 -- Feb 2025
 
 * Updated to `ouroboros-network-framework-0.16`
