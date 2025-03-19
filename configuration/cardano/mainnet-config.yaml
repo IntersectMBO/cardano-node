@@ -242,6 +242,13 @@ TraceOptions:
 # cardano-node to start.
 minSeverity: Critical
 
+# Required by some legacy tests which may otherwise fail to start.
+defaultBackends: []
+defaultScribes: []
+options: {}
+setupBackends: []
+setupScribes: []
+
 # Set or unset the mempool capacity override in number of bytes.
 #
 # This is intended for testing, and for low-resource machines to run with a smaller mempool.

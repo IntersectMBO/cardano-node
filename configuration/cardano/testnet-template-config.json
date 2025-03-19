@@ -124,5 +124,10 @@
   "TurnOnLogMetrics": true,
   "TurnOnLogging": true,
   "UseTraceDispatcher": true,
-  "minSeverity": "Critical"
+  "defaultBackends": [],
+  "defaultScribes": [],
+  "minSeverity": "Critical",
+  "options": {},
+  "setupBackends": [],
+  "setupScribes": []
 }
