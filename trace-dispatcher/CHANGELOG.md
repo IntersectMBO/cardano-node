@@ -1,5 +1,10 @@
 # Revision history for trace-dispatcher
 
+## 2.9.1 (April, 2025)
+* Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo` from
+  `cardano-tracer:Cardano.Node.Startup`to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`, and `NodePeers` from
+  `cardano-node:Cardano.Node.Tracing.Peers` to `trace-dispatcher:Cardano.Logging.Types.NodePeers`.
+
 ## 2.9 -- Mar 2025
 
 * New `PrometheusSimple` backend which runs a simple TCP server for direct exposition of metrics, without forwarding.

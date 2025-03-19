@@ -33,6 +33,7 @@ import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
 import           Cardano.Node.Startup
+import           Cardano.Node.Tracing.NodeInfo () -- MetaTrace NodeInfo
 import           Ouroboros.Network.IOManager (IOManager)
 
 import           Control.Monad (forM, guard)

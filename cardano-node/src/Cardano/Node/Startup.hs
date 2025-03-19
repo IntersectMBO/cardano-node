@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -8,13 +9,19 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Node.Startup where
+module Cardano.Node.Startup
+  ( module Cardano.Node.Startup
+  , module Cardano.Logging.Types.NodeInfo
+  , module Cardano.Logging.Types.NodeStartupInfo
+  ) where
 
 import qualified Cardano.Api as Api
 
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
+import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
+import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
@@ -43,15 +50,12 @@ import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
 import           Prelude
 
-import           Control.DeepSeq (NFData)
-import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Map.Strict (Map)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import           Data.Version (showVersion)
 import           Data.Word (Word64)
-import           GHC.Generics (Generic)
 import           Network.HostName (getHostName)
 import qualified Network.Socket as Socket
 
@@ -132,13 +136,15 @@ data StartupTrace blk =
   | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
   | MovedTopLevelOption String
 
-data EnabledBlockForging = EnabledBlockForging
-                         | DisabledBlockForging
-                         | NotEffective
-                         -- ^ one needs to send `SIGHUP` after consensus
-                         -- initialised itself (especially after replying all
-                         -- blocks).
-                         deriving (Eq, Show)
+data EnabledBlockForging 
+  = EnabledBlockForging
+  | DisabledBlockForging
+  | NotEffective
+    -- ^ one needs to send `SIGHUP` after consensus
+    -- initialised itself (especially after replying all
+    -- blocks).
+  deriving stock 
+    (Eq, Show)
 
 data BasicInfoCommon = BasicInfoCommon {
     biConfigPath    :: FilePath
@@ -169,37 +175,6 @@ data BasicInfoNetwork = BasicInfoNetwork {
   , niDnsProducers  :: [DnsSubscriptionTarget]
   , niIpProducers   :: IPSubscriptionTarget
   }
-
-data NodeInfo = NodeInfo
-  { niName            :: Text
-  , niProtocol        :: Text
-  , niVersion         :: Text
-  , niCommit          :: Text
-  , niStartTime       :: UTCTime
-  , niSystemStartTime :: UTCTime
-  } deriving (Eq, Generic, ToJSON, FromJSON, Show)
-
-deriving instance (NFData NodeInfo)
-
-instance MetaTrace NodeInfo where
-  namespaceFor NodeInfo {}  =
-    Namespace [] ["NodeInfo"]
-  severityFor  (Namespace _ ["NodeInfo"]) _ =
-    Just Info
-  severityFor _ns _ =
-    Nothing
-  documentFor  (Namespace _ ["NodeInfo"]) = Just
-    "Basic information about this node collected at startup\
-        \\n\
-        \\n _niName_: Name of the node. \
-        \\n _niProtocol_: Protocol which this nodes uses. \
-        \\n _niVersion_: Software version which this node is using. \
-        \\n _niStartTime_: Start time of this node. \
-        \\n _niSystemStartTime_: How long did the start of the node took."
-  documentFor _ns =
-     Nothing
-  allNamespaces = [ Namespace [] ["NodeInfo"]]
-
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
 prepareNodeInfo
@@ -261,32 +236,3 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
 
         hostName <- getHostName
         return (pack (hostName <> suffix))
-
--- | This information is taken from 'BasicInfoShelleyBased'. It is required for
---   'cardano-tracer' service (particularly, for RTView).
-data NodeStartupInfo = NodeStartupInfo {
-    suiEra               :: Text
-  , suiSlotLength        :: NominalDiffTime
-  , suiEpochLength       :: Word64
-  , suiSlotsPerKESPeriod :: Word64
-  } deriving (Eq, Generic, ToJSON, FromJSON, Show)
-
-deriving instance (NFData NodeStartupInfo)
-
-instance MetaTrace NodeStartupInfo where
-  namespaceFor NodeStartupInfo {}  =
-    Namespace [] ["NodeStartupInfo"]
-  severityFor  (Namespace _ ["NodeStartupInfo"]) _ =
-    Just Info
-  severityFor _ns _ =
-    Nothing
-  documentFor  (Namespace _ ["NodeStartupInfo"]) = Just
-    "Startup information about this node, required for RTView\
-        \\n\
-        \\n _suiEra_: Name of the current era. \
-        \\n _suiSlotLength_: Slot length, in seconds. \
-        \\n _suiEpochLength_: Epoch length, in slots. \
-        \\n _suiSlotsPerKESPeriod_: KES period length, in slots."
-  documentFor _ns =
-     Nothing
-  allNamespaces = [ Namespace [] ["NodeStartupInfo"]]

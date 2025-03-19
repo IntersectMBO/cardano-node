@@ -94,14 +94,16 @@ library
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
-                        Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.Compat
+                        Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
                         Cardano.Node.Tracing.Era.Byron
                         Cardano.Node.Tracing.Era.HardFork
                         Cardano.Node.Tracing.Era.Shelley
                         Cardano.Node.Tracing.Formatting
+                        Cardano.Node.Tracing.NodeInfo
+                        Cardano.Node.Tracing.NodeStartupInfo
                         Cardano.Node.Tracing.Peers
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep

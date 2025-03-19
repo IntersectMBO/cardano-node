@@ -111,8 +111,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 
   traceWith tr TracerInitEventQueues
 #if RTVIEW
-  eventsQueues   <- initEventsQueues rtViewStateDir connectedNodesNames dpRequestors currentDPLock
-
+  eventsQueues   <- initEventsQueues tr rtViewStateDir connectedNodesNames dpRequestors currentDPLock
   rtViewPageOpened <- newTVarIO False
 #endif
 
