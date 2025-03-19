@@ -134,10 +134,14 @@ TraceOptions:
     - EKGBackend
     - Forwarder
 
+    # Include for the 10.3 release
+    # - PrometheusSimple suffix 127.0.0.1 12798
+
     # Only one of the following can be enabled, which determines for format
     # of node logging to stdout.
-    - PrometheusSimple suffix 127.0.0.1 12798
     - Stdout HumanFormatColoured
+    # - Stdout HumanFormatUncoloured
+    # - Stdout MachineFormat
 
     # Each tracer can specify the level of details for printing messages.
     # Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If
@@ -236,7 +240,7 @@ TraceOptions:
 
 # Required by the legacy tracing system, this key is still required for
 # cardano-node to start.
-minSeverity = "Critical";
+minSeverity: Critical
 
 # Set or unset the mempool capacity override in number of bytes.
 #

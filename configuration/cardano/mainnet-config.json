@@ -47,7 +47,6 @@
       "backends": [
         "EKGBackend",
         "Forwarder",
-        "PrometheusSimple suffix 127.0.0.1 12798",
         "Stdout HumanFormatColoured"
       ],
       "detail": "DNormal",
@@ -124,10 +123,10 @@
     },
     "Startup.DiffusionInit": {
       "severity": "Info"
-    },
-    "minSeverity": "Critical"
+    }
   },
   "TurnOnLogMetrics": true,
   "TurnOnLogging": true,
-  "UseTraceDispatcher": true
+  "UseTraceDispatcher": true,
+  "minSeverity": "Critical"
 }
