@@ -1775,8 +1775,9 @@ instance ( tx ~ GenTx blk
     [CounterM "Forge.node-is-leader" Nothing]
   asMetrics TraceForgeTickedLedgerState {} = []
   asMetrics TraceForgingMempoolSnapshot {} = []
-  asMetrics (TraceForgedBlock _slot _ _ _) =
-    [CounterM "Forge.forged" Nothing]
+  asMetrics (TraceForgedBlock slot _ _ _) =
+    [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot),
+     CounterM "Forge.forged" Nothing]
   asMetrics (TraceDidntAdoptBlock _slot _) =
     [CounterM "Forge.didnt-adopt" Nothing]
   asMetrics (TraceForgedInvalidBlock _slot _ _) =
@@ -1875,7 +1876,8 @@ instance MetaTrace (TraceForgeEvent blk) where
   metricsDocFor (Namespace _ ["ForgeTickedLedgerState"]) = []
   metricsDocFor (Namespace _ ["ForgingMempoolSnapshot"]) = []
   metricsDocFor (Namespace _ ["ForgedBlock"]) =
-    [("Forge.forged", "")]
+    [("forgedSlotLast", "Slot number of the last forged block"),
+     ("Forge.forged", "Counter of forged blocks")]
   metricsDocFor (Namespace _ ["DidntAdoptBlock"]) =
     [("Forge.didnt-adopt", "")]
   metricsDocFor (Namespace _ ["ForgedInvalidBlock"]) =
