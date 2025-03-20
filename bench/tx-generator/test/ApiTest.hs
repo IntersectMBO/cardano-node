@@ -14,7 +14,8 @@ module Main (module Main) where
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as Api
-import           Cardano.Api.Shelley (ProtocolParameters (..), fromPlutusData)
+import           Cardano.Api.Shelley (fromPlutusData, sgNetworkMagic)
+import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters (..))
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
@@ -116,7 +117,7 @@ main
 -- helper functions move them out-of-line, with an extra helper to
 -- avoid repeating the failure message.
 showFundCore :: IsShelleyBasedEra era => Maybe (AddressInEra era, Api.Coin) -> String
-showFundCore = maybe "fund check failed" show
+showFundCore = maybe "no fund found for given key in genesis" show
 
 showBabbage :: Maybe (AddressInEra BabbageEra, Api.Coin) -> String
 showBabbage = ("Babbage: " ++) . showFundCore
@@ -135,14 +136,16 @@ checkFund nixService shelleyGenesis signingKey
   | AnyCardanoEra ConwayEra <- _nix_era nixService
   = showConway $ checkFundCore shelleyGenesis signingKey
   | otherwise
-  = "ApiTest: unrecognized era"
+  = "ApiTest.checkFund: unrecognized era"
 
 checkFundCore ::
   IsShelleyBasedEra era
   => ShelleyGenesis
   -> SigningKey PaymentKey
   -> Maybe (AddressInEra era, Api.Coin)
-checkFundCore = genesisInitialFundForKey Mainnet
+checkFundCore sg = genesisInitialFundForKey networkId sg
+  where
+    networkId = fromNetworkMagic $ NetworkMagic $ sgNetworkMagic sg
 
 checkPlutusBuiltin :: FilePath -> IO ()
 #ifndef WITH_LIBRARY

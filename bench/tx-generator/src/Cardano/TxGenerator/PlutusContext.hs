@@ -26,7 +26,7 @@ module  Cardano.TxGenerator.PlutusContext
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters (..))
+import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters (..))
 
 import           Cardano.Ledger.Coin (Coin)
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)

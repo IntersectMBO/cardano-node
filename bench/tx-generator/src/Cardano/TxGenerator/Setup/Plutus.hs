@@ -26,8 +26,8 @@ import           Control.Monad.Writer (runWriter)
 import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..), fromAlonzoExUnits,
-                   protocolParamCostModels, toPlutusData)
+import           Cardano.Api.Shelley (PlutusScript (..), fromAlonzoExUnits, toPlutusData)
+import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters (..))
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 
 import qualified PlutusLedgerApi.V1 as PlutusV1
