@@ -1,6 +1,6 @@
 cabal-version:          3.0
 name:                   plutus-scripts-bench
-version:                1.0.4.2
+version:                1.0.4.3
 synopsis:               Plutus scripts used for benchmarking
 description:            Plutus scripts used for benchmarking.
 category:               Cardano,
@@ -83,9 +83,9 @@ library
   --------------------------
   build-depends:
     , cardano-api             ^>=10.10
-    , plutus-ledger-api       ^>=1.37
-    , plutus-tx               ^>=1.37
-    , plutus-tx-plugin        ^>=1.37
+    , plutus-ledger-api       ^>=1.40
+    , plutus-tx               ^>=1.40
+    , plutus-tx-plugin        ^>=1.40
 
   ------------------------
   -- Non-IOG dependencies
