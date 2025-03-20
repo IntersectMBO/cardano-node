@@ -20,13 +20,17 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, Has
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
+import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
+import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
 import           Data.Proxy (Proxy (..))
+import           Data.Time (DiffTime)
 import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
@@ -379,3 +383,38 @@ instance MetaTrace (AnyMessage KA.KeepAlive) where
       , Namespace [] ["KeepAliveResponse"]
       , Namespace [] ["Done"]
       ]
+
+--------------------------------------------------------------------------------
+-- KeepAliveClient Tracer
+--------------------------------------------------------------------------------
+
+instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) where
+    forMachine _dtal (AddSample peer rtt pgsv) =
+        mconcat
+          [ "kind" .= String "AddSample"
+          , "address" .= show peer
+          , "rtt" .= rtt
+          , "sampleTime" .= show (dTime $ sampleTime pgsv)
+          , "outboundG" .= (realToFrac $ gGSV (outboundGSV pgsv) :: Double)
+          , "inboundG" .= (realToFrac $ gGSV (inboundGSV pgsv) :: Double)
+          ]
+        where
+          gGSV :: GSV -> DiffTime
+          gGSV (GSV g _ _) = g
+
+          dTime :: Time -> Double
+          dTime (Time d) = realToFrac d
+
+    forHuman = showT
+
+instance MetaTrace (TraceKeepAliveClient remotePeer) where
+  namespaceFor AddSample {} = Namespace [] ["KeepAliveClient"]
+
+  severityFor (Namespace _ ["KeepAliveClient"]) Nothing = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["KeepAliveClient"]) = Just
+    "A server read has occurred, either for an add block or a rollback"
+  documentFor _ = Just ""
+
+  allNamespaces = [Namespace [] ["KeepAliveClient"]]
