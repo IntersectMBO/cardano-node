@@ -1526,7 +1526,7 @@ instance (Show txid, Show tx)
 instance Show remotePeer => ToObject (TraceKeepAliveClient remotePeer) where
   toObject _verb (AddSample peer rtt pgsv) =
     mconcat
-      [ "kind" .= String "KeepAliveClient AddSample"
+      [ "kind" .= String "AddSample"
       , "address" .= show peer
       , "rtt" .= rtt
       , "sampleTime" .= show (dTime $ sampleTime pgsv)
