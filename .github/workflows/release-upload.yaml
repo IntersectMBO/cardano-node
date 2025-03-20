@@ -29,7 +29,7 @@ jobs:
       run: |
         while [[ true ]]; do
           check_name='ci/hydra-build:required'
-          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check_name" --jq '.check_runs[].conclusion')
+          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check_name" --paginate --jq '.check_runs[].conclusion')
           case "$conclusion" in
             success)
               echo "$check_name succeeded"
@@ -42,7 +42,7 @@ jobs:
               exit 1;;
           esac
         done
-    
+
   pull:
     needs: [wait-for-hydra]
     strategy:
@@ -77,11 +77,11 @@ jobs:
             win64)
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.windows.cardano-node-win64
               cp result/cardano-node-*-*.zip .
-              ;;              
+              ;;
           esac
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}-${{ matrix.arch }}       
+          name: ${{ github.sha }}-${{ matrix.arch }}
           path: cardano-node-*-*.*
           retention-days: 1
 
