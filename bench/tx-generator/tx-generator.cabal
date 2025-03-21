@@ -50,7 +50,7 @@ library
                         -fno-warn-missing-import-lists
                         -fobject-code -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas
-                        -- TODO: switch back to -Wwarn=deprecations having dropped Cardano.Api.ProtocolParameters.ProtocolParameters in favour of Cardano.Api.Ledger.PParams
+                        -- TODO: switch back to -Wwarn=deprecations having removed createAndValidateTransactionBody in favour of createTransactionBody (Cardano.Api deprecation)
                         -Wno-deprecations
 
   exposed-modules:      Cardano.Api.Internal.ProtocolParameters
@@ -91,10 +91,8 @@ library
                         Cardano.TxGenerator.Utils
                         Cardano.TxGenerator.UTxO
 
-                        Cardano.TxGenerator.Internal.Orphans
-
   other-modules:        Cardano.TxGenerator.Internal.Fifo
-                        -- Cardano.TxGenerator.Internal.Orphans
+                        Cardano.TxGenerator.Internal.Orphans
                         Paths_tx_generator
 
   autogen-modules:      Paths_tx_generator
@@ -180,12 +178,12 @@ executable tx-generator
   build-depends:        base
                       , tx-generator
 
-test-suite tx-generator-apitest
+executable calibrate-script
   import:               project-config, with-library
 
-  hs-source-dirs:       test
-  main-is:              ApiTest.hs
-  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       app
+                        src-calibrate
+  main-is:              calibrate-script.hs
   default-language:     Haskell2010
   ghc-options:          -threaded
                         -Wall
@@ -204,11 +202,49 @@ test-suite tx-generator-apitest
                       , cardano-cli
                       , cardano-node
                       , plutus-tx
+                      , text
                       , transformers
                       , transformers-except
                       , tx-generator
 
-  other-modules:        Paths_tx_generator
+  default-extensions:   ViewPatterns
+
+  other-modules:        Cardano.TxGenerator.Calibrate.Utils
+                        Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
+
+test-suite tx-generator-apitest
+  import:               project-config, with-library
+
+  hs-source-dirs:       src-calibrate
+                        test
+  main-is:              ApiTest.hs
+  type:                 exitcode-stdio-1.0
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
+                        -Wno-deprecations
+
+  build-depends:        base
+                      , aeson
+                      , aeson-pretty
+                      , bytestring
+                      , directory
+                      , extra
+                      , filepath
+                      , optparse-applicative-fork
+                      , cardano-api
+                      , cardano-cli
+                      , cardano-node
+                      , plutus-tx
+                      , transformers
+                      , transformers-except
+                      , tx-generator
+
+  other-modules:        Cardano.TxGenerator.Calibrate.Utils
+                        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
 
 test-suite tx-generator-test

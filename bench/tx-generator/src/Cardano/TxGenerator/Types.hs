@@ -83,8 +83,9 @@ data TxGenConfig = TxGenConfig
 
 
 data TxGenPlutusType
-  = LimitSaturationLoop                         -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx script budget
-  | LimitTxPerBlock_8                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 8 Txs into block script budget
+  = LimitSaturationLoop                         -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx budget
+  | LimitTxPerBlock_8                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 8 Txs into block budget
+  | LimitTxPerBlock_4                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 4 Txs into block budget
   | BenchCustomCall                             -- ^ Built-in script for benchmarking various complexity of data passed via Plutus API
   | CustomScript
   deriving (Show, Eq, Enum, Generic, FromJSON, ToJSON)
@@ -107,7 +108,7 @@ isPlutusMode
 
 hasLoopCalibration :: TxGenPlutusType -> Bool
 hasLoopCalibration t
-  = t == LimitTxPerBlock_8 || t == LimitSaturationLoop
+  = t == LimitTxPerBlock_8 || t == LimitTxPerBlock_4 || t == LimitSaturationLoop
 
 hasStaticBudget :: TxGenPlutusParams -> Maybe ExecutionUnits
 hasStaticBudget
@@ -116,10 +117,11 @@ hasStaticBudget
     _ -> Nothing
 
 data PlutusAutoBudget
-  = PlutusAutoBudget                           -- ^ Specifies a budget and parameters for a PlutusAuto loop script
-    { autoBudgetUnits     :: !ExecutionUnits   -- ^ execution units available per Tx input / script run
-    , autoBudgetDatum     :: !ScriptData       -- ^ datum for the auto script
-    , autoBudgetRedeemer  :: !ScriptRedeemer   -- ^ valid redeemer for the auto script
+  = PlutusAutoBudget                                 -- ^ Specifies a budget and parameters for a PlutusAuto loop script
+    { autoBudgetUnits           :: !ExecutionUnits   -- ^ execution units available per Tx input / script run
+    , autoBudgetDatum           :: !ScriptData       -- ^ datum for the auto script
+    , autoBudgetRedeemer        :: !ScriptRedeemer   -- ^ valid redeemer for the auto script
+    , autoBudgetUpperBoundHint  :: !(Maybe Int)      -- ^ hints at a loop count upper bount; speeds up calibration for scripts with low loop counts, but does not influence outcome
     }
     deriving (Show, Eq)
 
