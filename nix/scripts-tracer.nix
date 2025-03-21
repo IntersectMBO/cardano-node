@@ -6,31 +6,34 @@ let
   mkScript = envConfig: let
     service = evalService {
       inherit pkgs customConfigs;
-      serviceName = "cardano-node";
+      serviceName = "cardano-tracer";
       modules = [
-        ./nixos/cardano-node-service.nix
-        ({config, ...}: {
-          services.cardano-node = let cfg = config.services.cardano-node; in {
-            hostAddr = mkDefault "0.0.0.0";
+        ./nixos/cardano-tracer-service.nix
+        ({config, ...}: let cfg = config.services.cardano-tracer; in {
+          services.cardano-tracer = rec {
             environment = mkDefault envConfig.name;
-            nodeConfig = cfg.environments.${cfg.environment}.nodeConfig;
-            stateDir = mkDefault "state-node-${cfg.environment}";
+            stateDir = mkDefault "state-tracer-${cfg.environment}";
             runtimeDir = mkDefault null;
-          } // optionalAttrs (envConfig ? topology) {
-            topology = mkDefault envConfig.topology;
+            logging = mkDefault [
+              {
+                logRoot = stateDir;
+                logMode = "FileMode";
+                logFormat = "ForHuman";
+              }
+            ];
           };
         })
       ];
     };
-  scriptBin = pkgs.writeScriptBin "cardano-node-${service.environment}" ''
+  scriptBin = pkgs.writeScriptBin "cardano-tracer-${service.environment}" ''
     #!${pkgs.runtimeShell}
     export PATH=$PATH:${makeBinPath [ pkgs.coreutils ]}
     set -euo pipefail
-    mkdir -p "$(dirname "${service.socketPath 0}")"
+    mkdir -p "$(dirname "${service.acceptingSocket or service.connectToSocket}")"
     ${service.script} $@
   '';
   in scriptBin // {
-    exePath = "${scriptBin}/bin/cardano-node-${service.environment}";
+    exePath = "${scriptBin}/bin/cardano-tracer-${service.environment}";
   };
 
   # Allow list envs we specifically want scripts for as others in iohk-nix may
@@ -38,5 +41,5 @@ let
   environments' = pkgs.lib.getAttrs [ "mainnet" "preprod" "preview" ] environments;
 
 in forEnvironmentsCustom (environment: recurseIntoAttrs {
-  node = mkScript environment;
+  tracer = mkScript environment;
 }) environments'

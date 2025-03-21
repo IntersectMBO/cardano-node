@@ -13,7 +13,9 @@ with builtins; let
   configFile =
     if !isNull cfg.configFile
     then cfg.configFile
-    else "/etc/cardano-tracer/config.json";
+    else if isNull cfg.configFilePath
+    then prettyConfig
+    else cfg.configFilePath;
 
   tracerConfig =
     {
@@ -113,6 +115,8 @@ with builtins; let
     trap 'RC="$?"; echo "Service binary 'cardano-tracer' returned status: $RC" >&2; exit $RC' EXIT
     ${toString cmd}
   '';
+
+  runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "${cfg.runDirBase}${removePrefix cfg.runDirBase cfg.runtimeDir}";
 in {
   options = {
     services.cardano-tracer = {
@@ -134,7 +138,7 @@ in {
 
       acceptingSocket = mkOption {
         type = nullOr (either str path);
-        default = "${cfg.runtimeDir}/cardano-tracer.socket";
+        default = "${runtimeDir}/cardano-tracer.socket";
         description = ''
           If accepting connections from node(s) to a cardano-tracer socket, the
           path.
@@ -168,7 +172,22 @@ in {
         description = ''
           The actual cardano-tracer configuration file. If this option is set
           to null, a configuration file will be built based on the nixos
-          options and symlinked to `/etc/cardano-tracer/config.json`.
+          options.  The target location for a default configuration file will
+          depend on the configFilePath option.
+        '';
+      };
+
+      configFilePath = mkOption {
+        type = nullOr (either str path);
+        default = null;
+        example = "/etc/cardano-tracer/config.json";
+        description = ''
+          If a default config file is to be used, ie the configFile option is null,
+          the configFile will be located in:
+            * The nix store if this option is null, or
+            * Symlinked to an explicitly declared `/etc` prefixed path
+
+          The `/etc` prefix is a requirement of the nixos implementation.
         '';
       };
 
@@ -592,6 +611,13 @@ in {
             };
           };
         }));
+        default = {
+          # Provide some sane defaults
+          rpFrequencySecs = 60;
+          rpKeepFilesNum = 14;
+          rpMaxAgeHours = 24;
+          rpLogLimitBytes = 10 * 1000 * 1000;
+        };
         apply = rot:
           if isNull rot
           then rot
@@ -610,13 +636,6 @@ in {
             ''
             rot
           else rot;
-        default = {
-          # Provide some sane defaults
-          rpFrequencySecs = 60;
-          rpKeepFilesNum = 14;
-          rpMaxAgeHours = 24;
-          rpLogLimitBytes = 10 * 1000 * 1000;
-        };
         description = ''
           The rotation option describes the log rotation operation of
           cardano-tracer and is either null or a submodule with options of
@@ -684,7 +703,7 @@ in {
       };
 
       runtimeDir = mkOption {
-        type = str;
+        type = nullOr str;
         default = "${cfg.runDirBase}cardano-tracer";
         description = ''
           The directory to store any cardano-tracer runtime related data.
@@ -707,7 +726,8 @@ in {
         default = mkScript;
         internal = true;
         description = ''
-          The default nixos generated shell script used in workbench profile
+          The default nixos generated shell script used in the
+          scripts.$ENV.tracer package attribute and workbench profile
           generation.
         '';
       };
@@ -784,7 +804,7 @@ in {
   };
 
   config = mkIf cfg.enable {
-    environment.etc."cardano-tracer/config.json".source = mkIf (isNull cfg.configFile) prettyConfig;
+    environment.etc."cardano-tracer/config.json".source = mkIf (isNull cfg.configFile && isNull cfg.configFilePath) prettyConfig;
 
     systemd.services.cardano-tracer = {
       description = "cardano-tracer service";
@@ -817,7 +837,7 @@ in {
 
         WorkingDirectory = cfg.stateDir;
         StateDirectory = removePrefix cfg.stateDirBase cfg.stateDir;
-        RuntimeDirectory = removePrefix cfg.runDirBase cfg.runtimeDir;
+        RuntimeDirectory = removePrefix cfg.runDirBase runtimeDir;
 
         # Ensure quick restarts on any condition
         Restart = "always";
@@ -833,7 +853,11 @@ in {
     assertions = [
       {
         assertion = (!isNull cfg.acceptingSocket) != (!isNull cfg.connectToSocket);
-        message = "Exactly one of acceptingSocket or connectToSocket must be declared";
+        message = "In services.cardano-tracer, exactly one of acceptingSocket or connectToSocket must be declared";
+      }
+      {
+        assertion = isNull cfg.configFilePath || hasPrefix "/etc/" cfg.configFilePath;
+        message = "In services.cardano-tracer.configFilePath a non-null path must be prefixed with `/etc/`";
       }
     ];
   };
