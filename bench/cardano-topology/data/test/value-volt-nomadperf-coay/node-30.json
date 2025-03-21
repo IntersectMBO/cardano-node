@@ -8,6 +8,7 @@
         }
       ],
       "advertise": false,
+      "trustable": true,
       "valency": 6
     },
     {
@@ -18,6 +19,7 @@
         }
       ],
       "advertise": false,
+      "trustable": true,
       "valency": 6
     },
     {
@@ -28,6 +30,7 @@
         }
       ],
       "advertise": false,
+      "trustable": true,
       "valency": 6
     },
     {
@@ -38,6 +41,7 @@
         }
       ],
       "advertise": false,
+      "trustable": true,
       "valency": 6
     },
     {
@@ -48,6 +52,7 @@
         }
       ],
       "advertise": false,
+      "trustable": true,
       "valency": 6
     },
     {
@@ -58,6 +63,7 @@
         }
       ],
       "advertise": false,
+      "trustable": true,
       "valency": 6
     }
   ],

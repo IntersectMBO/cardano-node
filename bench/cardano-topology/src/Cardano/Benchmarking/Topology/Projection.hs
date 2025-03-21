@@ -65,7 +65,7 @@ projectionP2P topology i basePort = RealNodeTopologyP2P
                  }
                , hotValency = HotValency valency
                , warmValency = WarmValency valency
-               , trustable = IsNotTrustable
+               , trustable = IsTrustable
                }
           )
           (getCoreNodeProducersById topology i)

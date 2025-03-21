@@ -31,6 +31,7 @@ tests =  Tasty.testGroup "cardano-topology"
     , Projection.tests
   ]
 
+-- Identity (encode ~ decode).
 topologyTypes :: Tasty.TestTree
 topologyTypes = Tasty.testGroup
   "Cardano.Benchmarking.Topology.Types"
@@ -53,79 +54,85 @@ topologyTypes = Tasty.testGroup
         )
   ]
 
--- Create what profiles use and compare with previous profiles outputs.
+{-- Test all active topology combinations, ordered using the output of:
+    > jq 'map(.) | group_by(.composition) | map(map(.name))' all-profiles.json
+--}
 topology :: Tasty.TestTree
 topology = Tasty.testGroup
   "Cardano.Benchmarking.Topology"
   [
-
-  ------------------------------------
-  -- Loopback topologies, no explorer.
-  ------------------------------------
-
-    testCase "ci-test-coay" $ do
-      fp <- Paths.getDataFileName "data/test/ci-test-coay/topology.json"
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 0,
+      "n_pool_hosts": 0,
+      "n_pools": 0,
+      "n_singular_hosts": 0,
+      "n_singular_pools": 0,
+      "topology": "uni-circle",
+      "with_chaindb_server": true,
+      "with_explorer": true,
+      "with_proxy": false
+    }
+    [
+      "chainsync-early-alonzo",
+      "chainsync-early-alonzo-notracer",
+      "chainsync-early-alonzo-oldtracing",
+      "chainsync-early-alonzo-p2p",
+      "chainsync-early-byron",
+      "chainsync-early-byron-notracer",
+      "chainsync-early-byron-oldtracing"
+    ]
+  --}
+    testCase "chainsync-early-alonzo-coay" $ do
+      fp <- Paths.getDataFileName "data/test/chainsync-early-alonzo-coay/topology.json"
       ans <- Aeson.eitherDecodeFileStrict fp
       assertEqual
-        ("UniCircle (loopback) (2) == (decode \"" ++ fp ++ "\")")
+        ("UniCircle (loopback) (0) == (decode \"" ++ fp ++ "\")")
         ans
         (Right $ Topo.mkTopology
           (Topo.UniCircle
-            2
+            0
             Types.Loopback
             (\_ -> Just 1)
           )
-          Nothing
+          (Just (Types.AWS Types.EU_CENTRAL_1))
         )
-  -- For some reason "default" for supervisor/local is using UniCircle and
-  -- Nomad/cloud runs it's using Torus.
-  , testCase "default-coay" $ do
-      fp <- Paths.getDataFileName "data/test/default-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("UniCircle (loopback) (6) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.UniCircle
-            6
-            Types.Loopback
-            (\_ -> Just 1)
-          )
-          Nothing
-        )
-  , testCase "trace-bench-coay" $ do
-      fp <- Paths.getDataFileName "data/test/trace-bench-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("Torus (loopback) (6) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.Torus
-            6
-            [Types.Loopback]
-            (\_ -> Just 1)
-          )
-          Nothing
-        )
-  , testCase "6-dense-coay" $ do
-      fp <- Paths.getDataFileName "data/test/6-dense-coay/topology.json"
-      ans <- Aeson.eitherDecodeFileStrict fp
-      assertEqual
-        ("TorusDense (loopback) (6) == (decode \"" ++ fp ++ "\")")
-        ans
-        (Right $ Topo.mkTopology
-          (Topo.TorusDense
-            6
-            [Types.Loopback]
-            (\_ -> Just 1)
-          )
-          Nothing
-        )
-
-  -----------------------------------
-  -- Cloud topologies, with explorer.
-  -----------------------------------
-
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "eu-central-1",
+        "us-east-1",
+        "ap-southeast-2"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 2,
+      "n_pool_hosts": 2,
+      "n_pools": 2,
+      "n_singular_hosts": 2,
+      "n_singular_pools": 2,
+      "topology": "torus",
+      "with_explorer": true,
+      "with_proxy": false
+    }
+    [
+      "ci-bench-nomadperf",
+      "ci-bench-nomadperf-nop2p",
+      "ci-bench-oldtracing-nomadperf",
+      "ci-test-nomadperf",
+      "ci-test-nomadperf-nop2p",
+      "ci-test-oldtracing-nomadperf"
+    ]
+  --}
   , testCase "ci-test-nomadperf-coay" $ do
       fp <- Paths.getDataFileName "data/test/ci-test-nomadperf-coay/topology.json"
       ans <- Aeson.eitherDecodeFileStrict fp
@@ -162,6 +169,33 @@ topology = Tasty.testGroup
           )
           (Just (Types.AWS Types.EU_CENTRAL_1))
         )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "eu-central-1",
+        "us-east-1",
+        "ap-southeast-2"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 6,
+      "n_pool_hosts": 6,
+      "n_pools": 6,
+      "n_singular_hosts": 6,
+      "n_singular_pools": 6,
+      "topology": "torus",
+      "with_explorer": true,
+      "with_proxy": false
+    }
+    [
+      "default-nomadperf",
+      "default-nomadperf-nop2p",
+      "oldtracing-nomadperf",
+      "oldtracing-nomadperf-nop2p"
+    ]
+  --}
   , testCase "default-nomadperf-coay" $ do
       fp <- Paths.getDataFileName "data/test/default-nomadperf-coay/topology.json"
       ans <- Aeson.eitherDecodeFileStrict fp
@@ -198,6 +232,65 @@ topology = Tasty.testGroup
           )
           (Just (Types.AWS Types.EU_CENTRAL_1))
         )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "eu-central-1",
+        "us-east-1",
+        "ap-southeast-2"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 52,
+      "n_pool_hosts": 52,
+      "n_pools": 52,
+      "n_singular_hosts": 52,
+      "n_singular_pools": 52,
+      "topology": "torus-dense",
+      "with_explorer": true,
+      "with_proxy": false
+    }
+    [
+      "fast-nomadperf",
+      "fast-nomadperf-nop2p",
+      "fast-nomadperfssd",
+      "latency-nomadperf",
+      "latency-nomadperfssd",
+      "plutus-drep100k-nomadperf",
+      "plutus-drep10k-nomadperf",
+      "plutus-drep1k-nomadperf",
+      "plutus-drep2k-nomadperf",
+      "plutus-nomadperf",
+      "plutus-nomadperf-nop2p",
+      "plutus-secp-ecdsa-nomadperf",
+      "plutus-secp-schnorr-nomadperf",
+      "plutus-volt-nomadperf",
+      "plutus-volt-blockmem-x1.5-nomadperf-coay",
+      "plutus-volt-blockmem-x2-nomadperf-coay",
+      "plutus-voting-double-volt-nomadperf",
+      "plutus-voting-utxo-volt-nomadperf",
+      "plutus-voting-volt-nomadperf",
+      "plutus24-nomadperf",
+      "plutusv3-blst-double-nomadperf",
+      "plutusv3-blst-half-nomadperf",
+      "plutusv3-blst-nomadperf",
+      "value-drep100k-nomadperf",
+      "value-drep10k-nomadperf",
+      "value-drep1k-nomadperf",
+      "value-drep2k-nomadperf",
+      "value-nomadperf",
+      "value-nomadperf-nop2p",
+      "value-nomadperfssd",
+      "value-oldtracing-nomadperf",
+      "value-oldtracing-nomadperf-nop2p",
+      "value-volt-nomadperf",
+      "value-voting-double-volt-nomadperf",
+      "value-voting-utxo-volt-nomadperf",
+      "value-voting-volt-nomadperf"
+    ]
+  --}
   , testCase "value-volt-nomadperf-coay" $ do
       fp <- Paths.getDataFileName "data/test/value-volt-nomadperf-coay/topology.json"
       ans <- Aeson.eitherDecodeFileStrict fp
@@ -234,7 +327,461 @@ topology = Tasty.testGroup
           )
           (Just (Types.AWS Types.EU_CENTRAL_1))
         )
-
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 1,
+      "n_pool_hosts": 1,
+      "n_pools": 1,
+      "n_singular_hosts": 1,
+      "n_singular_pools": 1,
+      "topology": "uni-circle",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "fast-solo",
+      "faststartup-24M",
+      "forge-stress-plutus-solo",
+      "forge-stress-pre-solo",
+      "forge-stress-pre-solo-xl",
+      "forge-stress-pre-solo-xs",
+      "forge-stress-solo",
+      "forge-stress-solo-xs"
+    ]
+  --}
+  , testCase "fast-solo-coay" $ do
+      fp <- Paths.getDataFileName "data/test/fast-solo-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (1) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            1
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 2,
+      "n_pool_hosts": 2,
+      "n_pools": 2,
+      "n_singular_hosts": 2,
+      "n_singular_pools": 2,
+      "topology": "uni-circle",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "ci-bench",
+      "ci-bench-drep",
+      "ci-bench-lmdb",
+      "ci-bench-notracer",
+      "ci-bench-p2p",
+      "ci-bench-plutus",
+      "ci-bench-plutus-secp-ecdsa",
+      "ci-bench-plutus-secp-schnorr",
+      "ci-bench-plutus24",
+      "ci-bench-plutusv3-blst",
+      "ci-bench-plutusv3-ripemd",
+      "ci-bench-rtview",
+      "ci-test",
+      "ci-test-hydra",
+      "ci-test-notracer",
+      "ci-test-p2p",
+      "ci-test-plutus",
+      "ci-test-rtview",
+      "epoch-transition",
+      "fast",
+      "fast-notracer",
+      "fast-oldtracing",
+      "fast-p2p",
+      "fast-plutus"
+    ]
+  --}
+  , testCase "ci-test-coay" $ do
+      fp <- Paths.getDataFileName "data/test/ci-test-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (2) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            2
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  , testCase "ci-test-p2p-coay" $ do
+      fp <- Paths.getDataFileName "data/test/ci-test-p2p-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (2) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            2
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 3,
+      "n_pool_hosts": 3,
+      "n_pools": 3,
+      "n_singular_hosts": 3,
+      "n_singular_pools": 3,
+      "topology": "uni-circle",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "dish-10M",
+      "dish-10M-plutus",
+      "dish",
+      "dish-plutus",
+      "forge-stress",
+      "forge-stress-notracer",
+      "forge-stress-p2p",
+      "forge-stress-plutus",
+      "forge-stress-pre",
+      "forge-stress-pre-notracer",
+      "forge-stress-pre-plutus",
+      "forge-stress-pre-rtsA4m",
+      "forge-stress-pre-rtsA4mN3",
+      "forge-stress-pre-rtsA64m",
+      "forge-stress-pre-rtsA64mN3",
+      "forge-stress-pre-rtsN3",
+      "forge-stress-pre-rtsxn",
+      "k3-3ep-18kTx-10000kU-1300kD-64kbs-10tps-fixed-loaded",
+      "k3-3ep-5kTx-10000kU-1300kD-64kbs-fixed-loaded",
+      "k3-3ep-9kTx-10000kU-1300kD-64kbs-5tps-fixed-loaded"
+    ]
+  --}
+  , testCase "forge-stress-coay" $ do
+      fp <- Paths.getDataFileName "data/test/forge-stress-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (3) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            3
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  , testCase "forge-stress-p2p-coay" $ do
+      fp <- Paths.getDataFileName "data/test/forge-stress-p2p-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (3) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            3
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 4,
+      "n_pool_hosts": 4,
+      "n_pools": 4,
+      "n_singular_hosts": 4,
+      "n_singular_pools": 4,
+      "topology": "uni-circle",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "model-secp-ecdsa-double",
+      "model-secp-ecdsa-half",
+      "model-secp-ecdsa-plain",
+      "model-value",
+      "model-value-test"
+    ]
+  --}
+  , testCase "model-value-coay" $ do
+      fp <- Paths.getDataFileName "data/test/model-value-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (4) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            4
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 6,
+      "n_pool_hosts": 6,
+      "n_pools": 6,
+      "n_singular_hosts": 6,
+      "n_singular_pools": 6,
+      "topology": "torus",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "trace-bench",
+      "trace-bench-notracer",
+      "trace-bench-oldtracing",
+      "trace-bench-rtview",
+      "trace-full",
+      "trace-full-rtview"
+    ]
+  --}
+  , testCase "trace-bench-coay" $ do
+      fp <- Paths.getDataFileName "data/test/trace-bench-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("Torus (loopback) (6) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.Torus
+            6
+            [Types.Loopback]
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 6,
+      "n_pool_hosts": 6,
+      "n_pools": 6,
+      "n_singular_hosts": 6,
+      "n_singular_pools": 6,
+      "topology": "torus-dense",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "6-dense-1h",
+      "6-dense-1h-rtsprof",
+      "6-dense-4h",
+      "6-dense-4h-rtsprof",
+      "6-dense",
+      "6-dense-rtsprof"
+    ]
+  --}
+  , testCase "6-dense-coay" $ do
+      fp <- Paths.getDataFileName "data/test/6-dense-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("TorusDense (loopback) (6) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.TorusDense
+            6
+            [Types.Loopback]
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 6,
+      "n_pool_hosts": 6,
+      "n_pools": 6,
+      "n_singular_hosts": 6,
+      "n_singular_pools": 6,
+      "topology": "uni-circle",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "default",
+      "default-p2p",
+      "devops",
+      "forge-stress-large",
+      "idle",
+      "oldtracing",
+      "plutus",
+      "plutus-secp-ecdsa",
+      "plutus-secp-schnorr",
+      "plutuscall-loop-double",
+      "plutuscall-loop-half",
+      "plutuscall-loop-plain",
+      "plutuscall-secp-ecdsa-double",
+      "plutuscall-secp-ecdsa-half",
+      "plutuscall-secp-ecdsa-plain",
+      "plutuscall-secp-schnorr-double",
+      "plutuscall-secp-schnorr-half",
+      "plutuscall-secp-schnorr-plain",
+      "plutuscall-volt-blst",
+      "plutuscall-volt-loop",
+      "plutuscall-volt-ripemd",
+      "tracer-only"
+    ]
+  --}
+  -- For some reason "default" for supervisor/local is using UniCircle and
+  -- Nomad/cloud runs it's using Torus.
+  , testCase "default-coay" $ do
+      fp <- Paths.getDataFileName "data/test/default-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (6) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            6
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  , testCase "default-p2p-coay" $ do
+      fp <- Paths.getDataFileName "data/test/default-p2p-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (6) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            6
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 1,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 0,
+      "n_dense_pools": 0,
+      "n_hosts": 10,
+      "n_pool_hosts": 10,
+      "n_pools": 10,
+      "n_singular_hosts": 10,
+      "n_singular_pools": 10,
+      "topology": "uni-circle",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "10",
+      "10-notracer",
+      "10-p2p",
+      "10-plutus"
+    ]
+  --}
+  , testCase "10-coay" $ do
+      fp <- Paths.getDataFileName "data/test/10-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (6) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            10
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
+  {--
+    {
+      "dense_pool_density": 10,
+      "locations": [
+        "loopback"
+      ],
+      "n_bft_hosts": 0,
+      "n_dense_hosts": 1,
+      "n_dense_pools": 10,
+      "n_hosts": 1,
+      "n_pool_hosts": 1,
+      "n_pools": 10,
+      "n_singular_hosts": 0,
+      "n_singular_pools": 0,
+      "topology": "uni-circle",
+      "with_explorer": false,
+      "with_proxy": false
+    }
+    [
+      "ci-test-dense10"
+    ]
+  --}
+  , testCase "ci-test-dense10-coay" $ do
+      fp <- Paths.getDataFileName "data/test/ci-test-dense10-coay/topology.json"
+      ans <- Aeson.eitherDecodeFileStrict fp
+      assertEqual
+        ("UniCircle (loopback) (1) == (decode \"" ++ fp ++ "\")")
+        ans
+        (Right $ Topo.mkTopology
+          (Topo.UniCircle
+            1
+            Types.Loopback
+            (\_ -> Just 1)
+          )
+          Nothing
+        )
   ]
 
 benchTorusDense52 :: Types.Topology

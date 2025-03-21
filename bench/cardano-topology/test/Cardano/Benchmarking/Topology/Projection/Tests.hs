@@ -51,10 +51,37 @@ projection = Tasty.testGroup
         projections
     )
     [ (
+        "10-coay"
+      , [
+          ( 0, "node-0.json")
+        , ( 1, "node-1.json")
+        , ( 2, "node-2.json")
+        , ( 3, "node-3.json")
+        , ( 4, "node-4.json")
+        , ( 5, "node-5.json")
+        , ( 6, "node-6.json")
+        , ( 7, "node-7.json")
+        , ( 8, "node-8.json")
+        , ( 9, "node-9.json")
+        ]
+      )
+    , (
+        "chainsync-early-alonzo-coay"
+      , [
+          ( 0, "node-0.json")
+        ]
+      )
+    , (
         "ci-test-coay"
       , [
           ( 0, "node-0.json")
         , ( 1, "node-1.json")
+        ]
+      )
+    , (
+        "ci-test-dense10-coay"
+      , [
+          ( 0, "node-0.json")
         ]
       )
     , (
@@ -84,6 +111,29 @@ projection = Tasty.testGroup
         , ( 3, "node-3.json")
         , ( 4, "node-4.json")
         , ( 5, "node-5.json")
+        ]
+      )
+    , (
+        "fast-solo-coay"
+      , [
+          ( 0, "node-0.json")
+        ]
+      )
+    , (
+        "forge-stress-coay"
+      , [
+          ( 0, "node-0.json")
+        , ( 1, "node-1.json")
+        , ( 2, "node-2.json")
+        ]
+      )
+    , (
+        "model-value-coay"
+      , [
+          ( 0, "node-0.json")
+        , ( 1, "node-1.json")
+        , ( 2, "node-2.json")
+        , ( 3, "node-3.json")
         ]
       )
     , (
@@ -150,6 +200,13 @@ projectionP2P = Tasty.testGroup
         ]
       )
     , (
+        "ci-test-p2p-coay"
+      , [
+          ( 0, "node-0.json")
+        , ( 1, "node-1.json")
+        ]
+      )
+    , (
         "default-nomadperf-coay"
       , [
           ( 0, "node-0.json")
@@ -158,6 +215,14 @@ projectionP2P = Tasty.testGroup
         , ( 3, "node-3.json")
         , ( 4, "node-4.json")
         , ( 5, "node-5.json")
+        ]
+      )
+    , (
+        "forge-stress-p2p-coay"
+      , [
+          ( 0, "node-0.json")
+        , ( 1, "node-1.json")
+        , ( 2, "node-2.json")
         ]
       )
     , (
@@ -194,6 +259,10 @@ projectionExplorer = Tasty.testGroup
         projections
     )
     [ (
+        "chainsync-early-alonzo-coay"
+      , [(  1, "explorer.json")]
+      )
+    , (
         "ci-test-nomadperf-coay"
       , [(  2, "explorer.json")]
       )
