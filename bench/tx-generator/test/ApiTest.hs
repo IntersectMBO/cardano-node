@@ -218,6 +218,7 @@ checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
           { autoBudgetUnits = budget
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) redeemer
+          , autoBudgetUpperBoundHint = Nothing
           }
 
         pparamsScaleBlockBudget factor = case protocolParamMaxBlockExUnits protocolParameters of

@@ -116,10 +116,11 @@ hasStaticBudget
     _ -> Nothing
 
 data PlutusAutoBudget
-  = PlutusAutoBudget                           -- ^ Specifies a budget and parameters for a PlutusAuto loop script
-    { autoBudgetUnits     :: !ExecutionUnits   -- ^ execution units available per Tx input / script run
-    , autoBudgetDatum     :: !ScriptData       -- ^ datum for the auto script
-    , autoBudgetRedeemer  :: !ScriptRedeemer   -- ^ valid redeemer for the auto script
+  = PlutusAutoBudget                                 -- ^ Specifies a budget and parameters for a PlutusAuto loop script
+    { autoBudgetUnits           :: !ExecutionUnits   -- ^ execution units available per Tx input / script run
+    , autoBudgetDatum           :: !ScriptData       -- ^ datum for the auto script
+    , autoBudgetRedeemer        :: !ScriptRedeemer   -- ^ valid redeemer for the auto script
+    , autoBudgetUpperBoundHint  :: !(Maybe Int)      -- ^ hints at a loop count upper bount; speeds up calibration for scripts with low loop counts, but does not influence outcome
     }
     deriving (Show, Eq)
 

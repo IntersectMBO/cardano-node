@@ -174,8 +174,8 @@ plutusAutoBudgetMaxOut
     let pab' = pab {autoBudgetUnits = targetBudget, autoBudgetRedeemer = unsafeHashableScriptData $ toLoopArgument n}
     pure (pab', fromIntegral n, limitFactors)
   where
-    -- The highest loop counter that is tried - this is about 10 times the current mainnet limit.
-    searchUpperBound  = 20000
+    -- The highest loop counter that is tried
+    searchUpperBound  = maybe 16000 fromIntegral autoBudgetUpperBoundHint
 
     targetTxPerBlock :: Double -> Int
     targetTxPerBlock  s =

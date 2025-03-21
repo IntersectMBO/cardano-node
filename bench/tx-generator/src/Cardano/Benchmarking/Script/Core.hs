@@ -468,6 +468,7 @@ makePlutusContext ScriptSpec{..} = do
           { autoBudgetUnits = perTxBudget
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) (getScriptData redeemer)
+          , autoBudgetUpperBoundHint = Nothing
           }
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
