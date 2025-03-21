@@ -41,7 +41,8 @@ module Cardano.Tracer.Utils
   , sequenceConcurrently_
   ) where
 
-import           Cardano.Node.Startup (NodeInfo (..))
+import           Cardano.Logging.Types.DataPoint (NodeInfo(..))
+-- import           Cardano.Logging.Types (NodeInfo (..))
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Utils

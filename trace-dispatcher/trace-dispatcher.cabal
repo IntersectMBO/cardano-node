@@ -39,6 +39,7 @@ library
                       Cardano.Logging.Tracer.Forward
                       Cardano.Logging.Tracer.Composed
                       Cardano.Logging.Types
+                      Cardano.Logging.Types.DataPoint
                       Cardano.Logging.Utils
                       Cardano.Logging.Version
                       Control.Tracer.Arrow

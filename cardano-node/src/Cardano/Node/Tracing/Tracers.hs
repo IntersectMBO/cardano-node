@@ -23,7 +23,8 @@ import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
-import           Cardano.Node.Tracing.Peers
+import           Cardano.Logging.Types.DataPoint (NodePeers(..))
+-- import           Cardano.Node.Tracing.Peers
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
@@ -200,6 +201,12 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
       , peersTracer     = Tracer (traceWith peersTr)
                           <> Tracer (traceNodePeers nodePeersDP)
     }
+
+traceNodePeers
+  :: Trace IO NodePeers
+  -> [PeerT blk]
+  -> IO ()
+traceNodePeers tr ev = traceWith tr $ NodePeers (fmap ppPeer ev)
 
 mkConsensusTracers :: forall blk.
   ( Consensus.RunNode blk

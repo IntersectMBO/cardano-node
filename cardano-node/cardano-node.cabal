@@ -101,7 +101,6 @@ library
                         Cardano.Node.Tracing.Era.HardFork
                         Cardano.Node.Tracing.Era.Shelley
                         Cardano.Node.Tracing.Formatting
-                        Cardano.Node.Tracing.Peers
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep
                         Cardano.Node.Tracing.Tracers
