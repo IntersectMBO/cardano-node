@@ -1,7 +1,8 @@
-# our packages overlay
+# Our packages overlay
 final: prev:
 
 let
+  inherit (builtins) foldl' fromJSON listToAttrs map readFile;
   inherit (final) pkgs;
   inherit (prev.pkgs) lib;
   inherit (prev) customConfig;
@@ -35,7 +36,7 @@ in with final;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
-  # TODO Use `compiler-nix-name` here instead of `"ghc928"`
+  # TODO: Use `compiler-nix-name` here instead of `"ghc928"`
   # and fix the resulting `hlint` 3.6.1 warnings.
   hlint = haskell-nix.tool "ghc928" "hlint" ({config, ...}: {
     version = {
@@ -51,7 +52,7 @@ in with final;
     index-state = "2024-12-24T12:56:48Z";
   };
 
-  # The ghc-hls point release compatibility table is documented at
+  # The ghc-hls point release compatibility table is documented at:
   # https://haskell-language-server.readthedocs.io/en/latest/support/ghc-version-support.html
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
     src = {
@@ -64,7 +65,7 @@ in with final;
       ghc964 = haskell-nix.sources."hls-2.6";
       ghc981 = haskell-nix.sources."hls-2.6";
     }.${compiler-nix-name} or haskell-nix.sources."hls-2.8";
-    cabalProject = builtins.readFile (src + "/cabal.project");
+    cabalProject = readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
 
@@ -87,8 +88,11 @@ in with final;
 
   cardanolib-py = callPackage ./cardanolib-py { };
 
-  scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs; })
-    (import ./scripts-submit-api.nix { inherit pkgs; });
+  scripts = foldl' lib.recursiveUpdate {} [
+    (import ./scripts.nix { inherit pkgs; })
+    (import ./scripts-submit-api.nix { inherit pkgs; })
+    (import ./scripts-tracer.nix { inherit pkgs; })
+  ];
 
   clusterTests = import ./workbench/tests { inherit pkgs; };
 
@@ -125,12 +129,30 @@ in with final;
       script = "submit-api";
     };
 
+  tracerDockerImage =
+    let
+      defaultConfig = {
+        # Can we easily modify to the connecting socket scenario now?
+        # Probably need environment overrides for both node and tracer images.
+        acceptingSocket = "/ipc/cardano-tracer.socket";
+        stateDir = "/logs";
+      };
+    in
+    callPackage ./docker/tracer.nix {
+      exe = "cardano-tracer";
+      scripts = import ./scripts-tracer.nix {
+        inherit pkgs;
+        customConfigs = [ defaultConfig customConfig ];
+      };
+      script = "tracer";
+    };
+
   all-profiles-json = workbench.profile-names-json;
 
   # The profile data and backend data of the cloud / "*-nomadperf" profiles.
   # Useful to mix workbench and cardano-node commits, mostly because of scripts.
-  profile-data-nomadperf = builtins.listToAttrs (
-    builtins.map
+  profile-data-nomadperf = listToAttrs (
+    map
     (cloudName:
       # Only Conway era cloud profiles are flake outputs.
       let profileName = "${cloudName}-coay";
@@ -169,7 +191,7 @@ in with final;
         }
     )
     # Fetch all "*-nomadperf" profiles.
-    (__fromJSON (__readFile
+    (fromJSON (readFile
       (pkgs.runCommand "cardano-profile-names-cloud-noera" {} ''
         ${cardanoNodePackages.cardano-profile}/bin/cardano-profile names-cloud-noera > $out
       ''
