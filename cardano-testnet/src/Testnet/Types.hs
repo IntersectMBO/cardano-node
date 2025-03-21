@@ -30,10 +30,11 @@ module Testnet.Types
   , VKey
   , SKey
   , VrfKey
-  , StakingKey
+  , StakePoolKey
+  , StakeKey
   , PaymentKey
+  , KesKey
   , DRepKey
-  , SpoColdKey
   , readNodeLoggingFormat
   , ShelleyGenesis(..)
   , shelleyGenesis
@@ -44,7 +45,7 @@ module Testnet.Types
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Shelley (VrfKey)
+import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
@@ -92,10 +93,10 @@ instance MonoFunctor (KeyPair k) where
 deriving instance Show (KeyPair k)
 deriving instance Eq (KeyPair k)
 
-instance {-# OVERLAPPING #-} Show (Some KeyPair) where
+instance Show (Some KeyPair) where
   show (Some kp) = show kp
 
-instance {-# OVERLAPPING #-} Eq (Some KeyPair) where
+instance Eq (Some KeyPair) where
   (Some KeyPair{verificationKey=File vk1, signingKey=File sk1})
     == (Some KeyPair{verificationKey=File vk2, signingKey=File sk2}) =
       vk1 == vk2 && sk1 == sk2
@@ -148,13 +149,10 @@ isTestnetNodeSpo = isJust . poolKeys
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 
-data StakingKey
-data SpoColdKey
-
 data SpoNodeKeys = SpoNodeKeys
-  { poolNodeKeysCold :: KeyPair SpoColdKey
+  { poolNodeKeysCold :: KeyPair StakePoolKey
   , poolNodeKeysVrf :: KeyPair VrfKey
-  , poolNodeKeysStaking :: KeyPair StakingKey
+  , poolNodeKeysStaking :: KeyPair StakeKey
   } deriving (Eq, Show)
 
 type instance Element SpoNodeKeys = FilePath
@@ -168,7 +166,7 @@ data PaymentKeyInfo = PaymentKeyInfo
 
 data Delegator = Delegator
   { paymentKeyPair :: KeyPair PaymentKey
-  , stakingKeyPair :: KeyPair StakingKey
+  , stakingKeyPair :: KeyPair StakeKey
   } deriving (Eq, Show)
 
 data LeadershipSlot = LeadershipSlot
