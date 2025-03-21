@@ -20,14 +20,8 @@ cardano-api
 
 module Cardano.TxGenerator.ProtocolParameters
   ( -- * The updatable protocol parameters
-    ProtocolParameters (
-      ProtocolParameters
-    , protocolParamProtocolVersion
-    , protocolParamCostModels
-    , protocolParamPrices
-    , protocolParamMaxTxExUnits
-    , protocolParamMaxBlockExUnits
-    )
+    ProtocolParameters (..)
+  , LedgerProtocolParameters (..)
   , convertToLedgerProtocolParameters
   , toLedgerPParams
   , fromLedgerPParams
