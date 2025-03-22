@@ -1,0 +1,14 @@
+{
+  "coreNodes": [],
+  "relayNodes": [
+    {
+      "name": "explorer",
+      "nodeId": 0,
+      "org": "IOHK",
+      "pools": null,
+      "producers": [],
+      "region": "eu-central-1",
+      "stakePool": null
+    }
+  ]
+}

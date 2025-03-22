@@ -10,6 +10,15 @@ let
   ;
 
   topologyFiles =
+# TODO:
+#    workbenchNix.runCardanoTopology "profile-${profileName}.json"
+#      ''
+#      mkdir $out
+#      make ${profileName}
+#      --topology-output "$outdir"/topology.json
+#      --dot-output      "$outdir"/topology.dot
+#      ''
+#  ;
     pkgs.runCommand "workbench-topology-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
@@ -25,10 +34,6 @@ let
     workbenchNix.runCardanoProfile "node-specs-${profileName}.json"
                  "node-specs ${profileJson} ${topologyFiles}/topology.json"
   ;
-
-  jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
-                                         --argjson x '${x}'
-                                       '' "$x";
 
   ## This ports the (very minimal) config of the deprecated iohk-nix testnet environment to workbench, removing the dependency on it.
   baseNodeConfigTestnet =
@@ -51,7 +56,6 @@ let
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
             inherit workbenchNix;
-            inherit jsonFilePretty;
             baseNodeConfig = baseNodeConfigTestnet;
           })
         node-services;
@@ -62,30 +66,26 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit node-services;
-            inherit jsonFilePretty;
           })
         generator-service;
 
       workloads-service = builtins.map (workload: rec {
         name = workload.name;
-        start = rec {
-          value = ''
-            ${import ../workload/${name}.nix
-                    {inherit pkgs profile nodeSpecs workload;}
-            }
-            ${workload.entrypoints.producers}
-          '';
-          JSON = pkgs.writeScript "startup-${name}.sh" value;
-        };
+        start =
+          ''
+          ${import ../workload/${name}.nix
+                  {inherit pkgs profile nodeSpecs workload;}
+          }
+          ${workload.entrypoints.producers}
+          ''
+        ;
       }) profile.workloads;
 
       inherit
         (pkgs.callPackage
           ../service/tracer.nix
-          {
-            inherit backend profile nodeSpecs;
-            inherit jsonFilePretty;
-          })
+          {inherit backend profile nodeSpecs;}
+        )
         tracer-service;
 
       inherit
@@ -125,43 +125,39 @@ let
               nodeSpecsJsonPath = nodeSpecsJson;
               topologyJsonPath = "${topologyFiles}/topology.json";
               topologyDotPath  = "${topologyFiles}/topology.dot";
-              nodeServices =
-                __toJSON
+              nodeServices = __toJSON
                 (lib.flip lib.mapAttrs node-services
                   (name: node-service:
-                    with node-service;
                     { inherit name;
-                      start          = start.JSON;
-                      config         = config.JSON;
-                      topology       = topology.JSON;
-                    }));
-              generatorService =
-                with generator-service;
-                __toJSON
+                      inherit (node-service) start config;
+                      topology = node-service.topology.JSON;
+                    }
+                  )
+                )
+              ;
+              generatorService = __toJSON
                 { name            = "generator";
-                  start           = start.JSON;
-                  config          = config.JSON;
-                  plutus-redeemer = plutus-redeemer.JSON;
-                  plutus-datum    = plutus-datum.JSON;
-                };
-              workloadsService = __toJSON (builtins.map (workload: {
-                  name            = workload.name;
-                  start           = workload.start.JSON;
+                  inherit (generator-service) start config;
+                  # Not present on every profile. Can be null.
+                  inherit (generator-service) plutus-redeemer;
+                  # Not present on every profile. Can be null.
+                  inherit (generator-service) plutus-datum;
+                }
+              ;
+              workloadsService = __toJSON (builtins.map (workload:
+                { inherit (workload) name start;
                 }
               ) workloads-service);
-              tracerService =
-                with tracer-service;
-                __toJSON
-                { name                 = "tracer";
-                  start                = start.JSON;
-                  config               = config.JSON;
-                };
-              healthcheckService =
-                with healthcheck-service;
-                __toJSON
-                { name                 = "healthcheck";
-                  start                = start.JSON;
-                };
+              tracerService = __toJSON
+                { name = "tracer";
+                  inherit (tracer-service) start config;
+                }
+              ;
+              healthcheckService = __toJSON
+                { name = "healthcheck";
+                  inherit (healthcheck-service) start;
+                }
+              ;
               passAsFile =
                 [
                   "nodeServices"
