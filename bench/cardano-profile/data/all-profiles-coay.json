@@ -34312,7 +34312,9 @@
       "tracer": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
-      "verbatim": {}
+      "verbatim": {
+        "EnableP2P": true
+      }
     },
     "overlay": {},
     "scenario": "fixed-loaded",
