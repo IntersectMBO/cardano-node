@@ -127,6 +127,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
+      nodePidFile = logDir </> node </> "node.pid"
       socketRelPath = socketDir </> node </> "sock"
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 
@@ -167,8 +168,11 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- We force the evaluation of initiateProcess so we can be sure that
     -- the process has started. This allows us to read stderr in order
     -- to fail early on errors generated from the cardano-node binary.
-    _ <- liftIO (IO.getPid hProcess)
+    pid <- liftIO (IO.getPid hProcess)
       >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
+
+    -- We then log the pid in the temp dir structure.
+    liftIO $ IO.writeFile nodePidFile $ show pid
 
     -- Wait for socket to be created
     eSprocketError <-
