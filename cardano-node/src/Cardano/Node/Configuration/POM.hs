@@ -47,6 +47,7 @@ import           Ouroboros.Network.Diffusion.Configuration
                    PeerSelectionTargets (..), PeerSharing (..))
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TxSubmissionLogicVersion (..))
 
 import           Control.Monad (when, unless)
 import           Data.Aeson
@@ -187,6 +188,9 @@ data NodeConfiguration
 
          -- Ouroboros Genesis
        , ncGenesisConfig :: GenesisConfig
+
+         -- Enable new TX Submission Protocol
+       , ncTxSubmissionLogicVersion :: TxSubmissionLogicVersion
        } deriving (Eq, Show)
 
 
@@ -264,6 +268,9 @@ data PartialNodeConfiguration
 
          -- Ouroboros Genesis
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
+
+         -- Enable new TX Submission Protocol
+       , pncTxSubmissionLogicVersion :: !(Last TxSubmissionLogicVersion)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -376,6 +383,16 @@ instance FromJSON PartialNodeConfiguration where
       -- pncConsensusMode determines whether Genesis is enabled in the first place.
       pncGenesisConfigFlags <- Last <$> v .:? "LowLevelGenesisOptions"
 
+      -- TxSubmission Logic Version
+      (txSubmissionLogicVersion :: Maybe Int) <- v .:? "TxSubmissionLogicVersion"
+      pncTxSubmissionLogicVersion <-
+        case txSubmissionLogicVersion of
+          Nothing -> pure $ Last $ Just Ouroboros.defaultTxSubmissionLogicVersion
+          Just 1 -> pure $ Last $ Just TxSubmissionLogicV1
+          Just 2 -> pure $ Last $ Just TxSubmissionLogicV2
+          Just a -> Aeson.parseFail ("unexpected TxSubmissionLogicVersion: " ++ show a)
+
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -418,6 +435,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncEnableP2P
            , pncPeerSharing
            , pncGenesisConfigFlags
+           , pncTxSubmissionLogicVersion
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -610,6 +628,7 @@ defaultPartialNodeConfiguration =
     , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just Ouroboros.defaultPeerSharing)
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
+    , pncTxSubmissionLogicVersion  = Last (Just Ouroboros.defaultTxSubmissionLogicVersion)
     }
   where
     PeerSelectionTargets {
@@ -707,6 +726,9 @@ makeNodeConfiguration pnc = do
   ncPeerSharing <-
     lastToEither "Missing PeerSharing"
     $ pncPeerSharing pnc
+  ncTxSubmissionLogicVersion <-
+    lastToEither "Missing TxSubmissionLogicVersion"
+    $ pncTxSubmissionLogicVersion pnc
 
   mGenesisConfigFlags <- case ncConsensusMode of
     PraosMode -> pure Nothing
@@ -797,6 +819,7 @@ makeNodeConfiguration pnc = do
              , ncPeerSharing
              , ncConsensusMode
              , ncGenesisConfig
+             , ncTxSubmissionLogicVersion
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

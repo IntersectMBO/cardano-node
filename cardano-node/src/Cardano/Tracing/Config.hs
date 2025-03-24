@@ -182,6 +182,7 @@ type TracePeerSharingProtocol = ("TracePeerSharingProtocol" :: Symbol)
 type TraceGsm = ("TraceGsm" :: Symbol)
 type TraceCsj = ("TraceCsj" :: Symbol)
 type TraceDbf = ("TraceDbf" :: Symbol)
+type TraceTxLogic = ("TraceTxLogic" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -257,6 +258,7 @@ data TraceSelection
   , traceGsm :: OnOff TraceGsm
   , traceCsj :: OnOff TraceCsj
   , traceDbf :: OnOff TraceDbf
+  , traceTxLogic :: OnOff TraceTxLogic
   } deriving (Eq, Show)
 
 
@@ -326,6 +328,7 @@ data PartialTraceSelection
       , pTraceGsm :: Last (OnOff TraceGsm)
       , pTraceCsj :: Last (OnOff TraceCsj)
       , pTraceDbf :: Last (OnOff TraceDbf)
+      , pTraceTxLogic :: Last (OnOff TraceTxLogic)
       } deriving (Eq, Generic, Show)
 
 
@@ -396,6 +399,7 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceGsm) v
       <*> parseTracer (Proxy @TraceCsj) v
       <*> parseTracer (Proxy @TraceDbf) v
+      <*> parseTracer (Proxy @TraceTxLogic) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -463,6 +467,7 @@ defaultPartialTraceConfiguration =
     , pTraceGsm = pure $ OnOff True
     , pTraceCsj = pure $ OnOff True
     , pTraceDbf = pure $ OnOff True
+    , pTraceTxLogic = pure $ OnOff False
     }
 
 
@@ -532,6 +537,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
    traceDbf <- proxyLastToEither (Proxy @TraceDbf) pTraceDbf
+   traceTxLogic <- proxyLastToEither (Proxy @TraceTxLogic) pTraceTxLogic
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -594,6 +600,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceGsm = traceGsm
              , traceCsj = traceCsj
              , traceDbf = traceDbf
+             , traceTxLogic = traceTxLogic
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -660,6 +667,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
   traceDbf <- proxyLastToEither (Proxy @TraceDbf) pTraceDbf
+  traceTxLogic <- proxyLastToEither (Proxy @TraceTxLogic) pTraceTxLogic
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -722,6 +730,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceGsm = traceGsm
             , traceCsj = traceCsj
             , traceDbf = traceDbf
+            , traceTxLogic = traceTxLogic
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)

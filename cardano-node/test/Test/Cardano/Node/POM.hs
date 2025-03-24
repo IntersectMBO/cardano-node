@@ -20,10 +20,12 @@ import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
-import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
+import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..),
+                   defaultMinBigLedgerPeersForTrustedState)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TxSubmissionLogicVersion (..))
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -32,7 +34,6 @@ import           Data.Time.Clock (secondsToDiffTime)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
-import Ouroboros.Cardano.Diffusion.Configuration (defaultMinBigLedgerPeersForTrustedState)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -166,6 +167,7 @@ testPartialYamlConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
+    , pncTxSubmissionLogicVersion = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -214,6 +216,7 @@ testPartialCliConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
+    , pncTxSubmissionLogicVersion = Last (Just defaultTxSubmissionLogicVersion)
     }
 
 -- | Expected final NodeConfiguration
@@ -268,6 +271,7 @@ eExpectedConfig = do
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
+    , ncTxSubmissionLogicVersion = defaultTxSubmissionLogicVersion
     }
 
 -- -----------------------------------------------------------------------------

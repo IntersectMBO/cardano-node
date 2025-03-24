@@ -20,11 +20,13 @@ module Cardano.Node.Tracing.Tracers.P2P
   () where
 
 import           Cardano.Logging
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
+import           Cardano.Node.Tracing.Compat (fromDetailLevel)
+import           Cardano.Tracing.OrphanInstances.Common (ToObject(..))
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
 import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
@@ -55,6 +57,7 @@ import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount 
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxLogic (..))
 
 import           Control.Exception (displayException)
 import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList,
@@ -1933,4 +1936,52 @@ instance MetaTrace NtN.AcceptConnectionsPolicyTrace where
         Namespace [] ["ConnectionRateLimiting"]
       , Namespace [] ["ConnectionHardLimit"]
       , Namespace [] ["ConnectionLimitResume"]
+      ]
+
+--------------------------------------------------------------------------------
+-- TxLogic Tracer
+--------------------------------------------------------------------------------
+
+instance ( ToJSON txid
+         , ToObject tx
+         , ToJSONKey peer
+         , ToJSONKey txid
+         , Show peer
+         , Show txid
+         , Show tx
+         ) => LogFormatting (TraceTxLogic peer txid tx)  where
+    forMachine dtal (TraceTxDecisions td) =
+      mconcat [ "kind" .= String "TxDecisions"
+              , "decisions" .= fmap (toObject (fromDetailLevel dtal)) td
+              ]
+    forMachine dtal (TraceSharedTxState s st) =
+      mconcat [ "kind" .= String "SharedTxState"
+              , "name" .= s
+              , "sharedState" .= toObject (fromDetailLevel dtal) st
+              ]
+    forHuman   = showT
+
+instance MetaTrace (TraceTxLogic peer txid tx) where
+    namespaceFor TraceTxDecisions {} =
+      Namespace [] ["TxDecisions"]
+    namespaceFor TraceSharedTxState {} =
+      Namespace [] ["SharedTxState"]
+
+    severityFor (Namespace _ ["TxDecisions"]) _ = Just Debug
+    severityFor (Namespace _ ["SharedTxState"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["TxDecisions"]) = Just $ mconcat
+      [ "Current decision made by the decision logic thread"
+      , " to guide the TX Submission protocol"
+      ]
+    documentFor (Namespace _ ["SharedTxState"]) = Just $ mconcat
+      [ "Shared state as seen by the decision logict thread."
+      , " This state guides the TX Submission protocol"
+      ]
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["TxDecisions"]
+      , Namespace [] ["SharedTxState"]
       ]

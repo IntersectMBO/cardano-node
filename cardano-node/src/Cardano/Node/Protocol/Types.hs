@@ -46,6 +46,7 @@ data SomeConsensusProtocol where
                                           , HasKESMetricsData blk
                                           , HasKESInfo blk
                                           , TraceConstraints blk
+                                          , ToJSONKey (GenTxId blk)
                                           )
                            => Api.BlockType blk
                            -> Api.ProtocolInfoArgs blk
