@@ -92,6 +92,8 @@ instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBl
         . getOneEraGenTxId
         . getHardForkGenTxId
 
+instance All (Compose ToJSON WrapGenTxId) xs => ToJSONKey (TxId (GenTx (HardForkBlock xs)))
+
 instance ToJSON (TxId (GenTx blk)) => ToJSON (WrapGenTxId blk) where
     toJSON = toJSON . unwrapGenTxId
 
