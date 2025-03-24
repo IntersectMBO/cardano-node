@@ -106,6 +106,11 @@ plutusBlstBase :: Types.Profile -> Types.Profile
 plutusBlstBase =
     P.tps 2
 
+-- Replaces "nomad_perf_plutusv3blst_base".
+plutusRipemdBase :: Types.Profile -> Types.Profile
+plutusRipemdBase =
+    P.tps 2
+
 --------------------------------------------------------------------------------
 
 profilesNoEraCloud :: [Types.Profile]
@@ -121,14 +126,15 @@ profilesNoEraCloud =
                  . P.desc "AWS c5-2xlarge cluster dataset, 7 epochs"
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . P.desc "AWS c5-2xlarge cluster dataset, 9 epochs"
-      -- Loop.
-      loop     = plutus     & plutusLoopBase . V.plutusTypeLoop     . P.analysisSizeSmall
-      loop2024 = plutus     & plutusLoopBase . V.plutusTypeLoop2024 . P.analysisSizeSmall
-      loopVolt = plutusVolt & plutusLoopBase . V.plutusTypeLoop     . P.analysisSizeSmall
-      -- Secp.
-      ecdsa    = plutus     & plutusSecpBase . V.plutusTypeECDSA    . P.analysisSizeModerate
-      schnorr  = plutus     & plutusSecpBase . V.plutusTypeSchnorr  . P.analysisSizeModerate
-      blst     = plutusVolt & plutusBlstBase . V.plutusTypeBLST     . P.analysisSizeModerate2
+      -- memory-constrained
+      loop     = plutus     & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      loop2024 = plutus     & plutusLoopBase   . V.plutusTypeLoop2024 . P.analysisSizeSmall
+      loopVolt = plutusVolt & plutusLoopBase   . V.plutusTypeLoop     . P.analysisSizeSmall
+      -- steps-constrained
+      ecdsa    = plutus     & plutusSecpBase   . V.plutusTypeECDSA    . P.analysisSizeModerate
+      schnorr  = plutus     & plutusSecpBase   . V.plutusTypeSchnorr  . P.analysisSizeModerate
+      blst     = plutusVolt & plutusBlstBase   . V.plutusTypeBLST     . P.analysisSizeModerate2
+      ripemd   = plutusVolt & plutusRipemdBase . V.plutusTypeRIPEMD   . P.analysisSizeSmall
       -- PParams overlays and calibration for 4 tx per block memory full.
       blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay calibrateBlockMemx15
       blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay calibrateBlockMemx2
@@ -161,6 +167,7 @@ profilesNoEraCloud =
   , loopVolt  & P.name "plutus-volt-nomadperf"                             . P.dreps  10000 . P.newTracing . P.p2pOn
   , loopVolt  & P.name "plutus-volt-blockmem-x1.5-nomadperf" . blockMem15x . P.dreps  10000 . P.newTracing . P.p2pOn
   , loopVolt  & P.name "plutus-volt-blockmem-x2-nomadperf"   . blockMem2x  . P.dreps  10000 . P.newTracing . P.p2pOn
+  , ripemd    & P.name "plutusv3-ripemd-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn . P.v10Preview
   ]
   ----------
   -- Voting.
