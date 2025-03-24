@@ -110,7 +110,7 @@ library
                         Cardano.Node.Tracing.Tracers.Consensus
                         Cardano.Node.Tracing.Tracers.ConsensusStartupException
                         Cardano.Node.Tracing.Tracers.Diffusion
-                        Cardano.Node.Tracing.Tracers.ForgingThreadStats
+                        Cardano.Node.Tracing.Tracers.ForgingStats
                         Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
