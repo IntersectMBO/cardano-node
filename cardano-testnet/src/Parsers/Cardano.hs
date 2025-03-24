@@ -7,7 +7,7 @@ module Parsers.Cardano
 import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..))
 
 import           Cardano.CLI.Environment
-import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
+import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
 
 import           Prelude
 

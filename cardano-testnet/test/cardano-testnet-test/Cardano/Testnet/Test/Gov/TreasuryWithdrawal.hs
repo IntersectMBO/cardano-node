@@ -14,9 +14,8 @@ module Cardano.Testnet.Test.Gov.TreasuryWithdrawal
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval), KeyRole (Staking),
-                   StandardCrypto)
-import           Cardano.Api.ReexposeLedger (Coin, Credential)
+import           Cardano.Api.Ledger (Coin, Credential, EpochInterval (EpochInterval),
+                   KeyRole (Staking), StandardCrypto)
 
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L

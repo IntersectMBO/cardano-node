@@ -13,7 +13,7 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
 
 import           Cardano.Api as Api
 
-import           Cardano.CLI.Types.Output
+import           Cardano.CLI.Type.Output
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc

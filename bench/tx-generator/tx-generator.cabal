@@ -53,8 +53,7 @@ library
                         -- TODO: switch back to -Wwarn=deprecations having dropped Cardano.Api.ProtocolParameters.ProtocolParameters in favour of Cardano.Api.Ledger.PParams
                         -Wno-deprecations
 
-  exposed-modules:      Cardano.Api.Internal.ProtocolParameters
-                        Cardano.Benchmarking.Command
+  exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
                         Cardano.Benchmarking.GeneratorTx
                         Cardano.Benchmarking.GeneratorTx.NodeToNode
@@ -79,6 +78,7 @@ library
                         Cardano.TxGenerator.Fund
                         Cardano.TxGenerator.FundQueue
                         Cardano.TxGenerator.Genesis
+                        Cardano.TxGenerator.ProtocolParameters
                         Cardano.TxGenerator.PureExample
                         Cardano.TxGenerator.Script.Types
                         Cardano.TxGenerator.Setup.NixService
@@ -107,9 +107,9 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.8
+                      , cardano-api ^>= 10.11
                       , cardano-binary
-                      , cardano-cli ^>= 10.4
+                      , cardano-cli ^>= 10.5
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data

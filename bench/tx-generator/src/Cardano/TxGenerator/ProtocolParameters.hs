@@ -18,7 +18,7 @@ cardano-api
 - - https://github.com/IntersectMBO/cardano-api/pull/729
 --}
 
-module Cardano.Api.Internal.ProtocolParameters
+module Cardano.TxGenerator.ProtocolParameters
   ( -- * The updatable protocol parameters
     ProtocolParameters (
       ProtocolParameters
