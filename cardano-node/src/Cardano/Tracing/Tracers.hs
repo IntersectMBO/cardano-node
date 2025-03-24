@@ -119,7 +119,8 @@ import qualified Ouroboros.Network.PeerSelection.Governor as Governor
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import           Ouroboros.Network.TxSubmission.Inbound
+import           Ouroboros.Network.TxSubmission.Inbound.V1
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionCounters (..))
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Concurrent (MVar, modifyMVar_)
@@ -128,7 +129,8 @@ import qualified Control.Concurrent.STM as STM
 import           Control.Monad (forM_, when)
 import           "contra-tracer" Control.Tracer
 import           Control.Tracer.Transformers
-import           Data.Aeson (ToJSON (..), Value (..))
+import           Control.Monad.Class.MonadTimer.SI (diffTimeToMicrosecondsAsInt)
+import           Data.Aeson (ToJSON (..), Value (..), ToJSONKey)
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Base16 as B16
 import           Data.Functor ((<&>))
@@ -352,6 +354,8 @@ mkTracers
   :: forall blk p2p .
      ( Consensus.RunNode blk
      , TraceConstraints blk
+     , ToJSON (GenTxId blk)
+     , ToJSONKey (GenTxId blk)
      )
   => BlockConfig blk
   -> TraceOptions
@@ -556,6 +560,8 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.gsmTracer = nullTracer
       , Consensus.csjTracer = nullTracer
       , Consensus.dbfTracer = nullTracer
+      , Consensus.txLogicTracer = nullTracer
+      , Consensus.txCountersTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -571,6 +577,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       , NodeToNode.tKeepAliveTracer = nullTracer
       , NodeToNode.tPeerSharingTracer = nullTracer
+      , NodeToNode.tTxLogicTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -773,6 +780,7 @@ mkConsensusTracers
      , ToJSON peer
      , LedgerQueries blk
      , ToJSON (GenTxId blk)
+     , ToJSONKey (GenTxId blk)
      , ToObject (ApplyTxErr blk)
      , ToObject (CannotForge blk)
      , ToObject (GenTx blk)
@@ -783,6 +791,7 @@ mkConsensusTracers
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
+     , ToJSONKey peer
      )
   => Maybe EKGDirect
   -> TraceSelection
@@ -804,6 +813,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   tSubmissionsCollected <- STM.newTVarIO 0
   tSubmissionsAccepted <- STM.newTVarIO 0
   tSubmissionsRejected <- STM.newTVarIO 0
+  tSubmissionsDelay <- STM.newTVarIO 0
   tBlockDelayM <- STM.newTVarIO Pq.empty
   tBlockDelayCDF1s <- STM.newTVarIO $ CdfCounter 0
   tBlockDelayCDF3s <- STM.newTVarIO $ CdfCounter 0
@@ -833,7 +843,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
             case ev of
               TraceLabelPeer _ (TraceTxSubmissionCollected collected) ->
                 traceI trmet meta "submissions.submitted.count" =<<
-                  STM.modifyReadTVarIO tSubmissionsCollected (+ collected)
+                  STM.modifyReadTVarIO tSubmissionsCollected (+ length collected)
 
               TraceLabelPeer _ (TraceTxSubmissionProcessed processed) -> do
                 traceI trmet meta "submissions.accepted.count" =<<
@@ -842,8 +852,16 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
                   STM.modifyReadTVarIO tSubmissionsRejected (+ ptxcRejected processed)
 
               TraceLabelPeer _ TraceTxInboundTerminated -> return ()
-              TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
-              TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
+              TraceLabelPeer _ TraceTxInboundCanRequestMoreTxs {} -> return ()
+              TraceLabelPeer _ TraceTxInboundCannotRequestMoreTxs {} -> return ()
+              TraceLabelPeer _ (TraceTxInboundAddedToMempool txids delay) -> do
+                traceI trmet meta "submissions.mempoolDelayPerAcceptedTx" =<<
+                  STM.modifyReadTVarIO tSubmissionsDelay (+ diffTimeToMicrosecondsAsInt (delay / fromIntegral (length txids)))
+              TraceLabelPeer _ (TraceTxInboundRejectedFromMempool txids delay) -> do
+                traceI trmet meta "submissions.mempoolDelayPerRejectedTx" =<<
+                  STM.modifyReadTVarIO tSubmissionsDelay (+ diffTimeToMicrosecondsAsInt (delay / fromIntegral (length txids)))
+              TraceLabelPeer _ TraceTxInboundDecision {} -> return ()
+              TraceLabelPeer _ TraceTxInboundError {} -> return ()
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
@@ -862,6 +880,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
     , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr
+    , Consensus.txLogicTracer = tracerOnOff (traceTxSubmissionLogic trSel) verb "TxSubmissionLogic" tr
+    , Consensus.txCountersTracer = tracerOnOff (traceTxSubmissionCounters trSel) verb "TxSubmissionCounters" tr
+                                <> traceTxSubmissionCountersMetrics (traceTxSubmissionCounters trSel) mbEKGDirect
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1321,10 +1342,9 @@ mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
                     _ -> (0, Nothing)
   case tot_m of
     Just tot -> do
-      let logValue1 :: LOContent a
-          logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
-          logValue2 :: LOContent a
-          logValue2 = LogValue "mempoolBytes" . PureI . fromIntegral . unByteSize32 . msNumBytes $ tot
+      let logValue1, logValue2 :: LOContent a
+          logValue1 = LogValue "txsInMempool"  . PureI . fromIntegral . msNumTxs $ tot
+          logValue2 = LogValue "mempoolBytes"  . PureI . fromIntegral . unByteSize32 . msNumBytes $ tot
       meta <- mkLOMeta Critical Confidential
       traceNamedObject tr' (meta, logValue1)
       traceNamedObject tr' (meta, logValue2)
@@ -1485,6 +1505,9 @@ nodeToNodeTracers'
      , Show addr
      , ToObject (ConnectionId addr)
      , ToJSON addr
+     , ToObject (GenTx blk)
+     , ToJSON (GenTxId blk)
+     , ToJSONKey (GenTxId blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -1513,6 +1536,9 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tPeerSharingTracer =
       tracerOnOff (tracePeerSharingProtocol trSel)
                   verb "PeerSharingPrototocol" tr
+  , NodeToNode.tTxLogicTracer =
+      tracerOnOff (traceTxSubmissionLogic trSel)
+                  verb "TxSubmissionLogic" tr
   }
 
 -- TODO @ouroboros-network
@@ -1680,6 +1706,22 @@ tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBootstrapPeersPromotions" (snd $ Cardano.viewWarmBootstrapPeersPromotions extraCounters)
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeers" (snd $ Cardano.viewActiveBootstrapPeers extraCounters)
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeersDemotions" (snd $ Cardano.viewActiveBootstrapPeersDemotions extraCounters)
+
+
+traceTxSubmissionCountersMetrics
+    :: OnOff TraceTxSubmissionCounters
+    -> Maybe EKGDirect
+    -> Tracer IO TxSubmissionCounters
+traceTxSubmissionCountersMetrics _             Nothing          = nullTracer
+traceTxSubmissionCountersMetrics (OnOff False) _                = nullTracer
+traceTxSubmissionCountersMetrics (OnOff True)  (Just ekgDirect) = tracer
+  where
+    tracer :: Tracer IO TxSubmissionCounters
+    tracer = Tracer $ \cnts -> do
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.txsubmission.outstandingTxs" (numOfOutstandingTxIds cnts)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.txsubmission.bufferedTxs" (numOfBufferedTxs cnts)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.txsubmission.inSubmissionToMempoolTxs" (numOfInSubmissionToMempoolTxs cnts)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.txsubmission.inflightTxs" (numOfTxIdsInflight cnts)
 
 
 traceChurnCountersMetrics

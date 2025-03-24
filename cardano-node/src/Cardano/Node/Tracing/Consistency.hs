@@ -93,7 +93,7 @@ import qualified Ouroboros.Network.Server2 as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription.Dns (DnsTrace (..), WithDomainName (..))
 import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
-import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 import           Control.Exception (SomeException)

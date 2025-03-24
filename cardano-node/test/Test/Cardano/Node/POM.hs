@@ -15,7 +15,10 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
-import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
+import           Ouroboros.Cardano.Network.Diffusion.Configuration
+                   (defaultNumberOfBigLedgerPeers)
+import           Ouroboros.Network.Diffusion.Configuration
+                   (defaultTxSubmissionLogicVersion)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
@@ -27,6 +30,7 @@ import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (defaultTxSubmissionInitDelay)
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -170,6 +174,8 @@ testPartialYamlConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncTxSubmissionLogicVersion = mempty
+    , pncTxSubmissionInitDelay = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -221,6 +227,8 @@ testPartialCliConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncTxSubmissionLogicVersion = Last (Just defaultTxSubmissionLogicVersion)
+    , pncTxSubmissionInitDelay = Last (Just defaultTxSubmissionInitDelay)
     }
 
 -- | Expected final NodeConfiguration
@@ -278,6 +286,8 @@ eExpectedConfig = do
     , ncGenesisConfig = disableGenesisConfig
     , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
     , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
+    , ncTxSubmissionLogicVersion = defaultTxSubmissionLogicVersion
+    , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
     }
 
 -- -----------------------------------------------------------------------------

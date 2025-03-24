@@ -123,6 +123,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TxSubmissionLogicVersion (..))
 
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
 import           Control.Concurrent.Class.MonadSTM.Strict
@@ -134,6 +135,7 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
+import           Data.Aeson (ToJSONKey)
 import           Data.Bits
 import           Data.Either (partitionEithers)
 import           Data.IP (toSockAddr)
@@ -520,6 +522,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+              , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc
+              , rnTxSubmissionInitDelay = ncTxSubmissionInitDelay nc
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -618,6 +622,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
+                , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc
+                , rnTxSubmissionInitDelay = ncTxSubmissionInitDelay nc
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
