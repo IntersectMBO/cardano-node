@@ -53,6 +53,7 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TxSubmissionInitDelay (..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -203,6 +204,11 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+         -- Enable new TX Submission Protocol
+       , ncTxSubmissionLogicVersion :: TxSubmissionLogicVersion
+
+       , ncTxSubmissionInitDelay :: TxSubmissionInitDelay
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -301,6 +307,12 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
+
+         -- Enable new TX Submission Protocol
+       , pncTxSubmissionLogicVersion :: !(Last TxSubmissionLogicVersion)
+
+       , pncTxSubmissionInitDelay ::  !(Last TxSubmissionInitDelay)
+
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -420,6 +432,21 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
+      -- TxSubmission Logic Version
+      (txSubmissionLogicVersion :: Maybe Int) <- v .:? "TxSubmissionLogicVersion"
+      pncTxSubmissionLogicVersion <-
+        case txSubmissionLogicVersion of
+          Nothing -> pure $ Last $ Just Ouroboros.defaultTxSubmissionLogicVersion
+          Just 1 -> pure $ Last $ Just TxSubmissionLogicV1
+          Just 2 -> pure $ Last $ Just TxSubmissionLogicV2
+          Just a -> Aeson.parseFail ("unexpected TxSubmissionLogicVersion: " ++ show a)
+      (txSubmissionInitDelay :: Maybe Bool) <- v .:? "TxSubmissionInitDelay"
+      let pncTxSubmissionInitDelay =
+            case txSubmissionInitDelay of
+              Nothing    -> Last $ Just defaultTxSubmissionInitDelay
+              Just True  -> Last $ Just defaultTxSubmissionInitDelay
+              Just False -> Last $ Just NoTxSubmissionInitDelay
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -465,6 +492,8 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
+           , pncTxSubmissionLogicVersion
+           , pncTxSubmissionInitDelay
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -701,6 +730,8 @@ defaultPartialNodeConfiguration =
       -- the default is defined in `makeNodeConfiguration`
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
+    , pncTxSubmissionLogicVersion  = Last (Just Ouroboros.defaultTxSubmissionLogicVersion)
+    , pncTxSubmissionInitDelay = Last (Just defaultTxSubmissionInitDelay)
     }
   where
     PeerSelectionTargets {
@@ -820,6 +851,12 @@ makeNodeConfiguration pnc = do
             then PeerSharingDisabled
             else PeerSharingEnabled
           Last (Just peerSharing) -> peerSharing
+  ncTxSubmissionLogicVersion <-
+    lastToEither "Missing TxSubmissionLogicVersion"
+    $ pncTxSubmissionLogicVersion pnc
+  ncTxSubmissionInitDelay <-
+    lastToEither "Missing TxSubmissionInitDelay"
+    $ pncTxSubmissionInitDelay pnc
 
   mGenesisConfigFlags <- case ncConsensusMode of
     PraosMode -> pure Nothing
@@ -908,6 +945,8 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncTxSubmissionLogicVersion
+             , ncTxSubmissionInitDelay
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
