@@ -20,29 +20,29 @@ module Cardano.Node.Tracing.Tracers.P2P
   () where
 
 import           Cardano.Logging
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
 import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
+import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
-import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
-import           Ouroboros.Network.PeerSelection.Governor (
-                   DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
-                   PeerSelectionState (..), PeerSelectionTargets (..), PeerSelectionView (..),
-                   TracePeerSelection (..), peerSelectionStateToCounters)
+import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
+                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
+                   peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -1476,6 +1476,7 @@ instance MetaTrace (ConnectionManager.Trace addr
       ,("connectionManager.unidirectionalConns","")
       ,("connectionManager.inboundConns","")
       ,("connectionManager.outboundConns","")
+      ,("connectionManager.prunableConns","")
       ]
     metricsDocFor _ = []
 

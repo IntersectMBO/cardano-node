@@ -30,7 +30,7 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (forgeThreadStats)
+import           Cardano.Node.Tracing.Tracers.ForgingStats (calcForgeStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -61,8 +61,8 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.Common as Diffusion
-import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
+import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
@@ -317,11 +317,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 (forgeTracerTransform nodeKernel)
     configureTracers configReflection trConfig [forgeTr]
 
-    !forgeThreadStatsTr <- mkCardanoTracer'
+    !forgeStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
-                ["Forge", "ThreadStats"]
-                forgeThreadStats
-    configureTracers configReflection trConfig [forgeThreadStatsTr]
+                ["Forge", "Stats"]
+                calcForgeStats
+    configureTracers configReflection trConfig [forgeStatsTr]
 
     !blockchainTimeTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -391,7 +391,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       , Consensus.forgeTracer =
            Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeTr) x)
            <>
-           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeThreadStatsTr) x)
+           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeStatsTr) x)
       , Consensus.blockchainTimeTracer = Tracer $
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $
