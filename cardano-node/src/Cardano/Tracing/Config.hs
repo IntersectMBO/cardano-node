@@ -70,6 +70,7 @@ module Cardano.Tracing.Config
   , TraceTxOutbound
   , TraceTxSubmissionProtocol
   , TraceTxSubmission2Protocol
+  , TraceTxSubmissionCounters
   , TraceKeepAliveProtocol
   , TracePeerSharingProtocol
   , proxyName
@@ -183,6 +184,8 @@ type TracePeerSharingProtocol = ("TracePeerSharingProtocol" :: Symbol)
 type TraceGsm = ("TraceGsm" :: Symbol)
 type TraceCsj = ("TraceCsj" :: Symbol)
 type TraceDevotedBlockFetch = ("TraceDevotedBlockFetch" :: Symbol)
+type TraceTxSubmissionLogic = ("TraceTxSubmissionLogic" :: Symbol)
+type TraceTxSubmissionCounters = ("TraceTxSubmissionCounters" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -259,6 +262,8 @@ data TraceSelection
   , traceGsm :: OnOff TraceGsm
   , traceCsj :: OnOff TraceCsj
   , traceDevotedBlockFetch :: OnOff TraceDevotedBlockFetch
+  , traceTxSubmissionLogic :: OnOff TraceTxSubmissionLogic
+  , traceTxSubmissionCounters :: OnOff TraceTxSubmissionCounters
   } deriving (Eq, Show)
 
 
@@ -329,6 +334,8 @@ data PartialTraceSelection
       , pTraceGsm :: Last (OnOff TraceGsm)
       , pTraceCsj :: Last (OnOff TraceCsj)
       , pTraceDevotedBlockFetch :: Last (OnOff TraceDevotedBlockFetch)
+      , pTraceTxSubmissionLogic :: Last (OnOff TraceTxSubmissionLogic)
+      , pTraceTxSubmissionCounters :: Last (OnOff TraceTxSubmissionCounters)
       } deriving (Eq, Generic, Show)
 
 
@@ -400,6 +407,8 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceGsm) v
       <*> parseTracer (Proxy @TraceCsj) v
       <*> parseTracer (Proxy @TraceDevotedBlockFetch) v
+      <*> parseTracer (Proxy @TraceTxSubmissionLogic) v
+      <*> parseTracer (Proxy @TraceTxSubmissionCounters) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -468,6 +477,8 @@ defaultPartialTraceConfiguration =
     , pTraceGsm = pure $ OnOff True
     , pTraceCsj = pure $ OnOff True
     , pTraceDevotedBlockFetch = pure $ OnOff True
+    , pTraceTxSubmissionLogic = pure $ OnOff False
+    , pTraceTxSubmissionCounters = pure $ OnOff True
     }
 
 
@@ -538,6 +549,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
    traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
+   traceTxSubmissionLogic <- proxyLastToEither (Proxy @TraceTxSubmissionLogic) pTraceTxSubmissionLogic
+   traceTxSubmissionCounters <- proxyLastToEither (Proxy @TraceTxSubmissionCounters) pTraceTxSubmissionCounters
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -601,6 +614,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceGsm = traceGsm
              , traceCsj = traceCsj
              , traceDevotedBlockFetch = traceDevotedBlockFetch
+             , traceTxSubmissionLogic = traceTxSubmissionLogic
+             , traceTxSubmissionCounters = traceTxSubmissionCounters
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -668,6 +683,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   traceCsj <- proxyLastToEither (Proxy @TraceCsj) pTraceCsj
   traceDevotedBlockFetch <- proxyLastToEither (Proxy @TraceDevotedBlockFetch) pTraceDevotedBlockFetch
+  traceTxSubmissionLogic <- proxyLastToEither (Proxy @TraceTxSubmissionLogic) pTraceTxSubmissionLogic
+  traceTxSubmissionCounters <- proxyLastToEither (Proxy @TraceTxSubmissionCounters) pTraceTxSubmissionCounters
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -731,6 +748,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceGsm = traceGsm
             , traceCsj = traceCsj
             , traceDevotedBlockFetch = traceDevotedBlockFetch
+            , traceTxSubmissionLogic = traceTxSubmissionLogic
+            , traceTxSubmissionCounters = traceTxSubmissionCounters
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)
