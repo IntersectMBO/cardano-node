@@ -201,7 +201,9 @@ getAllNamespaces =
         gsmNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "GSM"])
                         (allNamespaces :: [Namespace (TraceGsmEvent (Tip blk))])
         csjNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "CSJ"])
-                        (allNamespaces :: [Namespace (Jumping.TraceEvent peer)])
+                        (allNamespaces :: [Namespace (Jumping.TraceEventCsj peer blk)])
+        dbfNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "DBF"])
+                        (allNamespaces :: [Namespace (Jumping.TraceEventDbf peer)])
 
 -- Node to client
         keepAliveClientNS = map (nsGetTuple . nsReplacePrefix ["Net"])
@@ -413,6 +415,7 @@ getAllNamespaces =
             <> consensusStartupErrorNS
             <> gsmNS
             <> csjNS
+            <> dbfNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

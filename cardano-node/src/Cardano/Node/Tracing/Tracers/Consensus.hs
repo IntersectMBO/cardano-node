@@ -2242,8 +2242,37 @@ instance MetaTrace (TraceGsmEvent selection) where
 -- CSJ Tracer
 --------------------------------------------------------------------------------
 
+-- TODO
 instance ( LogFormatting peer, Show peer
-         ) => LogFormatting (Jumping.TraceEvent peer) where
+         ) => LogFormatting (Jumping.TraceEventCsj peer blk) where
+  forMachine _dtal =
+    \case
+      _ -> mempty
+
+  forHuman _ = mempty
+
+instance MetaTrace (Jumping.TraceEventCsj peer blk) where
+  namespaceFor =
+    \case
+      _ -> Namespace [] []
+
+  severityFor ns _ =
+    case ns of
+      _ -> Nothing
+
+  documentFor = \case
+    Namespace _ _ ->
+      Nothing
+
+  allNamespaces =
+    []
+
+--------------------------------------------------------------------------------
+-- DBF Tracer
+--------------------------------------------------------------------------------
+
+instance ( LogFormatting peer, Show peer
+         ) => LogFormatting (Jumping.TraceEventDbf peer) where
   forMachine dtal =
     \case
       RotatedDynamo oldPeer newPeer ->
@@ -2256,7 +2285,7 @@ instance ( LogFormatting peer, Show peer
   forHuman (RotatedDynamo fromPeer toPeer) =
     "Rotated the dynamo from " <> showT fromPeer <> " to " <> showT toPeer
 
-instance MetaTrace (Jumping.TraceEvent peer) where
+instance MetaTrace (Jumping.TraceEventDbf peer) where
   namespaceFor =
     \case
       RotatedDynamo {}        -> Namespace [] ["RotatedDynamo"]

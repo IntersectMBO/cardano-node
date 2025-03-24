@@ -421,7 +421,14 @@ docTracersFirstPhase condConfigFileName = do
                 ["Consensus", "CSJ"]
     configureTracers configReflection trConfig [consensusCsjTr]
     consensusCsjTrDoc <- documentTracer (consensusCsjTr ::
-      Logging.Trace IO (Jumping.TraceEvent peer))
+      Logging.Trace IO (Jumping.TraceEventCsj peer blk))
+
+    consensusDbfTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "DBF"]
+    configureTracers configReflection trConfig [consensusDbfTr]
+    consensusDbfTrDoc <- documentTracer (consensusDbfTr ::
+      Logging.Trace IO (Jumping.TraceEventDbf peer))
 
 
 -- Node to client
@@ -773,6 +780,7 @@ docTracersFirstPhase condConfigFileName = do
             <> consensusGddTrDoc
             <> consensusGsmTrDoc
             <> consensusCsjTrDoc
+            <> consensusDbfTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc

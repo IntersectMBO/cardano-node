@@ -1419,19 +1419,62 @@ instance ( LedgerSupportsProtocol blk,
               , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
               , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info)) ]
 
-instance HasPrivacyAnnotation (ChainSync.Client.TraceEvent peer) where
-instance HasSeverityAnnotation (ChainSync.Client.TraceEvent peer) where
-  getSeverityAnnotation _ = Debug
-instance ToObject peer => Transformable Text IO (ChainSync.Client.TraceEvent peer) where
+instance HasPrivacyAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
+instance HasSeverityAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
+  getSeverityAnnotation _ = Info
+instance (ToJSON peer, ToObject peer, ConvertRawHash blk)
+      => Transformable Text IO (TraceLabelPeer peer (ChainSync.Client.TraceEventCsj peer blk)) where
   trTransformer = trStructured
+instance (ToJSON peer, ConvertRawHash blk)
+      => ToObject (ChainSync.Client.TraceEventCsj peer blk) where
+    toObject _verb = \case
+      ChainSync.Client.BecomingObjector mbPeer ->
+        mconcat
+          [ "kind" .= String "BecomingObjector"
+          , "peer" .= mbPeer
+          ]
+      ChainSync.Client.BlockedOnJump ->
+        mconcat
+          [ "kind" .= String "BlockedOnJump"
+          ]
+      ChainSync.Client.InitializedAsDynamo ->
+        mconcat
+          [ "kind" .= String "BlockedOnJump"
+          ]
+      ChainSync.Client.NoLongerDynamo mbPeer reason ->
+        mconcat
+          [ "kind" .= String "NoLongerDynamo"
+          , "peer" .= mbPeer
+          , "reason" .= String (pack . show $ reason)
+          ]
+      ChainSync.Client.NoLongerObjector mbPeer reason ->
+        mconcat
+          [ "kind" .= String "NoLongerObjector"
+          , "peer" .= mbPeer
+          , "reason" .= String (pack . show $ reason)
+          ]
+      ChainSync.Client.SentJumpInstruction point ->
+        mconcat
+          [ "kind" .= String "SentJumpInstruction"
+          , "point" .= point
+          ]
 
-instance ToObject peer => ToObject (ChainSync.Client.TraceEvent peer) where
-  toObject verb (ChainSync.Client.RotatedDynamo oldPeer newPeer) =
-    mconcat
-      [ "kind" .= String "RotatedDynamo"
-      , "oldPeer" .= toObject verb oldPeer
-      , "newPeer" .= toObject verb newPeer
-      ]
+
+instance HasPrivacyAnnotation (ChainSync.Client.TraceEventDbf peer) where
+instance HasSeverityAnnotation (ChainSync.Client.TraceEventDbf peer) where
+  getSeverityAnnotation _ = Info
+instance Transformable Text IO (ChainSync.Client.TraceEventDbf peer) where
+  trTransformer = trStructured
+instance HasTextFormatter (ChainSync.Client.TraceEventDbf peer) where
+instance ToObject (ChainSync.Client.TraceEventDbf peer) where
+    toObject _verb = \case
+      _ -> mempty
+      -- ChainSync.Client.RotateDynamo old new ->
+      --   mconcat
+      --     [ "kind" .= String "RotateDynamo"
+      --     , "old" .= old
+      --     , "new" .= new
+      --     ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
