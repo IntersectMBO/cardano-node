@@ -26,6 +26,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
 
 import           Cardano.Logging
 import           Cardano.Node.Queries (HasKESInfo (..))
+import           Cardano.Node.Tracing.Compat (fromDetailLevel)
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
@@ -34,6 +35,7 @@ import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
+import           Cardano.Tracing.OrphanInstances.Common (ToObject (..))
 import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -69,10 +71,11 @@ import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
+import           Ouroboros.Network.TxSubmission.Inbound.V1 hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Control.Monad (guard)
+import           Control.Monad.Class.MonadTimer.SI (diffTimeToMicrosecondsAsInt)
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (toList))
@@ -1067,17 +1070,18 @@ instance LogFormatting SanityCheckIssue where
 -- TxInbound Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (TraceTxSubmissionInbound txid tx) where
+instance (ToJSON txid, ToObject tx) => LogFormatting (TraceTxSubmissionInbound txid tx) where
   forMachine _dtal (TraceTxSubmissionCollected count) =
     mconcat
       [ "kind" .= String "TraceTxSubmissionCollected"
       , "count" .= toJSON count
       ]
-  forMachine _dtal (TraceTxSubmissionProcessed processed) =
+  forMachine _dtal (TraceTxSubmissionProcessed processed delay) =
     mconcat
       [ "kind" .= String "TraceTxSubmissionProcessed"
       , "accepted" .= toJSON (ptxcAccepted processed)
       , "rejected" .= toJSON (ptxcRejected processed)
+      , "delay" .= delay
       ]
   forMachine _dtal TraceTxInboundTerminated =
     mconcat
@@ -1093,14 +1097,19 @@ instance LogFormatting (TraceTxSubmissionInbound txid tx) where
       [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
+  forMachine dtal (TraceTxInboundDecision td) =
+    mconcat
+      [ "kind" .= String "TraceTxInboundDecision"
+      , "decision" .= toObject (fromDetailLevel dtal) td
+      ]
 
-  asMetrics (TraceTxSubmissionCollected count)=
-    [CounterM "submissions.submitted" (Just count)]
-  asMetrics (TraceTxSubmissionProcessed processed) =
+  asMetrics (TraceTxSubmissionProcessed processed duration) =
     [ CounterM "submissions.accepted"
         (Just (ptxcAccepted processed))
     , CounterM "submissions.rejected"
         (Just (ptxcRejected processed))
+    , CounterM "submission.duration"
+        (Just $ diffTimeToMicrosecondsAsInt duration)
     ]
   asMetrics _ = []
 
@@ -1110,12 +1119,15 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
     namespaceFor TraceTxInboundTerminated {} = Namespace [] ["Terminated"]
     namespaceFor TraceTxInboundCanRequestMoreTxs {} = Namespace [] ["CanRequestMoreTxs"]
     namespaceFor TraceTxInboundCannotRequestMoreTxs {} = Namespace [] ["CannotRequestMoreTxs"]
+    namespaceFor TraceTxInboundDecision {} = Namespace [] ["TxInboundDecision"]
 
     severityFor (Namespace _ ["Collected"]) _ = Just Debug
     severityFor (Namespace _ ["Processed"]) _ = Just Debug
     severityFor (Namespace _ ["Terminated"]) _ = Just Notice
     severityFor (Namespace _ ["CanRequestMoreTxs"]) _ = Just Debug
     severityFor (Namespace _ ["CannotRequestMoreTxs"]) _ = Just Debug
+    severityFor (Namespace _ ["TxInboundAddedToMempool"]) _ = Just Debug
+    severityFor (Namespace _ ["TxInboundDecision "]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["Collected"]) =
@@ -1142,6 +1154,13 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
       , " txids. Since this is the only thing to do now, we make this a"
       , " blocking call."
       ]
+    documentFor (Namespace _ ["TxInboundAddedToMempool"]) = Just $ mconcat
+      [ "Transaction ids that made it into the mempool"
+      ]
+    documentFor (Namespace _ ["TxInboundDecision"]) = Just $ mconcat
+      [ "Current decision made by the decision logic thread"
+      , " to guide the TX Submission protocol"
+      ]
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -1150,6 +1169,8 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
         , Namespace [] ["Terminated"]
         , Namespace [] ["CanRequestMoreTxs"]
         , Namespace [] ["CannotRequestMoreTxs"]
+        , Namespace [] ["TxInboundAddedToMempool"]
+        , Namespace [] ["TxInboundDecision"]
         ]
 
 --------------------------------------------------------------------------------

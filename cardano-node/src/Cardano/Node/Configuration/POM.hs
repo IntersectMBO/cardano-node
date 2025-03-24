@@ -53,6 +53,7 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import           Ouroboros.Network.Mux (ForkPolicy, noBindForkPolicy, responderForkPolicy)
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TxSubmissionInitDelay (..))
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -200,6 +201,11 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncForkPolicy :: NCForkPolicy
+
+         -- Enable new TX Submission Protocol
+       , ncTxSubmissionLogicVersion :: TxSubmissionLogicVersion
+
+       , ncTxSubmissionInitDelay :: TxSubmissionInitDelay
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -292,6 +298,12 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncForkPolicy :: !(Last NCForkPolicy)
+
+         -- Enable new TX Submission Protocol
+       , pncTxSubmissionLogicVersion :: !(Last TxSubmissionLogicVersion)
+
+       , pncTxSubmissionInitDelay ::  !(Last TxSubmissionInitDelay)
+
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -404,6 +416,21 @@ instance FromJSON PartialNodeConfiguration where
 
       pncForkPolicy <- Last <$> v .:? "ForkPolicy"
 
+      -- TxSubmission Logic Version
+      (txSubmissionLogicVersion :: Maybe Int) <- v .:? "TxSubmissionLogicVersion"
+      pncTxSubmissionLogicVersion <-
+        case txSubmissionLogicVersion of
+          Nothing -> pure $ Last $ Just Cardano.defaultTxSubmissionLogicVersion
+          Just 1 -> pure $ Last $ Just TxSubmissionLogicV1
+          Just 2 -> pure $ Last $ Just TxSubmissionLogicV2
+          Just a -> Aeson.parseFail ("unexpected TxSubmissionLogicVersion: " ++ show a)
+      (txSubmissionInitDelay :: Maybe Bool) <- v .:? "TxSubmissionInitDelay"
+      let pncTxSubmissionInitDelay =
+            case txSubmissionInitDelay of
+              Nothing    -> Last $ Just Cardano.defaultTxSubmissionInitDelay
+              Just True  -> Last $ Just Cardano.defaultTxSubmissionInitDelay
+              Just False -> Last $ Just NoTxSubmissionInitDelay
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -446,6 +473,8 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncForkPolicy
+           , pncTxSubmissionLogicVersion
+           , pncTxSubmissionInitDelay
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -683,6 +712,8 @@ defaultPartialNodeConfiguration =
     , pncPeerSharing   = Last (Just Ouroboros.defaultPeerSharing)
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
     , pncForkPolicy = Last $ Just NoBindForkPolicy
+    , pncTxSubmissionLogicVersion  = Last (Just Cardano.defaultTxSubmissionLogicVersion)
+    , pncTxSubmissionInitDelay = Last (Just Cardano.defaultTxSubmissionInitDelay)
     }
   where
     PeerSelectionTargets {
@@ -783,6 +814,12 @@ makeNodeConfiguration pnc = do
   ncPeerSharing <-
     lastToEither "Missing PeerSharing"
     $ pncPeerSharing pnc
+  ncTxSubmissionLogicVersion <-
+    lastToEither "Missing TxSubmissionLogicVersion"
+    $ pncTxSubmissionLogicVersion pnc
+  ncTxSubmissionInitDelay <-
+    lastToEither "Missing TxSubmissionInitDelay"
+    $ pncTxSubmissionInitDelay pnc
 
   mGenesisConfigFlags <- case ncConsensusMode of
     PraosMode -> pure Nothing
@@ -875,6 +912,8 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncForkPolicy
+             , ncTxSubmissionLogicVersion
+             , ncTxSubmissionInitDelay
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
