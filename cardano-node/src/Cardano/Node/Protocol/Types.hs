@@ -16,6 +16,7 @@ import qualified Cardano.Api as Api
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)
 import           Cardano.Node.TraceConstraints (TraceConstraints)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 
 import           Control.DeepSeq (NFData)
 import           Data.Aeson
@@ -45,6 +46,7 @@ data SomeConsensusProtocol where
                                           , HasKESMetricsData blk
                                           , HasKESInfo blk
                                           , TraceConstraints blk
+                                          , ToJSONKey (GenTxId blk)
                                           )
                            => Api.BlockType blk
                            -> Api.ProtocolInfoArgs blk

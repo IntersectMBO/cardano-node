@@ -44,6 +44,7 @@ import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionS
 import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
 import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
@@ -69,6 +70,7 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
 import           "contra-tracer" Control.Tracer (Tracer (..))
+import           Data.Aeson (ToJSONKey)
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (SockAddr)
@@ -87,6 +89,7 @@ mkDispatchTracers
       (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   , LogFormatting (TraceGsmEvent (Tip blk))
   , MetaTrace (TraceGsmEvent (Tip blk))
+  , ToJSONKey (GenTxId blk)
   )
   => NodeKernelData blk
   -> Trace IO FormattedMessage
@@ -226,6 +229,7 @@ mkConsensusTracers :: forall blk.
                     (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   , LogFormatting (TraceGsmEvent (Tip blk))
   , MetaTrace (TraceGsmEvent (Tip blk))
+  , ToJSONKey (GenTxId blk)
   )
   => ConfigReflection
   -> Trace IO FormattedMessage
@@ -301,6 +305,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["TxSubmission", "TxInbound"]
     configureTracers configReflection trConfig [txInboundTr]
 
+    !txLogicTr  <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["TxSubmission", "TxInbound", "TxLogic"]
+    configureTracers configReflection trConfig [txLogicTr]
+
     !txOutboundTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["TxSubmission", "TxOutbound"]
@@ -362,6 +371,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "DevotedBlockFetch"]
     configureTracers configReflection trConfig [consensusDbfTr]
 
+    !txSubmissionCountersTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["TxSubmission", "Counters"]
+    configureTracers configReflection trConfig [txSubmissionCountersTracer]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -386,6 +400,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusGddTr
       , Consensus.txInboundTracer = Tracer $
            traceWith txInboundTr
+      , Consensus.txLogicTracer = Tracer $
+           traceWith txLogicTr
       , Consensus.txOutboundTracer = Tracer $
           traceWith txOutboundTr
       , Consensus.localTxSubmissionServerTracer = Tracer $
@@ -408,6 +424,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusCsjTr
       , Consensus.dbfTracer = Tracer $
           traceWith consensusDbfTr
+      , Consensus.txCountersTracer = Tracer $
+          traceWith txSubmissionCountersTracer
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -457,7 +475,9 @@ mkNodeToClientTracers configReflection trBase trForward mbTrEKG _trDataPoint trC
 
 mkNodeToNodeTracers :: forall blk.
   ( Consensus.RunNode blk
-  , TraceConstraints blk)
+  , TraceConstraints blk
+  , ToJSONKey (GenTxId blk)
+  )
   => ConfigReflection
   -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
@@ -502,6 +522,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["PeerSharing", "Remote"]
     configureTracers configReflection trConfig [peerSharingTracer]
 
+    !txLogicTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["TxSubmission", "TxLogic"]
+    configureTracers configReflection trConfig [txSubmission2Tracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -517,6 +542,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith keepAliveTracer
       , NtN.tPeerSharingTracer = Tracer $
           traceWith peerSharingTracer
+      , NtN.tTxLogicTracer = Tracer $
+          traceWith txLogicTracer
       }
 
 mkDiffusionTracers

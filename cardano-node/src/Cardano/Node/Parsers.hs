@@ -136,6 +136,8 @@ nodeRunParser = do
            , pncPeerSharing = mempty
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty
+           , pncTxSubmissionLogicVersion = mempty
+           , pncTxSubmissionInitDelay = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
