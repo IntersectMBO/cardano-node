@@ -45,7 +45,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Budget overlays:
   -- -- Block:
   -- -- -- Steps:
-  , stepHalf, doubleBudget
+  , budgetBlockStepsOneAndAHalf, budgetBlockStepsDouble
   -- -- -- Memory:
   , budgetBlockMemoryOneAndAHalf, budgetBlockMemoryDouble
   -- -- TX:
@@ -81,11 +81,12 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Node's --shutdown-on-*-sync.
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
   -- Node's RTS params.
-  , rtsGcNonMoving, rtsGcAllocSize, rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
+  , rtsGcNonMoving, rtsGcAllocSize, rtsGcParallel, rtsGcLoadBalance
+  , rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
   , heapLimit
 
   -- Generator params.
-  , tps, txIn, txOut, txFee, initCooldown
+  , tps, txIn, txOut, txFee, txFeeOverwrite, initCooldown
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
   , generatorEpochs
@@ -443,13 +444,11 @@ v10Preview = helper_addOverlayOrDie "v10-preview"
 
 -- Steps:
 
--- budgetBlockStepsHalf
-stepHalf :: HasCallStack => Types.Profile -> Types.Profile
-stepHalf = helper_addOverlayOrDie "budget/block/steps/half"
+budgetBlockStepsOneAndAHalf :: HasCallStack => Types.Profile -> Types.Profile
+budgetBlockStepsOneAndAHalf = helper_addOverlayOrDie "budget/block/steps/oneandahalf"
 
--- budgetBlockStepsDouble
-doubleBudget :: HasCallStack => Types.Profile -> Types.Profile
-doubleBudget = helper_addOverlayOrDie "budget/block/steps/double"
+budgetBlockStepsDouble :: HasCallStack => Types.Profile -> Types.Profile
+budgetBlockStepsDouble = helper_addOverlayOrDie "budget/block/steps/double"
 
 -- Memory
 
@@ -705,6 +704,14 @@ rtsAppend str = node (\n -> n {Types.rts_flags_override = Types.rts_flags_overri
 rtsGcNonMoving :: Types.Profile -> Types.Profile
 rtsGcNonMoving = rtsAppend "-xn"
 
+-- parallel GC for the old generation only
+rtsGcParallel :: Types.Profile -> Types.Profile
+rtsGcParallel = rtsAppend "-qg1"
+
+-- load balancing, applies only to parallel GC
+rtsGcLoadBalance :: Types.Profile -> Types.Profile
+rtsGcLoadBalance = rtsAppend "-qb1"
+
 rtsGcAllocSize :: Integer -> Types.Profile -> Types.Profile
 rtsGcAllocSize size = rtsAppend $ "-A" ++ show size ++ "m"
 
@@ -764,6 +771,14 @@ txFee i = generator
   (\g ->
     if Types.tx_fee g /= 0
     then error "txFee: `tx_fee` already set (not zero)."
+    else g {Types.tx_fee = i}
+  )
+
+txFeeOverwrite :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+txFeeOverwrite i = generator
+  (\g ->
+    if Types.tx_fee g == 0
+    then error "txFeeOverwrite: `tx_fee` expected to be already set, but it isn't."
     else g {Types.tx_fee = i}
   )
 
