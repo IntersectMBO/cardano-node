@@ -107,8 +107,11 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     [ anyEraToString cEra, "transaction", "sign"
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
+    , "--out-canonical-cbor"
     , "--out-file", txbodySignedFp
     ]
+
+  H.failure
 
   txSubmissionResult :: TxSubmissionResult <- execCliStdoutToJson execConfig
     [ anyEraToString cEra, "transaction", "submit"
