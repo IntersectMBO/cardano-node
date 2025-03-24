@@ -15,7 +15,10 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
-import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
+import           Ouroboros.Cardano.Network.Diffusion.Configuration
+                    (defaultNumberOfBigLedgerPeers,
+                     defaultTxSubmissionLogicVersion,
+                     defaultTxSubmissionInitDelay)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
@@ -167,6 +170,8 @@ testPartialYamlConfig =
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncTxSubmissionLogicVersion = mempty
+    , pncTxSubmissionInitDelay = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -215,6 +220,8 @@ testPartialCliConfig =
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncTxSubmissionLogicVersion = Last (Just defaultTxSubmissionLogicVersion)
+    , pncTxSubmissionInitDelay = Last (Just defaultTxSubmissionInitDelay)
     }
 
 -- | Expected final NodeConfiguration
@@ -269,6 +276,8 @@ eExpectedConfig = do
     , ncGenesisConfig = disableGenesisConfig
     , ncForkPolicy = NoBindForkPolicy
     , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
+    , ncTxSubmissionLogicVersion = defaultTxSubmissionLogicVersion
+    , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
     }
 
 -- -----------------------------------------------------------------------------

@@ -81,7 +81,7 @@ import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad (guard)
-import           Data.Aeson (Value (..))
+import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))
 import           Data.Function (on)
@@ -393,6 +393,11 @@ condenseT = pack . condense
 showT :: Show a => a -> Text
 showT = pack . show
 
+instance ToJSON ByteSize32 where
+  toJSON (ByteSize32 w) = toJSON w
+
+instance FromJSON ByteSize32 where
+  parseJSON v = ByteSize32 <$> parseJSON v
 
 instance ( tx ~ GenTx blk
          , HasTxId tx
@@ -1598,10 +1603,12 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       ]
 
 instance ToObject MempoolSize where
-  toObject _verb MempoolSize{msNumTxs, msNumBytes} =
+  toObject _verb MempoolSize{msNumTxs, msNumBytes, msExUnitsMemory, msExUnitsSteps} =
     mconcat
       [ "numTxs" .= msNumTxs
       , "bytes" .= unByteSize32 msNumBytes
+      , "exMemory" .= msExUnitsMemory
+      , "exSteps" .= msExUnitsSteps
       ]
 
 instance HasTextFormatter () where
