@@ -45,7 +45,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Budget overlays:
   -- -- Block:
   -- -- -- Steps:
-  , stepHalf, doubleBudget
+  , budgetBlockStepsOneAndAHalf, budgetBlockStepsDouble
   -- -- -- Memory:
   , budgetBlockMemoryOneAndAHalf, budgetBlockMemoryDouble
   -- -- TX:
@@ -444,13 +444,11 @@ v10Preview = helper_addOverlayOrDie "v10-preview"
 
 -- Steps:
 
--- budgetBlockStepsHalf
-stepHalf :: HasCallStack => Types.Profile -> Types.Profile
-stepHalf = helper_addOverlayOrDie "budget/block/steps/half"
+budgetBlockStepsOneAndAHalf :: HasCallStack => Types.Profile -> Types.Profile
+budgetBlockStepsOneAndAHalf = helper_addOverlayOrDie "budget/block/steps/oneandahalf"
 
--- budgetBlockStepsDouble
-doubleBudget :: HasCallStack => Types.Profile -> Types.Profile
-doubleBudget = helper_addOverlayOrDie "budget/block/steps/double"
+budgetBlockStepsDouble :: HasCallStack => Types.Profile -> Types.Profile
+budgetBlockStepsDouble = helper_addOverlayOrDie "budget/block/steps/double"
 
 -- Memory
 
