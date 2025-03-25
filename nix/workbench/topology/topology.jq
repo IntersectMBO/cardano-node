@@ -26,8 +26,9 @@ def p2p_loopback_node_topology_from_nixops_topology($topo; $i):
               }
             ]
           , advertise: false
+          , hotValency: $valency
+          , warmValency: $valency
           , trustable: true
-          , valency: $valency
           })
       )
     , publicRoots: []
