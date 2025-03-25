@@ -124,7 +124,8 @@ cardanoTestnetDefault testnetOptions genesisOptions conf = do
 -- > │   └── README.md
 -- > ├── logs
 -- > │   ├── node{1,2,3}
--- > │   │   └── {stderr,stdout}.log
+-- > │   │   ├── node.pid
+-- > |   |   └── {stderr,stdout}.log
 -- > │   ├── ledger-epoch-state-diffs.log
 -- > │   ├── ledger-epoch-state.log
 -- > │   ├── node-20241010121635.log
@@ -305,7 +306,6 @@ cardanoTestnet
         <> spoNodeCliArgs
         <> maybe [] extraCliArgs nodeOptions
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
-    -- TODO log the node's pid in a file. This is useful for killing the node later.
 
   let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
   unless (null failedNodes) $ do
