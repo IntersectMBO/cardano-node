@@ -120,8 +120,12 @@ jobs:
         cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
 
     # Use a fresh cache each month
-    - name: Store month number as environment variable used in cache version
-      run:  echo "MONTHNUM=$(date -u '+%m')" >> $GITHUB_ENV
+    - name: Store month number and GHC version as environment variables used in cache version
+      run: |
+        cat <<EOF >> $GITHUB_ENV
+        MONTHNUM=$(date -u '+%m')
+        GHC=$(ghc --numeric-version)
+        EOF
 
     # From the dependency list we restore the cached dependencies.
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
@@ -134,10 +138,10 @@ jobs:
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist-newstyle
         key:
-          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-${{ hashFiles('dependencies.txt') }}
+          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ env.MONTHNUM }}-${{ hashFiles('dependencies.txt') }}
         # try to restore previous cache from this month if there's no cache for the dependencies set
         restore-keys: |
-          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-
+          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ env.MONTHNUM }}-
 
     # Now we install the dependencies. If the cache was found and restored in the previous step,
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
@@ -180,7 +184,7 @@ jobs:
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
       with:
-        name: failed-test-workspaces-${{ matrix.sys.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
+        name: failed-test-workspaces-${{ matrix.sys.os }}-ghc${{ env.GHC }}-cabal${{ matrix.cabal }}.tgz
         path: ${{ runner.temp }}/workspaces.tgz
 
     - name: "Tar artifacts"
@@ -211,7 +215,7 @@ jobs:
       if: ${{ always() }}
       continue-on-error: true
       with:
-        name: chairman-test-artifacts-${{ matrix.sys.os }}-${{ matrix.ghc }}
+        name: chairman-test-artifacts-${{ matrix.sys.os }}-${{ env.GHC }}
         path: ${{ runner.temp }}/chairman/
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
