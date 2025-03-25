@@ -74,7 +74,7 @@ profilesNoEraForgeStress =
   -- TODO: FIXME: "forge-stress-p2p" has no P2P enabled and Plutus TPS!!!!
   , fs & P.name "forge-stress-p2p"              . V.plutusLoop . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   , fs & P.name "forge-stress-plutus"           . V.plutusLoop . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
-  -- -large: voltaire variant, double nodes and double runtime. This probably needs >64GB RAM
+  -- -large: voltaire variant, double nodes and double runtime. This needs >64GB RAM.
   , fs & P.name "forge-stress-large"            . V.valueLocal . v6 . V.datasetCurrent . durationXL . P.traceForwardingOn
   -- 3 nodes versions (pre)
   , fs & P.name "forge-stress-pre"              . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
@@ -86,8 +86,10 @@ profilesNoEraForgeStress =
   , fs & P.name "forge-stress-pre-rtsxn"        . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                   . P.rtsGcNonMoving    . P.analysisUnitary
   , fs & P.name "forge-stress-pre-notracer"     . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
   , fs & P.name "forge-stress-pre-plutus"       . V.plutusLoop . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
-  -- -large: voltaire variant, double nodes and double runtime. This probably needs ~64GB RAM
-  , fs & P.name "forge-stress-pre-large"        . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn
-  , fs & P.name "forge-stress-pre-large-rtsN3"  . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 3
-  , fs & P.name "forge-stress-pre-large-rtsN4"  . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 4
+  -- -large: voltaire variant, double nodes and double runtime. This needs a 64GB RAM machine.
+  , fs & P.name "forge-stress-pre-large"           . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn
+  , fs & P.name "forge-stress-pre-large-rtsqg1"    . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsGcParallel . P.rtsGcLoadBalance
+  , fs & P.name "forge-stress-pre-large-rtsN3"     . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 3
+  , fs & P.name "forge-stress-pre-large-rtsN4"     . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 4
+  , fs & P.name "forge-stress-pre-large-rtsqg1N4"  . V.valueLocal . v6 . V.datasetOct2021 . durationXL . P.traceForwardingOn  . P.rtsThreads 4 . P.rtsGcParallel . P.rtsGcLoadBalance
   ]

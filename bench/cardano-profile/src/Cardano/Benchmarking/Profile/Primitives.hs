@@ -81,7 +81,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Node's --shutdown-on-*-sync.
   , shutdownOnSlot, shutdownOnBlock, shutdownOnOff
   -- Node's RTS params.
-  , rtsGcNonMoving, rtsGcAllocSize, rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
+  , rtsGcNonMoving, rtsGcAllocSize, rtsGcParallel, rtsGcLoadBalance
+  , rtsThreads, rtsHeapLimit, rtsEventlogged, rtsHeapProf
   , heapLimit
 
   -- Generator params.
@@ -704,6 +705,14 @@ rtsAppend str = node (\n -> n {Types.rts_flags_override = Types.rts_flags_overri
 
 rtsGcNonMoving :: Types.Profile -> Types.Profile
 rtsGcNonMoving = rtsAppend "-xn"
+
+-- parallel GC for the old generation only
+rtsGcParallel :: Types.Profile -> Types.Profile
+rtsGcParallel = rtsAppend "-qg1"
+
+-- load balancing, applies only to parallel GC
+rtsGcLoadBalance :: Types.Profile -> Types.Profile
+rtsGcLoadBalance = rtsAppend "-qb1"
 
 rtsGcAllocSize :: Integer -> Types.Profile -> Types.Profile
 rtsGcAllocSize size = rtsAppend $ "-A" ++ show size ++ "m"
