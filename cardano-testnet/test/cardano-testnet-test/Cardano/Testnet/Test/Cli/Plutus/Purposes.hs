@@ -6,8 +6,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 
-module Cardano.Testnet.Test.Cli.Conway.Plutus
-  ( hprop_plutus_v3
+module Cardano.Testnet.Test.Cli.Plutus.Purposes
+  ( hprop_plutus_purposes_v3
   ) where
 
 import           Cardano.Api
@@ -44,9 +44,9 @@ import qualified Hedgehog.Extras as H
 -- Voting NO
 -- Proposing NO
 -- Execute me with:
--- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/PlutusV3/"'@
-hprop_plutus_v3 :: Property
-hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+-- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Purposes/"@
+hprop_plutus_purposes_v3 :: Property
+hprop_plutus_purposes_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
