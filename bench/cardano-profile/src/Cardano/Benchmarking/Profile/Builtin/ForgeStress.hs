@@ -70,7 +70,7 @@ profilesNoEraForgeStress =
   , fs & P.name "forge-stress"               . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
   , fs & P.name "forge-stress-notracer"      . V.valueLocal . n3 . V.datasetCurrent . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
   -- TODO: FIXME: "forge-stress-p2p" has no P2P enabled and Plutus TPS!!!!
-  , fs & P.name "forge-stress-p2p"           . V.plutusLoop . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
+  , fs & P.name "forge-stress-p2p" . P.p2pOn . V.plutusLoop . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   , fs & P.name "forge-stress-plutus"        . V.plutusLoop . n3 . V.datasetCurrent . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   -- 3 nodes versions (pre).
   , fs & P.name "forge-stress-pre"           . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisUnitary
@@ -83,5 +83,5 @@ profilesNoEraForgeStress =
   , fs & P.name "forge-stress-pre-notracer"  . V.valueLocal . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOff                                        . P.analysisUnitary
   , fs & P.name "forge-stress-pre-plutus"    . V.plutusLoop . n3 . V.datasetOct2021 . durationM  . P.traceForwardingOn                                         . P.analysisSizeSmall
   -- Double nodes and double run time version.
-  , fs & P.name "forge-stress-large"         . V.valueLocal . n6 . V.datasetCurrent . durationXL . P.traceForwardingOn                                         
+  , fs & P.name "forge-stress-large"         . V.valueLocal . n6 . V.datasetCurrent . durationXL . P.traceForwardingOn
   ]

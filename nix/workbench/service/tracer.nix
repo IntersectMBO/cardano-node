@@ -1,5 +1,4 @@
 { pkgs
-, jsonFilePretty
 
 , backend
 , profile
@@ -81,19 +80,15 @@ let
       nixosServiceConfig    = tracerConfigServiceConfig;
       execConfig            = nixosServiceConfig.configJSONfn nixosServiceConfig;
     in {
-      start = rec {
-        value = ''
-          #!${pkgs.stdenv.shell}
+      start =
+        ''
+        #!${pkgs.stdenv.shell}
 
-          ${nixosServiceConfig.script}
-          '';
-        JSON = pkgs.writeScript "startup-tracer.sh" value;
-      };
+        ${nixosServiceConfig.script}
+        ''
+      ;
 
-      config = rec {
-        value = execConfig;
-        JSON  = jsonFilePretty "config.json" (__toJSON execConfig);
-      };
+      config = execConfig;
     })
     nodeSpecs;
 in
