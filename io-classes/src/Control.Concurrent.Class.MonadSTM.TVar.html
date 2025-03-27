@@ -1,0 +1,27 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ExplicitNamespaces #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | This module corresponds to `Control.Concurrent.STM.TVar` in &quot;stm&quot; package</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.TVar</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * MonadSTM</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#TVar"><span class="hs-identifier">TVar</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newTVar"><span class="hs-identifier">newTVar</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#newTVarIO"><span class="hs-identifier">newTVarIO</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#readTVar"><span class="hs-identifier">readTVar</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#readTVarIO"><span class="hs-identifier">readTVarIO</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#writeTVar"><span class="hs-identifier">writeTVar</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#modifyTVar"><span class="hs-identifier">modifyTVar</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#modifyTVar%27"><span class="hs-identifier">modifyTVar'</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#stateTVar"><span class="hs-identifier">stateTVar</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#swapTVar"><span class="hs-identifier">swapTVar</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#check"><span class="hs-identifier">check</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * MonadLabelSTM</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#labelTVar"><span class="hs-identifier">labelTVar</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#labelTVarIO"><span class="hs-identifier">labelTVarIO</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- * MonadTraceSTM</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#traceTVar"><span class="hs-identifier">traceTVar</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html#traceTVarIO"><span class="hs-identifier">traceTVarIO</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadSTM.Internal.html"><span class="hs-identifier">Control.Monad.Class.MonadSTM.Internal</span></a></span><span>
+</span><span id="line-27"></span></pre></body></html>
