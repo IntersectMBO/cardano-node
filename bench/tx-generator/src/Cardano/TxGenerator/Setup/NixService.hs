@@ -23,7 +23,7 @@ module Cardano.TxGenerator.Setup.NixService
 
 import           Cardano.Api (AnyCardanoEra, mapFile)
 
-import           Cardano.CLI.Types.Common (FileDirection (..), SigningKeyFile)
+import           Cardano.CLI.Type.Common (FileDirection (..), SigningKeyFile)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
                    NodeHostIPv4Address (..), NodeIPv4Address)

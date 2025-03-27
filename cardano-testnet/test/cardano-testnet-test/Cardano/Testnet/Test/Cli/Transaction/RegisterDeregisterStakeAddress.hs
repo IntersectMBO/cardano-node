@@ -9,9 +9,9 @@ module Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Address (StakeCredential (..), toShelleyStakeCredential)
+import           Cardano.Api.Internal.Address (StakeCredential (..), toShelleyStakeCredential)
 
-import           Cardano.CLI.Types.Key (SomeSigningKey (AStakeSigningKey))
+import           Cardano.CLI.Type.Key (SomeSigningKey (AStakeSigningKey))
 import qualified Cardano.Ledger.UMap as L
 import           Cardano.Testnet
 
