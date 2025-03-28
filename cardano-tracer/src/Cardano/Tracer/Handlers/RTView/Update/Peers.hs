@@ -12,7 +12,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Peers
   ) where
 
 import           Cardano.Logging (showT)
-import           Cardano.Node.Tracing.Peers
+import           Cardano.Logging.Types.NodePeers (NodePeers(..))
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
