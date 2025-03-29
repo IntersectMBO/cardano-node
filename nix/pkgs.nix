@@ -131,11 +131,16 @@ in with final;
 
   tracerDockerImage =
     let
-      defaultConfig = {
-        # Can we easily modify to the connecting socket scenario now?
-        # Probably need environment overrides for both node and tracer images.
+      defaultConfig = rec {
         acceptingSocket = "/ipc/cardano-tracer.socket";
         stateDir = "/logs";
+        logging = [
+          {
+            logRoot = stateDir;
+            logMode = "FileMode";
+            logFormat = "ForHuman";
+          }
+        ];
       };
     in
     callPackage ./docker/tracer.nix {
