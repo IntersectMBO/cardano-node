@@ -61,7 +61,7 @@ To launch cardano-node with a custom configuration, "custom" mode, provide
 entrypoint args starting with `run` and:
 * Leave the `NETWORK` env variable unset
 * Optionally include additional cardano-node args to the entrypoint after `run`
-* Optionally include environment variables interpreted by [nix/docker/context/bin/run-node](context/bin/run-node),
+* Optionally include environment variables interpreted by [nix/docker/context/node/bin/run-node](context/node/bin/run-node),
   or `/usr/local/bin/run-node` in the container
 
 For example, launch a custom cardano-node container using cardano-node args and

@@ -1,0 +1,93 @@
+#!/bin/env bash
+set -eo pipefail
+
+echo "Running the cardano tracer ..."
+
+[[ -n $DEBUG ]] && set -x
+
+# Define a few defaults
+CARDANO_CONFIG_BASE="/opt/cardano/config"
+
+if [[ -z $CARDANO_CONFIG ]]; then
+  CARDANO_CONFIG="$CARDANO_CONFIG_BASE/mainnet/tracer-config.json"
+fi
+
+#####################################################################
+#
+# Print run environment
+#
+printRunEnv () {
+
+  echo "CARDANO_CONFIG=$CARDANO_CONFIG"
+  echo "CARDANO_MIN_LOG_SEVERITY=$CARDANO_MIN_LOG_SEVERITY"
+  echo "CARDANO_STATE_DIR=$CARDANO_STATE_DIR"
+}
+
+#####################################################################
+#
+# Write root env file
+#
+writeRootEnv () {
+
+cat << EOF > /usr/local/bin/env
+#!/usr/bin/env bash
+
+# Docker run ENV vars
+CARDANO_CONFIG="$CARDANO_CONFIG"
+CARDANO_MIN_LOG_SEVERITY="$CARDANO_MIN_LOG_SEVERITY"
+CARDANO_STATE_DIR="$CARDANO_STATE_DIR"
+EOF
+}
+
+#####################################################################
+#
+# Run the relay node in the background
+#
+runTracer () {
+
+  effopts=(
+    "--config" "$CARDANO_CONFIG"
+    "--state-dir" "$CARDANO_STATE_DIR"
+  )
+
+  effopts+=("${filteredOpts[@]}")
+
+  echo "cardano-tracer ${effopts[*]}"
+  exec /usr/local/bin/cardano-tracer "${effopts[@]}"
+}
+
+# Shift the first option by one index
+shift
+
+# Override default values with explicit options
+
+options=("$@")
+
+for i in "${!options[@]}"
+do
+    j=$((i + 1))
+    key=${options[i]}
+    val=${options[j]}
+    found=false
+
+    # echo "$i/$j: ${key} ${val}"
+
+    case ${key} in
+      --config) CARDANO_CONFIG=${val}; found=true;;
+      --state-dir) CARDANO_STATE_DIR=${val}; found=true;;
+      --min-log-severity) CARDANO_MIN_LOG_SEVERITY=${val}; found=true;;
+    esac
+
+    if [[ $found == true ]]; then
+      options[i]="";
+      options[j]="";
+    fi
+done
+
+# Filter blank args from match removal above
+filteredOpts=(); for arg in "${options[@]}"; do [[ $arg ]] && filteredOpts+=("$arg"); done
+
+printRunEnv
+writeRootEnv
+
+runTracer
