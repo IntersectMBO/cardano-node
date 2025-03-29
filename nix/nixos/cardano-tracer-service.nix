@@ -519,7 +519,7 @@ in {
         type = bool;
         default = true;
         description = ''
-          Whether to enable a prometheus export of EKG metrics.
+          Whether to enable a prometheus export of metrics.
         '';
       };
 
