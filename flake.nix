@@ -230,7 +230,6 @@
               })
             .workbench-profile-run;
         in {
-
           "dockerImage/node" = pkgs.dockerImage;
           "dockerImage/submit-api" = pkgs.submitApiDockerImage;
           "dockerImage/tracer" = pkgs.tracerDockerImage;
@@ -499,7 +498,7 @@
           lib,
           ...
         }: {
-          imports = [ ./nix/nixos/cardano-tracer-service.nix ];
+          imports = [./nix/nixos/cardano-tracer-service.nix];
           services.cardano-tracer.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
         };
       };
