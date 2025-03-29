@@ -601,15 +601,16 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1740527380,
-        "narHash": "sha256-0sF0RUsnFVdRMoS9amtRQs6TnCFynDFdbzn8zBLD5Bg=",
+        "lastModified": 1743225804,
+        "narHash": "sha256-lpPypDYLESbkV1Vx7tAEtLaos6e/4QNXouvNiqDSPpg=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "ea26f2ca1686656d89bb5760f717f713168cd5a5",
+        "rev": "f6d0802fb8f4dc728d022d50085f7e662f9fb277",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "jl/new-tracing",
         "repo": "iohk-nix",
         "type": "github"
       }
