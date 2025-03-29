@@ -591,7 +591,7 @@ in {
 
       useLegacyTracing = mkOption {
         type = bool;
-        default = true;
+        default = false;
         description = ''
           Use the legacy tracing, based on iohk-monitoring-framework.
         '';
