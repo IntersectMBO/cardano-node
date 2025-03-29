@@ -1,0 +1,75 @@
+#!/bin/env bash
+
+[[ -n $DEBUG ]] && set -x
+
+# If the NETWORK env var is set to a valid cardano network, pre-defined
+# configuration will be used.
+if [[ -n $NETWORK ]]; then
+
+  # If CARDANO_CONFIG_JSON_MERGE env var is set, iohk-nix
+  # pre-defined NETWORK configuration will be used as a starting point and
+  # merged with custom configuration provided as json in the environment
+  # variable(s).
+  if [[ -n $CARDANO_CONFIG_JSON_MERGE ]]; then
+
+    CFG="/opt/cardano/config"
+    if ! [[ -f $CFG/$NETWORK/tracer-config.json ]]; then
+      echo "Network \"$NETWORK\" doesn't appear to have expected base configuration available at:"
+      echo "  $CFG/$NETWORK/tracer-config.json"
+      echo
+      echo "Please check that the NETWORK environment variable is set to a valid cardano network name."
+      exit 1
+    fi
+
+    # Do a recursive deep merge of iohk-nix NETWORK config and/or topology with
+    # the supplied json merge environment variable(s).
+    #
+    # In a jq deep merge, arrays are replaced, primitive values in the second
+    # object override the first, different types for the same key result in
+    # full replacement and null values persist.
+    if [[ -n $CARDANO_CONFIG_JSON_MERGE ]]; then
+      jq -S \
+        --argjson deepMerge "$CARDANO_CONFIG_JSON_MERGE" \
+        '. * $deepMerge' \
+        < "$CFG/$NETWORK/tracer-config.json" \
+        > "$CFG/$NETWORK/tracer-config-merged.json"
+      export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config-merged.json"
+    else
+      export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config.json"
+    fi
+
+    # Run cardano-tracer using iohk-nix base config merged with provided custom
+    # config for the requested NETWORK.
+    unset NETWORK
+    exec /usr/local/bin/run-tracer "$@"
+
+  else
+    # Run cardano-tracer using "scripts" mode for the requested NETWORK.
+    exec /usr/local/bin/run-network "$@"
+  fi
+
+elif [[ $1 == "run" ]]; then
+  # Run cardano-tracer using "custom" mode.
+  exec /usr/local/bin/run-tracer "$@"
+
+else
+
+  echo "Nothing to do!  Available modes of operation are:"
+  echo
+  echo "Scripts mode:"
+  echo "  * Set the NETWORK env var to a valid cardano network, such as mainnet to use default network config."
+  echo
+  echo "Custom mode:"
+  echo "  * Leave the NETWORK env var unset and provide entrypoint args starting with \"run\" and:"
+  echo "    * Optionally set environment variables interpreted by /usr/local/bin/run-tracer."
+  echo "    * Optionally include additional cardano-tracer args to the entrypoint after \"run\"."
+  echo
+  echo "Merge mode:"
+  echo "  * Set the NETWORK env var to a valid cardano network, such as mainnet, and"
+  echo "    set the CARDANO_CONFIG_JSON_MERGE env var with valid json to run cardano-tracer"
+  echo "    with deep merged base NETWORK and custom config."
+  echo "  * The extra environment variables and cardano-tracer args that can be used in custom mode"
+  echo "    are also available in merge mode."
+  exit 1
+
+fi
