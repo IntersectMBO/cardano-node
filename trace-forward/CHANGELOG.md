@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.2.11 - Mar 2025
+
+* Updated to `ouroboros-network-framework-0.17`
+
 ## 2.2.10 - Feb 2025
 
 * Updated to `ouroboros-network-framework-0.16`

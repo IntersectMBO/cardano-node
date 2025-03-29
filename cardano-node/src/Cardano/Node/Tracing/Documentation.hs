@@ -34,7 +34,7 @@ import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgeThreadStats)
+import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -377,8 +377,8 @@ docTracersFirstPhase condConfigFileName = do
                 trBase trForward mbTrEKG
                 ["Forge", "ThreadStats"]
     configureTracers configReflection trConfig [forgeTr']
-    forgeThreadStatsTrDoc <- documentTracer (forgeTr' ::
-      Logging.Trace IO ForgeThreadStats)
+    forgeStatsTrDoc <- documentTracer (forgeTr' ::
+      Logging.Trace IO ForgingStats)
 
     blockchainTimeTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -773,7 +773,7 @@ docTracersFirstPhase condConfigFileName = do
             <> localTxSubmissionServerTrDoc
             <> mempoolTrDoc
             <> forgeTrDoc
-            <> forgeThreadStatsTrDoc
+            <> forgeStatsTrDoc
             <> blockchainTimeTrDoc
             <> consensusSanityCheckTrDoc
             <> consensusStartupErrorTrDoc

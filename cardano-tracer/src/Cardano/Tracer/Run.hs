@@ -26,6 +26,7 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
+import           Control.Applicative
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async, link)
 import           Control.Concurrent.Extra (newLock)
@@ -45,7 +46,7 @@ import           Data.Text.Lazy.Builder as TB (Builder, fromText)
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
 runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
-  tr <- mkTracerTracer $ SeverityF logSeverity
+  tr <- mkTracerTracer $ SeverityF $ logSeverity <|> Just Info          -- default severity filter to Info
   traceWith tr TracerBuildInfo
 #if RTVIEW
     { ttBuiltWithRTView = True

@@ -67,12 +67,8 @@ generatorTracer ::
   -> Maybe (Trace IO FormattedMessage)
   -> IO (Trace IO a)
 generatorTracer tracerName mbTrStdout mbTrForward = do
-  forwardTrace <- case mbTrForward of
-                        Nothing -> mempty
-                        Just trForward -> forwardFormatter Nothing trForward
-  stdoutTrace  <- case mbTrStdout of
-                        Nothing -> mempty
-                        Just trForward -> machineFormatter Nothing trForward
+  forwardTrace <- maybe mempty forwardFormatter mbTrForward
+  stdoutTrace  <- maybe mempty machineFormatter mbTrStdout
   let tr = forwardTrace <> stdoutTrace
   tr'  <- withDetailsFromConfig tr
   pure $ withInnerNames $ appendPrefixName tracerName tr'
@@ -175,7 +171,7 @@ initialTraceConfig = TraceConfig {
           , setMaxDetail TracerNameConnect
           , setMaxDetail TracerNameSubmit
           ]
-    , tcForwarder = Just defaultForwarder
+    , tcForwarder = Just defaultForwarder {tofConnQueueSize = 2048, tofDisconnQueueSize = 4096}
     , tcNodeName = Nothing
     , tcPeerFrequency = Just 2000 -- Every 2 seconds
     , tcResourceFrequency = Just 1000 -- Every second

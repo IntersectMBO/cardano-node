@@ -1,30 +1,27 @@
-{-# LANGUAGE LambdaCase #-}
-
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
--- showHex needs to be a show instance on ghc8, but not any more on ghc9
-
-module Cardano.Logging.Utils (
-    runInLoop
-  , uncurry3
-  , showT
-  , showTHex
-  ) where
+module Cardano.Logging.Utils
+       ( module Cardano.Logging.Utils )
+       where
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.Text as T
-import           Numeric (showHex)
+import qualified Data.Text.Lazy as TL (toStrict)
+import qualified Data.Text.Lazy.Builder as T (toLazyText)
+import qualified Data.Text.Lazy.Builder.Int as T
+import qualified Data.Text.Lazy.Builder.RealFloat as T (realFloat)
+import           GHC.Conc (labelThread, myThreadId)
+
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
-runInLoop :: IO () -> FilePath -> Word -> IO ()
-runInLoop action localSocket prevDelayInSecs =
+runInLoop :: IO () -> FilePath -> Word -> Word -> IO ()
+runInLoop action localSocket prevDelayInSecs maxReconnectDelay =
   tryJust excludeAsyncExceptions action >>= \case
     Left e -> do
       logTrace $ "connection with " <> show localSocket <> " failed: " <> show e
       threadDelay . fromIntegral $ currentDelayInSecs * 1000000
-      runInLoop action localSocket currentDelayInSecs
+      runInLoop action localSocket currentDelayInSecs maxReconnectDelay
     Right _ -> return ()
  where
   excludeAsyncExceptions e =
@@ -35,21 +32,20 @@ runInLoop action localSocket prevDelayInSecs =
   logTrace = traceWith stdoutTracer
 
   currentDelayInSecs =
-    if prevDelayInSecs < 60
-      then prevDelayInSecs * 2
-      else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
-
--- | Converts a curried function to a function on a triple.
-uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
-uncurry3 f (a,b,c) = f a b c
-
+    min (prevDelayInSecs * 2) maxReconnectDelay
 
 -- | Convenience function for a Show instance to be converted to text immediately
 {-# INLINE showT #-}
 showT :: Show a => a -> T.Text
 showT = T.pack . show
 
--- | Convenience function for a showHex call converted to text immediately
 {-# INLINE showTHex #-}
-showTHex :: (Integral a, Show a) => a -> T.Text
-showTHex i = T.pack (showHex i [])
+showTHex :: Integral a => a -> T.Text
+showTHex = TL.toStrict . T.toLazyText . T.hexadecimal
+
+{-# INLINE showTReal #-}
+showTReal :: RealFloat a => a -> T.Text
+showTReal = TL.toStrict . T.toLazyText . T.realFloat
+
+threadLabelMe :: String -> IO ()
+threadLabelMe label = myThreadId >>= flip labelThread label
