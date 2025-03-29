@@ -34,8 +34,6 @@
 , jq
 , socat
 , utillinux
-, writeScriptBin
-, runtimeShell
 , lib
 , exe
 , script
@@ -82,15 +80,42 @@ let
         exec ${scriptBin}/bin/${scriptBin.name} $@
     '') scripts);
 
-  entry-point = writeScriptBin "entry-point" ''
-    #!${runtimeShell}
+  runNetwork = pkgs.writeShellScriptBin "run-network" ''
     if [[ -z "$NETWORK" ]]; then
-      exec ${pkgs.${exe}}/bin/${exe} $@
+      echo "[Error] Cannot obtain NETWORK env variable"
+      exit 1
     ${clusterStatements}
     else
-      echo "Managed configuration for network "$NETWORK" does not exist"
+      echo "[Error] Managed configuration for network "$NETWORK" does not exist"
+      exit 1
     fi
   '';
+
+  # The docker context with static content
+  context = ./context/tracer;
+
+  genCfgs = let
+    environments' = lib.getAttrs [ "mainnet" "preprod" "preview" ] commonLib.environments;
+    cardano-deployment = commonLib.mkConfigHtml environments';
+  in
+    pkgs.runCommand "cardano-html" {} ''
+      mkdir "$out"
+
+      ENVS=(${lib.escapeShellArgs (builtins.attrNames environments')})
+      for ENV in "''${ENVS[@]}"; do
+        # Migrate each env from a flat dir to an ENV subdir
+        mkdir -p "$out/config/$ENV"
+        for i in $(find ${cardano-deployment} -type f -name "$ENV-tracer-config*" -printf "%f\n"); do
+          cp -v "${cardano-deployment}/$i" "$out/config/$ENV/''${i#"$ENV-"}"
+
+          # Adjust from iohk-nix default config for the oci environment
+          sed -i -r \
+            -e 's|"contents": ".*"|"contents": "/ipc/cardano-tracer.socket"|g' \
+            -e 's|"logRoot": ".*"|"logRoot": "/logs"|g' \
+            "$out/config/$ENV/''${i#"$ENV-"}"
+        done
+      done
+    '';
 
 in
   dockerTools.buildImage {
@@ -110,15 +135,33 @@ in
 
       # Similarly, make a root level dir for logs:
       mkdir -p logs
+
+      # The "custom" operation mode of this image, when the NETWORK env is
+      # unset and "run" is provided as an entrypoint arg, will use the
+      # following default directories.
+      mkdir -p opt/cardano
+
+      # Setup bins
+      mkdir -p usr/local/bin
+      cp -v ${runNetwork}/bin/* usr/local/bin
+      cp -v ${context}/bin/* usr/local/bin
+      ln -sv ${cardano-tracer}/bin/cardano-tracer usr/local/bin/cardano-tracer
+      ln -sv ${jq}/bin/jq usr/local/bin/jq
+
+      # Create iohk-nix network configs, organized by network directory.
+      SRC="${genCfgs}"
+      DST="opt/cardano"
+
+      # Make the directory structure with the iohk-nix configs mutable. This
+      # enables creation of merge mode entrypoint configs in the respective
+      # NETWORK directory. Keep config files as read-only copies from the nix
+      # store instead of direct symlinks.  This avoids volume mount failures
+      # caused by broken symlinks as seen from the host.
+      cp -R "$SRC"/* "$DST"
+      find "$DST" -mindepth 1 -type d -exec bash -c "chmod 0755 {}" \;
     '';
 
-    copyToRoot = pkgs.buildEnv {
-      name = "image-root";
-      pathsToLink = ["/"];
-      paths = [entry-point];
-    };
-
     config = {
-      EntryPoint = [ "${entry-point}/bin/entry-point" ];
+      EntryPoint = [ "entrypoint" ];
     };
   }
