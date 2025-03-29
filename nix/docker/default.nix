@@ -93,7 +93,7 @@ let
   '';
 
   # The docker context with static content
-  context = ./context;
+  context = ./context/node;
 
   genCfgs = let
     environments' = lib.getAttrs [ "mainnet" "preprod" "preview" ] commonLib.environments;
@@ -113,7 +113,7 @@ let
         done
 
         # Adjust genesis file, config and config-bp refs
-        for i in config config-bp db-sync-config; do
+        for i in config config-bp config-legacy config-bp-legacy db-sync-config; do
           if [ -f "$out/config/$ENV/$i.json" ]; then
             sed -i "s|\"$ENV-|\"|g" "$out/config/$ENV/$i.json"
           fi
