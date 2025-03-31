@@ -8,7 +8,7 @@
 , profile
 , profiling
 , nodeSpecs
-, topologyFiles
+, topologyJsonPath
 }:
 
 with pkgs.lib;
@@ -251,7 +251,7 @@ let
                  "topology-${name}.json"
                  ''
                  projection-for                                            \
-                   --topology-input ${topologyFiles}/topology.json         \
+                   --topology-input ${topologyJsonPath}                    \
                    ${kind} ${builtins.concatStringsSep " " args."${kind}"} \
                  ''
                ;

@@ -4,26 +4,38 @@
 }:
 
 let
-  profileJson =
-    workbenchNix.runCardanoProfile "profile-${profileName}.json"
-      "by-name ${profileName}"
-  ;
 
-  topologyFiles =
-    pkgs.runCommand "workbench-topology-${profileName}"
-      { requiredSystemFeatures = [ "benchmark" ];
-        nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-          [ bash cardano-cli coreutils gnused jq moreutils workbenchNix.workbench ];
+  # All top-level profile files in one derivation.
+  ##############################################################################
+
+  inherit
+    (let
+      profileDerivedFiles =
+        pkgs.runCommand "workbench-profile-files-${profileName}"
+          { nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
+            [ bash coreutils gnused jq moreutils workbenchNix.workbench ];
+          }
+          ''
+            mkdir "$out"
+            wb profile json "${profileName}" > "$out"/profile.json
+            wb topology make "$out"/profile.json "$out"
+            wb profile node-specs  \
+              "$out"/profile.json  \
+              "$out/topology.json" \
+          > "$out"/node-specs.json
+          ''
+      ;
+     in
+      { profileJson      = "${profileDerivedFiles}/profile.json";
+        topologyJsonPath = "${profileDerivedFiles}/topology.json";
+        topologyDotPath  = "${profileDerivedFiles}/topology.dot";
+        nodeSpecsJson    = "${profileDerivedFiles}/node-specs.json";
       }
-      ''
-      mkdir $out
-      wb topology make ${profileJson} $out
-      ''
-  ;
-
-  nodeSpecsJson =
-    workbenchNix.runCardanoProfile "node-specs-${profileName}.json"
-                 "node-specs ${profileJson} ${topologyFiles}/topology.json"
+    )
+    profileJson
+    topologyJsonPath
+    topologyDotPath
+    nodeSpecsJson
   ;
 
   ## This ports the (very minimal) config of the deprecated iohk-nix testnet environment to workbench, removing the dependency on it.
@@ -45,7 +57,7 @@ let
           ../service/nodes.nix
           {
             inherit backend profile nodeSpecs;
-            inherit topologyFiles profiling;
+            inherit topologyJsonPath profiling;
             inherit workbenchNix;
             baseNodeConfig = baseNodeConfigTestnet;
           })
@@ -114,8 +126,7 @@ let
             { buildInputs = [];
               profileJsonPath = profileJson;
               nodeSpecsJsonPath = nodeSpecsJson;
-              topologyJsonPath = "${topologyFiles}/topology.json";
-              topologyDotPath  = "${topologyFiles}/topology.dot";
+              inherit topologyJsonPath topologyDotPath;
               nodeServices = __toJSON
                 (lib.flip lib.mapAttrs node-services
                   (name: node-service:
@@ -180,11 +191,14 @@ let
               inherit profileName;
               JSON = profileJson;
               value = profile;
-              topology = {
-                files = topologyFiles;
-                value = (__fromJSON (__readFile "${topologyFiles}/topology.json"));
+              topology = rec {
+                JSON = "${topologyJsonPath}";
+                value = (__fromJSON (__readFile JSON));
               };
-              node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
+              node-specs = {
+                JSON = nodeSpecsJson;
+                value = nodeSpecs;
+              };
               inherit node-services generator-service tracer-service healthcheck-service workloads-service;
             }
           )
