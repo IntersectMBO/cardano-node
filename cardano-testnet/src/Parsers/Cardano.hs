@@ -54,6 +54,11 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
+  <*> OA.flag GenerateAndRun OnlyGenerate
+      (   OA.long "only-generate-config-files"
+      <>  OA.help "Do not actually run anything, only generate config files and output them in 'output-dir'"
+      <>  OA.showDefault
+      )
   <*> optional (OA.strOption
       (   OA.long "output-dir"
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
