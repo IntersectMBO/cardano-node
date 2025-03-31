@@ -645,7 +645,7 @@ let
               env = false;
               destination = "local/${stateDir}/profile.json";
               data = escapeTemplate (__readFile
-                profileData.JSON.outPath);
+                profileAttrs.profile.JSON);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -654,7 +654,7 @@ let
               env = false;
               destination = "local/${stateDir}/node-specs.json";
               data = escapeTemplate (__readFile
-                profileData.node-specs.JSON.outPath);
+                profileData.node-specs.JSON);
               change_mode = "noop";
               error_on_missing_key = true;
             }
