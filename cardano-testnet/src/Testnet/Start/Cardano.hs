@@ -35,6 +35,7 @@ import           Prelude hiding (lines)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import           Control.Monad.Extra (whenM)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
@@ -181,12 +182,10 @@ cardanoTestnet
   Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
   let CardanoTestnetOptions
         { cardanoNodeEra=asbe
-        , cardanoNodeLoggingFormat=nodeLoggingFormat
-        , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
+        , cardanoConfigFilesBehaviour=configFilesBehaviour
         , cardanoNodes
         } = testnetOptions
       testnetMagic = fromIntegral $ genesisTestnetMagic genesisOptions
-      nPools = cardanoNumPools testnetOptions
   AnyShelleyBasedEra sbe <- pure asbe
 
   -- TODO check consistency of the paths to genesis files in the node configuration file (if any)
@@ -197,6 +196,62 @@ cardanoTestnet
   H.note_ OS.os
 
   _ <- createSPOGenesisAndFiles testnetOptions genesisOptions mShelleyGenesis mAlonzoGenesis mConwayGenesis (TmpAbsolutePath tmpAbsPath)
+
+  nodeConfigFile <- case cardanoNodes of
+    AutomaticNodeOptions _ -> do
+      configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
+      -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+      config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+      H.evalIO $ LBS.writeFile configurationFile config
+      return configurationFile
+    UserProvidedNodeOptions userSubmittedNodeConfigFile ->
+      liftIO $ IO.makeAbsolute userSubmittedNodeConfigFile
+
+  case configFilesBehaviour of
+    OnlyGenerate ->
+      -- Remove everything except config files from tmpAbsPath
+      let
+        genesisFiles = fmap (tmpAbsPath </>)
+          [ Defaults.defaultGenesisFilepath AlonzoEra
+          , Defaults.defaultGenesisFilepath ByronEra
+          , Defaults.defaultGenesisFilepath ConwayEra
+          , Defaults.defaultGenesisFilepath ShelleyEra
+          ]
+        removeUnwantedFile path =
+          let fullPath = tmpAbsPath </> path in
+          when (fullPath `notElem` nodeConfigFile:genesisFiles) $ do
+            whenM (IO.doesFileExist fullPath) $
+              IO.removeFile fullPath
+            whenM (IO.doesDirectoryExist fullPath) $
+              IO.removeDirectoryRecursive fullPath
+      in do
+      () <- H.evalIO $ IO.listDirectory tmpAbsPath >>= mapM_ removeUnwantedFile
+      pure $ TestnetRuntime
+        { configurationFile = File nodeConfigFile
+        , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
+        , testnetMagic
+        , testnetNodes = []
+        , wallets = []
+        , delegators = []
+        }
+    GenerateAndRun ->
+      cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile
+
+cardanoTestnet' :: ()
+  => HasCallStack
+  => CardanoTestnetOptions -- ^ The options to use
+  -> GenesisOptions
+  -> FilePath -- ^ Path to the test sandbox
+  -> FilePath -- ^ Path to the config file
+  -> H.Integration TestnetRuntime
+cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
+  let CardanoTestnetOptions
+        { cardanoNodeLoggingFormat=nodeLoggingFormat
+        , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
+        , cardanoNodes
+        } = testnetOptions
+      testnetMagic = fromIntegral $ genesisTestnetMagic genesisOptions
+      nPools = cardanoNumPools testnetOptions
 
   -- TODO: This should come from the configuration!
   let makePathsAbsolute :: (Element a ~ FilePath, MonoFunctor a) => a -> a
@@ -233,16 +288,6 @@ cardanoTestnet
         , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
         }
       }
-
-  nodeConfigFile <- case cardanoNodes of
-    AutomaticNodeOptions _ -> do
-      configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
-      -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-      config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-      H.evalIO $ LBS.writeFile configurationFile config
-      return configurationFile
-    UserProvidedNodeOptions userSubmittedNodeConfigFile ->
-      liftIO $ IO.makeAbsolute userSubmittedNodeConfigFile
 
   portNumbersWithNodeOptions <-
     case cardanoNodes of
