@@ -7,6 +7,7 @@
 module Testnet.Start.Types
   ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
+  , ConfigFilesBehaviour(..)
   , InputNodeConfigFile(..)
   , NumDReps(..)
   , NumPools(..)
@@ -73,6 +74,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
+  , cardanoConfigFilesBehaviour :: ConfigFilesBehaviour -- ^ Whether to continue tests after generating config files.
   , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   } deriving (Eq, Show)
 
@@ -106,6 +108,9 @@ newtype NumRelays = NumRelays Int
 newtype NumDReps = NumDReps Int
   deriving (Show, Read, Eq, Enum, Ord, Num, Real, Integral) via Int
 
+data ConfigFilesBehaviour = OnlyGenerate | GenerateAndRun
+  deriving (Eq, Show)
+
 instance Default CardanoTestnetOptions where
   def = CardanoTestnetOptions
     { cardanoNodes = cardanoDefaultTestnetNodeOptions
@@ -114,6 +119,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
+    , cardanoConfigFilesBehaviour = GenerateAndRun
     , cardanoOutputDir = Nothing
     }
 
