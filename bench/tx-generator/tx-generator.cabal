@@ -78,6 +78,7 @@ library
                         Cardano.TxGenerator.Fund
                         Cardano.TxGenerator.FundQueue
                         Cardano.TxGenerator.Genesis
+                        Cardano.TxGenerator.ProtocolParameters
                         Cardano.TxGenerator.PureExample
                         Cardano.TxGenerator.Script.Types
                         Cardano.TxGenerator.Setup.NixService
@@ -106,9 +107,9 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.8
+                      , cardano-api ^>= 10.11
                       , cardano-binary
-                      , cardano-cli ^>= 10.4
+                      , cardano-cli ^>= 10.5
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
@@ -158,6 +159,10 @@ library
                       , transformers-except
                       , unordered-containers
                       , yaml
+                      -- Needed by "Cardano.Api.Internal.ProtocolParameters" port.
+                      , either
+                      , scientific
+                      , cardano-ledger-babbage
 
   default-language:     Haskell2010
   default-extensions:   OverloadedStrings

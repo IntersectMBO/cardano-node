@@ -11,14 +11,14 @@ module Cardano.TxGenerator.Setup.SigningKey
        )
        where
 
+import           Cardano.Api
+
+import           Cardano.CLI.Type.Common (SigningKeyFile)
+import           Cardano.TxGenerator.Types (TxGenError (..))
+
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS (ByteString)
 import           Data.ByteString.Base16 as Base16 (decode)
-
-import           Cardano.Api
-import           Cardano.CLI.Types.Common (SigningKeyFile)
-
-import           Cardano.TxGenerator.Types (TxGenError (..))
 
 
 parseSigningKeyTE :: TextEnvelope -> Either TxGenError (SigningKey PaymentKey)

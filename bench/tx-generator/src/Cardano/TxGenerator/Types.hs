@@ -14,8 +14,7 @@ module  Cardano.TxGenerator.Types
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
-
+import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)

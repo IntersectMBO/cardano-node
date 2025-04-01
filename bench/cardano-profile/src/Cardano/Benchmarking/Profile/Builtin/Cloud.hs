@@ -16,6 +16,9 @@ module Cardano.Benchmarking.Profile.Builtin.Cloud (
 
 import           Prelude
 import           Data.Function ((&))
+-- Package: aeson.
+import qualified Data.Aeson        as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 -- Package: self.
 import qualified Cardano.Benchmarking.Profile.Builtin.Empty as E
 import qualified Cardano.Benchmarking.Profile.Builtin.Scenario.Base as B
@@ -126,33 +129,38 @@ profilesNoEraCloud =
       ecdsa    = plutus     & plutusSecpBase . V.plutusTypeECDSA    . P.analysisSizeModerate
       schnorr  = plutus     & plutusSecpBase . V.plutusTypeSchnorr  . P.analysisSizeModerate
       blst     = plutusVolt & plutusBlstBase . V.plutusTypeBLST     . P.analysisSizeModerate2
+      -- PParams overlays and calibration for 4 tx per block memory full.
+      blockMem15x = P.budgetBlockMemoryOneAndAHalf . P.overlay calibrateBlockMemx15
+      blockMem2x  = P.budgetBlockMemoryDouble      . P.overlay calibrateBlockMemx2
   in [
   -- Value (pre-Voltaire profiles)
-    value      & P.name "value-nomadperf"                                 . P.dreps      0 . P.newTracing . P.p2pOn
-  , value      & P.name "value-nomadperf-nop2p"                           . P.dreps      0 . P.newTracing . P.p2pOff
-  , value      & P.name "value-drep1k-nomadperf"                          . P.dreps   1000 . P.newTracing . P.p2pOn
-  , value      & P.name "value-drep2k-nomadperf"                          . P.dreps   2000 . P.newTracing . P.p2pOn
-  , value      & P.name "value-drep10k-nomadperf"                         . P.dreps  10000 . P.newTracing . P.p2pOn
-  , value      & P.name "value-drep100k-nomadperf"                        . P.dreps 100000 . P.newTracing . P.p2pOn
-  , value      & P.name "value-oldtracing-nomadperf"                      . P.dreps      0 . P.oldTracing . P.p2pOn
-  , value      & P.name "value-oldtracing-nomadperf-nop2p"                . P.dreps      0 . P.oldTracing . P.p2pOff
+    value     & P.name "value-nomadperf"                                   . P.dreps      0 . P.newTracing . P.p2pOn
+  , value     & P.name "value-nomadperf-nop2p"                             . P.dreps      0 . P.newTracing . P.p2pOff
+  , value     & P.name "value-drep1k-nomadperf"                            . P.dreps   1000 . P.newTracing . P.p2pOn
+  , value     & P.name "value-drep2k-nomadperf"                            . P.dreps   2000 . P.newTracing . P.p2pOn
+  , value     & P.name "value-drep10k-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
+  , value     & P.name "value-drep100k-nomadperf"                          . P.dreps 100000 . P.newTracing . P.p2pOn
+  , value     & P.name "value-oldtracing-nomadperf"                        . P.dreps      0 . P.oldTracing . P.p2pOn
+  , value     & P.name "value-oldtracing-nomadperf-nop2p"                  . P.dreps      0 . P.oldTracing . P.p2pOff
   -- Value (post-Voltaire profiles)
-  , valueVolt  & P.name "value-volt-nomadperf"                            . P.dreps  10000 . P.newTracing . P.p2pOn
+  , valueVolt & P.name "value-volt-nomadperf"                              . P.dreps  10000 . P.newTracing . P.p2pOn
   -- Plutus (pre-Voltaire profiles)
-  , loop       & P.name "plutus-nomadperf"                                . P.dreps      0 . P.newTracing . P.p2pOn
-  , loop       & P.name "plutus-nomadperf-nop2p"                          . P.dreps      0 . P.newTracing . P.p2pOff
-  , loop       & P.name "plutus-drep1k-nomadperf"                         . P.dreps   1000 . P.newTracing . P.p2pOn
-  , loop       & P.name "plutus-drep2k-nomadperf"                         . P.dreps   2000 . P.newTracing . P.p2pOn
-  , loop       & P.name "plutus-drep10k-nomadperf"                        . P.dreps  10000 . P.newTracing . P.p2pOn
-  , loop       & P.name "plutus-drep100k-nomadperf"                       . P.dreps 100000 . P.newTracing . P.p2pOn
-  , loop2024   & P.name "plutus24-nomadperf"                              . P.dreps      0 . P.newTracing . P.p2pOn
-  , ecdsa      & P.name "plutus-secp-ecdsa-nomadperf"                     . P.dreps      0 . P.newTracing . P.p2pOn
-  , schnorr    & P.name "plutus-secp-schnorr-nomadperf"                   . P.dreps      0 . P.newTracing . P.p2pOn
-  , blst       & P.name "plutusv3-blst-nomadperf"                         . P.dreps      0 . P.newTracing . P.p2pOn
-  , blst       & P.name "plutusv3-blst-double-nomadperf" . P.doubleBudget . P.dreps      0 . P.newTracing . P.p2pOn
-  , blst       & P.name "plutusv3-blst-half-nomadperf"   . P.stepHalf     . P.dreps      0 . P.newTracing . P.p2pOn
+  , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0 . P.newTracing . P.p2pOn
+  , loop      & P.name "plutus-nomadperf-nop2p"                            . P.dreps      0 . P.newTracing . P.p2pOff
+  , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000 . P.newTracing . P.p2pOn
+  , loop      & P.name "plutus-drep2k-nomadperf"                           . P.dreps   2000 . P.newTracing . P.p2pOn
+  , loop      & P.name "plutus-drep10k-nomadperf"                          . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loop      & P.name "plutus-drep100k-nomadperf"                         . P.dreps 100000 . P.newTracing . P.p2pOn
+  , loop2024  & P.name "plutus24-nomadperf"                                . P.dreps      0 . P.newTracing . P.p2pOn
+  , ecdsa     & P.name "plutus-secp-ecdsa-nomadperf"                       . P.dreps      0 . P.newTracing . P.p2pOn
+  , schnorr   & P.name "plutus-secp-schnorr-nomadperf"                     . P.dreps      0 . P.newTracing . P.p2pOn
+  , blst      & P.name "plutusv3-blst-nomadperf"                           . P.dreps      0 . P.newTracing . P.p2pOn
+  , blst      & P.name "plutusv3-blst-double-nomadperf" . P.doubleBudget   . P.dreps      0 . P.newTracing . P.p2pOn
+  , blst      & P.name "plutusv3-blst-half-nomadperf"   . P.stepHalf       . P.dreps      0 . P.newTracing . P.p2pOn
   -- Plutus (post-Voltaire profiles)
-  , loopVolt   & P.name "plutus-volt-nomadperf"                           . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopVolt  & P.name "plutus-volt-nomadperf"                             . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopVolt  & P.name "plutus-volt-blockmem-x1.5-nomadperf" . blockMem15x . P.dreps  10000 . P.newTracing . P.p2pOn
+  , loopVolt  & P.name "plutus-volt-blockmem-x2-nomadperf"   . blockMem2x  . P.dreps  10000 . P.newTracing . P.p2pOn
   ]
   ----------
   -- Voting.
@@ -256,6 +264,48 @@ profilesNoEraCloud =
   , ciBench & P.name "ci-bench-nomadperf-nop2p"      . V.valueLocal . P.dreps 0 . P.traceForwardingOn . P.newTracing . P.p2pOff
   -- TODO: FIXME: A non "nop2p" "nomadperf" profile without P2P???
   , ciBench & P.name "ci-bench-oldtracing-nomadperf" . V.valueLocal . P.dreps 0 . P.traceForwardingOn . P.oldTracing . P.p2pOff
+  ]
+
+--------------------------------------------------------------------------------
+
+-- Corrections to fill the block memory budget with 4 txs per block.
+calibrateBlockMemx15 :: Aeson.Object
+calibrateBlockMemx15 =
+  KeyMap.fromList [
+    ("genesis", Aeson.Object $ KeyMap.fromList [
+      ("alonzo", Aeson.Object $ KeyMap.fromList [
+        ("maxTxExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsMem", Aeson.Number 23250000)
+        ])
+      , ("maxBlockExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsSteps", Aeson.Number 20625739876)
+        ])
+      ])
+    ])
+  , ("generator", Aeson.Object $ KeyMap.fromList [
+      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":1892175}
+      ("tx_fee", Aeson.Number 1892175)
+    ])
+  ]
+
+-- Corrections to fill the block memory budget with 4 txs per block.
+calibrateBlockMemx2 :: Aeson.Object
+calibrateBlockMemx2 =
+  KeyMap.fromList [
+    ("genesis", Aeson.Object $ KeyMap.fromList [
+      ("alonzo", Aeson.Object $ KeyMap.fromList [
+        ("maxTxExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsMem", Aeson.Number 31000000)
+        ])
+      , ("maxBlockExUnits", Aeson.Object $ KeyMap.fromList [
+          ("exUnitsSteps", Aeson.Number 27500804996)
+        ])
+      ])
+    ])
+  , ("generator", Aeson.Object $ KeyMap.fromList [
+      -- "ns":"Mempool.RejectedTx","data":{"err":{"fee":1000000,"kind":"FeeTooSmallUTxO","minimum":2463246}
+      ("tx_fee", Aeson.Number 2463246)
+    ])
   ]
 
 --------------------------------------------------------------------------------

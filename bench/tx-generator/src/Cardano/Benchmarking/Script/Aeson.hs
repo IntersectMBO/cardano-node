@@ -22,7 +22,7 @@ import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.Yaml as Yaml (encode)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters)
 
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Internal.Orphans ()

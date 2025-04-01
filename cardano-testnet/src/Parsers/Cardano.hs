@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Parsers.Cardano
   ( cmdCardano
   ) where
@@ -5,10 +7,11 @@ module Parsers.Cardano
 import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..))
 
 import           Cardano.CLI.Environment
-import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
+import           Cardano.CLI.EraBased.Common.Option hiding (pNetworkId)
 
 import           Prelude
 
+import           Control.Applicative
 import           Data.Default.Class
 import           Data.Functor
 import qualified Data.List as L
@@ -20,6 +23,7 @@ import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
 
+{- HLINT ignore "Use asum" -}
 
 optsTestnet :: EnvCli -> Parser CardanoTestnetCliOptions
 optsTestnet envCli = CardanoTestnetCliOptions
@@ -28,16 +32,9 @@ optsTestnet envCli = CardanoTestnetCliOptions
 
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
-  <$> pNumSpoNodes
+  <$> pTestnetNodeOptions
   <*> pAnyShelleyBasedEra'
   <*> pMaxLovelaceSupply
-  <*> OA.option auto
-      (   OA.long "enable-p2p"
-      <>  OA.help "Enable P2P"
-      <>  OA.metavar "BOOL"
-      <>  OA.showDefault
-      <>  OA.value (cardanoEnableP2P def)
-      )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
       <>  OA.help "Node logging format (json|text)"
@@ -47,7 +44,7 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       )
   <*> OA.option auto
       (   OA.long "num-dreps"
-      <>  OA.help "Number of delegate representatives (DReps) to generate"
+      <>  OA.help "Number of delegate representatives (DReps) to generate. Ignored if a custom Conway genesis file is passed."
       <>  OA.metavar "NUMBER"
       <>  OA.showDefault
       <>  OA.value 3
@@ -67,19 +64,27 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
     pAnyShelleyBasedEra' =
       pAnyShelleyBasedEra envCli <&> (\(EraInEon x) -> AnyShelleyBasedEra x)
 
-pNumSpoNodes :: Parser [TestnetNodeOptions]
-pNumSpoNodes =
-  -- We don't support passing custom node configurations files on the CLI.
-  -- So we use a default node configuration for all nodes.
-  (`L.replicate` defaultSpoOptions) <$>
-    OA.option auto
-    (   OA.long "num-pool-nodes"
-    <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
-    <>  OA.metavar "COUNT"
-    <>  OA.showDefault
-    <>  OA.value 1)
+pTestnetNodeOptions :: Parser TestnetNodeOptions
+pTestnetNodeOptions =
+  asum' [
+      AutomaticNodeOptions . (`L.replicate` defaultSpoOptions) <$>
+        OA.option auto
+        (   OA.long "num-pool-nodes"
+        <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
+        <>  OA.metavar "COUNT"
+        <>  OA.showDefault
+        <>  OA.value 1)
+    , UserProvidedNodeOptions
+        <$> strOption ( long "node-config"
+                        <> metavar "FILEPATH"
+                        <> help "Path to the node's configuration file (which is generated otherwise). If you use this option, you should also pass all the genesis files (files pointed to by the fields \"AlonzoGenesisFile\", \"ShelleyGenesisFile\", etc.).")
+    ]
   where
     defaultSpoOptions = SpoNodeOptions []
+    -- \| Because asum is not available GHC 8.10.7's base (4.14.3.0). This can be removed
+    -- when oldest version of GHC we use is >= 9.0 (base >= 4.15)
+    asum' :: (Foldable t, Alternative f) => t (f a) -> f a
+    asum' = foldr (<|>) empty
 
 pGenesisOptions :: Parser GenesisOptions
 pGenesisOptions =
@@ -92,7 +97,8 @@ pGenesisOptions =
     pEpochLength =
       OA.option auto
         (   OA.long "epoch-length"
-        <>  OA.help "Epoch length, in number of slots"
+        -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
+        <>  OA.help "Epoch length, in number of slots. Ignored if a custom Shelley genesis file is passed."
         <>  OA.metavar "SLOTS"
         <>  OA.showDefault
         <>  OA.value (genesisEpochLength def)
@@ -100,7 +106,8 @@ pGenesisOptions =
     pSlotLength =
       OA.option auto
         (   OA.long "slot-length"
-        <>  OA.help "Slot length"
+        -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
+        <>  OA.help "Slot length. Ignored if a custom Shelley genesis file is passed."
         <>  OA.metavar "SECONDS"
         <>  OA.showDefault
         <>  OA.value (genesisSlotLength def)
@@ -108,7 +115,8 @@ pGenesisOptions =
     pActiveSlotCoeffs =
       OA.option auto
         (   OA.long "active-slots-coeff"
-        <>  OA.help "Active slots co-efficient"
+        -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
+        <>  OA.help "Active slots coefficient. Ignored if a custom Shelley genesis file is passed."
         <>  OA.metavar "DOUBLE"
         <>  OA.showDefault
         <>  OA.value (genesisActiveSlotsCoeff def)
@@ -129,7 +137,8 @@ pMaxLovelaceSupply :: Parser Word64
 pMaxLovelaceSupply =
   option auto
       (   long "max-lovelace-supply"
-      <>  help "Max lovelace supply that your testnet starts with."
+      -- TODO Check that this flag is not used when a custom Shelley genesis file is passed
+      <>  help "Max lovelace supply that your testnet starts with. Ignored if a custom Shelley genesis file is passed."
       <>  metavar "WORD64"
       <>  showDefault
       <>  value (cardanoMaxSupply def)

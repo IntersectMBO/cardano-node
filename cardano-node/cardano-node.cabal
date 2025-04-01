@@ -82,6 +82,7 @@ library
                         Cardano.Node.Protocol.Alonzo
                         Cardano.Node.Protocol.Byron
                         Cardano.Node.Protocol.Cardano
+                        Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
@@ -145,7 +146,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.8
+                      , cardano-api ^>= 10.11.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -251,7 +252,7 @@ test-suite cardano-node-test
                       , bytestring
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-api:{cardano-api, internal}
+                      , cardano-api
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting

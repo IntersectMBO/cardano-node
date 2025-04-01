@@ -1,4 +1,4 @@
-Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
+Usage: cardano-testnet cardano [--num-pool-nodes COUNT | --node-config FILEPATH]
   [ --shelley-era
   | --allegra-era
   | --mary-era
@@ -7,7 +7,6 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   | --conway-era
   ]
   [--max-lovelace-supply WORD64]
-  [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
@@ -22,6 +21,11 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
 Available options:
   --num-pool-nodes COUNT   Number of pool nodes. Note this uses a default node
                            configuration for all nodes. (default: 1)
+  --node-config FILEPATH   Path to the node's configuration file (which is
+                           generated otherwise). If you use this option, you
+                           should also pass all the genesis files (files pointed
+                           to by the fields "AlonzoGenesisFile",
+                           "ShelleyGenesisFile", etc.).
   --shelley-era            Specify the Shelley era - DEPRECATED - will be
                            removed in the future
   --allegra-era            Specify the Allegra era - DEPRECATED - will be
@@ -35,13 +39,14 @@ Available options:
   --conway-era             Specify the Conway era
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
+                           Ignored if a custom Shelley genesis file is passed.
                            (default: 100000020000000)
-  --enable-p2p BOOL        Enable P2P (default: False)
   --nodeLoggingFormat LOGGING_FORMAT
                            Node logging format (json|text)
                            (default: NodeLoggingFormatAsJson)
   --num-dreps NUMBER       Number of delegate representatives (DReps) to
-                           generate (default: 3)
+                           generate. Ignored if a custom Conway genesis file is
+                           passed. (default: 3)
   --enable-new-epoch-state-logging
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log
@@ -49,8 +54,11 @@ Available options:
                            It is created if it doesn't exist. If unset, a
                            temporary directory is used.
   --testnet-magic INT      Specify a testnet magic id.
-  --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
-  --slot-length SECONDS    Slot length (default: 0.1)
+  --epoch-length SLOTS     Epoch length, in number of slots. Ignored if a custom
+                           Shelley genesis file is passed. (default: 500)
+  --slot-length SECONDS    Slot length. Ignored if a custom Shelley genesis file
+                           is passed. (default: 0.1)
   --active-slots-coeff DOUBLE
-                           Active slots co-efficient (default: 5.0e-2)
+                           Active slots coefficient. Ignored if a custom Shelley
+                           genesis file is passed. (default: 5.0e-2)
   -h,--help                Show this help text
