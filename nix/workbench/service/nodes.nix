@@ -8,7 +8,8 @@
 , profile
 , profiling
 , nodeSpecs
-, topologyJsonPath
+
+, profileJson, topologyJsonPath
 }:
 
 with pkgs.lib;
@@ -199,6 +200,36 @@ let
     in
       eval.config.services.cardano-node;
 
+ topologiesJsonPaths =
+    let projections =
+          pkgs.runCommand "workbench-profile-files-topologies-${profileName}"
+            { nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
+              [ bash coreutils gnused jq moreutils workbenchNix.workbench ]; # cardano-cli
+            }
+            ''
+            mkdir "$out"
+            ${builtins.concatStringsSep
+              "\n"
+              (pkgs.lib.mapAttrsToList
+                (name: nodeSpec: ''
+                    wb topology projection-for     \
+                    "local-${nodeSpec.kind}"       \
+                    "${toString nodeSpec.i}"       \
+                    "${profileJson}"               \
+                    "${topologyJsonPath}"          \
+                    "${toString backend.basePort}" \
+                  > "$out"/"topology-${name}.json"
+                '')
+                nodeSpecs
+              )
+            }
+            ''
+        ;
+    in  pkgs.lib.mapAttrs
+          (name: _: "${projections}/topology-${name}.json")
+          nodeSpecs
+  ;
+
   nodeService =
     { name, i, mode ? null, ... }@nodeSpec:
     let
@@ -207,56 +238,10 @@ let
       service       = evalServiceConfigToService serviceConfig;
 
       topology =
-        let kind = nodeSpec.kind;
-        in
-           # Proxy is a special case used only by "chainsync-*" profiles!
-           if kind == "proxy"
-           then rec {
-             JSON = ../profile/presets/${profile.preset}/topology-proxy.json;
-             value = __fromJSON (__readFile JSON);
-           }
-           # The others: "bft", "pools", "explorer".
-           # FIXME: Why is explorer a special case ?
-           else
-             let args = rec {
-                   pool =
-                     [
-                      "--baseport"
-                      (toString backend.basePort)
-                      "--node-number"
-                      (toString i)
-                     ]
-                     ++
-                     [(if profile.node ? verbatim && profile.node.verbatim ? EnableP2P && profile.node.verbatim.EnableP2P == true
-                       then "--enable-p2p"
-                       else ""
-                     )]
-                   ;
-                   bft = pool;
-                   explorer = [
-                     "--baseport"
-                     (toString backend.basePort)
-                     "--nodes"
-                     (toString (
-                        profile.composition.n_bft_hosts
-                      + profile.composition.n_pool_hosts
-                      + (if profile.composition.with_proxy          or false then 1 else 0)
-                      + (if profile.composition.with_chaindb_server or false then 1 else 0)
-                    ))
-                   ];
-                   chaindb-server = [];
-                 };
-             in rec {
-               JSON  = workbenchNix.runCardanoTopology
-                 "topology-${name}.json"
-                 ''
-                 projection-for                                            \
-                   --topology-input ${topologyJsonPath}                    \
-                   ${kind} ${builtins.concatStringsSep " " args."${kind}"} \
-                 ''
-               ;
-               value = __fromJSON (__readFile JSON);
-             }
+         rec {
+           JSON  = topologiesJsonPaths.${name};
+           value = __fromJSON (__readFile JSON);
+         }
       ;
 
       valency =

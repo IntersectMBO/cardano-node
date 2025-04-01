@@ -31,7 +31,7 @@ usage_topology() {
                           Generate the profile-induced map of node names
                             to pool density: 0, 1 or N (for dense pools)
 
-    $(helpcmd projection-for ROLE N PROFILE TOPO-DIR BASE-PORT)
+    $(helpcmd projection-for ROLE N PROFILE TOPOLOGY-JSON BASE-PORT)
                           Given TOPO-DIR, containing the full cluster topology,
                             print topology for the N-th node, given its ROLE,
                             while assigning it a local port number BASE-PORT+N
@@ -236,7 +236,7 @@ case "${op}" in
         local role=${1:?$usage}
         local i=${2:?$usage}
         local profile=${3:?$usage}
-        local topo_dir=${4:?$usage}
+        local topology_json=${4:?$usage}
         local basePort=${5:?$usage}
 
         local prof=$(profile json $profile)
@@ -281,7 +281,7 @@ case "${op}" in
         ;;
         esac
 
-        cardano-topology projection-for --topology-input "$topo_dir"/topology.json "${args[@]}"
+        cardano-topology projection-for --topology-input "$topology_json" "${args[@]}"
     ;;
 
     * ) usage_topology;; esac

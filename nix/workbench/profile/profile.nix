@@ -57,7 +57,8 @@ let
           ../service/nodes.nix
           {
             inherit backend profile nodeSpecs;
-            inherit topologyJsonPath profiling;
+            inherit profiling;
+            inherit profileJson topologyJsonPath;
             inherit workbenchNix;
             baseNodeConfig = baseNodeConfigTestnet;
           })
