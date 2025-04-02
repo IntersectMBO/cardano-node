@@ -170,7 +170,7 @@ library
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward >= 0.8
+                      , ekg-forward >= 0.9
                       , ekg-wai
                       , extra
                       , filepath
@@ -178,7 +178,7 @@ library
                       , mime-mail
                       , network-mux
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.19
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal

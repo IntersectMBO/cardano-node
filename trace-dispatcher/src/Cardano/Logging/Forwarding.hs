@@ -108,6 +108,7 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       , EKGF.acceptorEndpoint   = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest    = const $ pure ()
+      , EKGF.useDummyForwarder  = False
       }
 
   tfConfig :: TF.ForwarderConfiguration TraceObject
@@ -249,6 +250,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
@@ -312,6 +314,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }

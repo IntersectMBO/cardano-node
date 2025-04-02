@@ -9,7 +9,6 @@ module Parsers.Run
   , opts
   ) where
 
-import           Cardano.Api.Ledger (StandardCrypto)
 import           Cardano.Api.Shelley (ShelleyGenesis)
 
 import           Cardano.CLI.Environment
@@ -79,11 +78,11 @@ runCardanoOptions (CardanoTestnetCliOptions testnetOptions genesisOptions) =
               -- Make all the files be relative to the location of the config file.
               adjustFilePaths (takeDirectory nodeInputConfigFile </>) protocolConfig
             (shelley, alonzo, conway) = getShelleyGenesises adjustedProtocolConfig
-        shelleyGenesis :: UserProvidedData (ShelleyGenesis StandardCrypto) <-
+        shelleyGenesis :: UserProvidedData ShelleyGenesis <-
           genesisFilepathToData $ npcShelleyGenesisFile shelley
         alonzoGenesis :: UserProvidedData AlonzoGenesis <-
           genesisFilepathToData $ npcAlonzoGenesisFile alonzo
-        conwayGenesis :: UserProvidedData (ConwayGenesis StandardCrypto) <-
+        conwayGenesis :: UserProvidedData ConwayGenesis <-
           genesisFilepathToData $ npcConwayGenesisFile conway
         runTestnet testnetOptions $ cardanoTestnet
           testnetOptions

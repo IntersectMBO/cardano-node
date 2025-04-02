@@ -19,6 +19,8 @@ module Test.Cardano.Node.Gen
 
 import           Cardano.Api (textShow)
 
+import           Cardano.Network.PeerSelection.Bootstrap
+import           Cardano.Network.PeerSelection.PeerTrustable
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..), NodeIPAddress,
                    NodeIPv4Address, NodeIPv6Address)
@@ -28,10 +30,8 @@ import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..
 import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Network.NodeToNode.Version
-import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),
                    RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),

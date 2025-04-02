@@ -26,6 +26,7 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
+import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -35,13 +36,16 @@ import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags (..),
-                   defaultGenesisConfigFlags, mkGenesisConfig)
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag, NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
-import           Ouroboros.Network.Diffusion.Configuration as Configuration
+import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..), pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
+import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags, defaultGenesisConfigFlags, mkGenesisConfig)
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..), Flag (..))
+import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
+import           Ouroboros.Network.Diffusion.Configuration
+                   (AcceptedConnectionsLimit (..), ConsensusMode (..), DiffusionMode (..),
+                   PeerSelectionTargets (..), PeerSharing (..))
+import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 
 import           Control.Monad (when, unless)
@@ -173,7 +177,7 @@ data NodeConfiguration
 
          -- Minimum number of active big ledger peers we must be connected to
          -- in Genesis mode
-       , ncMinBigLedgerPeersForTrustedState :: MinBigLedgerPeersForTrustedState
+       , ncMinBigLedgerPeersForTrustedState :: NumberOfBigLedgerPeers
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
@@ -247,7 +251,7 @@ data PartialNodeConfiguration
        , pncSyncTargetOfActiveBigLedgerPeers      :: !(Last Int)
          -- Minimum number of active big ledger peers we must be connected to
          -- in Genesis mode
-       , pncMinBigLedgerPeersForTrustedState :: !(Last MinBigLedgerPeersForTrustedState)
+       , pncMinBigLedgerPeersForTrustedState :: !(Last NumberOfBigLedgerPeers)
 
          -- Consensus mode for diffusion layer
        , pncConsensusMode :: !(Last ConsensusMode)
@@ -565,7 +569,7 @@ defaultPartialNodeConfiguration =
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncNumOfDiskSnapshots = Last $ Just DefaultNumOfDiskSnapshots
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
-    , pncDoDiskSnapshotChecksum = Last $ Just DoDiskSnapshotChecksum
+    , pncDoDiskSnapshotChecksum = Last $ Just Consensus.DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncProtocolFiles = mempty
@@ -601,26 +605,26 @@ defaultPartialNodeConfiguration =
     , pncSyncTargetOfKnownBigLedgerPeers       = Last (Just syncBigKnown)
     , pncSyncTargetOfEstablishedBigLedgerPeers = Last (Just syncBigEst)
     , pncSyncTargetOfActiveBigLedgerPeers      = Last (Just syncBigAct)
-    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
-    , pncConsensusMode = Last (Just defaultConsensusMode)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
+    , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
     , pncEnableP2P     = Last (Just EnabledP2PMode)
-    , pncPeerSharing   = Last (Just defaultPeerSharing)
+    , pncPeerSharing   = Last (Just Ouroboros.defaultPeerSharing)
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
     }
   where
-    Configuration.PeerSelectionTargets {
+    PeerSelectionTargets {
       targetNumberOfRootPeers = deadlineRoots,
       targetNumberOfKnownPeers = deadlineKnown,
       targetNumberOfEstablishedPeers = deadlineEstablished,
       targetNumberOfActivePeers = deadlineActive,
       targetNumberOfKnownBigLedgerPeers = deadlineBigKnown,
       targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
-      targetNumberOfActiveBigLedgerPeers = deadlineBigAct } = defaultDeadlineTargets
-    Configuration.PeerSelectionTargets {
+      targetNumberOfActiveBigLedgerPeers = deadlineBigAct } = Ouroboros.defaultDeadlineTargets
+    PeerSelectionTargets {
       targetNumberOfActivePeers = syncActive,
       targetNumberOfKnownBigLedgerPeers = syncBigKnown,
       targetNumberOfEstablishedBigLedgerPeers = syncBigEst,
-      targetNumberOfActiveBigLedgerPeers = syncBigAct } = defaultSyncTargets
+      targetNumberOfActiveBigLedgerPeers = syncBigAct } = Cardano.defaultSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional

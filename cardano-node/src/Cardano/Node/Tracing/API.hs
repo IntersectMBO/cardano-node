@@ -8,6 +8,7 @@ module Cardano.Node.Tracing.API
   ) where
 
 import           Cardano.Logging hiding (traceWith)
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.NodeAddress (File (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
@@ -21,6 +22,9 @@ import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Node (NetworkP2PMode)
@@ -28,7 +32,7 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.Magic (NetworkMagic)
-import           Ouroboros.Network.NodeToClient (withIOManager)
+import           Ouroboros.Network.NodeToClient (LocalAddress, withIOManager)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Prelude
@@ -56,7 +60,7 @@ initTraceDispatcher ::
   -> NetworkMagic
   -> NodeKernelData blk
   -> NetworkP2PMode p2p
-  -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p)
+  -> IO (Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO)
 initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
   trConfig <- readConfigurationWithDefault
                 (unConfigPath $ ncConfigFile nc)

@@ -56,12 +56,12 @@ library
                       , deepseq
                       , ekg-wai
                       , ekg-core
-                      , ekg-forward >= 0.8
+                      , ekg-forward >= 0.9
                       , hostname
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.19
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
