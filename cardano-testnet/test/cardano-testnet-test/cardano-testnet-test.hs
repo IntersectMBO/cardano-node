@@ -12,6 +12,7 @@ import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
+import qualified Cardano.Testnet.Test.DumpConfig
 import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
@@ -99,6 +100,7 @@ tests = do
           , ignoreOnWindows "foldEpochState receives ledger state" Cardano.Testnet.Test.FoldEpochState.prop_foldEpochState
           , ignoreOnMacAndWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
           ]
+        , ignoreOnMacAndWindows "Dumping config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
         ]
     , T.testGroup "SubmitApi"
         [ ignoreOnMacAndWindows "transaction" Cardano.Testnet.Test.SubmitApi.Transaction.hprop_transaction
