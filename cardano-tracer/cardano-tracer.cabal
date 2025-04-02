@@ -54,7 +54,7 @@ common project-config
                         -Wno-orphans
                         -Wpartial-fields
                         -Wredundant-constraints
-                        -Wunused-packages
+                        -fprint-potential-instances
 
 library
   import:               project-config
@@ -181,6 +181,7 @@ library
                       , extra
                       , filepath
                       , http-types
+                      , io-classes
                       , mime-mail
                       , network-mux
                       , optparse-applicative
@@ -197,6 +198,9 @@ library
                       , trace-dispatcher
                       , trace-forward
                       , trace-resources
+                      , typed-protocols
+                      , typed-protocols-examples
+                      , unordered-containers
                       , wai ^>= 3.2
                       , warp ^>= 3.4
                       , yaml

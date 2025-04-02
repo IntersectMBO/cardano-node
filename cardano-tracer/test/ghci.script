@@ -1,0 +1,23 @@
+:set -XBlockArguments
+:set -XLambdaCase
+:set -XPackageImports
+-- :set -package cborg
+-- :set -package network-mux
+-- :set -package ouroboros-network-framework
+-- :set -package cardano-tracer
+
+import qualified "bytestring"                  Data.ByteString as BS
+import qualified "bytestring"                  Data.ByteString.Lazy as LBS
+
+import qualified "cborg"                       Codec.CBOR.Read as CBOR -- (DeserialiseFailure)
+import qualified "cborg"                       Codec.CBOR.Term as CBOR -- (Term)
+
+import qualified "network-mux"                 Network.Mux.Types as Mux
+import qualified "network-mux"                 Network.Mux.Codec as Mux
+
+import qualified "typed-protocols"             Network.TypedProtocol.Codec as Codec -- (Codec)
+
+import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handshake.Codec as Handshake -- (codecHandshake)
+import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handshake.Type as Handshake -- (Handshake)
+
+import qualified "cardano-tracer"              Cardano.Tracer.Acceptors.Utils as Acceptors
