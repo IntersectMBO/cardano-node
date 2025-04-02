@@ -1,9 +1,26 @@
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-error=unused-imports #-}
 
 module Cardano.Tracer.Acceptors.Utils
-  ( prepareDataPointRequestor
+  ( handshakeCodec
+  , parseHandshakeLog
+  , parseSDU
+  , prepareDataPointRequestor
   , prepareMetricsStores
   , removeDisconnectedNode
   , notifyAboutNodeDisconnected
@@ -14,15 +31,30 @@ import           Cardano.Logging (SeverityS (..))
 import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Handlers.Notifications.Utils
 #endif
+import           Cardano.Logging.Version (ForwardingVersion, forwardingVersionCodec)
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
+import qualified Network.Mux.Codec as Mux (decodeSDU)
+import qualified Network.Mux.Trace as Mux (Error (..))
+import qualified Network.Mux.Types as Mux (RemoteClockModel (..), SDU (..), SDUHeader (..))
+import           Network.TypedProtocol.Codec (Codec (..), DecodeStep (..), SomeMessage (..))
+import           Network.TypedProtocol.Core (ActiveState, Agency (..), IsActiveState (..), Protocol (..))
+import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Type (Handshake, SingHandshake)
 import           Ouroboros.Network.Snocket (LocalAddress)
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
+import qualified Codec.CBOR.Read as CBOR (DeserialiseFailure)
+import qualified Codec.CBOR.Term as CBOR (Term)
+
+import           Control.Arrow (ArrowChoice (..))
+import           Control.Monad.Class.MonadST () -- (MonadST)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import qualified Data.Bimap as BM
+import qualified Data.ByteString.Lazy as LBS (ByteString, readFile, splitAt)
+import           Data.Kind () -- (Type)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import           Data.Time.Clock.POSIX (getPOSIXTime)
@@ -33,6 +65,37 @@ import qualified System.Metrics as EKG
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
 
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
+
+handshakeCodec :: Codec (Handshake ForwardingVersion CBOR.Term) CBOR.DeserialiseFailure IO LBS.ByteString
+handshakeCodec = codecHandshake forwardingVersionCodec
+
+parseSDU :: LBS.ByteString -> Either Mux.Error (Mux.SDU, LBS.ByteString)
+parseSDU (LBS.splitAt 8 -> (sduBS, bs))
+  = right (, bs) $ Mux.decodeSDU sduBS
+
+deriving instance Show Mux.RemoteClockModel
+deriving instance Show Mux.SDUHeader
+deriving instance Show Mux.SDU
+
+{- decodeHandshake :: forall st . ()
+  => IsActiveState st (StateAgency st)
+  => SingHandshake st
+       -> IO (DecodeStep
+             LBS.ByteString CBOR.DeserialiseFailure IO (SomeMessage st))
+decodeHandshake = decode where
+  Codec {..} = handshakeCodec -}
+
+parseHandshakeLog :: IO ()
+parseHandshakeLog = parseSDU <$> LBS.readFile logFile >>= \case
+  Left msg -> print msg
+  Right (sdu, cborBS) -> do
+    print sdu
+    print . take 1024 $ show cborBS
+    -- decodeHandshake undefined
+    pure ()
+  where
+    -- Codec {..} = handshakeCodec
+    logFile = "/home/nyc/src/c-trace-fwd/logs/handshake.log.005.A"
 
 prepareDataPointRequestor
   :: TracerEnv
