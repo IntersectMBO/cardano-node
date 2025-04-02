@@ -21,20 +21,18 @@ module Testnet.Components.Configuration
   , eraToString
   ) where
 
-import           Cardano.Api.Ledger (StandardCrypto)
+import           Cardano.Api.Ledger (AlonzoGenesis, ConwayGenesis)
 import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+import           Cardano.Network.PeerSelection.Bootstrap
+import           Cardano.Network.PeerSelection.PeerTrustable
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Exception.Safe (MonadCatch)
@@ -132,7 +130,7 @@ getDefaultShelleyGenesis :: ()
   => AnyShelleyBasedEra
   -> Word64 -- ^ The max supply
   -> GenesisOptions
-  -> m (ShelleyGenesis StandardCrypto)
+  -> m ShelleyGenesis
 getDefaultShelleyGenesis asbe maxSupply opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
@@ -154,9 +152,9 @@ createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => CardanoTestnetOptions -- ^ The options to use
   -> GenesisOptions
-  -> UserProvidedData (ShelleyGenesis StandardCrypto)
+  -> UserProvidedData ShelleyGenesis
   -> UserProvidedData AlonzoGenesis
-  -> UserProvidedData (ConwayGenesis StandardCrypto)
+  -> UserProvidedData ConwayGenesis
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
 createSPOGenesisAndFiles

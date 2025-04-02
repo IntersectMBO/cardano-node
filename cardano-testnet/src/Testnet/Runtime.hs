@@ -20,6 +20,7 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Shelley.State as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 
 import           Prelude
@@ -351,7 +352,7 @@ calculateEpochStateDiff current next =
      then "No changes in epoch state"
      else ppDiff diffResult
 
-instance (L.EraTxOut ledgerera, L.EraGov ledgerera) => ToJSON (L.NewEpochState ledgerera) where
+instance (L.EraTxOut ledgerera, L.EraGov ledgerera, L.EraCertState ledgerera, L.EraStake ledgerera) => ToJSON (L.NewEpochState ledgerera) where
   toJSON (L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu nesPd _stashedAvvm) =
     object
       [ "currentEpoch" .= nesEL

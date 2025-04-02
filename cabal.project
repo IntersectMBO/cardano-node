@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-03-18T07:42:38Z
-  , cardano-haskell-packages 2025-03-24T17:03:41Z
+  , cardano-haskell-packages 2025-03-31T11:34:47Z
 
 packages:
   cardano-node
@@ -91,3 +91,10 @@ if impl (ghc >= 9.12)
     , servant:base
     , servant-server:base
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-cli
+  tag: ebc65cf939253edb46137662dec3978312b68c47
+  --sha256: sha256-wXPp6kBBA7ZW3DiRoT78LT4mc/4N10PgOqRt9pPIXlM=
+  subdir:
+    cardano-cli

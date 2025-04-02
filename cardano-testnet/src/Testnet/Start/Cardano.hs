@@ -26,7 +26,6 @@ module Testnet.Start.Cardano
 
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (StandardCrypto)
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
@@ -165,13 +164,13 @@ cardanoTestnet :: ()
   => HasCallStack
   => CardanoTestnetOptions -- ^ The options to use
   -> GenesisOptions
-  -> UserProvidedData (ShelleyGenesis StandardCrypto)
+  -> UserProvidedData ShelleyGenesis
   -- ^ The shelley genesis to use, One possible way to provide this value is to use 'getDefaultShelleyGenesis'
   -- and customize it. Generated if omitted.
   -> UserProvidedData AlonzoGenesis
   -- ^ The alonzo genesis to use. One possible way to provide this value is to use 'getDefaultAlonzoGenesis'
   -- and customize it. Generated if omitted.
-  -> UserProvidedData (ConwayGenesis StandardCrypto)
+  -> UserProvidedData ConwayGenesis
   -- ^ The conway genesis to use. One possible way to provide this value is to use 'defaultConwayGenesis'
   -- and customize it. Generated if omitted.
   -> Conf

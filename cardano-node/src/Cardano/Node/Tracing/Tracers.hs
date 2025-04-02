@@ -17,6 +17,7 @@ module Cardano.Node.Tracing.Tracers
   ) where
 
 import           Cardano.Logging
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.TraceConstraints
@@ -39,6 +40,9 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -56,8 +60,9 @@ import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
-import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
+import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
+import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
@@ -66,13 +71,14 @@ import           Control.Monad (unless)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
+import           Network.Socket (SockAddr)
 
 import           Trace.Forward.Utils.DataPoint (DataPoint)
 
 -- | Construct tracers for all system components.
 --
 mkDispatchTracers
-  :: forall blk p2p.
+  :: forall blk p2p .
   ( Consensus.RunNode blk
   , TraceConstraints blk
   , LogFormatting (LedgerEvent blk)
@@ -90,7 +96,14 @@ mkDispatchTracers
   -> TraceConfig
   -> NetworkP2PMode p2p
   -> SomeConsensusProtocol
-  -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
+  -> IO (Tracers RemoteAddress LocalAddress blk p2p
+                 Cardano.ExtraState
+                 Cardano.DebugPeerSelectionState
+                 PeerTrustable
+                 (Cardano.PublicRootPeers.ExtraPeers RemoteAddress)
+                 (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress)
+                 IO)
+
 mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enableP2P p = do
 
     configReflection <- emptyConfigReflection
@@ -340,6 +353,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "CSJ"]
     configureTracers configReflection trConfig [consensusCsjTr]
 
+    !consensusDbfTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "DBF"]
+    configureTracers configReflection trConfig [consensusDbfTr]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -384,6 +402,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusGsmTr
       , Consensus.csjTracer = Tracer $
           traceWith consensusCsjTr
+      , Consensus.dbfTracer = Tracer $
+          traceWith consensusDbfTr
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -440,7 +460,7 @@ mkNodeToNodeTracers :: forall blk.
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
-  -> IO (NodeToNode.Tracers IO (ConnectionId RemoteAddress) blk DeserialiseFailure)
+  -> IO (NodeToNode.Tracers IO RemoteAddress blk DeserialiseFailure)
 mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
 
     !chainSyncTracer <-  mkCardanoTracer
@@ -473,6 +493,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["KeepAlive", "Remote"]
     configureTracers configReflection trConfig [keepAliveTracer]
 
+    !peerSharingTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["PeerSharing", "Remote"]
+    configureTracers configReflection trConfig [peerSharingTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -486,6 +511,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith txSubmission2Tracer
       , NtN.tKeepAliveTracer = Tracer $
           traceWith keepAliveTracer
+      , NtN.tPeerSharingTracer = Tracer $
+          traceWith peerSharingTracer
       }
 
 mkDiffusionTracers
@@ -537,7 +564,7 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            traceWith dtDiffusionInitializationTr
        }
 
-mkDiffusionTracersExtra  :: forall p2p.
+mkDiffusionTracersExtra  :: forall p2p .
      ConfigReflection
   -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
@@ -545,7 +572,14 @@ mkDiffusionTracersExtra  :: forall p2p.
   -> Trace IO DataPoint
   -> TraceConfig
   -> NetworkP2PMode p2p
-  -> IO (Diffusion.ExtraTracers p2p)
+  -> IO (Diffusion.ExtraTracers
+           p2p
+           Cardano.ExtraState
+           Cardano.DebugPeerSelectionState
+           PeerTrustable
+           (Cardano.PublicRootPeers.ExtraPeers SockAddr)
+           (Cardano.ExtraPeerSelectionSetsWithSizes SockAddr)
+           IO)
 mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2PMode = do
 
     !localRootPeersTr  <-  mkCardanoTracer

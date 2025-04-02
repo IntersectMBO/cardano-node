@@ -6,6 +6,7 @@ module Test.Cardano.Node.POM
   ( tests
   ) where
 
+
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
@@ -13,13 +14,16 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
-import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..), pattern DoDiskSnapshotChecksum)
+                   SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
-import           Ouroboros.Network.Diffusion.Configuration
+import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   DiffusionMode (InitiatorAndResponderDiffusionMode))
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -28,6 +32,7 @@ import           Data.Time.Clock (secondsToDiffTime)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
+import Ouroboros.Cardano.Diffusion.Configuration (defaultMinBigLedgerPeersForTrustedState)
 
 
 -- This is a simple test to check that the POM technique is working as intended.

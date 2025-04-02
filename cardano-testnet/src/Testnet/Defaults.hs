@@ -52,7 +52,6 @@ import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
 import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
@@ -112,7 +111,7 @@ defaultAlonzoGenesis sbe = do
         Nothing -> Left $ AlonzoGenErrTooMuchPrecision r
         Just s -> return s
 
-defaultConwayGenesis :: ConwayGenesis StandardCrypto
+defaultConwayGenesis :: ConwayGenesis
 defaultConwayGenesis =
   let upPParams :: UpgradeConwayPParams Identity
       upPParams = UpgradeConwayPParams
@@ -376,7 +375,7 @@ defaultShelleyGenesis
   -> UTCTime
   -> Word64
   -> GenesisOptions
-  -> Api.ShelleyGenesis StandardCrypto
+  -> Api.ShelleyGenesis
 defaultShelleyGenesis asbe startTime maxSupply options = do
   let GenesisOptions
         { genesisTestnetMagic = magic
@@ -425,8 +424,8 @@ mkProtVer (majorProtVer, minorProtVer) =
     Just pVer -> pVer
     Nothing -> error "mkProtVer: invalid protocol version"
 
-ppProtocolVersionL' ::  Lens' (PParams (Ledger.ShelleyEra StandardCrypto)) ProtVer
-ppProtocolVersionL' = Ledger.ppLens . Ledger.hkdProtocolVersionL @(Ledger.ShelleyEra StandardCrypto) @Identity
+ppProtocolVersionL' ::  Lens' (PParams Ledger.ShelleyEra) ProtVer
+ppProtocolVersionL' = Ledger.ppLens . Ledger.hkdProtocolVersionL @Ledger.ShelleyEra @Identity
 
 defaultMainnetTopology :: NetworkTopology
 defaultMainnetTopology =

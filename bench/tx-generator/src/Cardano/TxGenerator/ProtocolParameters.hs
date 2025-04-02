@@ -36,7 +36,13 @@ where
 
 --------------------------------------------------------------------------------
 
-import GHC.Generics
+import           Cardano.Api (AnyPlutusScriptVersion (..), CostModel, ExecutionUnits,
+                   PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3), PraosNonce,
+                   ProtocolParametersConversionError (..), makePraosNonce)
+import           Cardano.Api.Shelley (ExecutionUnitPrices (..), LedgerProtocolParameters (..),
+                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraMary, ShelleyBasedEraShelley),
+                   ShelleyLedgerEra, fromAlonzoCostModels, fromAlonzoExUnits, fromAlonzoPrices,
+                   toAlonzoCostModels, toAlonzoExUnits, toAlonzoPrices, toLedgerNonce)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -47,45 +53,18 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 
+import           Data.Aeson ((.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Aeson( (.!=), (.:), (.:?), (.=) )
 import qualified Data.Aeson.KeyMap as KeyMap
-import Data.Either.Combinators (maybeToRight)
-import Data.Int (Int64)
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import qualified Data.Scientific as Scientific
 import qualified Data.Text as Text
-import Data.Word (Word16)
-import Lens.Micro ( (^.), (.~), (&) )
-import Numeric.Natural (Natural)
-
-import Cardano.Api (
-    AnyPlutusScriptVersion (..)
-  , PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3)
-  , ExecutionUnits
-  , ProtocolParametersConversionError (..)
-
-  , CostModel
-
-  , PraosNonce, makePraosNonce
-  )
-import Cardano.Api.Shelley (
-    LedgerProtocolParameters (..)
-  , ShelleyBasedEra (
-        ShelleyBasedEraShelley
-      , ShelleyBasedEraAllegra
-      , ShelleyBasedEraMary
-      , ShelleyBasedEraAlonzo
-      , ShelleyBasedEraBabbage
-      , ShelleyBasedEraConway
-    )
-  , ShelleyLedgerEra
-  , toAlonzoExUnits, fromAlonzoExUnits
-  , ExecutionUnitPrices (..), toAlonzoPrices, fromAlonzoPrices
-  , toAlonzoCostModels
-  , fromAlonzoCostModels
-  , toLedgerNonce
-  )
+import           Data.Word (Word16)
+import           GHC.Generics
+import           Lens.Micro ((&), (.~), (^.))
+import           Numeric.Natural (Natural)
 
 -- Era based ledger protocol parameters.
 --------------------------------------------------------------------------------
@@ -488,9 +467,8 @@ toAlonzoCommonPParams
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
 toAlonzoPParams
-  :: Ledger.Crypto crypto
-  => ProtocolParameters
-  -> Either ProtocolParametersConversionError (PParams (Ledger.AlonzoEra crypto))
+  :: ProtocolParameters
+  -> Either ProtocolParametersConversionError (PParams Ledger.AlonzoEra)
 toAlonzoPParams
   protocolParameters@ProtocolParameters
     { protocolParamDecentralization

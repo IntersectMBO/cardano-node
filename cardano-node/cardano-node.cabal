@@ -146,7 +146,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.11.1
+                      , cardano-api ^>= 10.12
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -175,8 +175,9 @@ library
                       , formatting
                       , generic-data
                       , hostname
-                      , io-classes >= 1.4
+                      , io-classes >= 1.5
                       , iohk-monitoring ^>= 0.2
+                      , microlens
                       , iproute
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg ^>= 0.2
@@ -187,14 +188,14 @@ library
                       , network-mux >= 0.5
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.22
-                      , ouroboros-consensus-cardano ^>= 0.21
-                      , ouroboros-consensus-diffusion ^>= 0.20
+                      , ouroboros-consensus ^>= 0.23
+                      , ouroboros-consensus-cardano ^>= 0.22
+                      , ouroboros-consensus-diffusion ^>= 0.21
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.12
-                      , ouroboros-network ^>= 0.19.0.3
+                      , ouroboros-network-api ^>= 0.13
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.13
+                      , ouroboros-network-protocols ^>= 0.14
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues

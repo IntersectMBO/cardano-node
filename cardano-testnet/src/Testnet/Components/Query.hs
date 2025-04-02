@@ -42,8 +42,7 @@ module Testnet.Components.Query
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole),
-                   StandardCrypto)
+import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import           Cardano.Ledger.Api (ConwayGovState)
@@ -53,7 +52,6 @@ import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UMap as L
-import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
@@ -304,7 +302,7 @@ findAllUtxos
 findAllUtxos epochStateView sbe = withFrozenCallStack $ do
   AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
-  pure $ fromLedgerUTxO' $ newEpochState ^. L.nesEsL . L.esLStateL . L.lsUTxOStateL . L.utxosUtxoL
+  pure $ fromLedgerUTxO' $ newEpochState ^. L.nesEsL . L.esLStateL . L.lsUTxOStateL . L.utxoL
   where
     fromLedgerUTxO'
       :: ()
@@ -409,8 +407,8 @@ checkDRepState
   => MonadTest m
   => EpochStateView
   -> ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
-  -> (Map (Credential 'DRepRole StandardCrypto)
-          (DRepState StandardCrypto)
+  -> (Map (Credential 'DRepRole)
+          DRepState
       -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
                   -- and potentially inspects it.
   -> m a
@@ -596,7 +594,7 @@ getKeyDeposit epochStateView ceo = conwayEraOnwardsConstraints ceo $ do
 -- | Returns delegation state from the epoch state.
 getDelegationState :: (H.MonadAssertion m, MonadTest m, MonadIO m)
   => EpochStateView
-  -> m (L.StakeCredentials StandardCrypto)
+  -> m L.StakeCredentials
 getDelegationState epochStateView = do
   AnyNewEpochState sbe newEpochState <- getEpochState epochStateView
   let pools = shelleyBasedEraConstraints sbe $ newEpochState

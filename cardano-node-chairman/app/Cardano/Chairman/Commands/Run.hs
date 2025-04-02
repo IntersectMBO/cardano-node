@@ -12,6 +12,7 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import           Cardano.Chairman (chairmanTest)
+import           Cardano.Ledger.BaseTypes (unNonZero)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),
                    parseNodeConfigurationFP)
 import           Cardano.Node.Protocol
@@ -137,7 +138,7 @@ run RunOpts
   getConsensusMode (SecurityParam k) ncProtocolConfig =
     case ncProtocolConfig of
       NodeProtocolConfigurationCardano{} ->
-        CardanoModeParams $ EpochSlots k
+        CardanoModeParams $ EpochSlots $ unNonZero k
 
   getProtocolConfiguration
     :: PartialNodeConfiguration
