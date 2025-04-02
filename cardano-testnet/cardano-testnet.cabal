@@ -194,6 +194,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.StakeSnapshot
                         Cardano.Testnet.Test.Cli.Transaction
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
+                        Cardano.Testnet.Test.DumpConfig
                         Cardano.Testnet.Test.FoldEpochState
                         Cardano.Testnet.Test.Gov.CommitteeAddNew
                         Cardano.Testnet.Test.Gov.DRepActivity
@@ -229,6 +230,7 @@ test-suite cardano-testnet-test
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-prelude
                       , cardano-slotting
                       , cardano-strict-containers ^>= 0.1
                       , cardano-testnet
