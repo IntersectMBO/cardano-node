@@ -2,6 +2,8 @@
 
 ## Next version
 
+- Add a new configuration field for fork-policy.
+
 - Optionally support lightweight checkpointing.
 
   This PR adds optional support for *lightweight checkpointing*. Concretely, a file can contain a list of checkpoints (each consisting of a block number and a corresponding block hash). When validating a header/block with a block number with a corresponding checkpoint, we consider the header/block to be invalid if their actual hash does not coincide with the hash from the checkpoint.
