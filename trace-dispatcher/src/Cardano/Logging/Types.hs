@@ -82,7 +82,7 @@ import           Network.Socket (PortNumber)
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
 --   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.
 newtype Trace m a = Trace
-  {unpackTrace :: T.Tracer m (LoggingContext, Either TraceControl a)}
+                            {unpackTrace :: T.Tracer m (LoggingContext, Either TraceControl a)}
 
 -- | Contramap lifted to Trace
 instance Monad m => T.Contravariant (Trace m) where
