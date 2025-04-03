@@ -15,7 +15,6 @@ module Main (module Main) where
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as Api
 import           Cardano.Api.Shelley (fromPlutusData, sgNetworkMagic)
-import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters (..))
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
@@ -50,6 +49,7 @@ import           System.FilePath
 
 import           Paths_tx_generator
 import qualified PlutusTx
+import Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 
 
 data CommandLine = CommandLine {
