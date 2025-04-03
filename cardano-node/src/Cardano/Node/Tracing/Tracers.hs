@@ -143,8 +143,14 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                 ["ChainDB", "ReplayBlock"]
     configureTracers configReflection trConfig [replayBlockTr]
 
-    -- This tracer handles replayed blocks specially
     !replayBlockTr' <- withReplayedBlock replayBlockTr
+
+    -- This tracer handles replayed blocks specially
+    let replayBlockTr'' = filterTrace
+                          (\case (_, ChainDB.TraceLedgerReplayEvent
+                                       LedgerDB.ReplayedBlock {}) -> True
+                                 (_, _) -> False)
+                          replayBlockTr'
 
 
     !consensusTr <-
@@ -180,7 +186,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     pure Tracers
       {
         chainDBTracer = Tracer (traceWith chainDBTr')
-                      <> Tracer (traceWith replayBlockTr')
+                      <> Tracer (traceWith replayBlockTr'')
                       <> Tracer (SR.traceNodeStateChainDB p nodeStateDP)
       , consensusTracers = consensusTr
       , nodeToClientTracers = nodeToClientTr

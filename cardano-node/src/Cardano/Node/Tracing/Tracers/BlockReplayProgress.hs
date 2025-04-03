@@ -18,16 +18,19 @@ import           Control.Monad.IO.Class (MonadIO)
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 
+
 data ReplayBlockStats = ReplayBlockStats
   { rpsDisplay      :: Bool
   , rpsCurSlot      :: SlotNo
   , rpsGoalSlot     :: SlotNo
   , rpsProgress     :: Double
   , rpsLastProgress :: Double
-  }
+  , rpsFinished     :: Bool
+  } deriving Show
+
 
 emptyReplayBlockStats :: ReplayBlockStats
-emptyReplayBlockStats = ReplayBlockStats False 0 0 0.0 0.0
+emptyReplayBlockStats = ReplayBlockStats False 0 0 0.0 0.0 False
 
 --------------------------------------------------------------------------------
 -- ReplayBlockStats Tracer
@@ -49,7 +52,7 @@ instance LogFormatting ReplayBlockStats where
         in fromIntegral f / 100
 
   asMetrics ReplayBlockStats {..} =
-     [DoubleM "blockReplayProgress" rpsProgress]
+      [DoubleM "blockReplayProgress" rpsProgress]
 
 instance MetaTrace ReplayBlockStats where
   namespaceFor ReplayBlockStats {} = Namespace [] ["LedgerReplay"]
@@ -89,8 +92,10 @@ replayBlockStats ReplayBlockStats {..} _context
       let slotno = realPointSlot pt
           endslot = withOrigin 0 id $ pointSlot replayTo
           progress' = (fromIntegral (unSlotNo slotno) * 100.0) / fromIntegral (unSlotNo $ max slotno endslot)
+          finished = unSlotNo slotno == unSlotNo endslot
       pure $ if (progress' == 0.0 && not rpsDisplay)
                 || ((progress' - rpsLastProgress) > 0.1)
-                then ReplayBlockStats True slotno endslot progress' progress'
-                else ReplayBlockStats False slotno endslot progress' rpsLastProgress
-replayBlockStats st@ReplayBlockStats {} _context _ = pure st
+                || (finished && not rpsFinished)
+                then ReplayBlockStats True slotno endslot progress' progress' finished
+                else ReplayBlockStats False slotno endslot progress' rpsLastProgress rpsFinished
+replayBlockStats st@ReplayBlockStats {} _context _tr = pure st
