@@ -8,9 +8,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
+  , NCForkPolicy (..)
   , NetworkP2PMode (..)
   , SomeNetworkP2PMode (..)
   , PartialNodeConfiguration(..)
@@ -21,6 +24,7 @@ module Cardano.Node.Configuration.POM
   , parseNodeConfigurationFP
   , pncProtocol
   , ncProtocol
+  , getForkPolicy
   )
 where
 
@@ -34,24 +38,29 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.OrphanInstances.Network ()
+import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytesOverride (..))
-import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..), pattern DoDiskSnapshotChecksum)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
-import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags, defaultGenesisConfigFlags, mkGenesisConfig)
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..), Flag (..))
-import qualified Ouroboros.Cardano.Network.Diffusion.Configuration as Cardano
-import           Ouroboros.Network.Diffusion.Configuration
-                   (AcceptedConnectionsLimit (..), ConsensusMode (..), DiffusionMode (..),
-                   PeerSelectionTargets (..), PeerSharing (..))
+import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..),
+                   pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
+                   defaultGenesisConfigFlags, mkGenesisConfig)
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag (..),
+                   NumOfDiskSnapshots (..), SnapshotInterval (..))
+import           Ouroboros.Network.Diffusion.Configuration (AcceptedConnectionsLimit (..),
+                   ConsensusMode (..), DiffusionMode (..), PeerSelectionTargets (..),
+                   PeerSharing (..))
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
+import           Ouroboros.Network.Mux (ForkPolicy, noBindForkPolicy, responderForkPolicy)
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 
-import           Control.Monad (when, unless)
+import           Control.Concurrent (getNumCapabilities)
+import           Control.Monad (unless, when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Hashable (Hashable)
 import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -61,6 +70,7 @@ import           Data.Yaml (decodeFileThrow)
 import           GHC.Generics (Generic)
 import           Options.Applicative
 import           System.FilePath (takeDirectory, (</>))
+import           System.Random (randomIO)
 
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -187,8 +197,16 @@ data NodeConfiguration
 
          -- Ouroboros Genesis
        , ncGenesisConfig :: GenesisConfig
+
+       , ncForkPolicy :: NCForkPolicy
        } deriving (Eq, Show)
 
+data NCForkPolicy = NoBindForkPolicy | ResponderForkPolicy deriving (Eq, Show, Generic, FromJSON)
+
+getForkPolicy :: Hashable peerAddr => NCForkPolicy -> IO (ForkPolicy peerAddr)
+getForkPolicy = \case
+  NoBindForkPolicy -> pure noBindForkPolicy
+  ResponderForkPolicy -> responderForkPolicy <$> randomIO <*> getNumCapabilities
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
@@ -264,6 +282,8 @@ data PartialNodeConfiguration
 
          -- Ouroboros Genesis
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
+
+       , pncForkPolicy :: !(Last NCForkPolicy)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -376,6 +396,8 @@ instance FromJSON PartialNodeConfiguration where
       -- pncConsensusMode determines whether Genesis is enabled in the first place.
       pncGenesisConfigFlags <- Last <$> v .:? "LowLevelGenesisOptions"
 
+      pncForkPolicy <- Last <$> v .:? "ForkPolicy"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -418,6 +440,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncEnableP2P
            , pncPeerSharing
            , pncGenesisConfigFlags
+           , pncForkPolicy
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -610,6 +633,7 @@ defaultPartialNodeConfiguration =
     , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just Ouroboros.defaultPeerSharing)
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
+    , pncForkPolicy = Last $ Just NoBindForkPolicy
     }
   where
     PeerSelectionTargets {
@@ -716,6 +740,8 @@ makeNodeConfiguration pnc = do
       $ pncGenesisConfigFlags pnc
   let ncGenesisConfig = mkGenesisConfig mGenesisConfigFlags
 
+  ncForkPolicy <- lastToEither "Missing ForkPolicy" $ pncForkPolicy pnc
+
   let deadlineTargets =
         PeerSelectionTargets {
           targetNumberOfRootPeers = ncDeadlineTargetOfRootPeers,
@@ -797,6 +823,7 @@ makeNodeConfiguration pnc = do
              , ncPeerSharing
              , ncConsensusMode
              , ncGenesisConfig
+             , ncForkPolicy
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
