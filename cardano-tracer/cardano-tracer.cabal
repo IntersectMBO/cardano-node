@@ -129,7 +129,6 @@ library
                         Cardano.Tracer.Handlers.Notifications.Email
                         Cardano.Tracer.Handlers.Notifications.Send
                         Cardano.Tracer.Handlers.Notifications.Settings
-                        Cardano.Tracer.Handlers.Notifications.Timer
                         Cardano.Tracer.Handlers.Notifications.Types
                         Cardano.Tracer.Handlers.Notifications.Utils
 
@@ -147,7 +146,8 @@ library
                         Cardano.Tracer.Types
                         Cardano.Tracer.Utils
 
-  other-modules:        Paths_cardano_tracer
+  other-modules:        Cardano.Tracer.Handlers.Notifications.Timer
+                        Paths_cardano_tracer
   autogen-modules:      Paths_cardano_tracer
 
   if flag(rtview)

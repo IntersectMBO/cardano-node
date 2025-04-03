@@ -1,68 +1,113 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE StrictData #-}
 
 module Cardano.Tracer.Handlers.Notifications.Timer
   ( PeriodInSec
-  , Timer
+  , Timer(..)
   , mkTimer
-  , setCallPeriod
-  , startTimer
-  , stopTimer
+  , mkTimerStderr
+  , mkTimerStderrDieOnFailure
+  , mkTimerDieOnFailure
   ) where
 
-import           Control.Concurrent (forkIO)
-import           Control.Concurrent.STM (TVar, atomically, modifyTVar', newTVarIO, readTVarIO)
-import           Control.Monad (forever, void)
+import           "trace-dispatcher" Cardano.Logging.Types (Trace(..))
+import           Cardano.Tracer.MetaTrace (TracerTrace(TracerError), traceWith, stderrShowTracer)
+import           Control.Concurrent (forkIO, myThreadId, killThread)
+import           Control.Exception
 import           Control.Monad.Extra (whenM)
+import           Data.IORef (newIORef, readIORef, modifyIORef')
+import           Data.Kind (Type)
 import           Data.Word (Word32)
+import qualified Data.Text as Text (pack)
+import           GHC.Conc (threadStatus, ThreadStatus (ThreadRunning))
 import           System.Time.Extra (sleep)
 
+type PeriodInSec :: Type
 type PeriodInSec = Word32
 
+checkPeriod :: PeriodInSec
+checkPeriod = 1
+
+traceOnly :: Trace IO TracerTrace -> String -> IO ()
+traceOnly tracer = 
+  traceWith tracer . TracerError . Text.pack
+
+type Timer :: Type
 data Timer = Timer
-  { tCallPeriod  :: !(TVar PeriodInSec)
-  , tElapsedTime :: !(TVar PeriodInSec)
-  , tIsRunning   :: !(TVar Bool)
+  { threadAlive   :: !(IO Bool)
+  , threadKill    :: !(IO ())
+  , setCallPeriod :: !(PeriodInSec -> IO ())
+  , startTimer    :: !(IO ())
+  , stopTimer     :: !(IO ())
   }
 
 mkTimer
+  :: Trace IO TracerTrace
+  -> IO ()
+  -> Bool
+  -> PeriodInSec
+  -> IO Timer
+mkTimer = mkTimerOnFailure (pure ()) 
+
+mkTimerStderr
   :: IO ()
   -> Bool
   -> PeriodInSec
   -> IO Timer
-mkTimer ioAction state callPeriodInS = do
-  callPeriod  <- newTVarIO callPeriodInS
-  elapsedTime <- newTVarIO 0
-  isRunning   <- newTVarIO state
+mkTimerStderr = mkTimer stderrShowTracer
 
-  void . forkIO $ forever $ do
-    sleep $ fromIntegral checkPeriod
-    whenM (readTVarIO isRunning) $ do
-      period  <- readTVarIO callPeriod
-      elapsed <- readTVarIO elapsedTime
-      if elapsed < period
-        then
-          -- Ok, just continue to wait.
-          atomically $ modifyTVar' elapsedTime $ \current -> current + checkPeriod
-        else do
-          -- Done, we are ready to call the action.
-          ioAction
-          -- Reset elapsed time.
-          atomically $ modifyTVar' elapsedTime . const $ 0
+mkTimerStderrDieOnFailure
+  :: IO ()
+  -> Bool
+  -> PeriodInSec
+  -> IO Timer
+mkTimerStderrDieOnFailure = mkTimerDieOnFailure stderrShowTracer
 
-  return $
-    Timer
-      { tCallPeriod  = callPeriod
-      , tElapsedTime = elapsedTime
-      , tIsRunning   = isRunning
-      }
- where
-  checkPeriod :: PeriodInSec
-  checkPeriod = 1
+mkTimerDieOnFailure
+  :: Trace IO TracerTrace
+  -> IO ()
+  -> Bool
+  -> PeriodInSec
+  -> IO Timer
+mkTimerDieOnFailure = mkTimerOnFailure (killThread =<< myThreadId)
 
-startTimer, stopTimer :: Timer -> IO ()
-startTimer Timer{tIsRunning} = atomically $ modifyTVar' tIsRunning . const $ True
-stopTimer  Timer{tIsRunning} = atomically $ modifyTVar' tIsRunning . const $ False
+mkTimerOnFailure
+  :: IO ()
+  -> Trace IO TracerTrace
+  -> IO ()
+  -> Bool
+  -> PeriodInSec
+  -> IO Timer
+mkTimerOnFailure onFailure tracer io state callPeriod_sec = do
+  callPeriod  <- newIORef callPeriod_sec
+  elapsedTime <- newIORef 0
+  isRunning   <- newIORef state
 
-setCallPeriod :: Timer -> PeriodInSec -> IO ()
-setCallPeriod Timer{tCallPeriod} p = atomically $ modifyTVar' tCallPeriod . const $ p
+  let wait  :: IO () = modifyIORef' elapsedTime (+ checkPeriod)
+  let reset :: IO () = modifyIORef' elapsedTime (const 0)
+  let tryIO :: IO () = try @SomeException io >>= \case
+        Left exception -> do
+          traceOnly tracer (displayException exception)
+          onFailure 
+        _ -> reset
+
+  let run ::  IO ()
+      run = do
+        sleep (fromIntegral checkPeriod)
+        whenM (readIORef isRunning) do
+          period  <- readIORef callPeriod
+          elapsed <- readIORef elapsedTime
+          if elapsed < period then wait else tryIO
+          run
+
+  threadId <- forkIO run
+
+  pure Timer
+    { threadAlive   = (== ThreadRunning) <$> threadStatus threadId
+    , threadKill    = killThread threadId
+    , setCallPeriod = modifyIORef' callPeriod . const
+    , startTimer    = modifyIORef' isRunning (const True)
+    , stopTimer     = modifyIORef' isRunning (const False)
+    }
 
