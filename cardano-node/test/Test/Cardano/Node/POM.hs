@@ -270,7 +270,7 @@ eExpectedConfig = do
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
-    , ncForkPolicy = ResponderForkPolicy
+    , ncForkPolicy = NoBindForkPolicy
     }
 
 -- -----------------------------------------------------------------------------
