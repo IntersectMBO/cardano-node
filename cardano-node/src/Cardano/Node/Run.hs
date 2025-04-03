@@ -25,6 +25,7 @@ module Cardano.Node.Run
 
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
+import           System.Random (randomIO)
 
 import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
@@ -36,7 +37,7 @@ import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLo
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..), TimeoutOverride (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
+                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP, getForkPolicy)
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
@@ -113,7 +114,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
-import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
+import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, IOException)
 import qualified Control.Exception as Exception
@@ -153,7 +154,7 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 import           Paths_cardano_node (version)
-import Ouroboros.Network.Mux (noBindForkPolicy)
+import Ouroboros.Network.Mux (noBindForkPolicy, responderForkPolicy, ForkPolicy)
 
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -536,9 +537,11 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               )
               Nothing
 #endif
+        nForkPolicy <- getForkPolicy $ ncForkPolicy nc
+        cForkPolicy <- getForkPolicy $ ncForkPolicy nc
         void $
           let diffusionArgumentsExtra =
-                mkP2PArguments nc
+                mkP2PArguments nForkPolicy cForkPolicy nc
                   (readTVar localRootsVar)
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
@@ -924,7 +927,9 @@ checkVRFFilePermissions (File vrfPrivKey) = do
 
 mkP2PArguments
   :: Ord ntnAddr
-  => NodeConfiguration
+  => ForkPolicy ntnAddr
+  -> ForkPolicy ntcAddr
+  -> NodeConfiguration
   -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
@@ -951,7 +956,7 @@ mkP2PArguments
       Resolver
       IOException
       IO
-mkP2PArguments NodeConfiguration {
+mkP2PArguments nForkPolicy cForkPolicy NodeConfiguration {
                  ncDeadlineTargetOfRootPeers,
                  ncDeadlineTargetOfKnownPeers,
                  ncDeadlineTargetOfEstablishedPeers,
@@ -1007,8 +1012,8 @@ mkP2PArguments NodeConfiguration {
               Cardano.PublicRoots.getPublicConfigPeers = publicRoots,
               Cardano.PublicRoots.getBootstrapPeers = Set.empty
             }
-      , P2P.daMuxForkPolicy = noBindForkPolicy
-      , P2P.daLocalMuxForkPolicy = noBindForkPolicy
+      , P2P.daMuxForkPolicy = nForkPolicy
+      , P2P.daLocalMuxForkPolicy = cForkPolicy
       }
   where
     peerSelectionTargets = Configuration.defaultDeadlineTargets {
