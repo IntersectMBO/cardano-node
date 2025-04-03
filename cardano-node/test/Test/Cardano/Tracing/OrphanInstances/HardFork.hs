@@ -11,7 +11,7 @@
 -- The examples can be best viewed using a tool like 'jq'.
 module Test.Cardano.Tracing.OrphanInstances.HardFork (tests) where
 
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Protocol.Crypto (StandardCrypto)
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
@@ -65,7 +65,7 @@ ntc_HFV1_allDisabled ::
     (Consensus.Cardano.CardanoEras StandardCrypto)
 ntc_HFV1_allDisabled =
   Consensus.HardForkNodeToClientEnabled
-    Consensus.HardForkSpecificNodeToClientVersion1
+    Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientDisabled -- Byron
       :* Consensus.EraNodeToClientDisabled -- Shelley
       :* Consensus.EraNodeToClientDisabled -- Allegra
@@ -81,7 +81,7 @@ ntc_HFV1_ByronV1 ::
     (Consensus.Cardano.CardanoEras StandardCrypto)
 ntc_HFV1_ByronV1 =
   Consensus.HardForkNodeToClientEnabled
-    Consensus.HardForkSpecificNodeToClientVersion1
+    Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientEnabled Consensus.Cardano.ByronNodeToClientVersion1 -- Byron
       :* Consensus.EraNodeToClientDisabled -- Shelley
       :* Consensus.EraNodeToClientDisabled -- Allegra
@@ -97,9 +97,9 @@ ntc_HFV1_ByronV1_ShelleyV1 ::
     (Consensus.Cardano.CardanoEras StandardCrypto)
 ntc_HFV1_ByronV1_ShelleyV1 =
   Consensus.HardForkNodeToClientEnabled
-    Consensus.HardForkSpecificNodeToClientVersion1
+    Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientEnabled Consensus.Cardano.ByronNodeToClientVersion1   -- Byron
-      :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion1 -- Shelley
+      :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion8 -- Shelley
       :* Consensus.EraNodeToClientDisabled -- Allegra
       :* Consensus.EraNodeToClientDisabled -- Mary
       :* Consensus.EraNodeToClientDisabled -- Alonzo
@@ -113,14 +113,14 @@ ntc_HFV1_ByronV1_ShelleyV6_ConwayV2 ::
     (Consensus.Cardano.CardanoEras StandardCrypto)
 ntc_HFV1_ByronV1_ShelleyV6_ConwayV2 =
   Consensus.HardForkNodeToClientEnabled
-    Consensus.HardForkSpecificNodeToClientVersion1
+    Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientEnabled Consensus.Cardano.ByronNodeToClientVersion1   -- Byron
-      :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion6 -- Shelley
+      :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion8 -- Shelley
       :* Consensus.EraNodeToClientDisabled -- Allegra
       :* Consensus.EraNodeToClientDisabled -- Mary
       :* Consensus.EraNodeToClientDisabled -- Alonzo
       :* Consensus.EraNodeToClientDisabled -- Babbage
-      :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion2 -- Conway
+      :* Consensus.EraNodeToClientEnabled Consensus.Cardano.ShelleyNodeToClientVersion8 -- Conway
       :* Nil
     )
 

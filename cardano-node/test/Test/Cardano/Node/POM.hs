@@ -32,7 +32,7 @@ import           Data.Time.Clock (secondsToDiffTime)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
-import Ouroboros.Cardano.Diffusion.Configuration (defaultMinBigLedgerPeersForTrustedState)
+import Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -166,6 +166,7 @@ testPartialYamlConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
+    , pncForkPolicy = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -209,11 +210,12 @@ testPartialCliConfig =
     , pncSyncTargetOfKnownBigLedgerPeers = mempty
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
-    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
+    , pncForkPolicy = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -263,11 +265,12 @@ eExpectedConfig = do
     , ncSyncTargetOfKnownBigLedgerPeers = 100
     , ncSyncTargetOfEstablishedBigLedgerPeers = 50
     , ncSyncTargetOfActiveBigLedgerPeers = 30
-    , ncMinBigLedgerPeersForTrustedState = defaultMinBigLedgerPeersForTrustedState
+    , ncMinBigLedgerPeersForTrustedState = defaultNumberOfBigLedgerPeers
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
+    , ncForkPolicy = ResponderForkPolicy
     }
 
 -- -----------------------------------------------------------------------------
