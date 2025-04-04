@@ -9,7 +9,8 @@
 , profiling
 , nodeSpecs
 
-, profileJson, topologyJsonPath
+# Derivations used to generate the topology projections
+, profileJsonPath, topologyJsonPath
 }:
 
 with pkgs.lib;
@@ -202,7 +203,7 @@ let
 
  topologiesJsonPaths =
     let projections =
-          pkgs.runCommand "workbench-profile-files-topologies-${profileName}"
+          pkgs.runCommand "workbench-profile-files-${profileName}-topologies"
             { nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
               [ bash coreutils gnused jq moreutils workbenchNix.workbench ]; # cardano-cli
             }
@@ -215,7 +216,7 @@ let
                     wb topology projection-for     \
                     "local-${nodeSpec.kind}"       \
                     "${toString nodeSpec.i}"       \
-                    "${profileJson}"               \
+                    "${profileJsonPath}"           \
                     "${topologyJsonPath}"          \
                     "${toString backend.basePort}" \
                   > "$out"/"topology-${name}.json"

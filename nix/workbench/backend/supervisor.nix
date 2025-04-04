@@ -28,18 +28,18 @@ let
 
   # Backend-specific Nix bits:
   materialise-profile =
-    { profileData }:
+    { profileBundle }:
       let supervisorConf = import ./supervisor-conf.nix
         { inherit pkgs lib stateDir;
           # Create a `supervisord.conf`
-          inherit profileData;
-          nodeSpecs = profileData.node-specs.value;
+          profile = profileBundle.profile.value;
+          nodeSpecs = profileBundle.node-specs.value;
           withGenerator = true;
-          withTracer = profileData.value.node.tracer;
+          withTracer = profileBundle.profile.value.node.tracer;
           withSsh = false;
           inetHttpServerPort = "127.0.0.1:9001";
         };
-      in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-supervisor"
+      in pkgs.runCommand "workbench-backend-data-${profileBundle.profile.value.name}-supervisor"
         {supervisorConfPath = supervisorConf.INI;}
         ''
         mkdir $out

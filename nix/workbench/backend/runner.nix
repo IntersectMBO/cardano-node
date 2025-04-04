@@ -17,10 +17,12 @@ let
   backendName = backend.name;
   inherit (backend) stateDir basePort useCabalRun;
 
-  profileData = profile.materialise-profile
-    { inherit backend; };
-  backendData = backend.materialise-profile
-    { inherit profileData; };
+  profileBundle  = profile.profileBundle { inherit backend; };
+
+  profileDataDir = profile.materialise-profile
+    { inherit profileBundle; };
+  backendDataDir = backend.materialise-profile
+    { inherit profileBundle; };
 in
   let
 
@@ -39,8 +41,8 @@ in
 
       wb start \
         --batch-name   ${batchName} \
-        --profile-data ${profileData} \
-        --backend-data ${backendData} \
+        --profile-data ${profileDataDir} \
+        --backend-data ${backendDataDir} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ${pkgs.lib.optionalString useCabalRun ''--cabal''} \
@@ -63,8 +65,8 @@ in
 
     workbench-profile-run =
       let
-        profileJson = profile.profileJson;
-        nodeSpecsJson = profile.nodeSpecsJson;
+        profileJson = profileBundle.profile.JSON;
+        nodeSpecsJson = profileBundle.node-specs.JSON;
         genesisFiles =
           pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
             { requiredSystemFeatures = [ "benchmark" ];
@@ -136,8 +138,8 @@ in
             cmd=(
               wb
               start
-              --profile-data        ${profileData}
-              --backend-data        ${backendData}
+              --profile-data        ${profileDataDir}
+              --backend-data        ${backendDataDir}
               --genesis-cache-entry ${genesisFiles}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
@@ -174,7 +176,7 @@ in
             report workbench-log   $out wb-start.log
             report meta            $out meta.json
             ${pkgs.lib.concatStringsSep "\n"
-              (map nodeBuildProduct (__attrNames profileData.node-specs.value))}
+              (map nodeBuildProduct (__attrNames profileBundle.node-specs.value))}
             report archive-tar-zst $out archive.tar.zst
             EOF
 
@@ -219,8 +221,10 @@ in
 
 in
 {
-  inherit profileName profileData;
-  inherit backend backendData;
+  inherit profileName;
+  profile = profileBundle.profile.value;
+  inherit profileDataDir;
+  inherit backend backendDataDir;
   inherit profiling;
   inherit workbench-profile-run;
 
