@@ -2258,7 +2258,7 @@ instance MetaTrace (Jumping.TraceEventCsj peer blk) where
   allNamespaces = []
 
 --------------------------------------------------------------------------------
--- DBF Tracer
+-- Devoted BlockFetch Tracer
 --------------------------------------------------------------------------------
 
 instance ( LogFormatting peer, Show peer

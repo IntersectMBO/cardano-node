@@ -202,7 +202,7 @@ getAllNamespaces =
                         (allNamespaces :: [Namespace (TraceGsmEvent (Tip blk))])
         csjNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "CSJ"])
                         (allNamespaces :: [Namespace (Jumping.TraceEventCsj peer blk)])
-        dbfNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "DBF"])
+        dbfNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "DevotedBlockFetch"])
                         (allNamespaces :: [Namespace (Jumping.TraceEventDbf peer)])
 
 -- Node to client
