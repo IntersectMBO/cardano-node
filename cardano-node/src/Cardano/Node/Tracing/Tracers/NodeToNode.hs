@@ -406,18 +406,18 @@ instance ToJSON addr => LogFormatting (AnyMessage (PS.PeerSharing addr)) where
 
 instance MetaTrace (AnyMessage (PS.PeerSharing addr)) where
     namespaceFor (AnyMessageAndAgency _stok PS.MsgShareRequest {}) =
-      Namespace [] ["ShareRequest"]
+      Namespace [] ["PeerShareRequest"]
     namespaceFor (AnyMessageAndAgency _stok PS.MsgSharePeers {}) =
-      Namespace [] ["SharePeers"]
+      Namespace [] ["PeerShareResult"]
     namespaceFor (AnyMessageAndAgency _stok PS.MsgDone) =
-      Namespace [] ["Done"]
+      Namespace [] ["PeerShareDone"]
 
-    severityFor (Namespace _ ["ShareRequest"]) _ = Just Info
-    severityFor (Namespace _ ["SharePeers"]) _ = Just Info
-    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["PeerShareRequest"]) _ = Just Debug
+    severityFor (Namespace _ ["PeerShareResult"]) _ = Just Info
+    severityFor (Namespace _ ["PeerShareDone"]) _ = Just Debug
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["ShareRequest"]) = Just
+    documentFor (Namespace _ ["PeerShareRequest"]) = Just
         "Client asks for peers."
     documentFor (Namespace _ ["SharePeers"]) = Just $ mconcat
       [ "Server responds with peers."
@@ -428,7 +428,7 @@ instance MetaTrace (AnyMessage (PS.PeerSharing addr)) where
     documentFor _ = Nothing
 
     allNamespaces = [
-        Namespace [] ["PeerSharing"]
-      , Namespace [] ["PeerSharingResponse"]
-      , Namespace [] ["Done"]
+        Namespace [] ["PeerShareRequest"]
+      , Namespace [] ["PeerShareResult"]
+      , Namespace [] ["PeerShareDone"]
       ]

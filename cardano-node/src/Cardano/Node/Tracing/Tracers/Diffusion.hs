@@ -422,6 +422,7 @@ instance MetaTrace Mux.Trace where
     severityFor (Namespace _ ["SDUWriteTimeoutException"]) _ = Just Notice
     severityFor (Namespace _ ["StartEagerly"]) _          = Just Debug
     severityFor (Namespace _ ["StartOnDemand"]) _         = Just Debug
+    severityFor (Namespace _ ["StartOnDemandAny"]) _        = Just Debug
     severityFor (Namespace _ ["StartedOnDemand"]) _       = Just Debug
     severityFor (Namespace _ ["Terminating"]) _           = Just Debug
     severityFor (Namespace _ ["Shutdown"]) _              = Just Debug
@@ -480,6 +481,8 @@ instance MetaTrace Mux.Trace where
       "Preparing to start."
     documentFor (Namespace _ ["StartedOnDemand"])       = Just
       "Started on demand."
+    documentFor (Namespace _ ["StartOnDemandAny"])      = Just
+      "Start whenever any other protocol has started."
     documentFor (Namespace _ ["Terminating"])           = Just
       "Terminating."
     documentFor (Namespace _ ["Stopping"])              = Just
@@ -517,6 +520,7 @@ instance MetaTrace Mux.Trace where
       , Namespace [] ["SDUWriteTimeoutException"]
       , Namespace [] ["StartEagerly"]
       , Namespace [] ["StartOnDemand"]
+      , Namespace [] ["StartOnDemandAny"]
       , Namespace [] ["StartedOnDemand"]
       , Namespace [] ["Terminating"]
       , Namespace [] ["Stopping"]
