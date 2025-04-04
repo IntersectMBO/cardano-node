@@ -928,13 +928,13 @@ instance (Show addr, ToJSON addr) => LogFormatting (PeerSelectionCounters (Carda
             , "activeNonRootPeers" .= numberOfActiveNonRootPeers
             , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
 
-            , "knownBootstrapPeers" .= Cardano.viewKnownBootstrapPeers extraCounters
-            , "coldBootstrapPeersPromotions" .= Cardano.viewColdBootstrapPeersPromotions extraCounters
-            , "establishedBootstrapPeers" .= Cardano.viewEstablishedBootstrapPeers extraCounters
-            , "warmBootstrapPeersDemotions" .= Cardano.viewWarmBootstrapPeersDemotions extraCounters
-            , "warmBootstrapPeersPromotions" .= Cardano.viewWarmBootstrapPeersPromotions extraCounters
-            , "activeBootstrapPeers" .= Cardano.viewActiveBootstrapPeers extraCounters
-            , "ActiveBootstrapPeersDemotions" .= Cardano.viewActiveBootstrapPeersDemotions extraCounters
+            , "knownBootstrapPeers" .= snd (Cardano.viewKnownBootstrapPeers extraCounters)
+            , "coldBootstrapPeersPromotions" .= snd (Cardano.viewColdBootstrapPeersPromotions extraCounters)
+            , "establishedBootstrapPeers" .= snd (Cardano.viewEstablishedBootstrapPeers extraCounters)
+            , "warmBootstrapPeersDemotions" .= snd (Cardano.viewWarmBootstrapPeersDemotions extraCounters)
+            , "warmBootstrapPeersPromotions" .= snd (Cardano.viewWarmBootstrapPeersPromotions extraCounters)
+            , "activeBootstrapPeers" .= snd (Cardano.viewActiveBootstrapPeers extraCounters)
+            , "ActiveBootstrapPeersDemotions" .= snd (Cardano.viewActiveBootstrapPeersDemotions extraCounters)
             ]
   forHuman = pack . show
   asMetrics psc =
