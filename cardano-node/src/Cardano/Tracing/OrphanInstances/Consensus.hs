@@ -1421,17 +1421,17 @@ instance ( LedgerSupportsProtocol blk,
 
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
 instance HasSeverityAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
-  getSeverityAnnotation _ = Info
-instance (ToJSON peer, ToObject peer, ConvertRawHash blk)
+  getSeverityAnnotation _ = Debug
+instance (ToObject peer, ConvertRawHash blk)
       => Transformable Text IO (TraceLabelPeer peer (ChainSync.Client.TraceEventCsj peer blk)) where
   trTransformer = trStructured
-instance (ToJSON peer, ConvertRawHash blk)
+instance (ToObject peer, ConvertRawHash blk)
       => ToObject (ChainSync.Client.TraceEventCsj peer blk) where
-    toObject _verb = \case
-      ChainSync.Client.BecomingObjector mbPeer ->
+    toObject verb = \case
+      ChainSync.Client.BecomingObjector prevObjector ->
         mconcat
           [ "kind" .= String "BecomingObjector"
-          , "peer" .= mbPeer
+          , "previousObjector" .= (toObject verb <$> prevObjector)
           ]
       ChainSync.Client.BlockedOnJump ->
         mconcat
@@ -1439,25 +1439,29 @@ instance (ToJSON peer, ConvertRawHash blk)
           ]
       ChainSync.Client.InitializedAsDynamo ->
         mconcat
-          [ "kind" .= String "BlockedOnJump"
+          [ "kind" .= String "InitializedAsDynamo"
           ]
-      ChainSync.Client.NoLongerDynamo mbPeer reason ->
+      ChainSync.Client.NoLongerDynamo newDynamo reason ->
         mconcat
           [ "kind" .= String "NoLongerDynamo"
-          , "peer" .= mbPeer
-          , "reason" .= String (pack . show $ reason)
+          , "newDynamo" .= (toObject verb <$> newDynamo)
+          , "reason" .= csjReasonToJSON reason
           ]
-      ChainSync.Client.NoLongerObjector mbPeer reason ->
+      ChainSync.Client.NoLongerObjector newObjector reason ->
         mconcat
           [ "kind" .= String "NoLongerObjector"
-          , "peer" .= mbPeer
-          , "reason" .= String (pack . show $ reason)
+          , "newObjector" .= (toObject verb <$> newObjector)
+          , "reason" .= csjReasonToJSON reason
           ]
-      ChainSync.Client.SentJumpInstruction point ->
+      ChainSync.Client.SentJumpInstruction jumpTarget ->
         mconcat
           [ "kind" .= String "SentJumpInstruction"
-          , "point" .= point
+          , "jumpTarget" .= toObject verb jumpTarget
           ]
+      where
+        csjReasonToJSON = \case
+          ChainSync.Client.BecauseCsjDisengage -> String "BecauseCsjDisengage"
+          ChainSync.Client.BecauseCsjDisconnect -> String "BecauseCsjDisconnect"
 
 
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEventDbf peer) where
