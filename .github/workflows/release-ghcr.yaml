@@ -85,6 +85,16 @@ jobs:
         skopeo copy docker-archive:./result-api docker://ghcr.io/intersectmbo/cardano-submit-api:$GITHUB_REF_NAME
         echo "::endgroup::"
 
+    - name: Uploading intersectmbo/cardano-tracer
+      run: |
+        echo "::group::Downloading from cache"
+        nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 --out-link ./result-tracer ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/tracer
+        echo "::endgroup::"
+
+        echo "::group::Uploading to registry"
+        skopeo copy docker-archive:./result-tracer docker://ghcr.io/intersectmbo/cardano-tracer:$GITHUB_REF_NAME
+        echo "::endgroup::"
+
     - name: Obtaining latest release tag
       id: latest-tag
       run: |
@@ -109,4 +119,8 @@ jobs:
 
         echo "::group::Tagging latest for intersectmbo/cardano-submit-api"
         skopeo copy docker-archive:./result-api docker://ghcr.io/intersectmbo/cardano-submit-api:latest
+        echo "::endgroup::"
+
+        echo "::group::Tagging latest for intersectmbo/cardano-tracer"
+        skopeo copy docker-archive:./result-tracer docker://ghcr.io/intersectmbo/cardano-tracer:latest
         echo "::endgroup::"
