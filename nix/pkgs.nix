@@ -133,7 +133,7 @@ in with final;
   tracerDockerImage =
     let
       defaultConfig = rec {
-        acceptingSocket = "/ipc/cardano-tracer.socket";
+        acceptingSocket = "/ipc/tracer.socket";
         stateDir = "/logs";
         logging = [
           {
