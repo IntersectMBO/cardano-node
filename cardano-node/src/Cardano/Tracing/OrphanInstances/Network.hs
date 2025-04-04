@@ -2309,13 +2309,13 @@ instance ToJSON peeraddr => ToObject (PeerSelectionCounters (Cardano.ExtraPeerSe
             , "activeNonRootPeers" .= numberOfActiveNonRootPeers
             , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
 
-            , "knownBootstrapPeers" .= Cardano.viewKnownBootstrapPeers extraCounters
-            , "coldBootstrapPeersPromotions" .= Cardano.viewColdBootstrapPeersPromotions extraCounters
-            , "establishedBootstrapPeers" .= Cardano.viewEstablishedBootstrapPeers extraCounters
-            , "warmBootstrapPeersDemotions" .= Cardano.viewWarmBootstrapPeersDemotions extraCounters
-            , "warmBootstrapPeersPromotions" .= Cardano.viewWarmBootstrapPeersPromotions extraCounters
-            , "activeBootstrapPeers" .= Cardano.viewActiveBootstrapPeers extraCounters
-            , "activeBootstrapPeersDemotions" .= Cardano.viewActiveBootstrapPeersDemotions extraCounters
+            , "knownBootstrapPeers" .= snd (Cardano.viewKnownBootstrapPeers extraCounters)
+            , "coldBootstrapPeersPromotions" .= snd (Cardano.viewColdBootstrapPeersPromotions extraCounters)
+            , "establishedBootstrapPeers" .= snd (Cardano.viewEstablishedBootstrapPeers extraCounters)
+            , "warmBootstrapPeersDemotions" .= snd (Cardano.viewWarmBootstrapPeersDemotions extraCounters)
+            , "warmBootstrapPeersPromotions" .= snd (Cardano.viewWarmBootstrapPeersPromotions extraCounters)
+            , "activeBootstrapPeers" .= snd (Cardano.viewActiveBootstrapPeers extraCounters)
+            , "activeBootstrapPeersDemotions" .= snd (Cardano.viewActiveBootstrapPeersDemotions extraCounters)
             ]
 
 instance ToJSON ProtocolLimitFailure where
