@@ -138,7 +138,7 @@ in {
 
       acceptingSocket = mkOption {
         type = nullOr (either str path);
-        default = "${runtimeDir}/cardano-tracer.socket";
+        default = "${runtimeDir}/tracer.socket";
         description = ''
           If accepting connections from node(s) to a cardano-tracer socket, the
           path.
