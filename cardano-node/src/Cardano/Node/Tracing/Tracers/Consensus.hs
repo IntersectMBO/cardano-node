@@ -2339,12 +2339,12 @@ instance ( LogFormatting peer, Show peer
 instance MetaTrace (Jumping.TraceEventDbf peer) where
   namespaceFor =
     \case
-      RotatedDynamo {}        -> Namespace [] ["RotatedDynamo"]
+      RotatedDynamo {} -> Namespace [] ["RotatedDynamo"]
 
   severityFor ns _ =
     case ns of
-      Namespace _ ["RotatedDynamo"]               -> Just Info
-      Namespace _ _                               -> Nothing
+      Namespace _ ["RotatedDynamo"] -> Just Info
+      Namespace _ _                 -> Nothing
 
   documentFor = \case
     Namespace _ ["RotatedDynamo"] ->

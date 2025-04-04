@@ -1467,18 +1467,19 @@ instance (ToObject peer, ConvertRawHash blk)
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEventDbf peer) where
 instance HasSeverityAnnotation (ChainSync.Client.TraceEventDbf peer) where
   getSeverityAnnotation _ = Info
-instance Transformable Text IO (ChainSync.Client.TraceEventDbf peer) where
+instance ToObject peer
+      => Transformable Text IO (ChainSync.Client.TraceEventDbf peer) where
   trTransformer = trStructured
 instance HasTextFormatter (ChainSync.Client.TraceEventDbf peer) where
-instance ToObject (ChainSync.Client.TraceEventDbf peer) where
-    toObject _verb = \case
-      _ -> mempty
-      -- ChainSync.Client.RotateDynamo old new ->
-      --   mconcat
-      --     [ "kind" .= String "RotateDynamo"
-      --     , "old" .= old
-      --     , "new" .= new
-      --     ]
+instance ToObject peer
+      => ToObject (ChainSync.Client.TraceEventDbf peer) where
+    toObject verb = \case
+      ChainSync.Client.RotatedDynamo oldPeer newPeer ->
+        mconcat
+          [ "kind" .= String "RotatedDynamo"
+          , "oldPeer" .= toObject verb oldPeer
+          , "newPeer" .= toObject verb newPeer
+          ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
