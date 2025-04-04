@@ -380,6 +380,8 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
     severityFor (Namespace _ ["ReplyGetSizes"]) _ = Just Info
     severityFor (Namespace _ ["Release"]) _ = Just Info
     severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["GetMeasures"]) _ = Just Info
+    severityFor (Namespace _ ["ReplyGetMeasures"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Acquire"]) = Just
@@ -404,6 +406,10 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
       ""
     documentFor (Namespace _ ["Done"]) = Just
       ""
+    documentFor (Namespace _ ["GetMeasures"]) = Just
+      ""
+    documentFor (Namespace _ ["ReplyGetMeasures"]) = Just
+      ""
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -418,6 +424,8 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
       , Namespace [] ["ReplyGetSizes"]
       , Namespace [] ["Release"]
       , Namespace [] ["Done"]
+      , Namespace [] ["GetMeasures"]
+      , Namespace [] ["ReplyGetMeasures"]
       ]
 --------------------------------------------------------------------------------
 -- LocalTxSubmission Tracer
