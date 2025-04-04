@@ -1,7 +1,7 @@
 #!/bin/env bash
 set -eo pipefail
 
-echo "Running the cardano node ..."
+echo "Running cardano node ..."
 
 [[ -n $DEBUG ]] && set -x
 
@@ -92,18 +92,17 @@ cat << EOF > /usr/local/bin/env
 #!/usr/bin/env bash
 
 # Docker run ENV vars
-CARDANO_CONFIG="$CARDANO_CONFIG"
-CARDANO_TOPOLOGY="$CARDANO_TOPOLOGY"
 CARDANO_BIND_ADDR="$CARDANO_BIND_ADDR"
-CARDANO_PORT=$CARDANO_PORT
+CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
+CARDANO_CONFIG="$CARDANO_CONFIG"
 CARDANO_DATABASE_PATH="$CARDANO_DATABASE_PATH"
-CARDANO_SOCKET_PATH="$CARDANO_SOCKET_PATH"
 CARDANO_LOG_DIR="$CARDANO_LOG_DIR"
+CARDANO_PORT=$CARDANO_PORT
+CARDANO_SOCKET_PATH="$CARDANO_SOCKET_PATH"
+CARDANO_TOPOLOGY="$CARDANO_TOPOLOGY"
 
 CARDANO_PUBLIC_IP="$CARDANO_PUBLIC_IP"
 CARDANO_CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
-
-CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
 
 # Mapping for topologyUpdater
 CNODE_HOSTNAME="$CARDANO_PUBLIC_IP"
@@ -135,7 +134,7 @@ runRelayNode () {
     "--port" "$CARDANO_PORT"
   )
 
-  effopts+=("${options[@]}")
+  effopts+=("${filteredOpts[@]}")
 
   echo "cardano-node run ${effopts[*]}"
   exec /usr/local/bin/cardano-node run "${effopts[@]}"
@@ -159,7 +158,7 @@ runBlockProducerNode () {
     "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
   )
 
-  effopts+=("${options[@]}")
+  effopts+=("${filteredOpts[@]}")
 
   echo "cardano-node run ${effopts[*]}"
   exec /usr/local/bin/cardano-node run "${effopts[@]}"
@@ -169,7 +168,6 @@ runBlockProducerNode () {
 shift
 
 # Override default values with explicit options
-
 options=("$@")
 
 for i in "${!options[@]}"
@@ -198,6 +196,9 @@ do
       options[j]="";
     fi
 done
+
+# Filter blank args from match removal above
+filteredOpts=(); for arg in "${options[@]}"; do [[ $arg ]] && filteredOpts+=("$arg"); done
 
 printRunEnv
 writeRootEnv
