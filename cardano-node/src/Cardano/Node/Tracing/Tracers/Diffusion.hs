@@ -16,21 +16,21 @@ module Cardano.Node.Tracing.Tracers.Diffusion
 
 
 import           Cardano.Logging
-import           Data.Aeson (Value (String), (.=))
-import           Data.Text (pack)
-import           Formatting
-import qualified Network.Mux as Mux
-import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
-import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
+import           Cardano.Node.Configuration.TopologyP2P ()
 
-import qualified Data.List as List
+import qualified Ouroboros.Network.Diffusion.Common as Common
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
                    TraceLedgerPeers (..))
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
-import Cardano.Node.Configuration.TopologyP2P ()
-import qualified Ouroboros.Network.Diffusion.Common as Common
+import qualified Network.Mux as Mux
+import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
+import           Data.Aeson (Value (String), (.=))
+import qualified Data.List as List
+import           Data.Text (pack)
+import           Formatting
 
 --------------------------------------------------------------------------------
 -- Mux Tracer

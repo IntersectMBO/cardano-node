@@ -101,6 +101,7 @@ import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
+import           Ouroboros.Network.Mux (noBindForkPolicy, responderForkPolicy, ForkPolicy)
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
                    PeerSelectionTargets (..), RemoteAddress)
@@ -154,7 +155,6 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 import           Paths_cardano_node (version)
-import Ouroboros.Network.Mux (noBindForkPolicy, responderForkPolicy, ForkPolicy)
 
 
 {- HLINT ignore "Fuse concatMap/map" -}

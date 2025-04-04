@@ -32,9 +32,9 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
-import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
+import           Cardano.Tracing.OrphanInstances.Network (Verbose (..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -2242,30 +2242,20 @@ instance MetaTrace (TraceGsmEvent selection) where
 -- CSJ Tracer
 --------------------------------------------------------------------------------
 
--- TODO
 instance ( LogFormatting peer, Show peer
          ) => LogFormatting (Jumping.TraceEventCsj peer blk) where
-  forMachine _dtal =
-    \case
-      _ -> mempty
+  forMachine _dtal _ = mempty
 
   forHuman _ = mempty
 
 instance MetaTrace (Jumping.TraceEventCsj peer blk) where
-  namespaceFor =
-    \case
-      _ -> Namespace [] []
+  namespaceFor _ = Namespace [] []
 
-  severityFor ns _ =
-    case ns of
-      _ -> Nothing
+  severityFor _ _ = Nothing
 
-  documentFor = \case
-    Namespace _ _ ->
-      Nothing
+  documentFor _ = Nothing
 
-  allNamespaces =
-    []
+  allNamespaces = []
 
 --------------------------------------------------------------------------------
 -- DBF Tracer

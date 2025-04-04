@@ -16,8 +16,8 @@ module Cardano.Testnet.Test.Cli.Query
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Internal.Genesis as Api
-import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval),
-                   extractHash, unboundRational)
+import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), extractHash,
+                   unboundRational)
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
 
@@ -77,7 +77,6 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion, readJsonFile)
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Test.Golden as H
-import Cardano.Ledger.BaseTypes (unNonZero)
 
 -- | Test CLI queries
 -- Execute me with:
@@ -485,7 +484,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
                   }
     (SlotNo slotNo) =
     let firstSlotOfEpoch = slotNo `div` epochLength * epochLength
-        slotsInEpochToWaitOut = ceiling (4 * fromIntegral (unNonZero securityParam) / unboundRational activeSlotsCoeff) + 1
+        slotsInEpochToWaitOut = ceiling (4 * fromIntegral (L.unNonZero securityParam) / unboundRational activeSlotsCoeff) + 1
         minSlotInThisEpochToWaitTo = firstSlotOfEpoch + slotsInEpochToWaitOut + 1
     in slotNo >= minSlotInThisEpochToWaitTo
 

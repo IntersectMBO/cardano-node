@@ -36,14 +36,14 @@ tests = H.checkSequential
       $ test
      <$> [ (  ntcByronOnly
            , "ntcByronOnly.json")
-         , (  ntc_HFV1_allDisabled
-           , "ntc_HFV1_allDisabled.json")
-         , (  ntc_HFV1_ByronV1
-           , "ntc_HFV1_ByronV1.json")
-         , (  ntc_HFV1_ByronV1_ShelleyV1
-           , "ntc_HFV1_ByronV1_ShelleyV1.json")
-         , (  ntc_HFV1_ByronV1_ShelleyV6_ConwayV2
-           , "ntc_HFV1_ByronV1_ShelleyV6_ConwayV2.json")
+         , (  ntc_HFV3_allDisabled
+           , "ntc_HFV3_allDisabled.json")
+         , (  ntc_HFV3_ByronV1
+           , "ntc_HFV3_ByronV1.json")
+         , (  ntc_HFV3_ByronV1_ShelleyV8
+           , "ntc_HFV3_ByronV1_ShelleyV8.json")
+         , (  ntc_HFV3_ByronV1_ShelleyV8_ConwayV2
+           , "ntc_HFV3_ByronV1_ShelleyV8_ConwayV2.json")
          ]
   where
     test (actualValue, goldenBaseName) =
@@ -60,10 +60,10 @@ ntcByronOnly =
     Consensus.HardForkNodeToClientDisabled
       Consensus.Cardano.ByronNodeToClientVersion1
 
-ntc_HFV1_allDisabled ::
+ntc_HFV3_allDisabled ::
   Consensus.HardForkNodeToClientVersion
     (Consensus.Cardano.CardanoEras StandardCrypto)
-ntc_HFV1_allDisabled =
+ntc_HFV3_allDisabled =
   Consensus.HardForkNodeToClientEnabled
     Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientDisabled -- Byron
@@ -76,10 +76,10 @@ ntc_HFV1_allDisabled =
       :* Nil
     )
 
-ntc_HFV1_ByronV1 ::
+ntc_HFV3_ByronV1 ::
   Consensus.HardForkNodeToClientVersion
     (Consensus.Cardano.CardanoEras StandardCrypto)
-ntc_HFV1_ByronV1 =
+ntc_HFV3_ByronV1 =
   Consensus.HardForkNodeToClientEnabled
     Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientEnabled Consensus.Cardano.ByronNodeToClientVersion1 -- Byron
@@ -92,10 +92,10 @@ ntc_HFV1_ByronV1 =
       :* Nil
     )
 
-ntc_HFV1_ByronV1_ShelleyV1 ::
+ntc_HFV3_ByronV1_ShelleyV8 ::
   Consensus.HardForkNodeToClientVersion
     (Consensus.Cardano.CardanoEras StandardCrypto)
-ntc_HFV1_ByronV1_ShelleyV1 =
+ntc_HFV3_ByronV1_ShelleyV8 =
   Consensus.HardForkNodeToClientEnabled
     Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientEnabled Consensus.Cardano.ByronNodeToClientVersion1   -- Byron
@@ -108,10 +108,10 @@ ntc_HFV1_ByronV1_ShelleyV1 =
       :* Nil
     )
 
-ntc_HFV1_ByronV1_ShelleyV6_ConwayV2 ::
+ntc_HFV3_ByronV1_ShelleyV8_ConwayV2 ::
   Consensus.HardForkNodeToClientVersion
     (Consensus.Cardano.CardanoEras StandardCrypto)
-ntc_HFV1_ByronV1_ShelleyV6_ConwayV2 =
+ntc_HFV3_ByronV1_ShelleyV8_ConwayV2 =
   Consensus.HardForkNodeToClientEnabled
     Consensus.HardForkSpecificNodeToClientVersion3
     (    Consensus.EraNodeToClientEnabled Consensus.Cardano.ByronNodeToClientVersion1   -- Byron
