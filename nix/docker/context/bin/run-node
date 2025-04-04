@@ -135,7 +135,7 @@ runRelayNode () {
     "--port" "$CARDANO_PORT"
   )
 
-  effopts+=("${options[@]}")
+  effopts+=("${filteredOpts[@]}")
 
   echo "cardano-node run ${effopts[*]}"
   exec /usr/local/bin/cardano-node run "${effopts[@]}"
@@ -159,7 +159,7 @@ runBlockProducerNode () {
     "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
   )
 
-  effopts+=("${options[@]}")
+  effopts+=("${filteredOpts[@]}")
 
   echo "cardano-node run ${effopts[*]}"
   exec /usr/local/bin/cardano-node run "${effopts[@]}"
@@ -198,6 +198,9 @@ do
       options[j]="";
     fi
 done
+
+# Filter blank args from match removal above
+filteredOpts=(); for arg in "${options[@]}"; do [[ $arg ]] && filteredOpts+=("$arg"); done
 
 printRunEnv
 writeRootEnv
