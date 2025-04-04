@@ -9,7 +9,7 @@
 let
 
   # Backend-specific Nix bits:
-  materialise-profile = { profileData }:
+  materialise-profile = { profileBundle }:
     # Intermediate / workbench-adhoc container specifications
     let containerSpecs = rec {
       ##########################################################################
@@ -31,10 +31,10 @@ let
       # Binaries. Flake references to the local nix store or remote repos.
       containerPkgs = installables {inherit gitrev;};
       # The Nomad Job description for the requested sub-backend.
-      nomadJob = nomad-job {inherit profileData containerPkgs;};
+      nomadJob = nomad-job {inherit profileBundle containerPkgs;};
       ##########################################################################
     };
-    in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-nomad"
+    in pkgs.runCommand "workbench-backend-data-${profileBundle.profile.value.name}-nomad"
       ({
         containerSpecsJSON = pkgs.writeText "workbench-cluster-container-pkgs.json"
           (lib.generators.toJSON {} containerSpecs);
@@ -175,8 +175,8 @@ let
           # TODO: - cardano-node.passthru.profiled
           #       - cardano-node.passthru.eventlogged
           #       - cardano-node.passthru.asserted
-          # profileData.node-services."node-0".serviceConfig.value.eventlog
-          # builtins.trace (builtins.attrNames profileData.node-services."node-0".serviceConfig.value.eventlog) XXXX
+          # profileBundle.node-services."node-0".serviceConfig.value.eventlog
+          # builtins.trace (builtins.attrNames profileBundle.node-services."node-0".serviceConfig.value.eventlog) XXXX
           if eventlogged
             then cardanoNodePackages.cardano-node.passthru.eventlogged
             else cardanoNodePackages.cardano-node
@@ -214,9 +214,9 @@ let
   ;
 
   # The "exec" or "cloud" Nomad Job description.
-  nomad-job = {profileData, containerPkgs}:
+  nomad-job = {profileBundle, containerPkgs}:
     # TODO: Repeated code, add the generator's node name to profile.json
-    let generatorTaskName = if builtins.hasAttr "explorer" profileData.node-specs.value
+    let generatorTaskName = if builtins.hasAttr "explorer" profileBundle.node-specs.value
       then "explorer"
       else "node-0"
       ;
@@ -228,7 +228,7 @@ let
           # TODO: oneTracerPerGroup
           oneTracerPerCluster = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
               inherit containerPkgs;
               oneTracerPerNode = false;
@@ -236,7 +236,7 @@ let
             };
           oneTracerPerNode = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
               inherit containerPkgs;
               oneTracerPerNode = true;
@@ -251,7 +251,7 @@ let
           # TODO: oneTracerPerCluster and oneTracerPerGroup
           nomadExec = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
               inherit containerPkgs;
               oneTracerPerNode = true;
@@ -259,7 +259,7 @@ let
             };
           ssh = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
               inherit containerPkgs;
               oneTracerPerNode = true;

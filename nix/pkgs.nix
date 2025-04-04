@@ -151,15 +151,20 @@ in with final;
                   useCabalRun = customConfig.localCluster.useCabalRun;
                 }
               ;
-              profileData = profile.materialise-profile
+              profileBundle = profile.profileBundle
                 { inherit backend; }
               ;
-              backendData = backend.materialise-profile {inherit profileData;};
+              materialisedProfile = profile.materialise-profile
+                { inherit profileBundle; }
+              ;
+              backendDataDir = backend.materialise-profile
+                {inherit profileBundle;}
+              ;
           in pkgs.runCommand "workbench-data-${profileName}" {}
             ''
-            mkdir $out
-            ln -s ${profileData} $out/profileData
-            ln -s ${backendData} $out/backendData
+            mkdir "$out"
+            ln -s "${materialisedProfile}" "$out"/profileData
+            ln -s "${backendDataDir}"      "$out"/backendData
             ''
         ;
         }

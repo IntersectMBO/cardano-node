@@ -27,7 +27,7 @@ in project.shellFor {
   name = "workbench-shell";
 
   shellHook =
-    let inherit (workbench-runner) profileName profileData backend backendData profiling;
+    let inherit (workbench-runner) profile profileDataDir backend backendDataDir profiling;
     in
     ''
     while test $# -gt 0
@@ -36,13 +36,13 @@ in project.shellFor {
     . nix/workbench/lib.sh
 
     export WB_BACKEND=${backend.name}
-    export WB_BACKEND_DATA=${backendData}
+    export WB_BACKEND_DATA=${backendDataDir}
     export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
     export WB_LOCLI_DB=''${WB_LOCLI_DB:-1}
-    export WB_SHELL_PROFILE=${profileName}
-    export WB_SHELL_PROFILE_DATA=${profileData}
+    export WB_SHELL_PROFILE=${profile.name}
+    export WB_SHELL_PROFILE_DATA=${profileDataDir}
 
     progress "profile name"            $WB_SHELL_PROFILE
     progress "backend name"            $WB_BACKEND
@@ -87,7 +87,7 @@ in project.shellFor {
     }
     trap workbench_atexit EXIT
     ''
-    + optionalString (profileData.value.scenario == "chainsync")
+    + optionalString (profile.scenario == "chainsync")
     ''
     export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
     ''

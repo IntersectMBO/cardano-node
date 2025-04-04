@@ -6,7 +6,7 @@
 { pkgs
 , lib
 , stateDir
-, profileData
+, profileBundle
 , generatorTaskName
 , containerPkgs
 , oneTracerPerNode ? false
@@ -14,6 +14,8 @@
 }:
 
 let
+
+  profile = profileBundle.profile.value;
 
   # Filesystem
   #
@@ -188,7 +190,7 @@ let
     datacenters = lib.lists.unique # The regions of the nodes to deploy.
       (lib.attrsets.mapAttrsToList
         (name: value: value.region)
-        profileData.node-specs.value
+        profileBundle.node-specs.value
       )
     ;
 
@@ -200,7 +202,7 @@ let
       if builtins.all (r: r == "loopback")
           (lib.attrsets.mapAttrsToList
             (name: value: value.region)
-            profileData.node-specs.value
+            profileBundle.node-specs.value
           )
       then []
       # Unique placement:
@@ -463,7 +465,7 @@ let
       //
       # If it needs host volumes add the constraints (can't be "null" or "[]".)
       ### - https://developer.hashicorp.com/nomad/tutorials/stateful-workloads/stateful-workloads-host-volumes
-      (lib.optionalAttrs (profileData.value.cluster.nomad.host_volumes != null) {
+      (lib.optionalAttrs (profile.cluster.nomad.host_volumes != null) {
         volume = lib.listToAttrs (lib.lists.imap0
           (i: v: {
             # Internal name, reference to mount in this group's tasks below.
@@ -476,7 +478,7 @@ let
               source = v.source;
             };
           })
-          profileData.value.cluster.nomad.host_volumes
+          profile.cluster.nomad.host_volumes
         );
       })
       //
@@ -557,7 +559,7 @@ let
               # When using dedicated Nomad clusters on AWS we want to use public
               # IPs/routing, all the other cloud runs will run behind a
               # VPC/firewall.
-              if profileData.value.cluster.aws.use_public_routing
+              if profile.cluster.aws.use_public_routing
               then "\${attr.unique.platform.aws.public-ipv4}"
               else "" # Local runs just use 127.0.0.1.
             ;
@@ -589,7 +591,7 @@ let
           };
 
           # If it needs host volumes mount them (defined above if any).
-          volume_mount = if profileData.value.cluster.nomad.host_volumes != null
+          volume_mount = if profile.cluster.nomad.host_volumes != null
             then lib.lists.imap0
               (i: v: {
                 # Internal name, defined above in the group's specification.
@@ -598,7 +600,7 @@ let
                 destination = v.destination;
                 read_only = v.read_only;
               })
-              profileData.value.cluster.nomad.host_volumes
+              profile.cluster.nomad.host_volumes
             else null
           ;
 
@@ -645,7 +647,7 @@ let
               env = false;
               destination = "local/${stateDir}/profile.json";
               data = escapeTemplate (__readFile
-                profileAttrs.profile.JSON);
+                profileBundle.profile.JSON);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -654,7 +656,7 @@ let
               env = false;
               destination = "local/${stateDir}/node-specs.json";
               data = escapeTemplate (__readFile
-                profileData.node-specs.JSON);
+                profileBundle.node-specs.JSON);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -716,7 +718,7 @@ let
               data = escapeTemplate (__readFile (
                 let supervisorConf = import ./supervisor-conf.nix
                   { inherit pkgs lib stateDir;
-                    inherit profileData;
+                    inherit profile;
                     # Include only this taks' node
                     nodeSpecs = if taskName == "tracer"
                       then {}
@@ -741,13 +743,13 @@ let
           ## If using oneTracerPerNode no "tracer volumes" need to be mounted
           ## (because of no socket sharing between tasks), and tracer files are
           ## created using templates.
-          (lib.optionals (profileData.value.node.tracer && oneTracerPerNode) [
+          (lib.optionals (profile.node.tracer && oneTracerPerNode) [
             ## Tracer start.sh script.
             {
               env = false;
               destination = "local/${stateDir}/tracer/start.sh";
               data = escapeTemplate
-                profileData.tracer-service.start;
+                profileBundle.tracer-service.start;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -762,14 +764,14 @@ let
                   # When running locally every tracer has a 127.0.0.1 address
                   # and EKG and prometheus ports clash!
                   (builtins.removeAttrs
-                    profileData.tracer-service.config
+                    profileBundle.tracer-service.config
                     [ "hasEKG" "hasPrometheus" "hasRTView" ]
                   )
                   # Make it easier to download every log
                   {
                       logging = builtins.map
                         (value: value // { logRoot="./logRoot"; })
-                        profileData.tracer-service.config.logging
+                        profileBundle.tracer-service.config.logging
                       ;
                   }
                 )
@@ -786,7 +788,7 @@ let
               env = false;
               destination = "local/${stateDir}/${nodeSpec.name}/start.sh";
               data = escapeTemplate (
-                let scriptValue = profileData.node-services."${nodeSpec.name}".start;
+                let scriptValue = profileBundle.node-services."${nodeSpec.name}".start;
                 in (startScriptToGoTemplate
                     nodeSpec                         # nodeSpec
                     servicePortName                  # servicePortName
@@ -802,7 +804,7 @@ let
               env = false;
               destination = "local/${stateDir}/${nodeSpec.name}/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
-                profileData.node-services."${nodeSpec.name}".config);
+                profileBundle.node-services."${nodeSpec.name}".config);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -821,22 +823,22 @@ let
                     builtins.head # Must exist!
                       (builtins.filter
                         (coreNode: coreNode.name == nodeSpec.name)
-                        profileData.topology.value.coreNodes
+                        profileBundle.topology.value.coreNodes
                       )
                    else
                     # The explorer node is under "relayNodes"
                     builtins.head # Must exist!
                       (builtins.filter
                         (coreNode: coreNode.name == nodeSpec.name)
-                        profileData.topology.value.relayNodes
+                        profileBundle.topology.value.relayNodes
                       )
                   )
                   # The P2P flag.
-                  (if profileData.value.node ? verbatim && profileData.value.node.verbatim ? EnableP2P
+                  (if profile.node ? verbatim && profile.node.verbatim ? EnableP2P
                    then
-                        if profileData.value.node.verbatim.EnableP2P == null
+                        if profile.node.verbatim.EnableP2P == null
                         then false
-                        else profileData.value.node.verbatim.EnableP2P
+                        else profile.node.verbatim.EnableP2P
                    else false
                   )
                 )
@@ -854,7 +856,7 @@ let
                 env = false;
                 destination = "local/${stateDir}/generator/start.sh";
                 data = escapeTemplate
-                  profileData.generator-service.start;
+                  profileBundle.generator-service.start;
                 change_mode = "noop";
                 error_on_missing_key = true;
                 perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -864,7 +866,7 @@ let
                 env = false;
                 destination = "local/${stateDir}/generator/run-script.json";
                 data = escapeTemplate (
-                  let runScript = profileData.generator-service.config;
+                  let runScript = profileBundle.generator-service.config;
                   in
                      # Recreate the "run-script.json" with IPs and ports that are
                      # nomad template variables.
@@ -876,7 +878,7 @@ let
                          # All the producer nodes. How the workbench creates it.
                          (lib.attrsets.filterAttrs
                            (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
-                           profileData.node-specs.value
+                           profileBundle.node-specs.value
                          )
                        )
                      )
@@ -887,24 +889,24 @@ let
             ]
             ++
             ## Generator Plutus redeemer.
-            lib.optionals ((profileData.generator-service.plutus-redeemer or null) != null) [
+            lib.optionals ((profileBundle.generator-service.plutus-redeemer or null) != null) [
               {
                 env = false;
                 destination = "local/${stateDir}/generator/plutus-redeemer.json";
                 data = escapeTemplate (lib.generators.toJSON {}
-                  profileData.generator-service.plutus-redeemer);
+                  profileBundle.generator-service.plutus-redeemer);
                 change_mode = "noop";
                 error_on_missing_key = true;
               }
             ]
             ++
             ## Generator Plutus datum.
-            lib.optionals ((profileData.generator-service.plutus-datum or null) != null) [
+            lib.optionals ((profileBundle.generator-service.plutus-datum or null) != null) [
               {
                 env = false;
                 destination = "local/${stateDir}/generator/plutus-datum.json";
                 data = escapeTemplate (lib.generators.toJSON {}
-                  profileData.generator-service.plutus-datum);
+                  profileBundle.generator-service.plutus-datum);
                 change_mode = "noop";
                 error_on_missing_key = true;
               }
@@ -922,7 +924,7 @@ let
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
             }
-          ) profileData.workloads-service)
+          ) profileBundle.workloads-service)
           ++
           # healthcheck
           [
@@ -931,7 +933,7 @@ let
               env = false;
               destination = "local/${stateDir}/healthcheck/start.sh";
               data = escapeTemplate
-                profileData.healthcheck-service.start;
+                profileBundle.healthcheck-service.start;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -1015,7 +1017,7 @@ let
       in lib.listToAttrs (
         # If not oneTracerPerNode, an individual tracer task is needed (instead
         # of running a tracer alongside a node with supervisor)
-        lib.optionals (profileData.value.node.tracer && !oneTracerPerNode) [
+        lib.optionals (profile.node.tracer && !oneTracerPerNode) [
           {
             name = "tracer";
             value = valueF
@@ -1040,7 +1042,7 @@ let
               nodeSpec.port                          # portNum
             ;
           })
-          (profileData.node-specs.value)
+          (profileBundle.node-specs.value)
         )
       );
 
@@ -1305,7 +1307,7 @@ let
       [
         # Address string to
         (
-          if profileData.value.cluster.aws.use_public_routing
+          if profile.cluster.aws.use_public_routing
           then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
           else ''--host-addr 0.0.0.0''
         )
