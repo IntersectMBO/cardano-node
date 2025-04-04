@@ -425,7 +425,7 @@ docTracersFirstPhase condConfigFileName = do
 
     consensusDbfTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Consensus", "DBF"]
+                ["Consensus", "DevotedBlockFetch"]
     configureTracers configReflection trConfig [consensusDbfTr]
     consensusDbfTrDoc <- documentTracer (consensusDbfTr ::
       Logging.Trace IO (Jumping.TraceEventDbf peer))

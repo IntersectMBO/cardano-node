@@ -355,7 +355,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
 
     !consensusDbfTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Consensus", "DBF"]
+                ["Consensus", "DevotedBlockFetch"]
     configureTracers configReflection trConfig [consensusDbfTr]
 
     pure $ Consensus.Tracers

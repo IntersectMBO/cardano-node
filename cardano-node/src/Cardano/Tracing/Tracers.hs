@@ -836,7 +836,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
-    , Consensus.dbfTracer = tracerOnOff (traceDbf trSel) verb "DBF" tr
+    , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
