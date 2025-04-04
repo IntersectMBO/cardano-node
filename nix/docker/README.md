@@ -1,4 +1,4 @@
-# Building Node and Submit API Images
+# Building Node, Submit API and Tracer Images
 To build and load the oci images into the Docker engine, the most
 basic commands are:
 ```
@@ -36,7 +36,8 @@ docker run \
   ghcr.io/intersectmbo/cardano-node:dev
 ```
 
-A similar command can be run to look around the cardano-submit-api container.
+Similar commands can be run to look around the cardano-submit-api and
+cardano-tracer containers.
 
 
 # Cardano Node Image Operation
@@ -61,8 +62,9 @@ To launch cardano-node with a custom configuration, "custom" mode, provide
 entrypoint args starting with `run` and:
 * Leave the `NETWORK` env variable unset
 * Optionally include additional cardano-node args to the entrypoint after `run`
-* Optionally include environment variables interpreted by [nix/docker/context/node/bin/run-node](context/node/bin/run-node),
-  or `/usr/local/bin/run-node` in the container
+* Optionally include environment variables interpreted by
+  [nix/docker/context/node/bin/run-node](context/node/bin/run-node), or
+  `/usr/local/bin/run-node` in the container
 
 For example, launch a custom cardano-node container using cardano-node args and
 a local configuration mapped into the container:
@@ -81,19 +83,19 @@ files found at `/opt/cardano/config` and organized under a subdirectory of the
 network's name.  For example, to utilize standard configs for preprod network,
 but modify the cardano-node listening port:
 ```
-  docker run \
-    -v preprod-data:/data \
-    -e CARDANO_CONFIG="/opt/cardano/config/preprod/config.json" \
-    -e CARDANO_TOPOLOGY="/opt/cardano/config/preprod/topology.json" \
-    -e CARDANO_PORT="6001" \
-    ghcr.io/intersectmbo/cardano-node:dev \
-    run
+docker run \
+  -v preprod-data:/data \
+  -e CARDANO_CONFIG="/opt/cardano/config/preprod/config.json" \
+  -e CARDANO_TOPOLOGY="/opt/cardano/config/preprod/topology.json" \
+  -e CARDANO_PORT="6001" \
+  ghcr.io/intersectmbo/cardano-node:dev \
+  run
 ```
 
 In "custom" mode, default state directories include
 `/opt/cardano/{data,ipc,logs}`, with `/opt/cardano/data/db` being the default
 database state location.  These state directories are symlinked to root in the container:
-`/opt/cardano/{data,ipc,logs} -> /{data,ipc,logs}` for more consistency between modes.
+`/opt/cardano/{data,ipc,logs} -> /{data,ipc,logs}` for consistency between modes.
 Standard network config files can be found under `/opt/cardano/config`.
 
 
@@ -249,6 +251,132 @@ In the cardano-submit-api container a `/node-ipc` directory is symlinked to `/ip
 both to align the default ipc socket state directory in both the cardano-node
 and cardano-submit-api images and to remain backwards compatible.
 
+
+# Cardano Tracer Image Operation
+## Scripts Mode
+To launch cardano-tracer with pre-loaded configuration, "scripts" mode,
+use the `NETWORK` env variable to declare an existing cardano network name.
+
+An example using a docker named volume to persist socket state to the host:
+```
+docker run \
+  -v node-ipc:/ipc \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-tracer:dev
+```
+
+In "scripts" mode, default state directories include `/{ipc,logs}` and default
+mode of operation is to accept socket connections from node, `AcceptAt`, at a
+path of `/ipc/tracer.socket`.  Both tracer socket connection modes of
+`AcceptAt` and `ConnectTo` necessitate a shared volume mount between a node
+container and a tracer container.  See the [Cardano-node to Cardano-tracer
+Socket Connection](#cardano-node-to-cardano-tracer-socket-connection) section
+for more on making the required socket connections.
+
+
+## Custom Mode
+To launch cardano-tracer with a custom configuration, "custom" mode, provide
+entrypoint args starting with `run` and:
+* Leave the `NETWORK` env variable unset
+* Optionally include additional cardano-tracer args to the entrypoint after `run`
+* Optionally include environment variables interpreted by
+  [nix/docker/context/tracer/bin/run-tracer](context/tracer/bin/run-tracer), or
+  `/usr/local/bin/run-tracer` in the container
+
+For example, launch a custom cardano-tracer container using cardano-tracer args and
+a local configuration mapped into the container:
+```
+docker run \
+  -v node-ipc:/ipc \
+  -v "$PWD/config/tracer:/config" \
+  ghcr.io/intersectmbo/cardano-tracer:dev \
+  run \
+  --config /config/mainnet/config.json
+```
+
+Custom mode may also leverage standard mainnet or testnet network tracer config
+files found at `/opt/cardano/config` and organized under a subdirectory of the
+network's name.  For example, to utilize standard configs for preprod network,
+but modify the cardano-tracer minimum log severity:
+```
+docker run \
+  -e CARDANO_CONFIG="/opt/cardano/config/preprod/tracer-config.json" \
+  -e CARDANO_MIN_LOG_SEVERITY="Debug" \
+  ghcr.io/intersectmbo/cardano-tracer:dev \
+  run
+```
+
+In "custom" mode, default state directories include `/opt/cardano/{ipc,logs}`.
+These state directories are symlinked to root in the container:
+`/opt/cardano/{ipc,logs} -> /{ipc,logs}` for consistency between modes.
+Standard network tracer config files can be found under `/opt/cardano/config`.
+
+
+## Merge Mode
+With the `NETWORK` env variable set and `CARDANO_CONFIG_JSON_MERGE` env
+variable set and containing valid json, cardano-tracer will run with deep
+merged base `NETWORK` tracer config and json merge config.
+
+Optional env variables and cardano-tracer args which can be used in custom mode
+can also be used in this mode.  Merge mode uses the same default state
+directories as custom mode.
+
+An example which changes the prometheus binding address from a default of
+localhost (`127.0.0.1`) to `0.0.0.0`:
+```
+docker run \
+  -v node-ipc:/ipc \
+  -e NETWORK=mainnet \
+  -e CARDANO_CONFIG_JSON_MERGE='{"hasPrometheus":{"epHost": "0.0.0.0"}}' \
+  ghcr.io/intersectmbo/cardano-tracer:dev
+```
+
+Similar bind mounting, and host mounted network tracer config considerations
+exist for the cardano-tracer image as also detailed above for the cardano-node
+image.
+
+
+## Cardano-node to Cardano-tracer Socket Connection
+To establish a cardano-node container to cardano-tracer container socket
+connection, in addition to a shared volume mount where such a socket can be
+accessed by both containers, the cardano-node container will need to be started
+with an extra argument.  To include the extra argument, either custom mode or
+merge mode for the node image will be required.
+
+An example for node to connect to a tracer socket, using custom mode to
+append the extra cli arg:
+```
+docker run \
+  -v node-ipc:/ipc \
+  -e CARDANO_CONFIG="/opt/cardano/config/mainnet/config.json" \
+  -e CARDANO_TOPOLOGY="/opt/cardano/config/mainnet/topology.json" \
+  ghcr.io/intersectmbo/cardano-node:dev \
+  run \
+  --tracer-socket-path-connect /ipc/tracer.socket
+
+docker run \
+  -v node-ipc:/ipc \
+  -e NETWORK=mainnet \
+  ghcr.io/intersectmbo/cardano-tracer:dev
+```
+
+An example for node to use a socket to accept a tracer connection, using merge
+mode to append the extra cli arg:
+```
+docker run \
+  -v node-ipc:/ipc \
+  -e NETWORK=mainnet \
+  -e CARDANO_CONFIG_JSON_MERGE='{}' \
+  ghcr.io/intersectmbo/cardano-node:dev \
+  run \
+  --tracer-socket-path-accept /ipc/node-tracer.socket
+
+docker run \
+  -v node-ipc:/ipc \
+  -e NETWORK=mainnet \
+  -e CARDANO_CONFIG_JSON_MERGE='{"network":{"contents":["/ipc/node-tracer.socket"],"tag":"ConnectTo"}}' \
+  ghcr.io/intersectmbo/cardano-tracer:dev
+```
 
 # Manual Testing
 1. Run -e NETWORK=mainnet and check graceful shutdown SIGINT with -it
