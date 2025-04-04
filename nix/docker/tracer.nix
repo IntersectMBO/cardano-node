@@ -110,7 +110,7 @@ let
 
           # Adjust from iohk-nix default config for the oci environment
           sed -i -r \
-            -e 's|"contents": ".*"|"contents": "/ipc/cardano-tracer.socket"|g' \
+            -e 's|"contents": ".*"|"contents": "/ipc/tracer.socket"|g' \
             -e 's|"logRoot": ".*"|"logRoot": "/logs"|g' \
             "$out/config/$ENV/''${i#"$ENV-"}"
         done
@@ -130,7 +130,6 @@ in
       # The "scripts" operation mode of this image, when the NETWORK env var is
       # set to a valid network, will use the following default directories
       # mounted at /:
-      mkdir -p data
       mkdir -p ipc
 
       # Similarly, make a root level dir for logs:
@@ -138,8 +137,14 @@ in
 
       # The "custom" operation mode of this image, when the NETWORK env is
       # unset and "run" is provided as an entrypoint arg, will use the
-      # following default directories.
+      # following default directories.  To reduce confusion caused by default
+      # directory paths varying by mode, symlink these directories to the
+      # "scripts" mode default directories at the root location.  This will
+      # permit use of volume mounts at the root directory location regardless
+      # of which mode the image is operating in.
       mkdir -p opt/cardano
+      ln -sv /ipc opt/cardano/ipc
+      ln -sv /logs opt/cardano/logs
 
       # Setup bins
       mkdir -p usr/local/bin

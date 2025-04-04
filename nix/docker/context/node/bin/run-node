@@ -1,7 +1,7 @@
 #!/bin/env bash
 set -eo pipefail
 
-echo "Running the cardano node ..."
+echo "Running cardano node ..."
 
 [[ -n $DEBUG ]] && set -x
 

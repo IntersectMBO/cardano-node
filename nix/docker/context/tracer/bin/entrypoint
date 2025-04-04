@@ -38,10 +38,20 @@ if [[ -n $NETWORK ]]; then
       export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config.json"
     fi
 
+    if [[ -n $DEBUG ]]; then
+      echo "Cardano config in merge mode is:"
+      cat "$CARDANO_CONFIG"
+      echo
+    fi
+
     # Run cardano-tracer using iohk-nix base config merged with provided custom
     # config for the requested NETWORK.
     unset NETWORK
-    exec /usr/local/bin/run-tracer "$@"
+    if [[ $1 == "run" ]]; then
+      exec /usr/local/bin/run-tracer "$@"
+    else
+      exec /usr/local/bin/run-tracer run "$@"
+    fi
 
   else
     # Run cardano-tracer using "scripts" mode for the requested NETWORK.
