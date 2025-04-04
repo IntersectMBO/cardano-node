@@ -25,6 +25,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 import           Cardano.TxGenerator.Genesis
 import           Cardano.TxGenerator.PlutusContext
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Setup.Plutus
@@ -49,7 +50,6 @@ import           System.FilePath
 
 import           Paths_tx_generator
 import qualified PlutusTx
-import Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 
 
 data CommandLine = CommandLine {

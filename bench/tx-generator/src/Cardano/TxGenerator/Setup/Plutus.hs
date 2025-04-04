@@ -1,8 +1,8 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 {-|
 Module      : Cardano.TxGenerator.Setup.Plutus
@@ -34,13 +34,13 @@ import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx.AssocMap as AssocMap (empty)
 
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Types (TxGenError (..))
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
 import           Control.Exception (SomeException (..), try)
 import           Paths_tx_generator
-import Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 
 type ProtocolVersion = (Int, Int)
 
@@ -96,8 +96,6 @@ preExecutePlutusScript
       case script of
         ScriptInAnyLang _ (PlutusScript lang _) ->
           AnyPlutusScriptVersion lang `Map.lookup` protocolParamCostModels
-          -- let langMap = fromAlonzoCostModel <$> pparams ^. ppCostModelsL . to costModelsValid
-          --  in Map.lookup (toAlonzoLanguage $ AnyPlutusScriptVersion lang) langMap
         _ ->
           Nothing
 
@@ -113,9 +111,6 @@ preExecutePlutusScript
   where
     protocolVersion :: ProtocolVersion
     protocolVersion = bimap fromIntegral fromIntegral protocolParamProtocolVersion
-    -- protocolVersion =
-    --   let ProtVer {pvMajor, pvMinor} = pparams ^. ppProtocolVersionL
-    --    in bimap getVersion fromIntegral (pvMajor, pvMinor)
 
 preExecutePlutusV1 ::
      ProtocolVersion

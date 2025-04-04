@@ -1,15 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE LambdaCase #-}
 
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
@@ -201,8 +201,13 @@ data NodeConfiguration
        , ncForkPolicy :: NCForkPolicy
        } deriving (Eq, Show)
 
+-- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
+-- * `NoBindForkPolicy` corresponds to `Ouroboros.Network.Mux.noBindForkPolicy`
+-- * `ResponderForkPolicy` corresponds to `Ouroboros.Network.Mux.responderForkPolicy`
+--   with a `randomIO` generated salt and `getNumCapabilities`
 data NCForkPolicy = NoBindForkPolicy | ResponderForkPolicy deriving (Eq, Show, Generic, FromJSON)
 
+-- | Convert `NCForkPolicy` to a `Ouroboros.Network.Mux.ForkPolicy`
 getForkPolicy :: Hashable peerAddr => NCForkPolicy -> IO (ForkPolicy peerAddr)
 getForkPolicy = \case
   NoBindForkPolicy -> pure noBindForkPolicy
