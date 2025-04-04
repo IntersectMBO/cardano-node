@@ -2242,20 +2242,81 @@ instance MetaTrace (TraceGsmEvent selection) where
 -- CSJ Tracer
 --------------------------------------------------------------------------------
 
-instance ( LogFormatting peer, Show peer
+instance ( LogFormatting peer, Show peer, ConvertRawHash blk
          ) => LogFormatting (Jumping.TraceEventCsj peer blk) where
-  forMachine _dtal _ = mempty
+  forMachine dtal = \case
+    BecomingObjector prevObjector ->
+      mconcat
+        [ "kind" .= String "BecomingObjector"
+        , "previousObjector" .= (forMachine dtal <$> prevObjector)
+        ]
+    BlockedOnJump ->
+      mconcat
+        [ "kind" .= String "BlockedOnJump"
+        ]
+    InitializedAsDynamo ->
+      mconcat
+        [ "kind" .= String "InitializedAsDynamo"
+        ]
+    NoLongerDynamo newDynamo reason ->
+      mconcat
+        [ "kind" .= String "NoLongerDynamo"
+        , "newDynamo" .= (forMachine dtal <$> newDynamo)
+        , "reason" .= csjReasonToJSON reason
+        ]
+    NoLongerObjector newObjector reason ->
+      mconcat
+        [ "kind" .= String "NoLongerObjector"
+        , "newObjector" .= (forMachine dtal <$> newObjector)
+        , "reason" .= csjReasonToJSON reason
+        ]
+    SentJumpInstruction jumpTarget ->
+      mconcat
+        [ "kind" .= String "SentJumpInstruction"
+        , "jumpTarget" .= forMachine dtal jumpTarget
+        ]
+    where
+      csjReasonToJSON = \case
+        BecauseCsjDisengage -> String "BecauseCsjDisengage"
+        BecauseCsjDisconnect -> String "BecauseCsjDisconnect"
 
-  forHuman _ = mempty
+  forHuman = forHumanOrMachine
 
 instance MetaTrace (Jumping.TraceEventCsj peer blk) where
-  namespaceFor _ = Namespace [] []
+  namespaceFor = \case
+    BecomingObjector{}    -> Namespace [] ["BecomingObjector"]
+    BlockedOnJump{}       -> Namespace [] ["BlockedOnJump"]
+    InitializedAsDynamo{} -> Namespace [] ["InitializedAsDynamo"]
+    NoLongerDynamo{}      -> Namespace [] ["NoLongerDynamo"]
+    NoLongerObjector{}    -> Namespace [] ["NoLongerObjector"]
+    SentJumpInstruction{} -> Namespace [] ["SentJumpInstruction"]
 
-  severityFor _ _ = Nothing
+  severityFor ns _ = case ns of
+    Namespace _ ["BecomingObjector"]    -> Just Debug
+    Namespace _ ["BlockedOnJump"]       -> Just Debug
+    Namespace _ ["InitializedAsDynamo"] -> Just Debug
+    Namespace _ ["NoLongerDynamo"]      -> Just Debug
+    Namespace _ ["NoLongerObjector"]    -> Just Debug
+    Namespace _ ["SentJumpInstruction"] -> Just Debug
+    Namespace _ _                       -> Nothing
 
-  documentFor _ = Nothing
+  documentFor = \case
+    Namespace _ ["BecomingObjector"]    -> Just "This peer is becoming the CSJ objector"
+    Namespace _ ["BlockedOnJump"]       -> Just "This peer is blocked on a CSJ jump"
+    Namespace _ ["InitializedAsDynamo"] -> Just "This peer has been initialized as the CSJ dynamo"
+    Namespace _ ["NoLongerDynamo"]      -> Just "This peer no longer is the CSJ dynamo"
+    Namespace _ ["NoLongerObjector"]    -> Just "This peer no longer is the CSJ objector"
+    Namespace _ ["SentJumpInstruction"] -> Just "This peer has been instructed to jump via CSJ"
+    Namespace _ _                       -> Nothing
 
-  allNamespaces = []
+  allNamespaces =
+    [ Namespace [] ["BecomingObjector"]
+    , Namespace [] ["BlockedOnJump"]
+    , Namespace [] ["InitializedAsDynamo"]
+    , Namespace [] ["NoLongerDynamo"]
+    , Namespace [] ["NoLongerObjector"]
+    , Namespace [] ["SentJumpInstruction"]
+    ]
 
 --------------------------------------------------------------------------------
 -- Devoted BlockFetch Tracer
