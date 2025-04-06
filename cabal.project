@@ -105,6 +105,7 @@ source-repository-package
   --sha256: sha256-4/oW6cjBQwkOvCCJcb9qdXHiRSJl+cGjsVXi2y/SdSY=
   tag: 4936bf3b08c9e49bbdc8d8310c0c9c6dcc790a41
   subdir:
+    network-mux
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-api
