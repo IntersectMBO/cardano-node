@@ -893,7 +893,7 @@ instance MetaTrace (DebugPeerSelection extraState extraFlags extraPeers SockAddr
 -- PeerSelectionCounters
 --------------------------------------------------------------------------------
 
-instance (Show addr, ToJSON addr) => LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr)) where
+instance Show addr => LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr)) where
   forMachine _dtal PeerSelectionCounters {..} =
     mconcat [ "kind" .= String "PeerSelectionCounters"
 
