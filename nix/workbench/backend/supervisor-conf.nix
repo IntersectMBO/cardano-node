@@ -236,7 +236,5 @@ let
     }
     ;
 
-in {
-  value = supervisorConf;
-  INI = pkgs.writeText "supervisor.conf" (generators.toINI {} supervisorConf);
-}
+in
+  generators.toINI {} supervisorConf
