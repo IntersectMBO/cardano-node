@@ -8,13 +8,17 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Node.Startup where
+module Cardano.Node.Startup
+  ( module Cardano.Node.Startup
+  , module Cardano.Logging.Types.NodeInfo
+  ) where
 
 import qualified Cardano.Api as Api
 
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
+import           Cardano.Logging.Types.NodeInfo (NodeInfo(..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
@@ -168,37 +172,6 @@ data BasicInfoNetwork = BasicInfoNetwork {
   , niDnsProducers  :: [DnsSubscriptionTarget]
   , niIpProducers   :: IPSubscriptionTarget
   }
-
-data NodeInfo = NodeInfo
-  { niName            :: Text
-  , niProtocol        :: Text
-  , niVersion         :: Text
-  , niCommit          :: Text
-  , niStartTime       :: UTCTime
-  , niSystemStartTime :: UTCTime
-  } deriving (Eq, Generic, ToJSON, FromJSON, Show)
-
-deriving instance (NFData NodeInfo)
-
-instance MetaTrace NodeInfo where
-  namespaceFor NodeInfo {}  =
-    Namespace [] ["NodeInfo"]
-  severityFor  (Namespace _ ["NodeInfo"]) _ =
-    Just Info
-  severityFor _ns _ =
-    Nothing
-  documentFor  (Namespace _ ["NodeInfo"]) = Just
-    "Basic information about this node collected at startup\
-        \\n\
-        \\n _niName_: Name of the node. \
-        \\n _niProtocol_: Protocol which this nodes uses. \
-        \\n _niVersion_: Software version which this node is using. \
-        \\n _niStartTime_: Start time of this node. \
-        \\n _niSystemStartTime_: How long did the start of the node took."
-  documentFor _ns =
-     Nothing
-  allNamespaces = [ Namespace [] ["NodeInfo"]]
-
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
 prepareNodeInfo

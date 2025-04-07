@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
@@ -79,7 +80,7 @@ import           Network.HostName (HostName)
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
 --   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.
 newtype Trace m a = Trace
-  {unpackTrace :: T.Tracer m (LoggingContext, Either TraceControl a)}
+                            {unpackTrace :: T.Tracer m (LoggingContext, Either TraceControl a)}
 
 -- | Contramap lifted to Trace
 instance Monad m => T.Contravariant (Trace m) where
@@ -103,7 +104,7 @@ instance Monad m => Monoid (Trace m a) where
 data Namespace a = Namespace {
     nsPrefix :: [Text]
   , nsInner  :: [Text]}
-  deriving Eq
+  deriving stock Eq
 
 instance Show (Namespace a) where
   show (Namespace [] []) = "emptyNS"
@@ -197,7 +198,7 @@ data Metric
   -- the metric will be represented as "prometheus_metric{key1=\"value1\",key2=\"value2\"} 1"
 
     | PrometheusM Text [(Text, Text)]
-  deriving (Show, Eq)
+  deriving stock (Eq, Show)
 
 
 getMetricName :: Metric -> Text
@@ -216,7 +217,7 @@ emptyObject = HM.empty
 -- important to provide a complete list, as the prototypes are used as well for configuration.
 -- If you don't want to add an item for documentation enter an empty text.
 newtype Documented a = Documented {undoc :: [DocMsg a]}
-  deriving Show
+  deriving stock Show
 
 instance Semigroup (Documented a) where
   (<>) (Documented l) (Documented r) = Documented (l ++ r)
@@ -240,7 +241,7 @@ data LoggingContext = LoggingContext {
   , lcPrivacy   :: Maybe Privacy
   , lcDetails   :: Maybe DetailLevel
   }
-  deriving Show
+  deriving stock Show
 
 emptyLoggingContext :: LoggingContext
 emptyLoggingContext = LoggingContext [] [] Nothing Nothing Nothing
@@ -251,17 +252,18 @@ data DetailLevel =
     | DNormal
     | DDetailed
     | DMaximum
-  deriving (Show, Eq, Ord, Bounded, Enum, Generic, Serialise)
+  deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
+  deriving anyclass (Serialise, AE.FromJSON)
 
 instance AE.ToJSON DetailLevel where
     toEncoding = AE.genericToEncoding AE.defaultOptions
-instance AE.FromJSON DetailLevel
 
 -- | Privacy of a message. Default is Public
 data Privacy =
       Confidential              -- ^ confidential information - handle with care
     | Public                    -- ^ can be public.
-      deriving (Show, Eq, Ord, Bounded, Enum, Generic, Serialise)
+  deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
+  deriving anyclass Serialise
 
 -- | Severity of a message
 data SeverityS
@@ -273,13 +275,14 @@ data SeverityS
     | Critical                -- ^ Severe situations
     | Alert                   -- ^ Take immediate action
     | Emergency               -- ^ System is unusable
-  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON, AE.FromJSON, Generic, Serialise)
+  deriving stock (Eq, Ord, Show, Read, Enum, Bounded, Generic)
+  deriving anyclass (AE.ToJSON, AE.FromJSON, Serialise)
 
 -- | Severity for a filter
 -- Nothing means don't show anything (Silence)
 -- Nothing level means show messages with severity >= level
 newtype SeverityF = SeverityF (Maybe SeverityS)
-  deriving (Eq)
+  deriving stock Eq
 
 instance Enum SeverityF where
   toEnum 8 = SeverityF Nothing
@@ -338,7 +341,7 @@ data FormattedMessage =
     | FormattedMachine Text
     | FormattedMetrics [Metric]
     | FormattedForwarder TraceObject
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 
 data PreFormatted a = PreFormatted {
@@ -362,7 +365,7 @@ data TraceObject = TraceObject {
   , toTimestamp :: !UTCTime
   , toHostname  :: !HostName
   , toThreadId  :: !Text
-} deriving (Eq, Show)
+} deriving stock (Eq, Show)
 
 -- |
 data BackendConfig =
@@ -370,7 +373,7 @@ data BackendConfig =
   | Stdout FormatLogging
   | EKGBackend
   | DatapointBackend
-  deriving (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON BackendConfig where
   toJSON Forwarder  = AE.String "Forwarder"
@@ -394,7 +397,7 @@ data FormatLogging =
     HumanFormatColoured
   | HumanFormatUncoloured
   | MachineFormat
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- Configuration options for individual namespace elements
 data ConfigOption =
@@ -408,11 +411,11 @@ data ConfigOption =
   -- | Construct a limiter with limiting to the Double,
   -- which represents frequency in number of messages per second
   | ConfLimiter {maxFrequency :: Double}
-  deriving (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
 
 newtype ForwarderAddr
   = LocalSocket FilePath
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 instance AE.FromJSON ForwarderAddr where
   parseJSON = AE.withObject "ForwarderAddr" $ \o -> LocalSocket <$> o AE..: "filePath"
@@ -424,14 +427,15 @@ data ForwarderMode =
     -- | Forwarder works as a server: it accepts network connection from
     -- 'cardano-tracer' and/or another Haskell acceptor application.
   | Responder
-  deriving (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
 
 data Verbosity =
     -- | Maximum verbosity for all tracers in the forwarding protocols.
     Maximum
     -- | Minimum verbosity, the forwarding will work as silently as possible.
   | Minimum
-  deriving (Eq, Ord, Show, Generic, AE.ToJSON)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass AE.ToJSON
 
 instance AE.FromJSON Verbosity where
   parseJSON (AE.String "Maximum") = pure Maximum
@@ -443,7 +447,8 @@ data TraceOptionForwarder = TraceOptionForwarder {
     tofConnQueueSize    :: Word
   , tofDisconnQueueSize :: Word
   , tofVerbosity        :: Verbosity
-} deriving (Eq, Generic, Ord, Show, AE.ToJSON)
+} deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass AE.ToJSON
 
 -- A word regarding queue sizes:
 -- In case of a missing forwarding service consumer, traces messages will be
@@ -496,8 +501,7 @@ data TraceConfig = TraceConfig {
     -- | Optional resource trace frequency in milliseconds.
   , tcResourceFrequency :: Maybe Int
 }
-  deriving (Eq, Ord, Show)
-
+  deriving stock (Eq, Ord, Show)
 
 emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {
@@ -535,7 +539,7 @@ data LogDoc = LogDoc {
   , ldFiltered        :: ![SeverityF]
   , ldLimiter         :: ![(Text, Double)]
   , ldSilent          :: Bool
-} deriving(Eq, Show)
+} deriving stock (Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
 emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] [] False

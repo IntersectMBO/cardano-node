@@ -72,12 +72,16 @@ data RotationParams = RotationParams
   deriving stock (Eq, Generic, Show)
   deriving anyclass ToJSON
 
+-- <*> v .:? "age"        -- Optional field (note the .:? operator)
+-- <*> v .:! "age" .!= 0  -- Default to 0 if "age" is missing
 instance FromJSON RotationParams where
   parseJSON = withObject "RotationParams" \o -> do
     rpFrequencySecs <- o .: "rpFrequencySecs"
+                   <|> pure 60
     rpLogLimitBytes <- o .: "rpLogLimitBytes"
     rpMaxAgeMinutes <- o .: "rpMaxAgeMinutes"
                    <|> o .: "rpMaxAgeHours" <&> (* 60)
+                   <|> pure (24 * 60)
     rpKeepFilesNum  <- o .: "rpKeepFilesNum"
     pure RotationParams{..}
 
