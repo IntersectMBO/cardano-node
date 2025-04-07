@@ -893,7 +893,7 @@ instance MetaTrace (DebugPeerSelection extraState extraFlags extraPeers SockAddr
 -- PeerSelectionCounters
 --------------------------------------------------------------------------------
 
-instance Show addr => LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr)) where
+instance LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr)) where
   forMachine _dtal PeerSelectionCounters {..} =
     mconcat [ "kind" .= String "PeerSelectionCounters"
 
@@ -936,7 +936,7 @@ instance Show addr => LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSel
             , "activeBootstrapPeers" .= snd (Cardano.viewActiveBootstrapPeers extraCounters)
             , "ActiveBootstrapPeersDemotions" .= snd (Cardano.viewActiveBootstrapPeersDemotions extraCounters)
             ]
-  forHuman = pack . show
+  forHuman = forHumanFromMachine
   asMetrics psc =
     case psc of
       PeerSelectionCountersHWC {..} ->
