@@ -1033,7 +1033,7 @@ instance ( LogFormatting peer
     , "peers" .= toJSON (map (forMachine dtal) (toList peers))
     ]
 
-  forHuman = forHumanOrMachine
+  forHuman = forHumanFromMachine
 
 instance MetaTrace (TraceGDDEvent peer blk) where
   namespaceFor _ = Namespace [] ["TraceGDDEvent"]
@@ -1059,7 +1059,7 @@ instance ( HasHeader blk
     , "idling" .= toJSON idling
     ]
 
-  forHuman = forHumanOrMachine
+  forHuman = forHumanFromMachine
 
 
 --------------------------------------------------------------------------------
@@ -2280,7 +2280,7 @@ instance ( LogFormatting peer, Show peer, ConvertRawHash blk
         BecauseCsjDisengage -> String "BecauseCsjDisengage"
         BecauseCsjDisconnect -> String "BecauseCsjDisconnect"
 
-  forHuman = forHumanOrMachine
+  forHuman = forHumanFromMachine
 
 instance MetaTrace (Jumping.TraceEventCsj peer blk) where
   namespaceFor = \case

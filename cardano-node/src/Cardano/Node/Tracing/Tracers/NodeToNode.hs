@@ -417,14 +417,9 @@ instance MetaTrace (AnyMessage (PS.PeerSharing addr)) where
     severityFor (Namespace _ ["PeerShareDone"]) _ = Just Debug
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["PeerShareRequest"]) = Just
-        "Client asks for peers."
-    documentFor (Namespace _ ["SharePeers"]) = Just $ mconcat
-      [ "Server responds with peers."
-      ]
-    documentFor (Namespace _ ["Done"]) = Just $ mconcat
-      [ "Termination message, initiated by the client."
-      ]
+    documentFor (Namespace _ ["PeerShareRequest"]) = Just "Client asks for peers."
+    documentFor (Namespace _ ["PeerShareResult"]) = Just "Server responds with peers."
+    documentFor (Namespace _ ["PeerShareDone"]) = Just "Termination message, initiated by the client."
     documentFor _ = Nothing
 
     allNamespaces = [
