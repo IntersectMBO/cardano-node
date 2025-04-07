@@ -715,8 +715,8 @@ let
             {
               env = false;
               destination = "local/${task_supervisord_conf}";
-              data = escapeTemplate (__readFile (
-                let supervisorConf = import ./supervisor-conf.nix
+              data = escapeTemplate (
+                import ./supervisor-conf.nix
                   { inherit pkgs lib stateDir;
                     inherit profile;
                     # Include only this taks' node
@@ -731,9 +731,8 @@ let
                     inherit withSsh;
                     # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
                     inherit unixHttpServerPort;
-                  };
-                in supervisorConf.INI
-              ));
+                  }
+              );
               change_mode = "noop";
               error_on_missing_key = true;
             }
