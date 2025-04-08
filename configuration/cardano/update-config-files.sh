@@ -28,9 +28,12 @@ echo "################################"
 # Mainnet
 copyCfg "mainnet-alonzo-genesis.json"
 copyCfg "mainnet-byron-genesis.json"
+copyCfg "mainnet-checkpoints.json"
 copyCfg "mainnet-config.json"
 copyCfg "mainnet-conway-genesis.json"
+copyCfg "mainnet-peer-snapshot.json"
 copyCfg "mainnet-shelley-genesis.json"
+copyCfg "mainnet-topology.json"
 copyCfg "mainnet-topology.json"
 
 # IohkNix new tracing config placeholder

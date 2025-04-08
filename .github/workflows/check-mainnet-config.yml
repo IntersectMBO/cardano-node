@@ -40,7 +40,10 @@ jobs:
         test_files=(
           'mainnet-alonzo-genesis.json'
           'mainnet-byron-genesis.json'
+          'mainnet-checkpoints.json'
+          'mainnet-config-bp.json'
           'mainnet-config.json'
+          'mainnet-peer-snapshot.json'
           'mainnet-shelley-genesis.json'
           'mainnet-topology.json'
         )

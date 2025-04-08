@@ -11,6 +11,8 @@ ConwayGenesisFile: mainnet-conway-genesis.json
 ConwayGenesisHash: 15a199f895e461ec0ffc6dd4e4028af28a492ab4e806d39cb674c88f7643ef62
 ShelleyGenesisFile: mainnet-shelley-genesis.json
 ShelleyGenesisHash: 1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81
+CheckpointsFile: mainnet-checkpoints.json
+CheckpointsFileHash: 3e6dee5bae7acc6d870187e72674b37c929be8c66e62a552cf6a876b1af31ade
 
 EnableP2P: True
 
@@ -40,9 +42,20 @@ TargetNumberOfEstablishedPeers: 40
 TargetNumberOfKnownPeers: 150
 TargetNumberOfRootPeers: 60
 
+
+##### Network Configuration #####
+
+ConsensusMode: PraosMode
+SyncTargetNumberOfActivePeers: 0
+SyncTargetNumberOfActiveBigLedgerPeers: 30
+SyncTargetNumberOfEstablishedBigLedgerPeers: 50
+SyncTargetNumberOfKnownBigLedgerPeers: 100
+MinBigLedgerPeersForTrustedState: 5
+
+
 ##### Version Information #####
 
-MinNodeVersion: 10.1.4
+MinNodeVersion: 10.2.1
 
 ##### Logging configuration #####
 
