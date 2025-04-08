@@ -109,7 +109,7 @@ newtype NumDReps = NumDReps Int
 instance Default CardanoTestnetOptions where
   def = CardanoTestnetOptions
     { cardanoNodes = cardanoDefaultTestnetNodeOptions
-    , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraBabbage
+    , cardanoNodeEra = AnyShelleyBasedEra ShelleyBasedEraConway
     , cardanoMaxSupply = 100_000_020_000_000 -- 100 000 billions Lovelace, so 100 millions ADA. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3

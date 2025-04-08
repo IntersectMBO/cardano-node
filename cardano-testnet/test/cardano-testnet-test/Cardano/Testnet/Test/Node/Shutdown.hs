@@ -68,7 +68,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
       logDir' = makeLogDir $ tempAbsPath conf
       socketDir' = makeSocketDir $ tempAbsPath conf
       testnetMagic' = 42
-      sbe = ShelleyBasedEraBabbage
+      sbe = ShelleyBasedEraConway
 
   -- TODO: We need to uniformly create these directories
   H.createDirectoryIfMissing_ logDir'

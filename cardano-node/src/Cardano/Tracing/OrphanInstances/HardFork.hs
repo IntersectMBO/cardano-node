@@ -33,7 +33,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
-                   (EraNodeToClientVersion (..), HardForkNodeToClientVersion (..),
+                   (EraNodeToClientVersion (..),
                    HardForkNodeToNodeVersion (..), HardForkSpecificNodeToClientVersion (..),
                    HardForkSpecificNodeToNodeVersion (..))
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
