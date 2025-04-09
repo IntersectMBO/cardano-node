@@ -7,10 +7,10 @@ module  Cardano.TxGenerator.PureExample
         where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.ProtocolParameters (convertToLedgerProtocolParameters)
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
+import           Cardano.TxGenerator.ProtocolParameters (convertToLedgerProtocolParameters)
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
 import           Cardano.TxGenerator.Types (TxEnvironment (..), TxGenError (..), TxGenerator)
@@ -104,10 +104,10 @@ generateTx TxEnvironment{..}
 
     generator :: TxGenerator BabbageEra
     generator =
-        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
-          Right ledgerParameters ->
-            genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
-          Left err -> \_ _ -> Left (ApiError err)
+      case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+        Right ledgerParameters ->
+          genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
+        Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
@@ -155,10 +155,10 @@ generateTxPure TxEnvironment{..} inQueue
 
     generator :: TxGenerator BabbageEra
     generator =
-        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
-          Right ledgerParameters ->
-            genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
-          Left err -> \_ _ -> Left (ApiError err)
+      case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+        Right ledgerParameters ->
+          genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
+        Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])

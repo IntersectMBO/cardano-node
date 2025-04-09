@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                2.1
+version:                2.1.1
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -126,7 +126,7 @@ library
                       , hashable
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus
-                      , ouroboros-network-api ^>= 0.12
+                      , ouroboros-network-api ^>= 0.13
                       , sop-core
                       , split
                       , sqlite-easy >= 1.1.0.1

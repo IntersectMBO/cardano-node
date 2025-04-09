@@ -4,29 +4,30 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+
 module Cardano.Benchmarking.Script.Aeson
 where
 
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BS (lines)
-import qualified Data.ByteString.Lazy as BSL
-import           Data.Text (Text)
-import           GHC.Generics (Generic)
+import           Cardano.Api
+
+import           Cardano.Benchmarking.Script.Types
+import           Cardano.TxGenerator.Internal.Orphans ()
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
+import           Cardano.TxGenerator.Types
+
 import           Prelude
-import           System.Exit
 
 import           Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty
 import           Data.Aeson.Parser as Aeson (json)
 import qualified Data.Attoparsec.ByteString as Atto
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS (lines)
+import qualified Data.ByteString.Lazy as BSL
+import           Data.Text (Text)
 import qualified Data.Yaml as Yaml (encode)
-
-import           Cardano.Api
-import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters)
-
-import           Cardano.Benchmarking.Script.Types
-import           Cardano.TxGenerator.Internal.Orphans ()
-import           Cardano.TxGenerator.Types
+import           GHC.Generics (Generic)
+import           System.Exit
 
 testJSONRoundTrip :: [Action] -> Maybe String
 testJSONRoundTrip l = case fromJSON $ toJSON l of

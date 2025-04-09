@@ -13,7 +13,6 @@ module Cardano.Testnet.Test.Gov.CommitteeAddNew
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Credential as L
@@ -281,13 +280,13 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   -- show proposed committe meembers
   H.noteShow_ ccCredentials
 
-  newCommitteeMembers :: Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
+  newCommitteeMembers :: Set (L.Credential L.ColdCommitteeRole)
     <- fromList <$> getCommitteeMembers epochStateView ceo
 
   -- check that the committee is actually what we expect
   newCommitteeMembers === fromList ccCredentials
 
-parseKeyHashCred :: MonadFail m => String -> m (L.Credential kr L.StandardCrypto)
+parseKeyHashCred :: MonadFail m => String -> m (L.Credential kr)
 parseKeyHashCred hash = L.parseCredential $ "keyHash-" <> Text.pack (trim hash)
 
 trim :: String -> String
@@ -301,7 +300,7 @@ getCommitteeMembers
   => MonadTest m
   => EpochStateView
   -> ConwayEraOnwards era
-  -> m [L.Credential L.ColdCommitteeRole (L.EraCrypto (ShelleyLedgerEra era))]
+  -> m [L.Credential L.ColdCommitteeRole]
 getCommitteeMembers epochStateView ceo = withFrozenCallStack $ do
   govState <- getGovState epochStateView ceo
   fmap (Map.keys . L.committeeMembers) . H.nothingFail $ strictMaybeToMaybe $ govState ^. L.cgsCommitteeL

@@ -18,10 +18,8 @@
 module Cardano.Benchmarking.Script.Core
 where
 
-import           Cardano.Api hiding (toLedgerPParams, fromLedgerPParams)
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..),
-                   ShelleyLedgerEra)
-import           Cardano.Api.Internal.ProtocolParameters (toLedgerPParams, fromLedgerPParams, ProtocolParameters, convertToLedgerProtocolParameters, protocolParamPrices, protocolParamMaxTxExUnits)
+import           Cardano.Api
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ShelleyLedgerEra)
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -46,6 +44,7 @@ import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import qualified Cardano.TxGenerator.Genesis as Genesis
 import           Cardano.TxGenerator.PlutusContext
+import           Cardano.TxGenerator.ProtocolParameters
 import           Cardano.TxGenerator.Setup.Plutus as Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx

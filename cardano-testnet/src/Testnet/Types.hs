@@ -48,7 +48,6 @@ import           Cardano.Api.Shelley (VrfKey)
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
@@ -180,7 +179,7 @@ shelleyGenesis
   :: H.MonadTest m
   => MonadIO m
   => HasCallStack
-  => TestnetRuntime -> m (ShelleyGenesis StandardCrypto)
+  => TestnetRuntime -> m ShelleyGenesis
 shelleyGenesis TestnetRuntime{shelleyGenesisFile} = withFrozenCallStack $
   H.evalEither =<< H.evalIO (A.eitherDecodeFileStrict' shelleyGenesisFile)
 

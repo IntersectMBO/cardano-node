@@ -69,6 +69,7 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart (..), Pushing (..),
                    ReplayStart (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
@@ -83,7 +84,6 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Control.Monad (guard)
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
-import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
 import           Data.Function (on)
 import           Data.Text (Text, pack)
@@ -600,13 +600,19 @@ instance ( ConvertRawHash blk
           "Invalid snapshot " <> showT snap <> showT failure <> context
           where
             context = case failure of
-              LedgerDB.InitFailureRead{} ->
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotFailed{} ->
                    " This is most likely an expected change in the serialization format,"
                 <> " which currently requires a chain replay"
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotDataCorruption ->
+                   " The checksum does not match the snapshot. Seems like the snapshot is corrupted"
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotInvalidChecksumFile{} ->
+                   " The checksum file contains malformed json"
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotNoChecksumFile{} ->
+                   " Snapshot checksum checks are enabled but the snapshot had no checksum file."
+                <> " Did you intend to disable them with `\"DoDiskSnapshotChecksum\": True` in the configuration file?"
               _ -> ""
         LedgerDB.SnapshotMissingChecksum snap ->
           "Checksum file is missing for snapshot " <> showT snap
-
         LedgerDB.TookSnapshot snap pt RisingEdge ->
           "Taking ledger snapshot " <> showT snap <>
           " at " <> renderRealPointAsPhrase pt
@@ -1420,19 +1426,67 @@ instance ( LedgerSupportsProtocol blk,
               , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
               , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info)) ]
 
-instance HasPrivacyAnnotation (ChainSync.Client.TraceEvent peer) where
-instance HasSeverityAnnotation (ChainSync.Client.TraceEvent peer) where
+instance HasPrivacyAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
+instance HasSeverityAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
   getSeverityAnnotation _ = Debug
-instance ToObject peer => Transformable Text IO (ChainSync.Client.TraceEvent peer) where
+instance (ToObject peer, ConvertRawHash blk)
+      => Transformable Text IO (TraceLabelPeer peer (ChainSync.Client.TraceEventCsj peer blk)) where
   trTransformer = trStructured
+instance (ToObject peer, ConvertRawHash blk)
+      => ToObject (ChainSync.Client.TraceEventCsj peer blk) where
+    toObject verb = \case
+      ChainSync.Client.BecomingObjector prevObjector ->
+        mconcat
+          [ "kind" .= String "BecomingObjector"
+          , "previousObjector" .= (toObject verb <$> prevObjector)
+          ]
+      ChainSync.Client.BlockedOnJump ->
+        mconcat
+          [ "kind" .= String "BlockedOnJump"
+          ]
+      ChainSync.Client.InitializedAsDynamo ->
+        mconcat
+          [ "kind" .= String "InitializedAsDynamo"
+          ]
+      ChainSync.Client.NoLongerDynamo newDynamo reason ->
+        mconcat
+          [ "kind" .= String "NoLongerDynamo"
+          , "newDynamo" .= (toObject verb <$> newDynamo)
+          , "reason" .= csjReasonToJSON reason
+          ]
+      ChainSync.Client.NoLongerObjector newObjector reason ->
+        mconcat
+          [ "kind" .= String "NoLongerObjector"
+          , "newObjector" .= (toObject verb <$> newObjector)
+          , "reason" .= csjReasonToJSON reason
+          ]
+      ChainSync.Client.SentJumpInstruction jumpTarget ->
+        mconcat
+          [ "kind" .= String "SentJumpInstruction"
+          , "jumpTarget" .= toObject verb jumpTarget
+          ]
+      where
+        csjReasonToJSON = \case
+          ChainSync.Client.BecauseCsjDisengage -> String "BecauseCsjDisengage"
+          ChainSync.Client.BecauseCsjDisconnect -> String "BecauseCsjDisconnect"
 
-instance ToObject peer => ToObject (ChainSync.Client.TraceEvent peer) where
-  toObject verb (ChainSync.Client.RotatedDynamo oldPeer newPeer) =
-    mconcat
-      [ "kind" .= String "RotatedDynamo"
-      , "oldPeer" .= toObject verb oldPeer
-      , "newPeer" .= toObject verb newPeer
-      ]
+
+instance HasPrivacyAnnotation (ChainSync.Client.TraceEventDbf peer) where
+instance HasSeverityAnnotation (ChainSync.Client.TraceEventDbf peer) where
+  getSeverityAnnotation _ = Info
+instance ToObject peer
+      => Transformable Text IO (ChainSync.Client.TraceEventDbf peer) where
+  trTransformer = trStructured
+instance HasTextFormatter (ChainSync.Client.TraceEventDbf peer) where
+instance ToObject peer
+      => ToObject (ChainSync.Client.TraceEventDbf peer) where
+    toObject verb = \case
+      ChainSync.Client.RotatedDynamo oldPeer newPeer ->
+        mconcat
+          [ "kind" .= String "RotatedDynamo"
+          , "oldPeer" .= toObject verb oldPeer
+          , "newPeer" .= toObject verb newPeer
+          ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where

@@ -15,7 +15,6 @@ module Main (module Main) where
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as Api
 import           Cardano.Api.Shelley (fromPlutusData, sgNetworkMagic)
-import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters (..))
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
@@ -26,6 +25,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 import           Cardano.TxGenerator.Genesis
 import           Cardano.TxGenerator.PlutusContext
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Setup.Plutus

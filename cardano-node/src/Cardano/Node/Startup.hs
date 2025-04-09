@@ -15,6 +15,7 @@ import qualified Cardano.Api as Api
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
@@ -107,7 +108,7 @@ data StartupTrace blk =
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint LocalRootConfig)]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
                   (Maybe PeerSnapshotFile)

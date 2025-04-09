@@ -26,9 +26,9 @@ module  Cardano.TxGenerator.PlutusContext
         where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters (..))
 
 import           Cardano.Ledger.Coin (Coin)
+import           Cardano.TxGenerator.ProtocolParameters
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
 import           Cardano.TxGenerator.Types
 
@@ -38,7 +38,6 @@ import           Data.List (maximumBy, minimumBy)
 import           Data.Ord (comparing)
 import           GHC.Generics (Generic)
 import           GHC.Natural (Natural)
-
 
 -- | This collects information describing the budget. It's only
 -- directly referenced in "Cardano.Benchmarking.Script.Env" to supply

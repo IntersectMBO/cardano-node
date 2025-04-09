@@ -20,24 +20,29 @@ module Cardano.Node.Tracing.Tracers.P2P
   () where
 
 import           Cardano.Logging
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Tracing.OrphanInstances.Network ()
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
+import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import           Ouroboros.Network.ConnectionManager.Core as ConnectionManager (Trace (..))
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
-import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor as InboundGovernor (Trace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..),
-                   DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
-                   PeerSelectionState (..), PeerSelectionTargets (..), PeerSelectionView (..),
-                   TracePeerSelection (..), peerSelectionStateToCounters)
+import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
+import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
+                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
+                   peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -74,7 +79,7 @@ instance
   , ToJSONKey RelayAccessPoint
   , Show ntnAddr
   , Show exception
-  ) => LogFormatting (TraceLocalRootPeers ntnAddr exception) where
+  ) => LogFormatting (TraceLocalRootPeers PeerTrustable ntnAddr exception) where
   forMachine _dtal (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
@@ -115,7 +120,7 @@ instance
       ]
   forHuman = pack . show
 
-instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
+instance MetaTrace (TraceLocalRootPeers ntnAddr extraFlags exception) where
   namespaceFor = \case
     TraceLocalRootDomains {}      -> Namespace [] ["LocalRootDomains"]
     TraceLocalRootWaiting {}      -> Namespace [] ["LocalRootWaiting"]
@@ -223,7 +228,7 @@ instance MetaTrace TracePublicRootPeers where
 -- PeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (TracePeerSelection SockAddr) where
+instance LogFormatting (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -568,7 +573,7 @@ instance LogFormatting (TracePeerSelection SockAddr) where
     ]
   asMetrics _ = []
 
-instance MetaTrace (TracePeerSelection SockAddr) where
+instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers SockAddr) where
     namespaceFor TraceLocalRootPeersChanged {} =
       Namespace [] ["LocalRootPeersChanged"]
     namespaceFor TraceTargetsChanged {}        =
@@ -833,14 +838,14 @@ instance MetaTrace (TracePeerSelection SockAddr) where
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-instance LogFormatting (DebugPeerSelection SockAddr) where
+instance LogFormatting (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
   forMachine dtal@DNormal (TraceGovernorState blockedAt wakeupAfter
                    st@PeerSelectionState { targets }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
-             , "counters" .= forMachine dtal (peerSelectionStateToCounters st)
+             , "counters" .= forMachine dtal (peerSelectionStateToCounters Cardano.PublicRootPeers.toSet Cardano.cardanoPeerSelectionStatetoCounters st)
              ]
   forMachine _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -870,7 +875,7 @@ peerSelectionTargetsToObject
                , "activeBigLedgerPeers" .= targetNumberOfActiveBigLedgerPeers
                ]
 
-instance MetaTrace (DebugPeerSelection SockAddr) where
+instance MetaTrace (DebugPeerSelection extraState extraFlags extraPeers SockAddr) where
     namespaceFor TraceGovernorState {} = Namespace [] ["GovernorState"]
 
     severityFor (Namespace _ ["GovernorState"]) _ = Just Debug
@@ -888,7 +893,7 @@ instance MetaTrace (DebugPeerSelection SockAddr) where
 -- PeerSelectionCounters
 --------------------------------------------------------------------------------
 
-instance LogFormatting PeerSelectionCounters where
+instance LogFormatting (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr)) where
   forMachine _dtal PeerSelectionCounters {..} =
     mconcat [ "kind" .= String "PeerSelectionCounters"
 
@@ -923,15 +928,15 @@ instance LogFormatting PeerSelectionCounters where
             , "activeNonRootPeers" .= numberOfActiveNonRootPeers
             , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
 
-            , "knownBootstrapPeers" .= numberOfKnownBootstrapPeers
-            , "coldBootstrapPeersPromotions" .= numberOfColdBootstrapPeersPromotions
-            , "establishedBootstrapPeers" .= numberOfEstablishedBootstrapPeers
-            , "warmBootstrapPeersDemotions" .= numberOfWarmBootstrapPeersDemotions
-            , "warmBootstrapPeersPromotions" .= numberOfWarmBootstrapPeersPromotions
-            , "activeBootstrapPeers" .= numberOfActiveBootstrapPeers
-            , "ActiveBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
+            , "knownBootstrapPeers" .= snd (Cardano.viewKnownBootstrapPeers extraCounters)
+            , "coldBootstrapPeersPromotions" .= snd (Cardano.viewColdBootstrapPeersPromotions extraCounters)
+            , "establishedBootstrapPeers" .= snd (Cardano.viewEstablishedBootstrapPeers extraCounters)
+            , "warmBootstrapPeersDemotions" .= snd (Cardano.viewWarmBootstrapPeersDemotions extraCounters)
+            , "warmBootstrapPeersPromotions" .= snd (Cardano.viewWarmBootstrapPeersPromotions extraCounters)
+            , "activeBootstrapPeers" .= snd (Cardano.viewActiveBootstrapPeers extraCounters)
+            , "ActiveBootstrapPeersDemotions" .= snd (Cardano.viewActiveBootstrapPeersDemotions extraCounters)
             ]
-  forHuman = pack . show
+  forHuman = forHumanFromMachine
   asMetrics psc =
     case psc of
       PeerSelectionCountersHWC {..} ->
@@ -999,16 +1004,16 @@ instance LogFormatting PeerSelectionCounters where
         , IntM "peerSelection.ActiveNonRootPeers" (fromIntegral numberOfActiveNonRootPeers)
         , IntM "peerSelection.ActiveNonRootPeersDemotions" (fromIntegral numberOfActiveNonRootPeersDemotions)
 
-        , IntM "peerSelection.KnownBootstrapPeers" (fromIntegral numberOfKnownBootstrapPeers)
-        , IntM "peerSelection.ColdBootstrapPeersPromotions" (fromIntegral numberOfColdBootstrapPeersPromotions)
-        , IntM "peerSelection.EstablishedBootstrapPeers" (fromIntegral numberOfEstablishedBootstrapPeers)
-        , IntM "peerSelection.WarmBootstrapPeersDemotions" (fromIntegral numberOfWarmBootstrapPeersDemotions)
-        , IntM "peerSelection.WarmBootstrapPeersPromotions" (fromIntegral numberOfWarmBootstrapPeersPromotions)
-        , IntM "peerSelection.ActiveBootstrapPeers" (fromIntegral numberOfActiveBootstrapPeers)
-        , IntM "peerSelection.ActiveBootstrapPeersDemotions" (fromIntegral numberOfActiveBootstrapPeersDemotions)
+        , IntM "peerSelection.KnownBootstrapPeers" (fromIntegral $ snd $ Cardano.viewKnownBootstrapPeers extraCounters)
+        , IntM "peerSelection.ColdBootstrapPeersPromotions" (fromIntegral $ snd $ Cardano.viewColdBootstrapPeersPromotions extraCounters)
+        , IntM "peerSelection.EstablishedBootstrapPeers" (fromIntegral $ snd $ Cardano.viewEstablishedBootstrapPeers extraCounters)
+        , IntM "peerSelection.WarmBootstrapPeersDemotions" (fromIntegral $ snd $ Cardano.viewWarmBootstrapPeersDemotions extraCounters)
+        , IntM "peerSelection.WarmBootstrapPeersPromotions" (fromIntegral $ snd $ Cardano.viewWarmBootstrapPeersPromotions extraCounters)
+        , IntM "peerSelection.ActiveBootstrapPeers" (fromIntegral $ snd $ Cardano.viewActiveBootstrapPeers extraCounters)
+        , IntM "peerSelection.ActiveBootstrapPeersDemotions" (fromIntegral $ snd $ Cardano.viewActiveBootstrapPeersDemotions extraCounters)
         ]
 
-instance MetaTrace PeerSelectionCounters where
+instance MetaTrace (PeerSelectionCounters extraCounters) where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
 
     severityFor (Namespace _ ["Counters"]) _ = Just Debug
@@ -1471,6 +1476,7 @@ instance MetaTrace (ConnectionManager.Trace addr
       ,("connectionManager.unidirectionalConns","")
       ,("connectionManager.inboundConns","")
       ,("connectionManager.outboundConns","")
+      ,("connectionManager.prunableConns","")
       ]
     metricsDocFor _ = []
 

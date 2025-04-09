@@ -27,7 +27,6 @@ import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScript (..), fromAlonzoExUnits, toPlutusData)
-import           Cardano.Api.Internal.ProtocolParameters (ProtocolParameters (..))
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 
 import qualified PlutusLedgerApi.V1 as PlutusV1
@@ -35,6 +34,7 @@ import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx.AssocMap as AssocMap (empty)
 
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
 import           Cardano.TxGenerator.Types (TxGenError (..))
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)

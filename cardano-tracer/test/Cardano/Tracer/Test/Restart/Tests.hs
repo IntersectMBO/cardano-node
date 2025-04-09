@@ -96,8 +96,9 @@ mkConfig TestSetup{..} rootDir p = TracerConfig
   , logging        = NE.fromList [LoggingParams rootDir FileMode ForMachine]
   , rotation       = Nothing
   , verbosity      = Just Minimum
-  , metricsComp    = Nothing
+  , metricsNoSuffix = Nothing
   , metricsHelp    = Nothing
   , hasForwarding  = Nothing
   , resourceFreq   = Nothing
+  , ekgRequestFull = Nothing
   }

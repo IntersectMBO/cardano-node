@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-partial-fields  #-}
@@ -61,19 +61,21 @@ import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
-import qualified Data.Aeson.KeyMap as AE
+import           Data.Bool (bool)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text, intercalate, pack, singleton, unpack)
+import           Data.Text as T (Text, intercalate, null, pack, singleton, unpack, words)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Encoding (decodeUtf8)
+import           Data.Text.Read as T (decimal)
 import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
+import           Network.Socket (PortNumber)
 
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
@@ -152,17 +154,28 @@ class LogFormatting a where
   forHuman :: a -> Text
   forHuman _v = ""
 
-  forHumanOrMachine :: a -> Text
-  forHumanOrMachine v =
-    case forHuman v of
-      "" -> toStrict . decodeUtf8 . AE.encodingToLazyByteString $
-              AE.toEncoding $ forMachine DNormal v
-      s  -> s
-
   -- | Metrics representation.
   -- No metrics by default
   asMetrics :: a -> [Metric]
   asMetrics _v = []
+
+  -- | A quick drop-in for forHuman to re-use the existing JSON serialization on normal detail level
+  --   You can safely use `forHuman = forHumanFromMachine` in instance definitions.
+  forHumanFromMachine :: a -> Text
+  forHumanFromMachine =
+    toStrict . decodeUtf8 . AE.encodingToLazyByteString . AE.toEncoding . forMachine DNormal
+
+  -- | Yields the JSON serialization as Text if no human-readable representation is defined.
+  --   CAUTION: It is *NOT* safe to use it as a drop-in like forHumanFromMachine above - this leads to a stack overflow.
+  --   It's only meant to ease forHuman definitions using values of a distinct type such as:
+  --     `forHuman (ChainDB.PipeliningEvent ev') = forHumanFromMachine ev'`
+  --   In the future, the type should probably change to sth. akin to LogFormatting b => (a == b) ~ 'False => a -> b -> Text
+  --   to guard against that misuse.
+  forHumanOrMachine :: a -> Text
+  forHumanOrMachine v =
+    case forHuman v of
+      "" -> forHumanFromMachine v
+      s  -> s
 
 class MetaTrace a where
   namespaceFor  :: a -> Namespace a
@@ -341,14 +354,12 @@ data FormattedMessage =
   deriving (Eq, Show)
 
 
-data PreFormatted a = PreFormatted {
-    pfMessage    :: !a
-  , pfForHuman   :: !(Maybe Text)
-  , pfForMachine :: !(AE.KeyMap AE.Value)
+data PreFormatted = PreFormatted {
+    pfForHuman   :: !(Maybe Text)
+  , pfForMachine :: !AE.Encoding
   , pfNamespace  :: ![Text]
   , pfTimestamp  :: !Text
   , pfTime       :: !UTCTime
-  , pfHostname   :: !HostName
   , pfThreadId   :: !Text
 }
 
@@ -360,7 +371,7 @@ data TraceObject = TraceObject {
   , toSeverity  :: !SeverityS
   , toDetails   :: !DetailLevel
   , toTimestamp :: !UTCTime
-  , toHostname  :: !HostName
+  , toHostname  :: !Text
   , toThreadId  :: !Text
 } deriving (Eq, Show)
 
@@ -370,6 +381,7 @@ data BackendConfig =
   | Stdout FormatLogging
   | EKGBackend
   | DatapointBackend
+  | PrometheusSimple Bool (Maybe HostName) PortNumber   -- boolean: drop suffixes like "_int" in exposition; default: False
   deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON BackendConfig where
@@ -377,18 +389,40 @@ instance AE.ToJSON BackendConfig where
   toJSON DatapointBackend = AE.String "DatapointBackend"
   toJSON EKGBackend = AE.String "EKGBackend"
   toJSON (Stdout f) = AE.String $ "Stdout " <> (pack . show) f
+  toJSON (PrometheusSimple s h p) = AE.String $ "PrometheusSimple "
+    <> bool mempty "nosuffix" s
+    <> maybe mempty ((<> " ") . pack) h
+    <> (pack . show) p
 
 instance AE.FromJSON BackendConfig where
-  parseJSON (AE.String "Forwarder")            = pure Forwarder
-  parseJSON (AE.String "EKGBackend")           = pure EKGBackend
-  parseJSON (AE.String "DatapointBackend")     = pure DatapointBackend
-  parseJSON (AE.String "Stdout HumanFormatColoured")
-                                               = pure $ Stdout HumanFormatColoured
-  parseJSON (AE.String "Stdout HumanFormatUncoloured")
-                                               = pure $ Stdout HumanFormatUncoloured
-  parseJSON (AE.String "Stdout MachineFormat") = pure $ Stdout MachineFormat
-  parseJSON other                              = fail $ "Parsing of backend config failed."
-                        <> "Unknown config: " <> show other
+  parseJSON = AE.withText "BackendConfig" $ \case
+    "Forwarder"                     -> pure Forwarder
+    "EKGBackend"                    -> pure EKGBackend
+    "DatapointBackend"              -> pure DatapointBackend
+    "Stdout HumanFormatColoured"    -> pure $ Stdout HumanFormatColoured
+    "Stdout HumanFormatUncoloured"  -> pure $ Stdout HumanFormatUncoloured
+    "Stdout MachineFormat"          -> pure $ Stdout MachineFormat
+    prometheus                      -> either fail pure (parsePrometheusString prometheus)
+
+parsePrometheusString :: Text -> Either String BackendConfig
+parsePrometheusString t = case T.words t of
+  ["PrometheusSimple", portNo_] ->
+    parsePort portNo_ >>= Right . PrometheusSimple False Nothing
+  ["PrometheusSimple", arg, portNo_] ->
+    parsePort portNo_ >>= Right . if validSuffix arg then PrometheusSimple (isNoSuffix arg) Nothing else PrometheusSimple False (Just $ unpack arg)
+  ["PrometheusSimple", noSuff, host, portNo_]
+    | validSuffix noSuff  -> parsePort portNo_ >>= Right . PrometheusSimple (isNoSuffix noSuff) (Just $ unpack host)
+    | otherwise           -> Left $ "invalid modifier for PrometheusSimple: " ++ show noSuff
+  _
+    -> Left $ "unknown backend: " ++ show t
+  where
+    validSuffix s = s == "suffix" || s == "nosuffix"
+    isNoSuffix    = (== "nosuffix")
+    parsePort p = case T.decimal p of
+      Right (portNo :: Word, rest)
+        | T.null rest && 0 < portNo && portNo < 65536 -> Right $ fromIntegral portNo
+      _                                               -> failure
+      where failure = Left $ "invalid PrometheusSimple port: " ++ show p
 
 data FormatLogging =
     HumanFormatColoured
@@ -440,9 +474,10 @@ instance AE.FromJSON Verbosity where
                                     <> "Unknown Verbosity: " <> show other
 
 data TraceOptionForwarder = TraceOptionForwarder {
-    tofConnQueueSize    :: Word
-  , tofDisconnQueueSize :: Word
-  , tofVerbosity        :: Verbosity
+    tofConnQueueSize       :: Word
+  , tofDisconnQueueSize    :: Word
+  , tofVerbosity           :: Verbosity
+  , tofMaxReconnectDelay   :: Word
 } deriving (Eq, Generic, Ord, Show, AE.ToJSON)
 
 -- A word regarding queue sizes:
@@ -463,17 +498,19 @@ data TraceOptionForwarder = TraceOptionForwarder {
 instance AE.FromJSON TraceOptionForwarder where
     parseJSON (AE.Object obj) =
       TraceOptionForwarder
-        <$> obj AE..:? "connQueueSize"    AE..!= 1024
-        <*> obj AE..:? "disconnQueueSize" AE..!= 2048
-        <*> obj AE..:? "verbosity"        AE..!= Minimum
+        <$> obj AE..:? "connQueueSize"      AE..!= 1024
+        <*> obj AE..:? "disconnQueueSize"   AE..!= 2048
+        <*> obj AE..:? "verbosity"          AE..!= Minimum
+        <*> obj AE..:? "maxReconnectDelay"  AE..!= 60
     parseJSON _ = mempty
 
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
-    tofConnQueueSize    = 1024
-  , tofDisconnQueueSize = 2048
-  , tofVerbosity        = Minimum
+    tofConnQueueSize       = 1024
+  , tofDisconnQueueSize    = 2048
+  , tofVerbosity           = Minimum
+  , tofMaxReconnectDelay   = 60
 }
 
 instance AE.FromJSON ForwarderMode where

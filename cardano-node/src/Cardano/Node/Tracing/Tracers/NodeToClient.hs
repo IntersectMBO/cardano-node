@@ -332,6 +332,14 @@ instance LogFormatting (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) w
     mconcat [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
+  forMachine _dtal (Simple.AnyMessageAndAgency stok LTM.MsgGetMeasures {}) =
+    mconcat [ "kind" .= String "MsgGetMeasures"
+            , "agency" .= String (pack $ show stok)
+            ]
+  forMachine _dtal (Simple.AnyMessageAndAgency stok LTM.MsgReplyGetMeasures {}) =
+    mconcat [ "kind" .= String "MsgReplyMeasures"
+            , "agency" .= String (pack $ show stok)
+            ]
 
 instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
     namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgAcquire {}) =
@@ -356,6 +364,10 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
       Namespace [] ["Release"]
     namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgDone {}) =
       Namespace [] ["Done"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgGetMeasures {}) =
+      Namespace [] ["GetMeasures"]
+    namespaceFor (Simple.AnyMessageAndAgency _agency LTM.MsgReplyGetMeasures {}) =
+      Namespace [] ["ReplyGetMeasures"]
 
     severityFor (Namespace _ ["Acquire"]) _ = Just Info
     severityFor (Namespace _ ["Acquired"]) _ = Just Info
@@ -368,6 +380,8 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
     severityFor (Namespace _ ["ReplyGetSizes"]) _ = Just Info
     severityFor (Namespace _ ["Release"]) _ = Just Info
     severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor (Namespace _ ["GetMeasures"]) _ = Just Info
+    severityFor (Namespace _ ["ReplyGetMeasures"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Acquire"]) = Just
@@ -392,6 +406,10 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
       ""
     documentFor (Namespace _ ["Done"]) = Just
       ""
+    documentFor (Namespace _ ["GetMeasures"]) = Just
+      ""
+    documentFor (Namespace _ ["ReplyGetMeasures"]) = Just
+      ""
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -406,6 +424,8 @@ instance MetaTrace (Simple.AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
       , Namespace [] ["ReplyGetSizes"]
       , Namespace [] ["Release"]
       , Namespace [] ["Done"]
+      , Namespace [] ["GetMeasures"]
+      , Namespace [] ["ReplyGetMeasures"]
       ]
 --------------------------------------------------------------------------------
 -- LocalTxSubmission Tracer

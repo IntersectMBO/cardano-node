@@ -35,6 +35,12 @@ import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
                    HasTxs (..), TxId, txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
+import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers(..))
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable(..))
+import           Cardano.Network.Types (LedgerStateJudgement(..))
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block
@@ -52,8 +58,8 @@ import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
                    ConnectionManagerCounters (..),
                    OperationResult (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
+import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
-import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
@@ -67,7 +73,6 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..), DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
                    PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
@@ -75,7 +80,6 @@ import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..),
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.PublicRootPeers (PublicRootPeers)
 import qualified Ouroboros.Network.PeerSelection.PublicRootPeers as PublicRootPeers
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -102,6 +106,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmi
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
 import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..),
                    PeerSharingResult (..))
+import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PeerSharing
 import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 as Server
@@ -142,11 +147,11 @@ import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance HasPrivacyAnnotation (ND.DiffusionTracer ntnAddr ntcAddr)
-instance HasSeverityAnnotation (ND.DiffusionTracer ntnAddr ntcAddr) where
-  getSeverityAnnotation ND.SystemdSocketConfiguration {} = Warning
-  getSeverityAnnotation ND.UnsupportedLocalSystemdSocket {} = Warning
-  getSeverityAnnotation ND.DiffusionErrored {} = Critical
+instance HasPrivacyAnnotation (Diffusion.DiffusionTracer ntnAddr ntcAddr)
+instance HasSeverityAnnotation (Diffusion.DiffusionTracer ntnAddr ntcAddr) where
+  getSeverityAnnotation Diffusion.SystemdSocketConfiguration {} = Warning
+  getSeverityAnnotation Diffusion.UnsupportedLocalSystemdSocket {} = Warning
+  getSeverityAnnotation Diffusion.DiffusionErrored {} = Critical
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion)
@@ -417,21 +422,22 @@ instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
     Mux.TraceStartEagerly _ _ -> Info
     Mux.TraceStartOnDemand _ _ -> Info
     Mux.TraceStartedOnDemand _ _ -> Info
+    Mux.TraceStartOnDemandAny {} -> Info
     Mux.TraceTerminating {} -> Debug
     Mux.TraceStopping -> Debug
     Mux.TraceStopped -> Debug
     Mux.TraceTCPInfo {} -> Debug
 
-instance HasPrivacyAnnotation (TraceLocalRootPeers RemoteAddress exception)
-instance HasSeverityAnnotation (TraceLocalRootPeers RemoteAddress exception) where
+instance HasPrivacyAnnotation (TraceLocalRootPeers extraFlags RemoteAddress exception)
+instance HasSeverityAnnotation (TraceLocalRootPeers extraFlags RemoteAddress exception) where
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation TracePublicRootPeers
 instance HasSeverityAnnotation TracePublicRootPeers where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (TracePeerSelection addr)
-instance HasSeverityAnnotation (TracePeerSelection addr) where
+instance HasPrivacyAnnotation (TracePeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr)
+instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr) where
   getSeverityAnnotation ev =
     case ev of
       TraceLocalRootPeersChanged {} -> Notice
@@ -507,8 +513,8 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceVerifyPeerSnapshot True  -> Info
       TraceVerifyPeerSnapshot False -> Error
 
-instance HasPrivacyAnnotation (DebugPeerSelection addr)
-instance HasSeverityAnnotation (DebugPeerSelection addr) where
+instance HasPrivacyAnnotation (DebugPeerSelection extraState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr)
+instance HasSeverityAnnotation (DebugPeerSelection extraState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) addr) where
   getSeverityAnnotation _ = Debug
 
 instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr lAddr)
@@ -521,8 +527,8 @@ instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr lAddr) where
      PeerMonitoringResult {}    -> Debug
      AcquireConnectionError {}  -> Error
 
-instance HasPrivacyAnnotation PeerSelectionCounters
-instance HasSeverityAnnotation PeerSelectionCounters where
+instance HasPrivacyAnnotation (PeerSelectionCounters extraCounters)
+instance HasSeverityAnnotation (PeerSelectionCounters extraCounters) where
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation (ConnMgr.Trace addr connTrace)
@@ -608,9 +614,9 @@ instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance Transformable Text IO (ND.DiffusionTracer RemoteAddress LocalAddress) where
+instance Transformable Text IO (Diffusion.DiffusionTracer RemoteAddress LocalAddress) where
   trTransformer = trStructuredText
-instance HasTextFormatter (ND.DiffusionTracer RemoteAddress LocalAddress) where
+instance HasTextFormatter (Diffusion.DiffusionTracer RemoteAddress LocalAddress) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
@@ -691,6 +697,10 @@ instance (ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv KA.KeepAlive)) where
   trTransformer = trStructured
 
+instance (ToObject localPeer, ToJSON addr)
+     => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (PeerSharing.PeerSharing addr))) where
+  trTransformer = trStructured
+
 instance
   ( HasPrivacyAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
   , HasSeverityAnnotation (Stateful.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)) f)
@@ -768,9 +778,9 @@ instance (Show peer)
      <> " event: " <> pack (show ev)
 
 
-instance Show exception => Transformable Text IO (TraceLocalRootPeers RemoteAddress exception) where
+instance Show exception => Transformable Text IO (TraceLocalRootPeers PeerTrustable RemoteAddress exception) where
   trTransformer = trStructuredText
-instance Show exception => HasTextFormatter (TraceLocalRootPeers RemoteAddress exception) where
+instance Show exception => HasTextFormatter (TraceLocalRootPeers PeerTrustable RemoteAddress exception) where
     formatText a _ = pack (show a)
 
 instance Transformable Text IO TracePublicRootPeers where
@@ -778,14 +788,14 @@ instance Transformable Text IO TracePublicRootPeers where
 instance HasTextFormatter TracePublicRootPeers where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO (TracePeerSelection SockAddr) where
+instance Transformable Text IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (TracePeerSelection SockAddr) where
+instance (Show extraDebugState, Show extraFlags, Show (Cardano.PublicRootPeers.ExtraPeers addr)) => HasTextFormatter (TracePeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers addr) SockAddr) where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO (DebugPeerSelection SockAddr) where
+instance Transformable Text IO (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (DebugPeerSelection SockAddr) where
+instance HasTextFormatter (DebugPeerSelection extraDebugState extraFlags (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
   -- One can only change what is logged with respect to verbosity using json
   -- format.
   formatText _ obj = pack (show obj)
@@ -795,9 +805,9 @@ instance Show lAddr => Transformable Text IO (PeerSelectionActionsTrace SockAddr
 instance Show lAddr => HasTextFormatter (PeerSelectionActionsTrace SockAddr lAddr) where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO PeerSelectionCounters where
+instance (ToJSON addr, Show addr) => Transformable Text IO (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr)) where
   trTransformer = trStructuredText
-instance HasTextFormatter PeerSelectionCounters where
+instance Show extraCounters => HasTextFormatter (PeerSelectionCounters extraCounters) where
   formatText a _ = pack (show a)
 
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
@@ -1005,6 +1015,14 @@ instance ToObject (AnyMessage (LocalTxMonitor txid tx slotno)) where
     mconcat [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
+  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgGetMeasures {}) =
+    mconcat [ "kind" .= String "MsgGetMeasures"
+            , "agency" .= String (pack $ show stok)
+            ]
+  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgReplyGetMeasures {}) =
+    mconcat [ "kind" .= String "MsgReplyMeasures"
+            , "agency" .= String (pack $ show stok)
+            ]
 
 instance ToObject (AnyMessage (LocalTxSubmission tx err)) where
   toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgSubmitTx{}) =
@@ -1110,6 +1128,26 @@ instance ToObject (AnyMessage KA.KeepAlive) where
       , "agency" .= String (pack $ show stok)
       ]
 
+instance ToJSON peerAddr => ToObject (AnyMessage (PeerSharing.PeerSharing peerAddr)) where
+  toObject _verb (AnyMessageAndAgency stok (PeerSharing.MsgShareRequest num)) =
+    mconcat
+      [ "kind" .= String "MsgShareRequest"
+      , "agency" .= String (pack $ show stok)
+      , "ammount" .= PeerSharing.getAmount num
+      ]
+  toObject _verb (AnyMessageAndAgency stok (PeerSharing.MsgSharePeers peers)) =
+    mconcat
+      [ "kind" .= String "MsgSharePeers"
+      , "agency" .= String (pack $ show stok)
+      , "peers" .= peers
+      ]
+  toObject _verb (AnyMessageAndAgency stok PeerSharing.MsgDone) =
+    mconcat
+      [ "kind" .= String "MsgDone"
+      , "agency" .= String (pack $ show stok)
+      ]
+
+
 instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
   toJSON ConnectionId { localAddress, remoteAddress } =
     Aeson.object [ "localAddress"  .= toJSON localAddress
@@ -1131,72 +1169,72 @@ instance Aeson.ToJSON ConnectionManagerCounters where
                  ]
 
 -- TODO: use 'ToJSON' constraints
-instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.DiffusionTracer ntnAddr ntcAddr) where
-  toObject _verb (ND.RunServer sockAddr) = mconcat
+instance (Show ntnAddr, Show ntcAddr) => ToObject (Diffusion.DiffusionTracer ntnAddr ntcAddr) where
+  toObject _verb (Diffusion.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
     ]
 
-  toObject _verb (ND.RunLocalServer localAddress) = mconcat
+  toObject _verb (Diffusion.RunLocalServer localAddress) = mconcat
     [ "kind" .= String "RunLocalServer"
     , "localAddress" .= String (pack (show localAddress))
     ]
-  toObject _verb (ND.UsingSystemdSocket localAddress) = mconcat
+  toObject _verb (Diffusion.UsingSystemdSocket localAddress) = mconcat
     [ "kind" .= String "UsingSystemdSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
 
-  toObject _verb (ND.CreateSystemdSocketForSnocketPath localAddress) = mconcat
+  toObject _verb (Diffusion.CreateSystemdSocketForSnocketPath localAddress) = mconcat
     [ "kind" .= String "CreateSystemdSocketForSnocketPath"
     , "path" .= String (pack . show $ localAddress)
     ]
-  toObject _verb (ND.CreatedLocalSocket localAddress) = mconcat
+  toObject _verb (Diffusion.CreatedLocalSocket localAddress) = mconcat
     [ "kind" .= String "CreatedLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
-  toObject _verb (ND.ConfiguringLocalSocket localAddress socket) = mconcat
+  toObject _verb (Diffusion.ConfiguringLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ConfiguringLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.ListeningLocalSocket localAddress socket) = mconcat
+  toObject _verb (Diffusion.ListeningLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ListeningLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.LocalSocketUp localAddress fd) = mconcat
+  toObject _verb (Diffusion.LocalSocketUp localAddress fd) = mconcat
     [ "kind" .= String "LocalSocketUp"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show fd))
     ]
-  toObject _verb (ND.CreatingServerSocket socket) = mconcat
+  toObject _verb (Diffusion.CreatingServerSocket socket) = mconcat
     [ "kind" .= String "CreatingServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.ListeningServerSocket socket) = mconcat
+  toObject _verb (Diffusion.ListeningServerSocket socket) = mconcat
     [ "kind" .= String "ListeningServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.ServerSocketUp socket) = mconcat
+  toObject _verb (Diffusion.ServerSocketUp socket) = mconcat
     [ "kind" .= String "ServerSocketUp"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.ConfiguringServerSocket socket) = mconcat
+  toObject _verb (Diffusion.ConfiguringServerSocket socket) = mconcat
     [ "kind" .= String "ConfiguringServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.UnsupportedLocalSystemdSocket path) = mconcat
+  toObject _verb (Diffusion.UnsupportedLocalSystemdSocket path) = mconcat
     [ "kind" .= String "UnsupportedLocalSystemdSocket"
     , "path" .= String (pack (show path))
     ]
-  toObject _verb ND.UnsupportedReadySocketCase = mconcat
+  toObject _verb Diffusion.UnsupportedReadySocketCase = mconcat
     [ "kind" .= String "UnsupportedReadySocketCase"
     ]
-  toObject _verb (ND.DiffusionErrored exception) = mconcat
+  toObject _verb (Diffusion.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
-  toObject _verb (ND.SystemdSocketConfiguration config) = mconcat
+  toObject _verb (Diffusion.SystemdSocketConfiguration config) = mconcat
     [ "kand" .= String "SystemdSocketConfiguration"
     , "message" .= String (pack (show config))
     ]
@@ -1439,6 +1477,7 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
       , "count" .= toJSON count
       ]
 
+instance Aeson.ToJSONKey PeerTrustable where
 
 instance Aeson.ToJSONKey SockAddr where
 
@@ -1646,17 +1685,17 @@ instance FromJSON HotValency where
 instance FromJSON WarmValency where
   parseJSON v = WarmValency <$> parseJSON v
 
-instance ToJSON LocalRootConfig where
+instance ToJSON (LocalRootConfig PeerTrustable) where
   toJSON LocalRootConfig { peerAdvertise,
-                           peerTrustable,
+                           extraFlags = peerTrustable,
                            diffusionMode } =
     Aeson.object
       [ "peerAdvertise" .= peerAdvertise
-      , "peerTrustable" .= peerTrustable
       , "diffusionMode" .= show diffusionMode
+      , "extraFlags"    .= show peerTrustable
       ]
 
-instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
+instance Show exception => ToObject (TraceLocalRootPeers PeerTrustable RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
@@ -1746,7 +1785,7 @@ instance ToJSON PeerStatus where
   toJSON = String . pack . show
 
 instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Ord peerAddr, Show peerAddr)
-  => ToJSON (LocalRootPeers peerAddr) where
+  => ToJSON (LocalRootPeers PeerTrustable peerAddr) where
   toJSON lrp =
     Aeson.object [ "kind" .= String "LocalRootPeers"
                  , "groups" .= Aeson.toJSONList (LocalRootPeers.toGroups lrp)
@@ -1773,7 +1812,7 @@ instance ToJSON PeerSelectionTargets where
                  , "targetActiveBigLedgerPeers" .= nActiveBigLedgerPeers
                  ]
 
-instance ToJSON peerAddr => ToJSON (PublicRootPeers peerAddr) where
+instance ToJSON peerAddr => ToJSON (PublicRootPeers (Cardano.PublicRootPeers.ExtraPeers peerAddr) peerAddr) where
   toJSON prp =
     Aeson.object [ "kind" .= String "PublicRootPeers"
                  , "bootstrapPeers" .= PublicRootPeers.getBootstrapPeers prp
@@ -1789,7 +1828,7 @@ instance ToJSON addr => ToJSON (PeerSharingResult addr) where
   toJSON (PeerSharingResult addrs) = Aeson.toJSONList addrs
   toJSON PeerSharingNotRegisteredYet = String "PeerSharingNotRegisteredYet"
 
-instance ToObject (TracePeerSelection SockAddr) where
+instance ToObject (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -2124,7 +2163,7 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
-            , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
+            , "ledgerStateJudgement" .= Cardano.debugLedgerStateJudgement (dpssExtraState ds)
             , "associationMode" .= dpssAssociationMode ds
             ]
 
@@ -2187,7 +2226,7 @@ peerSelectionTargetsToObject
                , "activeBigLedgerPeers" .= targetNumberOfActiveBigLedgerPeers
                ]
 
-instance ToObject (DebugPeerSelection SockAddr) where
+instance ToObject (DebugPeerSelection Cardano.ExtraState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers SockAddr) SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
                    st@PeerSelectionState { targets })
       | verb <= NormalVerbosity =
@@ -2195,7 +2234,10 @@ instance ToObject (DebugPeerSelection SockAddr) where
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
-             , "counters" .= toObject verb (peerSelectionStateToCounters st)
+             , "counters" .= toObject verb (peerSelectionStateToCounters
+                                             Cardano.PublicRootPeers.toSet
+                                             Cardano.cardanoPeerSelectionStatetoCounters
+                                             st)
 
              ]
   toObject _ (TraceGovernorState blockedAt wakeupAfter ev) =
@@ -2232,7 +2274,7 @@ instance Show lAddr => ToObject (PeerSelectionActionsTrace SockAddr lAddr) where
             , "error" .= displayException exception
             ]
 
-instance ToObject PeerSelectionCounters where
+instance ToJSON peeraddr => ToObject (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes peeraddr)) where
   toObject _verb PeerSelectionCounters {..} =
     mconcat [ "kind" .= String "PeerSelectionCounters"
 
@@ -2267,13 +2309,13 @@ instance ToObject PeerSelectionCounters where
             , "activeNonRootPeers" .= numberOfActiveNonRootPeers
             , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
 
-            , "knownBootstrapPeers" .= numberOfKnownBootstrapPeers
-            , "coldBootstrapPeersPromotions" .= numberOfColdBootstrapPeersPromotions
-            , "establishedBootstrapPeers" .= numberOfEstablishedBootstrapPeers
-            , "warmBootstrapPeersDemotions" .= numberOfWarmBootstrapPeersDemotions
-            , "warmBootstrapPeersPromotions" .= numberOfWarmBootstrapPeersPromotions
-            , "activeBootstrapPeers" .= numberOfActiveBootstrapPeers
-            , "activeBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
+            , "knownBootstrapPeers" .= snd (Cardano.viewKnownBootstrapPeers extraCounters)
+            , "coldBootstrapPeersPromotions" .= snd (Cardano.viewColdBootstrapPeersPromotions extraCounters)
+            , "establishedBootstrapPeers" .= snd (Cardano.viewEstablishedBootstrapPeers extraCounters)
+            , "warmBootstrapPeersDemotions" .= snd (Cardano.viewWarmBootstrapPeersDemotions extraCounters)
+            , "warmBootstrapPeersPromotions" .= snd (Cardano.viewWarmBootstrapPeersPromotions extraCounters)
+            , "activeBootstrapPeers" .= snd (Cardano.viewActiveBootstrapPeers extraCounters)
+            , "activeBootstrapPeersDemotions" .= snd (Cardano.viewActiveBootstrapPeersDemotions extraCounters)
             ]
 
 instance ToJSON ProtocolLimitFailure where
@@ -2346,6 +2388,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_17 = Number 17
   toJSON NodeToClientV_18 = Number 18
   toJSON NodeToClientV_19 = Number 19
+  toJSON NodeToClientV_20 = Number 20
   -- NB: When adding a new version here, update FromJSON below as well!
 
 instance FromJSON NodeToClientVersion where
@@ -2545,7 +2588,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
                                              listValue (\(localAddr, connState) ->
                                                 Aeson.object
                                                   [ "localAddress" .= localAddr
-                                                  , "state" .= toJSON connState  
+                                                  , "state" .= toJSON connState
                                                   ]
                                              )
                                              (Map.toList inner)

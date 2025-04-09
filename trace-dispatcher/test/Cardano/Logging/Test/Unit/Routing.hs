@@ -32,7 +32,7 @@ testRouting :: IO [Text]
 testRouting = do
     testTracerRef <- newIORef []
     simpleTracer <- testTracer testTracerRef
-    tf <- machineFormatter Nothing simpleTracer
+    tf <- machineFormatter simpleTracer
     let t1 = appendPrefixName "tracer1" tf
     let t2 = appendPrefixName "tracer2" tf
     confState <- emptyConfigReflection

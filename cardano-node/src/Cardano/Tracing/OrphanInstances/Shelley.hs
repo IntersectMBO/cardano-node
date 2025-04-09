@@ -33,21 +33,20 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Api as Ledger
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe, Mismatch (..))
+import           Cardano.Ledger.BaseTypes (Mismatch (..), activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import           Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Crypto as Core
-import qualified Cardano.Ledger.SafeHash as SafeHash
+import qualified Cardano.Ledger.Hashes as Hashes
 import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
                    renderScriptIntegrityHash)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
+import qualified Cardano.Protocol.Crypto as Core
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
@@ -129,10 +128,10 @@ instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
       ]
 
 instance
-  ( ToObject (PredicateFailure (Ledger.EraRule "BBODY" ledgerera))
-  ) => ToObject (ShelleyLedgerError ledgerera) where
-  toObject verb (BBodyError (BlockTransitionError fs)) =
-    mconcat [ "kind" .= String "BBodyError"
+  ( ToObject (PredicateFailure (Ledger.EraRule "BBODY" era))
+  ) => ToObject (BlockTransitionError era) where
+  toObject verb (BlockTransitionError fs) =
+    mconcat [ "kind" .= String "BlockTransitionError"
             , "failures" .= fmap (toObject verb) fs
             ]
 
@@ -226,13 +225,13 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "error" .= String "Delegated rep is not registered for provided stake key"
       ]
 
-instance ToObject (Set (Credential 'Staking StandardCrypto)) where
+instance ToObject (Set (Credential 'Staking)) where
   toObject _verb creds =
     mconcat [ "kind" .= String "StakeCreds"
              , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
 
-instance ToObject (NonEmpty.NonEmpty (KeyHash 'Staking StandardCrypto)) where
+instance ToObject (NonEmpty.NonEmpty (KeyHash 'Staking)) where
   toObject _verb keyHashes =
     mconcat [ "kind" .= String "StakeKeyHashes"
              , "stakeKeyHashes" .= toJSON keyHashes
@@ -269,7 +268,7 @@ instance ToObject ChainPredicateFailure where
           , "protocol version."
           ]
 
-instance ToObject (PrtlSeqFailure crypto) where
+instance ToObject PrtlSeqFailure where
   toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
     mconcat [ "kind" .= String "WrongSlotInterval"
              , "lastSlot" .= lastSlot
@@ -289,14 +288,14 @@ instance ToObject (PrtlSeqFailure crypto) where
 instance
   ( ToObject (PredicateFailure (Ledger.EraRule "LEDGERS" ledgerera))
   ) => ToObject (ShelleyBbodyPredFailure ledgerera) where
-  toObject _verb (WrongBlockBodySizeBBODY (Mismatch { mismatchSupplied = actualBodySz
-                                                    , mismatchExpected = claimedBodySz })) =
+  toObject _verb (WrongBlockBodySizeBBODY Mismatch { mismatchSupplied = actualBodySz
+                                                   , mismatchExpected = claimedBodySz }) =
     mconcat [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
              , "claimedBlockBodySize" .= claimedBodySz
              ]
-  toObject _verb (InvalidBodyHashBBODY (Mismatch { mismatchSupplied = actualHash
-                                                 , mismatchExpected = claimedHash })) =
+  toObject _verb (InvalidBodyHashBBODY Mismatch { mismatchSupplied = actualHash
+                                                , mismatchExpected = claimedHash }) =
     mconcat [ "kind" .= String "InvalidBodyHashBBODY"
              , "actualBodyHash" .= textShow actualHash
              , "claimedBodyHash" .= textShow claimedHash
@@ -321,8 +320,6 @@ instance
   ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
-  , ToObject (Set (Credential 'Staking (Consensus.EraCrypto ledgerera)))
-  , ToObject (NonEmpty.NonEmpty (KeyHash 'Staking (Consensus.EraCrypto ledgerera)))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
   toObject _    (Conway.ConwayTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
@@ -429,8 +426,7 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
             ]
 
 instance
-  ( Core.Crypto (Consensus.EraCrypto era)
-  , ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
+  ( ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => ToObject (Conway.ConwayCertsPredFailure era) where
   toObject verb = \case
     Conway.WithdrawalsNotInRewardsCERTS incorrectWithdrawals ->
@@ -443,7 +439,6 @@ instance
   , Api.IsShelleyBasedEra era
   , ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , ToObject (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
@@ -456,9 +451,9 @@ instance
              ]
   toObject _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
-             , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+             , "required" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                  (Set.toList required)
-             , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+             , "received" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                  (Set.toList received)
              ]
   toObject _ (PPViewHashesDontMatch Mismatch {mismatchSupplied, mismatchExpected}) =
@@ -492,8 +487,6 @@ instance
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "UTXO" ledgerera))
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
-  , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (ShelleyUtxowPredFailure ledgerera) where
   toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
     mconcat [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
@@ -529,8 +522,8 @@ instance
              , "txBodyMetadataHash" .= txBodyMetadataHash
              ]
   -- TODO are these arguments in the right order?
-  toObject _verb (ConflictingMetadataHash (Mismatch { mismatchSupplied = txBodyMetadataHash
-                                                    , mismatchExpected = fullMetadataHash })) =
+  toObject _verb (ConflictingMetadataHash Mismatch { mismatchSupplied = txBodyMetadataHash
+                                                   , mismatchExpected = fullMetadataHash }) =
     mconcat [ "kind" .= String "ConflictingMetadataHash"
              , "txBodyMetadataHash" .= txBodyMetadataHash
              , "fullMetadataHash" .= fullMetadataHash
@@ -544,7 +537,6 @@ instance
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
-  , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (ShelleyUtxoPredFailure ledgerera) where
   toObject _verb (BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
@@ -555,8 +547,8 @@ instance
     mconcat [ "kind" .= String "ExpiredUTxO"
              , "ttl"  .= mismatchSupplied
              , "slot" .= mismatchExpected ]
-  toObject _verb (MaxTxSizeUTxO (Mismatch { mismatchSupplied = txsize
-                                          , mismatchExpected = maxtxsize })) =
+  toObject _verb (MaxTxSizeUTxO Mismatch { mismatchSupplied = txsize
+                                         , mismatchExpected = maxtxsize }) =
     mconcat [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
@@ -578,8 +570,8 @@ instance
              ]
   toObject _verb InputSetEmptyUTxO =
     mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
-  toObject _verb (FeeTooSmallUTxO (Mismatch { mismatchSupplied = minfee
-                                            , mismatchExpected = txfee })) =
+  toObject _verb (FeeTooSmallUTxO Mismatch { mismatchSupplied = minfee
+                                           , mismatchExpected = txfee }) =
     mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= txfee ]
@@ -607,7 +599,6 @@ instance
   , ToJSON (Ledger.TxOut ledgerera)
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
-  , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (AllegraUtxoPredFailure ledgerera) where
   toObject _verb (Allegra.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
@@ -669,7 +660,7 @@ instance
              , "error" .= String "Too many asset ids in the tx output"
              ]
 
-renderBadInputsUTxOErr :: Set (TxIn era) -> Aeson.Value
+renderBadInputsUTxOErr :: Set TxIn -> Aeson.Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
@@ -679,8 +670,8 @@ renderValueNotConservedErr consumed produced = String $
     "This transaction consumed " <> textShow consumed <> " but produced " <> textShow produced
 
 instance Ledger.Era era => ToObject (ShelleyPpupPredFailure era) where
-  toObject _verb (NonGenesisUpdatePPUP (Mismatch { mismatchSupplied = proposalKeys
-                                                 , mismatchExpected = genesisKeys })) =
+  toObject _verb (NonGenesisUpdatePPUP Mismatch { mismatchSupplied = proposalKeys
+                                                , mismatchExpected = genesisKeys }) =
     mconcat [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
   toObject _verb (PPUpdateWrongEpoch currEpoch intendedEpoch votingPeriod) =
@@ -697,7 +688,6 @@ instance Ledger.Era era => ToObject (ShelleyPpupPredFailure era) where
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "DELPL" ledgerera))
-  , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (ShelleyDelegsPredFailure ledgerera) where
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
     mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
@@ -801,9 +791,9 @@ instance ToObject (ShelleyPoolPredFailure era) where
   toObject _dtal (StakePoolRetirementWrongEpochPOOL
                    -- inspired by Ledger's Test.Cardano.Ledger.Generic.PrettyCore
                    -- but is it correct here?
-                    (Mismatch { mismatchExpected = currentEpoch })
-                    (Mismatch { mismatchSupplied = intendedRetireEpoch
-                              , mismatchExpected = maxRetireEpoch})) =
+                    Mismatch { mismatchExpected = currentEpoch }
+                    Mismatch { mismatchSupplied = intendedRetireEpoch
+                             , mismatchExpected = maxRetireEpoch}) =
     mconcat [ "kind" .= String "StakePoolRetirementWrongEpochPOOL"
              , "currentEpoch" .= String (textShow currentEpoch)
              , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
@@ -811,8 +801,8 @@ instance ToObject (ShelleyPoolPredFailure era) where
              ]
   -- TODO is this in the right order?
   toObject _verb (StakePoolCostTooLowPOOL
-                   (Mismatch { mismatchSupplied = certCost
-                             , mismatchExpected = protCost })) =
+                   Mismatch { mismatchSupplied = certCost
+                            , mismatchExpected = protCost }) =
     mconcat [ "kind" .= String "StakePoolCostTooLowPOOL"
              , "certificateCost" .= String (textShow certCost)
              , "protocolParCost" .= String (textShow protCost)
@@ -843,8 +833,8 @@ instance ToObject (ShelleyPoolPredFailure era) where
   --                   ]
 
   -- TODO are these in the right order?
-  toObject _verb (WrongNetworkPOOL (Mismatch { mismatchSupplied = networkId
-                                             , mismatchExpected = listedNetworkId })
+  toObject _verb (WrongNetworkPOOL Mismatch { mismatchSupplied = networkId
+                                            , mismatchExpected = listedNetworkId }
                                    poolId) =
     mconcat [ "kind" .= String "WrongNetworkPOOL"
              , "networkId" .= String (textShow networkId)
@@ -957,7 +947,7 @@ instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
   toObject verb (OcertFailure f) = toObject verb f
 
 
-instance ToObject (OcertPredicateFailure crypto) where
+instance ToObject OcertPredicateFailure where
   toObject _verb (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
     mconcat [ "kind" .= String "KESBeforeStartOCERT"
             , "opCertKESStartPeriod" .= String (textShow oCertstart)
@@ -1214,7 +1204,6 @@ instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Ledger.Era ledgerera
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Show (Ledger.Value ledgerera)
   , ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , ToObject (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
@@ -1332,19 +1321,13 @@ instance ToJSON ShelleyNodeToNodeVersion where
   toJSON ShelleyNodeToNodeVersion1 = String "ShelleyNodeToNodeVersion1"
 
 instance ToJSON ShelleyNodeToClientVersion where
-  toJSON ShelleyNodeToClientVersion1 = String "ShelleyNodeToClientVersion1"
-  toJSON ShelleyNodeToClientVersion2 = String "ShelleyNodeToClientVersion2"
-  toJSON ShelleyNodeToClientVersion3 = String "ShelleyNodeToClientVersion3"
-  toJSON ShelleyNodeToClientVersion4 = String "ShelleyNodeToClientVersion4"
-  toJSON ShelleyNodeToClientVersion5 = String "ShelleyNodeToClientVersion5"
-  toJSON ShelleyNodeToClientVersion6 = String "ShelleyNodeToClientVersion6"
-  toJSON ShelleyNodeToClientVersion7 = String "ShelleyNodeToClientVersion7"
   toJSON ShelleyNodeToClientVersion8 = String "ShelleyNodeToClientVersion8"
   toJSON ShelleyNodeToClientVersion9 = String "ShelleyNodeToClientVersion9"
   toJSON ShelleyNodeToClientVersion10 = String "ShelleyNodeToClientVersion10"
   toJSON ShelleyNodeToClientVersion11 = String "ShelleyNodeToClientVersion11"
+  toJSON ShelleyNodeToClientVersion12 = String "ShelleyNodeToClientVersion12"
 
-instance Ledger.Crypto c => ToObject (PraosChainSelectView c) where
+instance Core.Crypto c => ToObject (PraosChainSelectView c) where
   toObject _ PraosChainSelectView {
       csvChainLength
     , csvSlotNo
@@ -1399,7 +1382,6 @@ instance
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
-  , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (Conway.ConwayUtxoPredFailure ledgerera) where
   toObject v = \case
     Conway.UtxosFailure utxosPredFailure -> toObject v utxosPredFailure
@@ -1513,7 +1495,6 @@ instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Ledger.Era ledgerera
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Show (Ledger.Value ledgerera)
   , ToObject (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   , ToJSON (Ledger.Value ledgerera)
@@ -1563,9 +1544,9 @@ instance
               ]
     Conway.MissingRequiredDatums required received ->
       mconcat [ "kind" .= String "MissingRequiredDatums"
-              , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+              , "required" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                       (Set.toList required)
-              , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+              , "received" .= map (Crypto.hashToTextAsHex . Hashes.extractHash)
                                       (Set.toList received)
               ]
     Conway.NotAllowedSupplementalDatums disallowed acceptable ->
@@ -1605,7 +1586,7 @@ instance
 -- Helper functions
 --------------------------------------------------------------------------------
 
-showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
+showLastAppBlockNo :: WithOrigin LastAppliedBlock -> Text
 showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
                      Nothing -> "Genesis Block"
                      Just blk -> textShow . unBlockNo $ labBlockNo blk

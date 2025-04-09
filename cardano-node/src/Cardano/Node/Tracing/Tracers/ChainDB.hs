@@ -35,6 +35,7 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkN
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import           Ouroboros.Consensus.Storage.LedgerDB (ReplayStart (..),
                    UpdateLedgerDbTraceEvent (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -1566,9 +1567,16 @@ instance ( StandardHash blk
                  ]
     where
       context = case failure of
-        LedgerDB.InitFailureRead{} ->
-             " This is most likely an expected change in the serialization format,"
-          <> " which currently requires a chain replay"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotFailed{} ->
+                   " This is most likely an expected change in the serialization format,"
+                <> " which currently requires a chain replay"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotDataCorruption ->
+                   " The checksum does not match the snapshot. Seems like the snapshot is corrupted"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotInvalidChecksumFile{} ->
+                   " The checksum file contains malformed json"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotNoChecksumFile{} ->
+                   " Snapshot checksum checks are enabled but the snapshot had no checksum file."
+                <> " Did you intend to disable them with `\"DoDiskSnapshotChecksum\": True` in the configuration file?"
         _ -> ""
   forHuman (LedgerDB.SnapshotMissingChecksum snap) =
       "Checksum file is missing for snapshot " <> showT snap
@@ -1586,9 +1594,9 @@ instance ( StandardHash blk
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
   forMachine dtals (LedgerDB.SnapshotMissingChecksum snap) =
-      mconcat [ "kind" .= String "SnapshotMissingChecksum"
-               , "snapshot" .= forMachine dtals snap
-               ]
+    mconcat [ "kind" .= String "SnapshotMissingChecksum"
+            , "snapshot" .= forMachine dtals snap
+            ]
 
 instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
