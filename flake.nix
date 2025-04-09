@@ -15,8 +15,6 @@
       };
     };
 
-    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
-
     # Custom user config (default: empty), eg:
     # { outputs = {...}: {
     #   # Customize listening port of node scripts:
@@ -68,7 +66,6 @@
 
   outputs = {
     cardano-automation,
-    cardano-mainnet-mirror,
     CHaP,
     em,
     haskellNix,
@@ -158,7 +155,7 @@
 
       # This is used by `nix develop .` to open a devShell
       devShells = let
-        shell = import ./shell.nix {inherit pkgs customConfig cardano-mainnet-mirror;};
+        shell = import ./shell.nix {inherit pkgs customConfig;};
       in {
         inherit (shell) devops workbench-shell;
         default = shell.dev;

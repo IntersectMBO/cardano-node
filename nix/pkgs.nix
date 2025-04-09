@@ -18,14 +18,13 @@ let
     , stateDir           ? customConfig.localCluster.stateDir
     , basePort           ? customConfig.localCluster.basePort
     , useCabalRun        ? customConfig.localCluster.useCabalRun
-    , workbenchDevMode   ? customConfig.localCluster.workbenchDevMode
     , batchName          ? customConfig.localCluster.batchName
     , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
     , cardano-node-rev   ? null
     }:
     workbench.runner
       { inherit profileName profiling backendName stateDir basePort useCabalRun;
-        inherit batchName workbenchDevMode workbenchStartArgs cardano-node-rev;
+        inherit batchName workbenchStartArgs cardano-node-rev;
       };
 
 in with final;

@@ -204,8 +204,12 @@ let
  topologiesJsonPaths =
     let projections =
           pkgs.runCommand "workbench-profile-files-${profileName}-topologies"
-            { nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-              [ bash coreutils gnused jq moreutils workbenchNix.workbench ]; # cardano-cli
+            { nativeBuildInputs = with pkgs;
+              # A workbench with only the dependencies needed for this command.
+              [ workbenchNix.workbench
+                jq
+                workbenchNix.cardanoNodePackages.cardano-topology
+              ];
             }
             ''
             mkdir "$out"

@@ -8,9 +8,7 @@
 with pkgs.lib;
 
 let
-  ##
-  ## generator-service :: (TracerConfig, NixosServiceConfig, Config, StartScript)
-  ##
+
   healthcheck-service =
     (nodeSpecs:
     let
@@ -19,6 +17,7 @@ let
       supervisor      = pkgs.supervisor;
       grep            = pkgs.gnugrep;
       jq              = pkgs.jq;
+      # Script will be rebuilt on every commit because of `set-git-rev`.
       cardano-cli     = pkgs.cardanoNodePackages.cardano-cli;
     in {
       start =

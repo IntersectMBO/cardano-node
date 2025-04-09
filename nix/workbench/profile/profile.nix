@@ -12,10 +12,19 @@ let
     (let
       profileDerivedFiles =
         pkgs.runCommand "workbench-profile-files-${profileName}"
-          { nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-            [ bash coreutils gnused jq moreutils workbenchNix.workbench ];
+          { nativeBuildInputs = with pkgs;
+            # A workbench with only the dependencies needed for these commands.
+            [ workbenchNix.workbench
+              moreutils # sponge
+              jq
+              graphviz
+              workbenchNix.cardanoNodePackages.cardano-profile
+              workbenchNix.cardanoNodePackages.cardano-topology
+            ];
           }
           ''
+            echo $PATH
+            ls
             mkdir "$out"
             wb profile json "${profileName}" > "$out"/profile.json
             wb topology make "$out"/profile.json "$out"

@@ -10,6 +10,7 @@ let
   extraShellPkgs = with pkgs;
     [
       python3Packages.supervisor
+      pstree
     ]
   ++ lib.optionals ( useCabalRun)
     (with haskellPackages; [

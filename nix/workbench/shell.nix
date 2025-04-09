@@ -3,9 +3,7 @@
 , haskellLib
 , project
 ##
-, setLocale, haveGlibcLocales, commandHelp
-##
-, cardano-mainnet-mirror
+, setLocale, haveGlibcLocales
 ##
 , workbench-runner
 , workbenchDevMode ? false
@@ -15,19 +13,11 @@
 
 with lib;
 
-let
-
-    # recover CHaP location from cardano's project
-    chap = project.args.inputMap."https://chap.intersectmbo.org/";
-
-    # build plan as computed by nix
-    nixPlanJson = project.plan-nix.json;
-
-in project.shellFor {
+project.shellFor {
   name = "workbench-shell";
 
   shellHook =
-    let inherit (workbench-runner) profile profileDataDir backend backendDataDir profiling;
+    let inherit (workbench-runner) backend profiling;
     in
     ''
     while test $# -gt 0
@@ -35,24 +25,17 @@ in project.shellFor {
 
     . nix/workbench/lib.sh
 
-    export WB_BACKEND=${backend.name}
-    export WB_BACKEND_DATA=${backendDataDir}
-    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-1}
-    export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
-    export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
-    export WB_LOCLI_DB=''${WB_LOCLI_DB:-1}
-    export WB_SHELL_PROFILE=${profile.name}
-    export WB_SHELL_PROFILE_DATA=${profileDataDir}
+    ${workbench-runner.workbench-envars}
 
     progress "profile name"            $WB_SHELL_PROFILE
     progress "backend name"            $WB_BACKEND
     progress "deployment name"         $WB_DEPLOYMENT_NAME
     progress "params"                  'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
+    progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
     progress "WB_LOCLI_DB="            $WB_LOCLI_DB
     progress "WB_CREATE_TESTNET_DATA=" $WB_CREATE_TESTNET_DATA
     progress "WB_MODULAR_GENESIS="     $WB_MODULAR_GENESIS
-    progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
 
     function parse_git_branch() {
         git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'
@@ -62,8 +45,6 @@ in project.shellFor {
     + optionalString workbenchDevMode
     ''
     export WB_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
-    export WB_CHAP_PATH=${chap}
-    export WB_NIX_PLAN=${nixPlanJson}
     export WB_EXTRA_FLAGS=
 
     function wb() {
@@ -78,23 +59,25 @@ in project.shellFor {
     ''
     +
     ''
-    export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
-
     function workbench_atexit() {
         if test -n "$(wb backend is-running run/current)"
         then stop-cluster
         fi
     }
     trap workbench_atexit EXIT
-    ''
-    + optionalString (profile.scenario == "chainsync")
-    ''
-    export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
-    ''
-    + ''
     ${setLocale}
-    ${commandHelp}
-    '';
+    echo "
+      Commands:
+        * nix flake lock --update-input <iohkNix|haskellNix> - update nix build input
+        * cardano-cli - used for key generation and other operations tasks
+        * wb - cluster workbench
+        * start-cluster - start a local development cluster
+        * stop-cluster - stop a local development cluster
+        * restart-cluster - restart the last cluster run (in 'run/current')
+                            (WARNING: logs & node DB will be wiped clean)
+    "
+    ''
+  ;
 
   inherit withHoogle;
 
@@ -129,7 +112,6 @@ in project.shellFor {
     pkgs.git
     pkgs.hlint
     pkgs.moreutils
-    pkgs.pstree
     pkgs.time
     pkgs.util-linux
     workbench-runner.workbench-interactive-start
