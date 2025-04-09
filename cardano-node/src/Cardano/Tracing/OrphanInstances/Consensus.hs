@@ -69,6 +69,7 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart (..), Pushing (..),
                    ReplayStart (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
@@ -173,7 +174,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.TookSnapshot {} -> Info
     LedgerDB.DeletedSnapshot {} -> Debug
     LedgerDB.InvalidSnapshot {} -> Error
-    LedgerDB.SnapshotMissingChecksum {} -> Error
+    LedgerDB.SnapshotMissingChecksum {} -> Warning
 
   getSeverityAnnotation (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB {} -> Debug
@@ -599,11 +600,19 @@ instance ( ConvertRawHash blk
           "Invalid snapshot " <> showT snap <> showT failure <> context
           where
             context = case failure of
-              LedgerDB.InitFailureRead{} ->
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotFailed{} ->
                    " This is most likely an expected change in the serialization format,"
                 <> " which currently requires a chain replay"
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotDataCorruption ->
+                   " The checksum does not match the snapshot. Seems like the snapshot is corrupted"
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotInvalidChecksumFile{} ->
+                   " The checksum file contains malformed json"
+              LedgerDB.InitFailureRead LedgerDB.ReadSnapshotNoChecksumFile{} ->
+                   " Snapshot checksum checks are enabled but the snapshot had no checksum file."
+                <> " Did you intend to disable them with `\"DoDiskSnapshotChecksum\": True` in the configuration file?"
               _ -> ""
-
+        LedgerDB.SnapshotMissingChecksum snap ->
+          "Checksum file is missing for snapshot " <> showT snap
         LedgerDB.TookSnapshot snap pt RisingEdge ->
           "Taking ledger snapshot " <> showT snap <>
           " at " <> renderRealPointAsPhrase pt
@@ -613,8 +622,6 @@ instance ( ConvertRawHash blk
           ", duration: " <> showT t
         LedgerDB.DeletedSnapshot snap ->
           "Deleted old snapshot " <> showT snap
-        LedgerDB.SnapshotMissingChecksum snap ->
-          "Missing snapshot checksum " <> showT snap
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmutableDB pt ->
           "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
@@ -1060,7 +1067,7 @@ instance ( ConvertRawHash blk
                , "snapshot" .= toObject verb snap
                , "failure" .= show failure ]
     LedgerDB.SnapshotMissingChecksum snap ->
-      mconcat [ "kind" .= String "TraceSnapshotEvent.InvalidSnapshot"
+      mconcat [ "kind" .= String "TraceSnapshotEvent.SnapshotMissingChecksum"
                , "snapshot" .= toObject verb snap
                ]
 

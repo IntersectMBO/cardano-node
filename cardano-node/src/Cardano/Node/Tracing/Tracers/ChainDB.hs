@@ -35,6 +35,7 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkN
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import           Ouroboros.Consensus.Storage.LedgerDB (ReplayStart (..),
                    UpdateLedgerDbTraceEvent (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -1566,12 +1567,19 @@ instance ( StandardHash blk
                  ]
     where
       context = case failure of
-        LedgerDB.InitFailureRead{} ->
-             " This is most likely an expected change in the serialization format,"
-          <> " which currently requires a chain replay"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotFailed{} ->
+                   " This is most likely an expected change in the serialization format,"
+                <> " which currently requires a chain replay"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotDataCorruption ->
+                   " The checksum does not match the snapshot. Seems like the snapshot is corrupted"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotInvalidChecksumFile{} ->
+                   " The checksum file contains malformed json"
+        LedgerDB.InitFailureRead LedgerDB.ReadSnapshotNoChecksumFile{} ->
+                   " Snapshot checksum checks are enabled but the snapshot had no checksum file."
+                <> " Did you intend to disable them with `\"DoDiskSnapshotChecksum\": True` in the configuration file?"
         _ -> ""
   forHuman (LedgerDB.SnapshotMissingChecksum snap) =
-    Text.unwords ["Snapshot missing checksum", showT snap]
+      "Checksum file is missing for snapshot " <> showT snap
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt enclosedTiming) =
     mconcat [ "kind" .= String "TookSnapshot"
@@ -1586,19 +1594,20 @@ instance ( StandardHash blk
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
   forMachine dtals (LedgerDB.SnapshotMissingChecksum snap) =
-    mconcat [ "kind" .= String "MissingChecksum"
-             , "snapshot" .= forMachine dtals snap ]
+    mconcat [ "kind" .= String "SnapshotMissingChecksum"
+            , "snapshot" .= forMachine dtals snap
+            ]
 
 instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
-    namespaceFor LedgerDB.SnapshotMissingChecksum {} = Namespace [] ["MissingChecksum"]
+    namespaceFor LedgerDB.SnapshotMissingChecksum {} = Namespace [] ["SnapshotMissingChecksum"]
 
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
-    severityFor  (Namespace _ ["MissingChecksum"]) _ = Just Error
+    severityFor  (Namespace _ ["SnapshotMissingChecksum"]) _ = Just Warning
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["TookSnapshot"]) = Just $ mconcat
@@ -1610,15 +1619,15 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
           "A snapshot was deleted from the disk."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just
           "An on disk snapshot was invalid. Unless it was suffixed, it will be deleted"
-    documentFor (Namespace _ ["MissingChecksum"]) = Just
-          "Snapshot is missing checksum"
+    documentFor (Namespace _ ["SnapshotMissingChecksum"]) = Just
+          "Checksum file was missing for snapshot."
     documentFor _ = Nothing
 
     allNamespaces =
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
       , Namespace [] ["InvalidSnapshot"]
-      , Namespace [] ["MissingChecksum"]
+      , Namespace [] ["SnapshotMissingChecksum"]
       ]
 
 
