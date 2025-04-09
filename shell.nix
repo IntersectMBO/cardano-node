@@ -17,7 +17,6 @@ in
     };
   }
 , pkgs ? import ./nix customConfig
-, cardano-mainnet-mirror ? __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix"
 }:
 with pkgs;
 let
@@ -74,7 +73,6 @@ let
       import ./nix/workbench/shell.nix
         { inherit pkgs lib haskellLib project;
           inherit setLocale haveGlibcLocales commandHelp;
-          inherit cardano-mainnet-mirror;
           inherit workbenchDevMode;
           inherit withHoogle;
           workbench-runner = pkgs.workbench-runner
@@ -96,7 +94,6 @@ let
           import ./nix/workbench/shell.nix
             { inherit pkgs lib haskellLib project;
               inherit setLocale haveGlibcLocales commandHelp;
-              inherit cardano-mainnet-mirror;
               inherit workbench-runner workbenchDevMode;
               inherit withHoogle;
             };
@@ -123,7 +120,12 @@ let
       pstree
       pkgs.time
       pkgs.util-linux
-      workbench.workbench
+      (workbench.workbench [])
+      git
+      graphviz
+      jq
+      moreutils
+      procps
       workbench-runner.workbench-interactive-start
       workbench-runner.workbench-interactive-stop
       workbench-runner.workbench-interactive-restart
@@ -138,9 +140,6 @@ let
       | ${lolcat}/bin/lolcat
 
       ${devopsShell.shellHook}
-
-      # Socket path default to first node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${workbench-runner.stateDir} 'node-0')
 
       ${setLocale}
 
