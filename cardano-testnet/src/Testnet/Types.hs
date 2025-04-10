@@ -21,6 +21,7 @@ module Testnet.Types
   , testnetSprockets
   , TestnetNode(..)
   , nodeSocketPath
+  , node0ConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
   , Delegator(..)
@@ -72,7 +73,9 @@ import qualified System.Process as IO
 
 import           Testnet.Start.Types
 
+import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
@@ -114,7 +117,7 @@ data SKey k
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
-  , testnetMagic :: !Int
+  , testnetMagic :: !Int -- TODO change to Word32
   , testnetNodes :: ![TestnetNode]
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
@@ -146,6 +149,18 @@ isTestnetNodeSpo = isJust . poolKeys
 
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
+
+-- | Connection data for the first node in the testnet
+node0ConnectionInfo :: MonadTest m => TestnetRuntime -> m LocalNodeConnectInfo
+node0ConnectionInfo TestnetRuntime{testnetMagic, testnetNodes} = do
+  case testnetNodes of
+    [] -> H.note_ "There are no nodes in the testnet" >> H.failure
+    node0:_ -> do
+        pure LocalNodeConnectInfo
+              { localNodeSocketPath= nodeSocketPath node0
+              , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
+              , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
+
 
 data StakingKey
 data SpoColdKey
@@ -189,7 +204,7 @@ getStartTime
   => HasCallStack
   => FilePath
   -> TestnetRuntime
-  -> m UTCTime
+  -> m UTCTime -- TODO change to SystemStart
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
     decodeNodeConfiguration configurationFile >>= \case
