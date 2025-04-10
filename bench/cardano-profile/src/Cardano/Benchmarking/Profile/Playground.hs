@@ -4,7 +4,9 @@
 --------------------------------------------------------------------------------
 
 module Cardano.Benchmarking.Profile.Playground (
-  profilesNoEraPlayground
+    calibrateLoopBlockMemx15
+  , calibrateLoopBlockMemx2
+  , profilesNoEraPlayground
 ) where
 
 --------------------------------------------------------------------------------
@@ -24,8 +26,8 @@ import qualified Cardano.Benchmarking.Profile.Workload.Voting   as W
 --------------------------------------------------------------------------------
 
 -- Corrections to fill the block memory budget with 4 txs per block.
-calibrate15x :: Aeson.Object
-calibrate15x =
+calibrateLoopBlockMemx15 :: Aeson.Object
+calibrateLoopBlockMemx15 =
   KeyMap.fromList [
     ("genesis", Aeson.Object $ KeyMap.fromList [
       ("alonzo", Aeson.Object $ KeyMap.fromList [
@@ -44,8 +46,8 @@ calibrate15x =
   ]
 
 -- Corrections to fill the block memory budget with 4 txs per block.
-calibrate2x :: Aeson.Object
-calibrate2x =
+calibrateLoopBlockMemx2 :: Aeson.Object
+calibrateLoopBlockMemx2 =
   KeyMap.fromList [
     ("genesis", Aeson.Object $ KeyMap.fromList [
       ("alonzo", Aeson.Object $ KeyMap.fromList [
@@ -102,9 +104,9 @@ profilesNoEraPlayground =
   -- Budget profiles.
     ciBenchLike & P.name "calibrate-volt"
   , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt"      . mem15x
-  , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt-fill" . mem15x . P.overlay calibrate15x
+  , ciBenchLike & P.name "calibrate-blockmem-x1.5-volt-fill" . mem15x . P.overlay calibrateLoopBlockMemx15
   , ciBenchLike & P.name "calibrate-blockmem-x2-volt"        . mem2x
-  , ciBenchLike & P.name "calibrate-blockmem-x2-volt-fill"   . mem2x  . P.overlay calibrate2x
+  , ciBenchLike & P.name "calibrate-blockmem-x2-volt-fill"   . mem2x  . P.overlay calibrateLoopBlockMemx2
   -- Voting profiles.
   , voting & P.name "development-voting"
            . P.dreps 1000

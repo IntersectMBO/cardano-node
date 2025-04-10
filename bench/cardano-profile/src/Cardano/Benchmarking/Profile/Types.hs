@@ -7,6 +7,7 @@
 module Cardano.Benchmarking.Profile.Types (
 
   Profile (..)
+, profileProtocolVersion
 
 , Scenario (..)
 
@@ -14,6 +15,7 @@ module Cardano.Benchmarking.Profile.Types (
 , Topology (..), Topology.Location (..), Topology.AWSRegion (..)
 
 , Era (..)
+, firstEraForMajorVersion
 , Genesis (..)
 
 , ChainDB (..), Chunks (..)
@@ -112,6 +114,14 @@ instance Aeson.FromJSON Profile where
   parseJSON = Aeson.genericParseJSON
     -- TODO: Change to `True` after removing `jq` profiles.
     (Aeson.defaultOptions {Aeson.rejectUnknownFields = False})
+
+profileProtocolVersion :: Profile -> Maybe (Int, Int)
+profileProtocolVersion Profile{genesis = Genesis{shelley = shey}} = do
+  Aeson.Object pparams <- KM.lookup "protocolParams" shey
+  Aeson.Object protver <- KM.lookup "protocolVersion" pparams
+  Aeson.Number major   <- KM.lookup "major" protver
+  Aeson.Number minor   <- KM.lookup "minor" protver
+  (,) <$> Scientific.toBoundedInteger major <*> Scientific.toBoundedInteger minor
 
 --------------------------------------------------------------------------------
 
@@ -237,19 +247,8 @@ instance Aeson.FromJSON Topology where
 
 --------------------------------------------------------------------------------
 
-{--
-https://docs.cardano.org/explore-cardano/eras-and-phases/
-
-> wb profile all-profiles | jq .[] | jq -r .era | sort | uniq
-allegra
-alonzo
-babbage
-conway
-mary
-shelley
---}
-data Era = Allegra | Shelley | Mary | Alonzo | Babbage | Conway
-  deriving (Eq, Show, Generic)
+data Era = Shelley | Allegra | Mary | Alonzo | Babbage | Conway
+  deriving (Show, Eq, Ord, Generic)
 
 instance Aeson.ToJSON Era where
   toJSON Allegra = Aeson.toJSON ("allegra" :: Text.Text)
@@ -268,6 +267,35 @@ instance Aeson.FromJSON Era where
     "babbage" -> return Babbage
     "conway"  -> return Conway
     _         -> fail $ "Unknown Era: \"" ++ Text.unpack t ++ "\""
+
+-- | Minimal major protocol version per era
+firstEraForMajorVersion :: Int -> Era
+firstEraForMajorVersion pv
+  | pv >= 9   = Conway
+  | pv >= 7   = Babbage
+  | pv >= 5   = Alonzo
+  | pv >= 4   = Mary
+  | pv >= 3   = Allegra
+  | pv >= 2   = Shelley
+  | otherwise = error $ "firstEraForVersion: unsupported major protocol version " ++ show pv
+
+{-
+cf. https://github.com/cardano-foundation/CIPs/blob/master/CIP-0059/feature-table.md
+
+| Date    | Phase    | Era     | Slot Number | Epoch Number | Protocol Version | Ledger Protocol | Consensus Mechanism     | Notes              |
+|---------|----------|---------|------------:|-------------:|-----------------:|-----------------|-------------------------|--------------------|
+| 2017/09 | Byron    | Byron   |           0 |            0 |              0,0 | -               | Ouroboros Classic       |                    |
+| 2020/02 | Byron    | Byron   |     3801600 |          176 |              1,0 | -               | Ouroboros BFT           |                    |
+| 2020/07 | Shelley  | Shelley |     4492800 |          208 |              2,0 | TPraos          | Ouroboros Praos         |                    |
+| 2020/12 | Goguen   | Allegra |    16588800 |          236 |              3,0 | TPraos          | Ouroboros Praos         |                    |
+| 2021/03 | Goguen   | Mary    |    23068800 |          251 |              4,0 | TPraos          | Ouroboros Praos         |                    |
+| 2021/09 | Goguen   | Alonzo  |    39916975 |          290 |              5,0 | TPraos          | Ouroboros Praos         |                    |
+| 2021/10 | Goguen   | Alonzo  |    43372972 |          298 |              6,0 | TPraos          | Ouroboros Praos         | intra-era hardfork |
+| 2022/09 | Goguen   | Babbage |    72316896 |          365 |              7,0 | Praos           | Ouroboros Praos         | Vasil HF           |
+| 2023/02 | Goguen   | Babbage |    84844885 |          394 |              8,0 | Praos           | Ouroboros Praos         | Valentine HF       |
+| 2024/09 | Voltaire | Conway  |   133660855 |          507 |              9,0 | Praos           | Ouroboros Genesis/Praos | Chang HF           |
+| 2025/01 | Voltaire | Conway  |   146620809 |          537 |             10,0 | Praos           | Ouroboros Genesis/Praos | Plomin HF          |
+-}
 
 --------------------------------------------------------------------------------
 

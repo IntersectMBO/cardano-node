@@ -8,7 +8,7 @@ On how to set up Nix for ``cardano-node`` development, please see `Building Card
 
 
 Roles and Responsibilities
-====
+==========================
 
 We maintain a [CODEOWNERS file][CODEOWNERS] which provides information who
 should review a contributing PR.  Note that you might need to get approvals
@@ -18,25 +18,25 @@ from all code owners (even though GitHub doesn't give a way to enforce it).
 
 
 Supplementary tooling
-====
+=====================
 
 GHCID
-----
+-----
 
 run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
 
 Testing
-====
+=======
 
 ``cardano-node`` is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
 
 Developers on ``cardano-node`` can `launch their own testnets <https://github.com/input-output-hk/cardano-node-wiki/wiki/launching-a-testnet>`_ or `run the chairman tests <https://github.com/input-output-hk/cardano-node-wiki/wiki/running-chairman-tests>`_ locally.
 
 Debugging
-====
+=========
 
 Pretty printing CBOR encoded files
-----
+----------------------------------
 
 It may be useful to print the on chain representations of blocks, delegation certificates, txs and update proposals. There are two commands that do this (for any cbor encoded file):
 
@@ -44,17 +44,17 @@ To pretty print as CBOR:
 ``cabal exec cardano-cli -- pretty-print-cbor --filepath CBOREncodedFile``
 
 Validate CBOR files
-----
+-------------------
 
 You can validate Byron era blocks, delegation certificates, txs and update proposals with the ``validate-cbor`` command.
 
 ``cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile``
 
 Updating dependencies
-====
+=====================
 
 ... from Hackage
-----
+----------------
 
 Updating package dependencies from Hackage should work like normal in a Haskell project. 
 The most important thing to note is that we pin the ``index-state`` of the Hackage package index in ``cabal.project``. 
@@ -65,14 +65,14 @@ Because of how we use Nix to manage our Haskell build, whenever you do this you 
 You can do this by running ``nix flake lock --update-input hackageNix``.
 
 ... from the Cardano package repository
-----
+---------------------------------------
 
 Many Cardano packages are not on Hackage and are instead in the `Cardano package repository <https://github.com/input-output-hk/cardano-haskell-packages>`__, see the README for (lots) more information. 
 Getting new packages from there works much like getting them from Hackage. 
 The differences are that it has an independent ``index-state``, and that there is a different Nix command you need to run afterwards: ``nix flake lock --update-input CHaP``.
 
 Using unreleased versions of dependencies
-~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Sometimes we need to use an unreleased version of one of our dependencies, either to fix an issue in a package that is not under our control, or to experiment with a pre-release version of one of our own packages.
 You can use a ``source-repository-package`` stanza to pull in the unreleased version.
@@ -83,34 +83,34 @@ In that case, release a patched version to the `Cardano package repository <http
 See the README for instructions.
 
 Releasing a version of the node
-====
+===============================
 
 (There is much more to say here, this is just a small fragment)
 
 ... to the Cardano package repository
-----
+-------------------------------------
 
 When releasing a new version of the node, it and the other packages in this repository should be released to the `Cardano package repository <https://github.com/input-output-hk/cardano-haskell-packages>`__.
 See the README for instructions, including a script to automate most of the process. 
 Please note that libraries need bounds on the version of their dependencies to avoid bitrot and be effectively reusable.
 
-Workbench: a local cluster playground
-====
+Workbench: running a cluster
+============================
 
 You can quickly spin up a local cluster (on Linux and Darwin), based on any of a wide variety of configurations, and put it under a transaction generation workload -- using the ``workbench`` environment:
 
 1. Optional: choose a workbench profile:
-    - ``default`` stands for a light-state, 6-node cluster, under saturation workload, indefinite runtime
-    - ``ci-test`` is the profile run in the node CI -- very light, just two nodes and short runtime
-    - ``devops`` is an unloaded profile (no transaction generation) with short slots -- ``0.2`` sec.
-    - ..and many more -- which can be either:
-        - listed, by ``make ps``
-        - observed at their point of definition: `nix/workbench/profiles/prof1-variants.jq <https://github.com/intersectmbo/cardano-node/tree/master/nix/workbench/profiles/prof1-variants.jq#L333-L526>`_
+    - ``default`` stands for a light-state, 6-node cluster, under transaction saturation workload, ~30min runtime.
+    - ``ci-test-hydra`` is the profile run in the node CI -- very light, just two nodes, Plutus transaction worklooad, =< 3min runtime.
+    - ``devops`` is an unloaded profile (no transaction workload) with short slots -- ``0.2`` sec.
+    - ...and many more -- which can be:
+        - listed by name with ``make ps``
+        - inspected with e.g. ``cabal run cardano-profile -- by-name-pretty default-coay`` (default profile with Conway era suffix)
 2. Optional: select mode of operation, by optionally providing a suffix:
-    - default -- no suffix -- just enter the workbench shell, allowing you to run ``start-cluster`` at any time.  Binaries will be built locally, by ``cabal``.
-    - ``autostay`` suffix -- enter the workbench shell, start the cluster, and stay in the shell afterwards.  Binaries will be built locally, by ``cabal``.
-    - ``autonix`` suffix -- enter the workbench shell, start the cluster.  All binaries will be provided by the Nix CI.
-    - ..there are other modes, as per `lib.mk <https://github.com/intersectmbo/cardano-node/tree/master/lib.mk>`_
+    - no suffix (default) -- just enter the workbench shell, allowing you to run ``start-cluster`` at any time.  Binaries will be built locally, by ``cabal``.
+    - ``-nix`` suffix -- same as before, but all binaries will be built by Nix or downloaded from Hydra CI cache directly.
+    - ``-prof`` and ``-profnix`` suffixes -- same as both before, but all binaries will be built such that GHC profiling is enabled.
+    - ...there are other modes as per `lib.mk <https://github.com/intersectmbo/cardano-node/tree/master/lib.mk#L31-L42>`_
 3. Enter the workbench shell for the chosen profile & mode:
     ``make <PROFILE-NAME>`` or ``make <PROFILE-NAME>-<SUFFIX>`` (when there is a suffix).
 4. Optional: start cluster:
@@ -119,12 +119,12 @@ You can quickly spin up a local cluster (on Linux and Darwin), based on any of a
 The workbench services are available only inside the workbench shell.
 
 Using Cabal
-----
+-----------
 
 By default, all binaries originating in the ``cardano-node`` repository are available to ``cabal build`` and ``cabal run``, unless the workbench was entered using one of the pure ``*nix`` modes.  Note that in all cases, the dependencies for the workbench are supplied through Nix and have been built/tested on CI.
 
 **Dependency localisation** -or- *Cabal&Nix for painless cross-repository work*
-----
+-------------------------------------------------------------------------------
 
 The Cabal workflow described above only extends to the repository-local packages.  Therefore, ordinarily, to work on ``cardano-node`` dependencies in the context of the node itself, one needs to go through an expensive multi-step process -- with committing, pushing and re-pinning of the dependency changes.
 
@@ -168,9 +168,9 @@ Without further ado (**NOTE**: *the order of steps is important!*):
 7. The two packages have now become **local** -- when you try ``cabal build exe:cardano-node`` now, you'll see that Cabal starts to build these dependencies you just localised.  Hacking time!
 
 Hoogle
-----
+------
 
-The workbench shell provides ``hoogle``, with a local database for the full set of dependencies:
+The workbench shell provides ``hoogle``, with a local database for the full **non-local** set of package dependencies:
 
 .. code-block:: console
 
@@ -186,4 +186,3 @@ The workbench shell provides ``hoogle``, with a local database for the full set 
     Cardano.Ledger.Shelley.Tx TxId :: SafeHash crypto EraIndependentTxBody -> TxId crypto
     Ouroboros.Consensus.HardFork.Combinator data family TxId tx :: Type
     -- plus more results not shown, pass --count=20 to see more
-

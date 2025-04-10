@@ -4,7 +4,7 @@
 
 import           Prelude
 
-import           Data.Function ((&))
+import           Data.Bool (bool)
 import           System.Environment (lookupEnv)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
@@ -79,17 +79,19 @@ data Cli =
     NamesNoEra
   | NamesCloudNoEra
   | Names
-  | All
-  | ByName PrettyPrint String
+  | All [CliOptions]
+  | ByName [CliOptions] String
   | LibMK
   | NodeSpecs FilePath FilePath
   | EpochTimeline Integer
   | ToJson String
   | FromJson String
 
-data PrettyPrint =
-    PrettyPrint
-  | SingleLine
+data CliOptions =
+    OptPrettyPrint
+  | OptWithEra
+  | OptWithPlayground
+  deriving Eq
 
 --------------------------------------------------------------------------------
 
@@ -106,30 +108,18 @@ toMap maybeObj ps = Map.fromList $ map
   )
   ps
 
--- All profiles are created/defined in the Conway era.
-addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
-addEras = foldMap
-  (\profile -> Map.fromList $
-    let
-        -- TODO: Profiles properties other than the "name" and "era" of
-        --       type string are the only thing that change ??? Remove the
-        --       concept of eras from the profile definitions and make it a
-        --       workbench-level feature (???).
-        addEra p era suffix =
-          let name = Types.name p
-              newName = name ++ "-" ++ suffix
-          in  (newName, p {Types.name = newName, Types.era = era})
-    in 
-        [ addEra profile Types.Allegra "alra"
-        , addEra profile Types.Shelley "shey"
-        , addEra profile Types.Mary    "mary"
-        , addEra profile Types.Alonzo  "alzo"
-        , addEra profile Types.Babbage "bage"
-        , addEra profile Types.Conway  "coay"
-        ]
-  )
-
 --------------------------------------------------------------------------------
+
+encoder :: Aeson.ToJSON a => [CliOptions] -> a -> BSL8.ByteString
+encoder opts
+  | OptPrettyPrint `elem` opts = Aeson.encodePretty' prettyConf
+  | otherwise                  = Aeson.encode
+  where
+    prettyConf  = defConfig
+      { confCompare = compare
+      , confTrailingNewline = True
+      , confIndent = Spaces 2
+      }
 
 main :: IO ()
 main = do
@@ -142,24 +132,24 @@ main = do
     -- Print all profile names (applies overlays!!!!!).
     Names -> do
       maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
-      BSL8.putStrLn $ Aeson.encode $ Map.keys $ addEras $ toMap maybeObj allProfiles
+      BSL8.putStrLn $ Aeson.encode $ Map.keys $ Profile.addEras $ toMap maybeObj allProfiles
     -- Print a map with all profiles, with an optional overlay.
-    All -> do
+    All cliOptions -> do
+      let
+        targetProfiles = if OptWithPlayground `elem` cliOptions then allProfiles else performanceAndTracingProfiles
+        enc            = encoder cliOptions
+        withEraSuffs   = OptWithEra `elem` cliOptions
       maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
-      BSL8.putStrLn $ Aeson.encode $ addEras $ toMap maybeObj allProfiles
+      BSL8.putStrLn $ enc $ bool id Profile.addEras withEraSuffs $ toMap maybeObj targetProfiles
     -- Print a single profiles, with an optional overlay.
-    (ByName prettyPrint profileName) -> do
+    ByName cliOptions profileName -> do
       maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
-      let profiles = addEras $ toMap maybeObj allProfiles
+      let
+        enc      = encoder cliOptions
+        profiles = Profile.addEras $ toMap maybeObj allProfiles
       case Map.lookup profileName profiles of
-        Nothing -> error $ "No profile named \"" ++ profileName ++ "\""
-        (Just profile) ->
-          let
-            prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
-            aeson       = profile & case prettyPrint of
-              PrettyPrint -> Aeson.encodePretty' prettyConf
-              SingleLine  -> Aeson.encode
-          in BSL8.putStrLn aeson
+        Nothing      -> error $ "No profile named \"" ++ profileName ++ "\""
+        Just profile -> BSL8.putStrLn $ enc profile
     LibMK -> do
       mapM_ putStrLn libMk
     (NodeSpecs profilePath topologyPath) -> do
@@ -229,19 +219,31 @@ cliParser = OA.hsubparser $
   <>
       OA.command "all"
         (OA.info
-          (pure All)
+          (pure $ All [OptWithEra, OptWithPlayground])
           (OA.fullDesc <> OA.header "all" <> OA.progDesc "Create all profiles")
+        )
+  <>
+      OA.command "all-noera"
+        (OA.info
+          (pure $ All [OptWithPlayground])
+          (OA.fullDesc <> OA.header "all-noera" <> OA.progDesc "Create all profiles (no era suffix)")
+        )
+  <>
+      OA.command "allpt-noera"
+        (OA.info
+          (pure $ All [OptPrettyPrint])
+          (OA.fullDesc <> OA.header "allpt-noera" <> OA.progDesc "Create P&T profiles (no era suffix)")
         )
   <>
       OA.command "by-name"
         (OA.info
-          (ByName SingleLine <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName [] <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name" <> OA.progDesc "Create profile")
         )
   <>
       OA.command "by-name-pretty"
         (OA.info
-          (ByName PrettyPrint <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName [OptPrettyPrint] <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name-pretty" <> OA.progDesc "Create profile (pretty-printed)")
         )
   <>

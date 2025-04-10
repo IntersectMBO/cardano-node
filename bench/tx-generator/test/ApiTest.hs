@@ -1,14 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
-
-{- HLINT ignore "Use camelCase" -}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Main (module Main) where
 
@@ -21,8 +18,8 @@ import           Cardano.Benchmarking.PlutusScripts
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 #endif
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
+import           Cardano.TxGenerator.Calibrate.Utils
 import           Cardano.TxGenerator.Genesis
 import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
@@ -32,24 +29,20 @@ import           Cardano.TxGenerator.Setup.Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
-import           Control.Exception (SomeException (..), try)
 import           Control.Monad
-import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
-import           Data.Aeson.Encode.Pretty
-import           Data.Bool
+import           Data.Aeson (eitherDecodeFileStrict')
 import qualified Data.ByteString as BS (pack)
-import qualified Data.ByteString.Lazy.Char8 as BSL (ByteString, pack, putStrLn, writeFile)
+import qualified Data.ByteString.Lazy.Char8 as BSL (pack, putStrLn, writeFile)
 import           Data.Either (rights)
-import           Data.Functor ((<&>))
-import           GHC.Natural (Natural)
+import           Data.Either.Extra (fromEither)
+import           Data.Maybe (fromMaybe)
+import           Numeric.Natural (Natural)
 import           Options.Applicative as Opt
-import           System.Directory (doesFileExist)
 import           System.Environment (getArgs)
 import           System.Exit (die, exitSuccess)
 import           System.FilePath
 
-import           Paths_tx_generator
-import qualified PlutusTx
+import qualified PlutusTx (toData)
 
 
 data CommandLine = CommandLine {
@@ -77,7 +70,9 @@ main
         exitSuccess
 
     CommandLine{..} <- parseCommandLine
-    let pathModifier p = if isRelative p then runPath </> p else p
+    let
+      pathModifier p = if isRelative p then runPath </> p else p
+      protoParamPath' = if null protoParamPath then Nothing else Just protoParamPath
 
     setup <- runExceptT $ do
       nixService :: NixServiceOptions <-
@@ -107,8 +102,8 @@ main
         putStrLn "* Can I pre-execute a plutus script?"
         let plutus = _nix_plutus nixService
         case plutusType <$> plutus of
-          Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath
-          Just{}                    -> checkPlutusLoop protoParamPath plutus
+          Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath'
+          Just{}                    -> checkPlutusLoop protoParamPath' plutus
           Nothing                   -> putStrLn "--> no Plutus configuration found - skipping"
         exitSuccess
 
@@ -147,16 +142,14 @@ checkFundCore sg = genesisInitialFundForKey networkId sg
   where
     networkId = fromNetworkMagic $ NetworkMagic $ sgNetworkMagic sg
 
-checkPlutusBuiltin :: FilePath -> IO ()
+checkPlutusBuiltin :: Maybe FilePath -> IO ()
 #ifndef WITH_LIBRARY
 checkPlutusBuiltin _protoParamFile
   = putStrLn "* checkPlutusBuiltin: skipped - no library available"
 #else
 checkPlutusBuiltin protoParamFile
   = do
-    let script = case findPlutusScript "CustomCall.hs" of
-                    Just x -> x
-                    Nothing -> error "Error: CustomCall.hs not found"
+    let script = fromMaybe (error "checkPlutusBuiltin: script CustomCall not found") (findPlutusScript "CustomCall")
 
     putStrLn "* serialisation of built-in Plutus script:"
     BSL.putStrLn $ encodePlutusScript script
@@ -187,7 +180,7 @@ checkPlutusBuiltin protoParamFile
 #endif
 
 checkPlutusLoop ::
-     FilePath
+     Maybe FilePath
   -> Maybe TxGenPlutusParams
   -> IO ()
 checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
@@ -211,13 +204,11 @@ checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
       Left err -> putStrLn $ "--> execution failed: " ++ show err
       Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
 
-    let budget = case protocolParamMaxTxExUnits protocolParameters of
-                    Just x -> x
-                    Nothing -> error "Cannot find protocolParamMaxTxExUnits"
-        autoBudget = PlutusAutoBudget
-          { autoBudgetUnits = budget
+    let autoBudget = PlutusAutoBudget
+          { autoBudgetUnits = fromMaybe (error "autoBudget: cannot find protocolParamMaxTxExUnits") (protocolParamMaxTxExUnits protocolParameters)
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) redeemer
+          , autoBudgetUpperBoundHint = Nothing
           }
 
         pparamsScaleBlockBudget factor = case protocolParamMaxBlockExUnits protocolParameters of
@@ -233,14 +224,14 @@ checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
 
     let
       blockMaxOut b d =
-        case plutusAutoScaleBlockfit (pparamsScaleBlockBudget d) (scriptName ++ idPath) script b (TargetTxsPerBlock 8) 1 of
+        case plutusAutoScaleBlockfit (pparamsScaleBlockBudget d) (scriptName, idPath) script b (TargetTxsPerBlock 8) 1 of
           Right (summary, _, _) -> Right summary
           Left err              -> Left $ BSL.pack $ show err
         where
-          idPath = "/blockbudget" ++ if d == 1.0 then "" else "/steps_x" ++ show d
+          idPath = "blockbudget" ++ if d == 1.0 then "" else "/steps_x" ++ show d
 
       txMaxOut b =
-        case plutusAutoScaleBlockfit protocolParameters (scriptName ++ "/txbudget") script b TargetTxExpenditure 1 of
+        case plutusAutoScaleBlockfit protocolParameters (scriptName, "txbudget") script b TargetTxExpenditure 1 of
           Right (summary, _, _) -> Right summary
           Left err              -> Left $ BSL.pack $ show err
 
@@ -277,50 +268,6 @@ checkPlutusLoop _ _
 
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
 readFileJson f = handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' f) >>= firstExceptT TxGenError . hoistEither
-
--- resolve protocol parameters file from --param PARAM
--- 1. try to resolve to file
--- 2. try to resolve from data/ directory
-readProtocolParametersOrDie :: FilePath -> IO ProtocolParameters
-readProtocolParametersOrDie filePath =
-  resolver >>= eitherDecodeFileStrict' >>= either die pure
-  where
-    resolver =
-      doesFileExist filePath >>= bool (getDataFileName $ "data" </> filePath) (pure filePath)
-
-resolveRedeemer :: Either ScriptData TxGenPlutusParams -> IO (Either TxGenError HashableScriptData)
-resolveRedeemer (Left hsd) = do
-  putStrLn "--> a hard-coded redeemer has been provided"
-  pure $ Right $ unsafeHashableScriptData hsd
-resolveRedeemer (Right PlutusOn{..}) =
-  case plutusScript of
-    -- it's a file path: we rely on a redeemer file that's been passed explicitly
-    Right{} -> loader plutusRedeemer
-
-    -- it's a built-in, either from the library or from scripts-fallback/
-    -- 1. an explicitly passed in redeemer file takes precedence
-    -- 2. a fallback redeemer is resolved from data/ by adding .redeemer.json
-    -- NB: while scripts-fallback/ content might be used in production, data/ should *NEVER* be - it's for tx-generator development and testing only
-    Left n  -> do
-       let fallbackName = "data" </> n <.> "redeemer" <.> "json"
-       fileExists     <- maybe (pure False) doesFileExist plutusRedeemer
-       fallbackFile   <- try (getDataFileName fallbackName) <&> either (\SomeException{} -> "") id
-       loader $ if fileExists then plutusRedeemer else Just fallbackFile
-  where
-    loader = \case
-      Just f@(_:_) -> do
-        putStrLn $ "--> will read redeemer from: " ++ f
-        readScriptData f
-      _ -> pure $ Left $ TxGenError "resolveRedeemer: no redeemer file resolved"
-
-resolveRedeemer _ = pure $ Left $ TxGenError "resolveRedeemer: no Plutus script defined"
-
-fromEither :: Either a a -> a
-fromEither = either id id
-
-encodePrettySorted :: ToJSON a => a -> BSL.ByteString
-encodePrettySorted = encodePretty' defConfig { confCompare = compare }
-
 
 --
 -- command line parsing
@@ -368,9 +315,6 @@ parserCommandLine
 -- test data
 --
 
-loop_redeemer :: ScriptData
-loop_redeemer = ScriptDataNumber 1_000_000
-
 hashAndAddG2_redeemer :: ScriptData
 hashAndAddG2_redeemer =
   ScriptDataConstructor 0
@@ -384,11 +328,3 @@ hashAndAddG2_redeemer =
     ]
   where
     mkBytes = ScriptDataBytes . BS.pack
-
-
-printScriptData :: ScriptData -> IO ()
-printScriptData =
-    BSL.putStrLn
-  . encodePretty
-  . scriptDataToJson ScriptDataJsonDetailedSchema
-  . unsafeHashableScriptData

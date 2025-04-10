@@ -63,12 +63,12 @@ fastDuration =
 
 ciTestDuration :: Types.Profile -> Types.Profile
 ciTestDuration =
-    V.timescaleCompressed . P.shutdownOnBlock 3
+    V.timescaleCompressed . P.shutdownOnBlock 8
   -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
   --       Create a "time.epochs" or "time.blocks" or similar, IDK!
   -- This applies to all profiles!
-  . P.generatorEpochs 3
-  . P.desc "Miniature dataset, CI-friendly duration, test scale"
+  . P.generatorEpochs 2
+  . P.desc "Miniature dataset, CI-friendly duration (2-3min), test scale"
 
 traceBenchDuration :: Types.Profile -> Types.Profile
 traceBenchDuration =
@@ -143,7 +143,6 @@ profilesNoEraEmpty = map baseNoDataset
   -- TODO: Remove and make `P.p2pOn` the default without adding a "-nop2p" profile.
   , ciTest & P.name "ci-test-p2p"      . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.p2pOn
   , ciTest & P.name "ci-test-plutus"   . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff . P.analysisSizeSmall
-  , ciTest & P.name "ci-test-hydra"    . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOff
   ]
   ++
   ------------------------------------------------------------------------------
@@ -155,7 +154,8 @@ profilesNoEraEmpty = map baseNoDataset
         . P.analysisSizeSmall
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
-    ciTestHydra & P.name "ci-test-hydra" . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOn
+     -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
+    ciTestHydra & P.name "ci-test-hydra" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOn . P.blocksize64k
   ]
   ++
   ------------------------------------------------------------------------------
@@ -194,7 +194,8 @@ profilesNoEraEmpty = map baseNoDataset
       value  = noCliStop & V.genesisVariant300
       -- TODO: "fast-plutus" and "ci-test-plutus" are using `genesisVariant300`.
       plutus = noCliStop & V.genesisVariantPreVoltaire
-      loop    = V.plutusLoop
+      -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
+      loop    = P.txFeeOverwrite 1380000 . V.plutusLoop
       ecdsa   = V.plutusSaturation . V.plutusTypeECDSA
       schnorr = V.plutusSaturation . V.plutusTypeSchnorr
   in [

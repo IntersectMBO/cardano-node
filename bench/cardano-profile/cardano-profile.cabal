@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-profile
-version:                8.7.0
+version:                8.8.0
 synopsis:               A Cardano benchmarking profile generator
 description:            A Cardano benchmarking profile generator.
 category:               Cardano,
@@ -32,7 +32,8 @@ data-files:             data/all-profiles-coay.json
 common project-config
   build-depends:        base >= 4.14 && < 5
   default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
+  default-extensions:   LambdaCase
+                        NoImplicitPrelude
   ghc-options:          -Wall
                         -Wcompat
                         -Wincomplete-record-updates
@@ -107,6 +108,8 @@ executable cardano-timeline
 
 test-suite cardano-profile-test
   import:               project-config
+  -- GHC9.12's warning turns to an error in CI
+  ghc-options:          -Wno-unused-imports
   hs-source-dirs:       test/
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
