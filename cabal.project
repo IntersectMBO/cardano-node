@@ -106,6 +106,7 @@ source-repository-package
   tag: 2d67928dd39b0727453dc266b6b8fdec871cbe66
   subdir:
     network-mux
+    cardano-ping
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-api
