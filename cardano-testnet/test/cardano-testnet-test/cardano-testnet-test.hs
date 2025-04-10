@@ -5,11 +5,12 @@ module Main
   ) where
 
 import qualified Cardano.Crypto.Init as Crypto
+import qualified Cardano.Testnet.Test.Api.TxReferenceInputDatum
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
+import qualified Cardano.Testnet.Test.Cli.Plutus.CostCalculation
+import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
-import qualified Cardano.Testnet.Test.Cli.Plutus.Scripts
-import qualified Cardano.Testnet.Test.Cli.Plutus.CostCalculation
 import qualified Cardano.Testnet.Test.Cli.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
@@ -82,6 +83,8 @@ tests = do
                   ]
                 ]
            ]
+        , T.testGroup "API"
+        [ignoreOnWindows "actual datum for transaction datum hashes in ref inputs" Cardano.Testnet.Test.Api.TxReferenceInputDatum.hprop_tx_refin_datum]
         , T.testGroup "CLI"
           [ ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
           -- ShutdownOnSigint fails on Mac with
