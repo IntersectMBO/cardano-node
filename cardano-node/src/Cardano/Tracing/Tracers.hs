@@ -867,22 +867,24 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
    mkForgeTracers :: IO ForgeTracers
    mkForgeTracers = do
      -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
-     staticMeta <- mkLOMeta Critical Confidential
+     metaCritical <- mkLOMeta Critical Confidential
+     metaInfo <- mkLOMeta Info Public
+     metaError <- mkLOMeta Error Public
      let name :: LoggerName = "metrics.Forge"
      ForgeTracers
-       <$> counting (liftCounting staticMeta name "forged" tr)
-       <*> counting (liftCounting staticMeta name "forge-about-to-lead" tr)
-       <*> counting (liftCounting staticMeta name "could-not-forge" tr)
-       <*> counting (liftCounting staticMeta name "adopted" tr)
-       <*> counting (liftCounting staticMeta name "didnt-adopt" tr)
-       <*> counting (liftCounting staticMeta name "forged-invalid" tr)
-       <*> counting (liftCounting staticMeta name "node-not-leader" tr)
-       <*> counting (liftCounting staticMeta name "cannot-forge" tr)
-       <*> counting (liftCounting staticMeta name "forge-state-update-error" tr)
-       <*> counting (liftCounting staticMeta name "block-from-future" tr)
-       <*> counting (liftCounting staticMeta name "slot-is-immutable" tr)
-       <*> counting (liftCounting staticMeta name "node-is-leader" tr)
-       <*> counting (liftCounting staticMeta name "adoption-thread-died" tr)
+       <$> counting (liftCounting metaInfo     name "forged"                   tr)
+       <*> counting (liftCounting metaInfo     name "forge-about-to-lead"      tr)
+       <*> counting (liftCounting metaError    name "could-not-forge"          tr)
+       <*> counting (liftCounting metaInfo     name "adopted"                  tr)
+       <*> counting (liftCounting metaError    name "didnt-adopt"              tr)
+       <*> counting (liftCounting metaError    name "forged-invalid"           tr)
+       <*> counting (liftCounting metaInfo     name "node-not-leader"          tr)
+       <*> counting (liftCounting metaError    name "cannot-forge"             tr)
+       <*> counting (liftCounting metaCritical name "forge-state-update-error" tr)
+       <*> counting (liftCounting metaError    name "block-from-future"        tr)
+       <*> counting (liftCounting metaError    name "slot-is-immutable"        tr)
+       <*> counting (liftCounting metaInfo     name "node-is-leader"           tr)
+       <*> counting (liftCounting metaError    name "adoption-thread-died"     tr)
 
    traceServedCount :: Maybe EKGDirect -> TraceChainSyncServerEvent blk -> IO ()
    traceServedCount Nothing _ = pure ()
