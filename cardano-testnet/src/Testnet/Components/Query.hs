@@ -36,6 +36,7 @@ module Testnet.Components.Query
   , checkDRepsNumber
   , checkDRepState
   , assertNewEpochState
+  , getProtocolParams
   , getGovActionLifetime
   , getKeyDeposit
   , getDelegationState
@@ -43,7 +44,8 @@ module Testnet.Components.Query
 
 import           Cardano.Api as Api
 import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole))
-import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
+import           Cardano.Api.Shelley (LedgerProtocolParameters (..), ShelleyLedgerEra,
+                   fromShelleyTxIn, fromShelleyTxOut)
 
 import           Cardano.Ledger.Api (ConwayGovState)
 import qualified Cardano.Ledger.Api as L
@@ -565,6 +567,15 @@ assertNewEpochState epochStateView sbe maxWait lens expected = withFrozenCallSta
       \(AnyNewEpochState actualEra newEpochState, _, _) -> do
         Refl <- H.leftFail $ assertErasEqual sbe actualEra
         pure $ newEpochState ^. lens
+
+-- | Return current protocol parameters from the governance state
+getProtocolParams :: (H.MonadAssertion m, MonadTest m, MonadIO m)
+  => EpochStateView
+  -> ConwayEraOnwards era
+  -> m (LedgerProtocolParameters era)
+getProtocolParams epochStateView ceo = conwayEraOnwardsConstraints ceo $ do
+   govState :: ConwayGovState era <- getGovState epochStateView ceo
+   pure . LedgerProtocolParameters $ govState ^. L.cgsCurPParamsL
 
 
 -- | Obtains the @govActionLifetime@ from the protocol parameters.
