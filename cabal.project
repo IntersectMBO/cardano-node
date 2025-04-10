@@ -103,7 +103,7 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
   --sha256: sha256-lpaYxW1TiCNuSOEAsu2lWYsVXmI71nxsjeTushpkIR8=
-  tag: d5852c89dcb6fc1980b171a901622503e5217d04
+  tag: 26e6b30ecd827ab240cbe6b5dd5890e57f33c889
   subdir:
     network-mux
     ouroboros-network

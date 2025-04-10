@@ -65,6 +65,11 @@ instance LogFormatting Mux.Trace where
       [ "kind" .= String "Mux.TraceRecvHeaderStart"
       , "msg"  .= String "Bearer Receive Header Start"
       ]
+    forMachine _dtal (Mux.TraceRecvRaw len) = mconcat
+      [ "kind" .= String "Mux.TraceRecvRaw"
+      , "msg"  .= String "Bearer Receive Raw"
+      , "length" .= String (showT len)
+      ]
     forMachine _dtal (Mux.TraceRecvHeaderEnd SDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) = mconcat
       [ "kind" .= String "Mux.TraceRecvHeaderStart"
       , "msg"  .=  String "Bearer Receive Header End"
@@ -255,6 +260,8 @@ instance LogFormatting Mux.Trace where
 
     forHuman Mux.TraceRecvHeaderStart =
       "Bearer Receive Header Start"
+    forHuman (Mux.TraceRecvRaw len) =
+      sformat ("Bearer Receive Raw: length " % int) len
     forHuman (Mux.TraceRecvHeaderEnd SDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) =
       sformat ("Bearer Receive Header End: ts:" % prefixHex % "(" % shown % ") " % shown % " len " % int)
         (unRemoteClockModel mhTimestamp) mhNum mhDir mhLength
@@ -339,6 +346,8 @@ instance LogFormatting Mux.Trace where
 instance MetaTrace Mux.Trace where
     namespaceFor Mux.TraceRecvHeaderStart {}       =
       Namespace [] ["RecvHeaderStart"]
+    namespaceFor Mux.TraceRecvRaw {}             =
+      Namespace [] ["RecvRaw"]
     namespaceFor Mux.TraceRecvHeaderEnd {}         =
       Namespace [] ["RecvHeaderEnd"]
     namespaceFor Mux.TraceRecvStart {}             =
