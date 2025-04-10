@@ -18,12 +18,13 @@
 
 module Cardano.Tracer.Acceptors.Utils
   ( handshakeCodec
+  , notifyAboutNodeDisconnected
   , parseHandshakeLog
   , parseSDU
   , prepareDataPointRequestor
   , prepareMetricsStores
   , removeDisconnectedNode
-  , notifyAboutNodeDisconnected
+  , decodeHandshake
   ) where
 
 #if RTVIEW
@@ -39,7 +40,7 @@ import qualified Network.Mux.Codec as Mux (decodeSDU)
 import qualified Network.Mux.Trace as Mux (Error (..))
 import qualified Network.Mux.Types as Mux (RemoteClockModel (..), SDU (..), SDUHeader (..))
 import           Network.TypedProtocol.Codec (Codec (..), DecodeStep (..), SomeMessage (..))
-import           Network.TypedProtocol.Core (ActiveState, Agency (..), IsActiveState (..), Protocol (..))
+import           Network.TypedProtocol.Core (IsActiveState (..), Protocol (..))
 import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake, SingHandshake)
 import           Ouroboros.Network.Snocket (LocalAddress)
@@ -77,25 +78,22 @@ deriving instance Show Mux.RemoteClockModel
 deriving instance Show Mux.SDUHeader
 deriving instance Show Mux.SDU
 
-{- decodeHandshake :: forall st . ()
+decodeHandshake
+  :: forall (st :: Handshake ForwardingVersion CBOR.Term) . ()
   => IsActiveState st (StateAgency st)
   => SingHandshake st
        -> IO (DecodeStep
              LBS.ByteString CBOR.DeserialiseFailure IO (SomeMessage st))
-decodeHandshake = decode where
-  Codec {..} = handshakeCodec -}
+decodeHandshake = decode handshakeCodec
 
-parseHandshakeLog :: IO ()
-parseHandshakeLog = parseSDU <$> LBS.readFile logFile >>= \case
+parseHandshakeLog :: FilePath -> IO ()
+parseHandshakeLog logFile = parseSDU <$> LBS.readFile logFile >>= \case
   Left msg -> print msg
   Right (sdu, cborBS) -> do
     print sdu
     print . take 1024 $ show cborBS
     -- decodeHandshake undefined
     pure ()
-  where
-    -- Codec {..} = handshakeCodec
-    logFile = "/home/nyc/src/c-trace-fwd/logs/handshake.log.005.A"
 
 prepareDataPointRequestor
   :: TracerEnv
