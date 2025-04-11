@@ -166,9 +166,12 @@
         profiled = project.profiled.shell;
       };
 
-      # NixOS tests run a node and submit-api and validate it listens
+      # NixOS tests a sandboxed mainnet edge node with submit-api, ensuring
+      # startup and port listening functionality using the nixos service. It
+      # also tests Linux binary artifact start up with each set of pre-bundled
+      # environment configuration files.
       nixosTests = import ./nix/nixos/tests {
-        inherit pkgs;
+        inherit pkgs ciJobs;
       };
 
       checks =
