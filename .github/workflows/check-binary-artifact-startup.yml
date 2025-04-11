@@ -1,0 +1,69 @@
+name: Check binary artifact startup
+
+on:
+  pull_request:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@v31
+      with:
+        # Use last stable nixos channel and the same nix as in channel:
+        nix_path: nixpkgs=channel:nixos-24.11
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+        extra_nix_config: |
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+          experimental-features = nix-command flakes
+          allow-import-from-derivation = true
+          substituters = https://cache.nixos.org https://cache.iog.io
+          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+    - uses: actions/checkout@v4
+
+    - name: Obtain the linux binary artifact
+      run: |
+        nix --version
+        time nix build --accept-flake-config .#hydraJobs.x86_64-linux.musl.cardano-node-linux
+
+    - name: Test the linux binary artifact startup
+      run: |
+        TIMEOUT="20"
+        ENVS=(
+          "mainnet"
+          "preprod"
+          "preview"
+        )
+
+        echo "::group::Expand the artifact..."
+        tar -zxvf result/cardano-node-*-linux.tar.gz
+        echo "::group::"
+
+        for ENV in "${ENVS[@]}"; do
+          echo "::group::Test artifact startup with $ENV for $TIMEOUT seconds"
+          set +e
+          timeout "$TIMEOUT" ./bin/cardano-node run \
+            --config "./share/$ENV/config.json" \
+            --topology "./share/$ENV/topology.json" \
+            --database-path "db-$ENV" \
+            --socket-path "node-$ENV.socket" \
+            | grep 'Chain extended'
+          RC="$?"
+          set -e
+          echo "::group::"
+
+          if [ "$RC" -eq 124 ]; then
+            echo "Artifact startup for $ENV succeeded."
+          elif [ "$RC" -eq 0 ]; then
+            echo "Artifact startup for $ENV exited early; this is unexpected."
+            exit 1
+          else
+            echo "Artifact startup for $ENV exited with error code $RC."
+            exit 1
+          fi
+        done
