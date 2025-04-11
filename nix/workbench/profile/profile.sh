@@ -52,12 +52,10 @@ case "$op" in
         local usage="USAGE: wb profile $op [NAME=<current-shell-profile>"
         local name=${1:-${WB_SHELL_PROFILE:?variable unset, no profile name to use as a default.}}
 
-        local json=$(if test -f  "$name"
-                     then jq '.' "$name"
-                     else profile all-profiles |
-                             jq '.["'$name'"]'
-                     fi)
-        jq '.' <<<$json
+        if test -f  "$name"
+        then jq '.' "$name"
+        else cardano-profile by-name "$name" | jq .
+        fi
         ;;
 
     profile-describe | describe | pdesc | pd )

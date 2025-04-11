@@ -10,6 +10,7 @@ let
   extraShellPkgs = with pkgs;
     [
       python3Packages.supervisor
+      pstree
     ]
   ++ lib.optionals ( useCabalRun)
     (with haskellPackages; [
@@ -27,24 +28,26 @@ let
     ]);
 
   # Backend-specific Nix bits:
-  materialise-profile =
-    { profileData }:
-      let supervisorConf = import ./supervisor-conf.nix
+  materialise-profile = { profileBundle }:
+    pkgs.runCommand
+      "workbench-backend-data-${profileBundle.profile.value.name}-supervisor"
+      { # Create a `supervisord.conf`
+        supervisorConf = import ./supervisor-conf.nix
         { inherit pkgs lib stateDir;
-          # Create a `supervisord.conf`
-          inherit profileData;
-          nodeSpecs = profileData.node-specs.value;
+          profile = profileBundle.profile.value;
+          nodeSpecs = profileBundle.node-specs.value;
           withGenerator = true;
-          withTracer = profileData.value.node.tracer;
+          withTracer = profileBundle.profile.value.node.tracer;
           withSsh = false;
           inetHttpServerPort = "127.0.0.1:9001";
         };
-      in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-supervisor"
-        {supervisorConfPath = supervisorConf.INI;}
-        ''
-        mkdir $out
-        cp    $supervisorConfPath           $out/supervisor.conf
-        '';
+        passAsFile = ["supervisorConf"];
+      }
+      ''
+      mkdir $out
+      cp $supervisorConfPath $out/supervisor.conf
+      ''
+  ;
 
   service-modules = {
     node =

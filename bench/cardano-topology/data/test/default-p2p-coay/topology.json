@@ -1,0 +1,71 @@
+{
+  "coreNodes": [
+    {
+      "name": "node-0",
+      "nodeId": 0,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-1"
+      ],
+      "region": "loopback",
+      "stakePool": true
+    },
+    {
+      "name": "node-1",
+      "nodeId": 1,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-2"
+      ],
+      "region": "loopback",
+      "stakePool": true
+    },
+    {
+      "name": "node-2",
+      "nodeId": 2,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-3"
+      ],
+      "region": "loopback",
+      "stakePool": true
+    },
+    {
+      "name": "node-3",
+      "nodeId": 3,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-4"
+      ],
+      "region": "loopback",
+      "stakePool": true
+    },
+    {
+      "name": "node-4",
+      "nodeId": 4,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-5"
+      ],
+      "region": "loopback",
+      "stakePool": true
+    },
+    {
+      "name": "node-5",
+      "nodeId": 5,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-0"
+      ],
+      "region": "loopback",
+      "stakePool": true
+    }
+  ],
+  "relayNodes": []
+}

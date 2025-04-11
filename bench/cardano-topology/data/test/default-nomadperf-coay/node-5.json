@@ -1,0 +1,42 @@
+{
+  "localRoots": [
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30003
+        }
+      ],
+      "advertise": false,
+      "hotValency": 3,
+      "warmValency": 3,
+      "trustable": true
+    },
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30004
+        }
+      ],
+      "advertise": false,
+      "hotValency": 3,
+      "warmValency": 3,
+      "trustable": true
+    },
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 30002
+        }
+      ],
+      "advertise": false,
+      "hotValency": 3,
+      "warmValency": 3,
+      "trustable": true
+    }
+  ],
+  "publicRoots": [],
+  "useLedgerAfterSlot": -1
+}

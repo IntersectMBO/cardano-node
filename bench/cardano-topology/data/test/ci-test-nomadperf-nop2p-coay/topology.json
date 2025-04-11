@@ -1,0 +1,40 @@
+{
+  "coreNodes": [
+    {
+      "name": "node-0",
+      "nodeId": 0,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-1"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-1",
+      "nodeId": 1,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-0"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    }
+  ],
+  "relayNodes": [
+    {
+      "name": "explorer",
+      "nodeId": 2,
+      "org": "IOHK",
+      "pools": null,
+      "producers": [
+        "node-0",
+        "node-1"
+      ],
+      "region": "eu-central-1",
+      "stakePool": null
+    }
+  ]
+}

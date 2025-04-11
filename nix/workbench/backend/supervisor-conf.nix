@@ -1,7 +1,7 @@
 { pkgs
 , lib
 , stateDir
-, profileData
+, profile
 , nodeSpecs
 , withGenerator
 , withTracer
@@ -138,7 +138,7 @@ let
         ### - forge-stress-pre:        5000000
         ### - forge-stress-large:     11300000
         ### - value:                   5000000 (50s more needed)
-        startsecs      = 5 + (profileData.derived.dataset_measure / (5000000 / 50));
+        startsecs      = 5 + (profile.derived.dataset_measure / (5000000 / 50));
       })
     nodeSpecs))
     //
@@ -208,7 +208,7 @@ let
         # Seconds it needs to stay running to consider the start successful
         startsecs      = 5;
       };
-    }) profileData.workloads))
+    }) profile.workloads))
 
 
 
@@ -236,7 +236,5 @@ let
     }
     ;
 
-in {
-  value = supervisorConf;
-  INI = pkgs.writeText "supervisor.conf" (generators.toINI {} supervisorConf);
-}
+in
+  generators.toINI {} supervisorConf

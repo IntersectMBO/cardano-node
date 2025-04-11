@@ -11,30 +11,10 @@ let
           ## To refer to a plutus script file, do something like:
           ## { Right = pkgs.plutus-scripts + "/generated-plutus-scripts/" + cfg.plutus.script; }
           script   = { Left = cfg.plutus.script; };
-          ## For cardano-ops backwards compatibility the redeemer and datum
-          ## files are file paths to the Nix Store UNLESS cfg.plutusRedeemerFile
-          ## and cfg.plutusDatumFile are present (these should be file paths to
-          ## where they are going to be deployed).
-          redeemer = if cfg.plutus.redeemer == null
-                     then null
-                     else if cfg.plutusRedeemerFile == null
-                       # File path to the Nix Store
-                       then pkgs.writeText
-                              "plutus-redeemer.json"
-                              (__toJSON cfg.plutus.redeemer)
-                       # Config supplied file path.
-                       else cfg.plutusRedeemerFile
-                     ;
-          datum    = if cfg.plutus.datum == null
-                     then null
-                     else if cfg.plutusDatumFile == null
-                       # File path to the Nix Store
-                       then pkgs.writeText
-                              "plutus-datum.json"
-                              (__toJSON cfg.plutus.datum)
-                       # Config supplied file path.
-                       else cfg.plutusDatumFile
-                     ;
+          ## If present, redeemer and datum are the file paths to where they are
+          ## going to be deployed.
+          redeemer = cfg.plutusRedeemerFile or null;
+          datum    = cfg.plutusDatumFile or null;
           inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
         };
       targetNodes = targetNodesList cfg.targetNodes;
