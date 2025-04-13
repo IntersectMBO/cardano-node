@@ -51,15 +51,12 @@ import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
 import           Prelude
 
-import           Control.DeepSeq (NFData)
-import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Map.Strict (Map)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import           Data.Version (showVersion)
 import           Data.Word (Word64)
-import           GHC.Generics (Generic)
 import           Network.HostName (getHostName)
 import qualified Network.Socket as Socket
 

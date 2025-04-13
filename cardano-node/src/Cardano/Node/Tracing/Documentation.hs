@@ -18,6 +18,7 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
+import           Cardano.Node.Tracing.NodeStartupInfo () -- MetaTrace NodeVersionTrace
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
