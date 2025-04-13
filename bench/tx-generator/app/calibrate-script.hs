@@ -155,11 +155,14 @@ runPlutus s@TargetBlockExpenditure{} _ _ _ _
   = putStrLn $ "--> fitting strategy currently unsupported: " ++ show s
 runPlutus strategy budgetType protoParamFile plutusDef@PlutusOn{..} scales
   = do
-    script <- either (error . show) pure =<< readPlutusScript plutusScript
-    putStrLn $ "--> read Plutus script: " ++ scriptNameExt
     protocolParameters <- readProtocolParametersOrDie protoParamFile
+    (script, resolvedTo) <- either (error . show) pure =<< readPlutusScript plutusScript
 
-    let redeemerDef = Right plutusDef
+    let
+      redeemerDef   = Right plutusDef
+      scriptNameExt = show resolvedTo
+      scriptName    = takeWhile (/= '.') . drop 1 . dropWhile (not . isSpace) $ scriptNameExt
+    putStrLn $ "--> got script " ++ scriptNameExt
 
     redeemer :: ScriptData <-
       resolveRedeemer redeemerDef >>= either
@@ -186,13 +189,9 @@ runPlutus strategy budgetType protoParamFile plutusDef@PlutusOn{..} scales
       jsonName  = "summaries_" ++ scriptName <.> "json"
       csvName   = "scaling_" ++ scriptName <.> "csv"
 
-
     summariesWithApprox <- mapM (approximateTxProperties script protocolParameters) summaries
     writeResultsJSON jsonName summariesWithApprox
     writeResultsCSV csvName summariesWithApprox
-  where
-    scriptNameExt = either (++ " (known script)") (++ " (from file)") plutusScript
-    scriptName    = takeWhile (not . isSpace) scriptNameExt
 
 runPlutus _ _ _ _ _ = error "calibrate-script: implementation error"
 

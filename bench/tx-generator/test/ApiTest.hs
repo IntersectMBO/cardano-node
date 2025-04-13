@@ -185,8 +185,8 @@ checkPlutusLoop ::
   -> IO ()
 checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
   = do
-    script <- either (die . show) pure =<< readPlutusScript plutusScript
-    putStrLn $ "--> Read plutus script: " ++ scriptName
+    (script, resolvedTo) <- either (die . show) pure =<< readPlutusScript plutusScript
+    putStrLn $ "--> Got script " ++ show resolvedTo
     protocolParameters <- readProtocolParametersOrDie protoParamFile
 
     let count = 1_792       -- arbitrary counter for a loop script; should respect mainnet limits
