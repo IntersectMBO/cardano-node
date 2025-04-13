@@ -80,7 +80,7 @@ instance FromJSON RotationParams where
                    <|> pure 60
     rpLogLimitBytes <- o .: "rpLogLimitBytes"
     rpMaxAgeMinutes <- o .: "rpMaxAgeMinutes"
-                   <|> o .: "rpMaxAgeHours" <&> (* 60)
+                   <|> (o .: "rpMaxAgeHours" <&> (* 60))
                    <|> pure (24 * 60)
     rpKeepFilesNum  <- o .: "rpKeepFilesNum"
     pure RotationParams{..}
