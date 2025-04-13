@@ -102,6 +102,7 @@ library
                         Cardano.Node.Tracing.Era.Shelley
                         Cardano.Node.Tracing.Formatting
                         Cardano.Node.Tracing.NodeInfo
+                        Cardano.Node.Tracing.NodeStartupInfo
                         Cardano.Node.Tracing.Peers
                         Cardano.Node.Tracing.Render
                         Cardano.Node.Tracing.StateRep

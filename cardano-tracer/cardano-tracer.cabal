@@ -18,7 +18,7 @@ extra-doc-files:        README.md
 
 flag rtview
   description:          Enable RTView. False by default. Enable with `-f +rtview`.
-  default:              False
+  default:              True
   manual:               True
 
 flag systemd

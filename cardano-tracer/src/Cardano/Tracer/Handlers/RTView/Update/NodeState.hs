@@ -8,6 +8,8 @@ module Cardano.Tracer.Handlers.RTView.Update.NodeState
   ) where
 
 -- import           Cardano.Node.Tracing.StateRep
+import           Data.Aeson
+import           Data.Aeson.Types (Parser)
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
@@ -16,7 +18,7 @@ import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
 import           Control.Monad.Extra (whenJustM)
-import           Data.Text (pack)
+import           Data.Text (Text, pack)
 import           Text.Printf (printf)
 
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
@@ -66,6 +68,6 @@ instance FromJSON NodeStateWrapper where
   parseJSON = withObject "NodeState" \obj -> do
     -- Check if this is a NodeAddBlock constructor, verify that it's
     -- AddedToCurrentChain and extract the Double.
-    "NodeAddBlock" <- obj .: "tag"
+    "NodeAddBlock" :: Text <- obj .: "tag"
     [_, _, double] <- obj .: "contents"
     pure (NodeStateWrapper double)

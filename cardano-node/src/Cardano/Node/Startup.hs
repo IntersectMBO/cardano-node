@@ -12,6 +12,7 @@
 module Cardano.Node.Startup
   ( module Cardano.Node.Startup
   , module Cardano.Logging.Types.NodeInfo
+  , module Cardano.Logging.Types.NodeStartupInfo
   ) where
 
 import qualified Cardano.Api as Api
@@ -19,8 +20,9 @@ import qualified Cardano.Api as Api
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 import           Cardano.Logging
+import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
+import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
-import           Cardano.Logging.Types.NodeInfo (NodeInfo(..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
@@ -237,34 +239,3 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
 
         hostName <- getHostName
         return (pack (hostName <> suffix))
-
--- | This information is taken from 'BasicInfoShelleyBased'. It is required for
---   'cardano-tracer' service (particularly, for RTView).
-data NodeStartupInfo = NodeStartupInfo {
-    suiEra               :: Text
-  , suiSlotLength        :: NominalDiffTime
-  , suiEpochLength       :: Word64
-  , suiSlotsPerKESPeriod :: Word64
-  } 
-  deriving stock
-    (Eq, Generic, Show)
-  deriving anyclass
-    (ToJSON, FromJSON, NFData)
-
-instance MetaTrace NodeStartupInfo where
-  namespaceFor NodeStartupInfo {}  =
-    Namespace [] ["NodeStartupInfo"]
-  severityFor  (Namespace _ ["NodeStartupInfo"]) _ =
-    Just Info
-  severityFor _ns _ =
-    Nothing
-  documentFor  (Namespace _ ["NodeStartupInfo"]) = Just
-    "Startup information about this node, required for RTView\
-        \\n\
-        \\n _suiEra_: Name of the current era. \
-        \\n _suiSlotLength_: Slot length, in seconds. \
-        \\n _suiEpochLength_: Epoch length, in slots. \
-        \\n _suiSlotsPerKESPeriod_: KES period length, in slots."
-  documentFor _ns =
-     Nothing
-  allNamespaces = [ Namespace [] ["NodeStartupInfo"]]

@@ -6,7 +6,7 @@ module Cardano.Tracer.Handlers.RTView.Update.EraSettings
   ( runEraSettingsUpdater
   ) where
 
-import           Cardano.Node.Startup (NodeStartupInfo (..))
+import           Cardano.Logging.Types.NodeStartupInfo (NodeStartupInfo (..))
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.Utils
