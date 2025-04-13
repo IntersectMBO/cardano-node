@@ -427,7 +427,7 @@ makePlutusContext :: forall era. IsShelleyBasedEra era
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
-  script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
+  (script, resolvedTo) <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -470,7 +470,7 @@ makePlutusContext ScriptSpec{..} = do
           , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) (getScriptData redeemer)
           , autoBudgetUpperBoundHint = Nothing
           }
-        scriptInfo = (either ("builtin: " ++) ("plutus file: " ++) scriptSpecFile, show strategy)
+        scriptInfo = (show resolvedTo, show strategy)
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
 

@@ -93,7 +93,7 @@ data TxGenPlutusType
 data TxGenPlutusParams
   = PlutusOn                                    -- ^ Generate Plutus Txs for given script
       { plutusType        :: !TxGenPlutusType
-      , plutusScript      :: !(Either String FilePath) -- ^ Path to the Plutus script
+      , plutusScript      :: !(Either String FilePath) -- ^ name or path of the Plutus script
       , plutusDatum       :: !(Maybe FilePath)  -- ^ Datum passed to the Plutus script (JSON file in ScriptData schema)
       , plutusRedeemer    :: !(Maybe FilePath)  -- ^ Redeemer passed to the Plutus script (JSON file in ScriptData schema)
       , plutusExecMemory  :: !(Maybe Natural)   -- ^ Max. memory for ExecutionUnits (overriding corresponding protocol parameter)
@@ -101,6 +101,19 @@ data TxGenPlutusParams
       }
   | PlutusOff                                   -- ^ Do not generate Plutus Txs
   deriving (Show, Eq)
+
+-- | Documents how the `plutusScript` parameter above was eventually resolved
+data TxGenPlutusResolvedTo
+  = ResolvedToLibrary     String      -- ^ source is the library from the plutus-scripts-bench package
+  | ResolvedToFallback    FilePath    -- ^ source it the tx-generator's scripts-fallback data directory
+  | ResolvedToFileName    FilePath    -- ^ source is a .plutus file
+  deriving Eq
+
+instance Show TxGenPlutusResolvedTo where
+  show = \case
+    ResolvedToLibrary n ->   "builtin: " ++ n
+    ResolvedToFallback f  -> "fallback: " ++ f
+    ResolvedToFileName f  -> "file: " ++ f
 
 isPlutusMode :: TxGenPlutusParams -> Bool
 isPlutusMode
