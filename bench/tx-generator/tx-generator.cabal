@@ -26,6 +26,8 @@ common project-config
   if os(windows)
     buildable: False
 
+  default-language:     Haskell2010
+
 common with-library
   -- This is the inverse to the "buildable" GHC version constraint in plutus-scripts-bench.
   -- It makes sure, we only depend on that package if it is buildable.
@@ -37,6 +39,7 @@ common with-library
 common maybe-unix
   if !os(windows)
     build-depends:      unix
+
 
 library
   import:               project-config, with-library, maybe-unix
@@ -168,14 +171,12 @@ library
                       , scientific
                       , cardano-ledger-babbage
 
-  default-language:     Haskell2010
   default-extensions:   OverloadedStrings
 
 executable tx-generator
   import:               project-config
   hs-source-dirs:       app
   main-is:              tx-generator.hs
-  default-language:     Haskell2010
   ghc-options:          -threaded
                         -Wall
                         -rtsopts
@@ -190,9 +191,8 @@ executable calibrate-script
   hs-source-dirs:       app
                         src-calibrate
   main-is:              calibrate-script.hs
-  default-language:     Haskell2010
-  ghc-options:          -threaded
-                        -Wall
+
+  ghc-options:          -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
                         -Wno-deprecations
@@ -207,9 +207,6 @@ executable calibrate-script
                       , filepath
                       , optparse-applicative-fork
                       , cardano-api
-                      , cardano-cli
-                      , cardano-node
-                      , plutus-tx
                       , text
                       , transformers
                       , transformers-except
@@ -228,9 +225,8 @@ test-suite tx-generator-apitest
                         test
   main-is:              ApiTest.hs
   type:                 exitcode-stdio-1.0
-  default-language:     Haskell2010
-  ghc-options:          -threaded
-                        -Wall
+
+  ghc-options:          -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
                         -Wno-deprecations
@@ -266,8 +262,6 @@ test-suite tx-generator-test
                       , tasty-hunit
                       , tx-generator
 
-  default-language:     Haskell2010
-
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists
                         -fno-warn-safe
@@ -284,8 +278,6 @@ benchmark tx-generator-bench
                       , criterion
                       , stm
                       , tx-generator
-
-  default-language:     Haskell2010
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists

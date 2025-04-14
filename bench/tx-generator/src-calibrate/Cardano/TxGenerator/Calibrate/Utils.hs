@@ -17,7 +17,6 @@ import           Data.Aeson (eitherDecodeFileStrict')
 import           Data.Aeson.Encode.Pretty
 import           Data.Bool (bool)
 import qualified Data.ByteString.Lazy.Char8 as BSL (ByteString, putStrLn)
-import           Data.Functor ((<&>))
 import           System.Directory (doesFileExist)
 import           System.FilePath
 
@@ -62,18 +61,18 @@ resolveRedeemerQuiet quiet = \case
       -- NB: while scripts-fallback/ content might be used in production, data/ should *NEVER* be - it's for tx-generator development and testing only
       Left n -> do
          let fallbackName = "data" </> n <.> "redeemer" <.> "json"
-         fileExists     <- maybe (pure False) doesFileExist plutusRedeemer
-         fallbackFile   <- try (getDataFileName fallbackName) <&> either (\SomeException{} -> "") id
-         loader $ if fileExists then plutusRedeemer else Just fallbackFile
+         fileExists     <- or <$> forM plutusRedeemer doesFileExist
+         fallbackFile   <- either (\SomeException{} -> Nothing) Just <$> try (getDataFileName fallbackName)
+         loader $ if fileExists then plutusRedeemer else fallbackFile
 
   Right{} -> pure $ Left $ TxGenError "resolveRedeemer: no Plutus script defined"
 
   where
     loader = \case
-      Just f@(_:_) -> do
+      Just f -> do
         unless quiet $ putStrLn $ "--> will read redeemer from: " ++ f
         readScriptData f
-      _ -> pure $ Left $ TxGenError "resolveRedeemer: no redeemer file resolved"
+      Nothing -> pure $ Left $ TxGenError "resolveRedeemer: no redeemer file resolved"
 
 printScriptData :: ScriptData -> IO ()
 printScriptData =

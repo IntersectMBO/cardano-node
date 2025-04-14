@@ -12,6 +12,7 @@ module Cardano.Benchmarking.Profile
 
 import           Prelude
 import           Control.Monad (foldM)
+import           Data.Maybe (catMaybes)
 import           System.IO.Unsafe (unsafePerformIO)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
@@ -478,20 +479,7 @@ unionWithKey _ _ b = b
 addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
 addEras = foldMap
   (\profile -> Map.fromList $
-    let
-        -- TODO: Profiles properties other than the "name" and "era" of
-        --       type string are the only thing that change ??? Remove the
-        --       concept of eras from the profile definitions and make it a
-        --       workbench-level feature (???).
-        addEra p era suffix
-          | Just (major, _) <- Types.profileProtocolVersion p
-          , era < Types.firstEraForMajorVersion major
-            = mempty
-          | otherwise
-            = let name = Types.name p
-                  newName = name ++ "-" ++ suffix
-              in [(newName, p {Types.name = newName, Types.era = era})]
-    in mconcat
+      catMaybes
         [ addEra profile Types.Shelley "shey"
         , addEra profile Types.Allegra "alra"
         , addEra profile Types.Mary    "mary"
@@ -500,3 +488,13 @@ addEras = foldMap
         , addEra profile Types.Conway  "coay"
         ]
   )
+
+addEra :: Types.Profile -> Types.Era -> String -> Maybe (String, Types.Profile)
+addEra p era suffix
+  | Just (major, _) <- Types.profileProtocolVersion p
+  , era < Types.firstEraForMajorVersion major
+    = Nothing
+  | otherwise
+    = let name = Types.name p
+          newName = name ++ "-" ++ suffix
+      in Just (newName, p {Types.name = newName, Types.era = era})

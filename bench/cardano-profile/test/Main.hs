@@ -1,6 +1,6 @@
 {-# LANGUAGE Trustworthy #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 --------------------------------------------------------------------------------
 module Main (main) where
@@ -766,12 +766,18 @@ testGroupMap = Tasty.testGroup
             )
   , testCase "Profiles (Duplicate names)" $
       let
-        go (set, duplicates) name
-          | name `Set.member` set = (set, name:duplicates)
-          | otherwise             = (name `Set.insert` set, duplicates)
+        go (T set duplicates) name
+          | name `Set.member` set = T set (name:duplicates)
+          | otherwise             = T (name `Set.insert` set) duplicates
       in assertEqual "Duplicate definition(s) for profile(s)" []
-          $ snd $ foldl' go (Set.empty, []) (map Types.name profilesRaw)
+          $ sndT $ foldl' go (T Set.empty []) (map Types.name profilesRaw)
   ]
+
+-- little helper type for tuples strict in the first element
+data TupleStrictFirst a b = T !a b
+
+sndT :: TupleStrictFirst a b -> b
+sndT (T _ b) = b
 
 --------------------------------------------------------------------------------
 
