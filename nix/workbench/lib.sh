@@ -334,9 +334,14 @@ wait_internal () {
 # )
 #
 acquire_lock() {
-  WB_LOCKFILE=${WB_LOCKFILE:-/tmp/workbench.lock}
-  info lockfile "$(white "waiting to acquire the lock on ${WB_LOCKFILE}")"
-  exec {lock_fd}>"$WB_LOCKFILE"
-  flock $lock_fd
-  info lockfile "$(green "lock acquired")"
+  # Nomad Exec does not support current lockfile implementation.
+  # Nomad Exec is a local test environment for "nomadcloud" and needs `sudo`.
+  if test "${WB_BACKEND}" != "nomadexec"
+  then
+    WB_LOCKFILE=${WB_LOCKFILE:-/tmp/workbench.lock}
+    info lockfile "$(white "waiting to acquire the lock on ${WB_LOCKFILE}")"
+    exec {lock_fd}>"$WB_LOCKFILE"
+    flock $lock_fd
+    info lockfile "$(green "lock acquired")"
+  fi
 }
