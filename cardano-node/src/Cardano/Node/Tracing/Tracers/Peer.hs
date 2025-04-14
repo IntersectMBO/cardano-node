@@ -88,7 +88,6 @@ ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
 
 ppStatus :: PeerFetchStatus header -> String
 ppStatus = \case
-  PeerFetchStatusStarting -> "starting"
   PeerFetchStatusShutdown -> "shutdown"
   PeerFetchStatusAberrant -> "aberrant"
   PeerFetchStatusBusy     -> "fetching"

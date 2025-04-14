@@ -85,7 +85,6 @@ ppStatus = \case
   PeerFetchStatusAberrant -> "aberrant"
   PeerFetchStatusBusy     -> "fetching"
   PeerFetchStatusReady {} -> "ready"
-  PeerFetchStatusStarting -> "starting"
 
 getCurrentPeers
   :: NodeKernelData blk
