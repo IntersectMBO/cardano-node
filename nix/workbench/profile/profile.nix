@@ -107,12 +107,11 @@ let
         )
         tracer-service
       ;
-      inherit
+      healthcheck-service =
         (pkgs.callPackage
           ../service/healthcheck.nix
           {inherit backend profile nodeSpecs;}
         )
-        healthcheck-service
       ;
     in {
       profile = {

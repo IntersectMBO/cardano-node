@@ -260,7 +260,7 @@ backend_nomad() {
     ;;
 
     allocate-run-nomad-job-patch-nix )
-      local usage="USAGE: wb backend $op RUN-DIR"
+      local usage="USAGE: wb backend $op RUN-DIR [GITREV]"
       local dir=${1:?$usage}; shift
       local nomad_environment=$(envjqr 'nomad_environment')
       local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
@@ -270,7 +270,9 @@ backend_nomad() {
       then
         installables_array=$(jq '.containerPkgs | map(."nix-store-path")' "${dir}"/container-specs.json)
       else
-        installables_array=$(jq '.containerPkgs | map(.installable)' "${dir}"/container-specs.json)
+        local gitrev=${1:?$usage}; shift
+        # "${flakeReference}/${commit}#${flakeOutput}"
+        installables_array=$(jq ".containerPkgs | map(.flakeReference + \"/${gitrev}#\"+ .flakeOutput)" "${dir}"/container-specs.json)
       fi
       # nix_installables
       local groups_array=$(jq -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)

@@ -12,20 +12,7 @@ let
       python3Packages.supervisor
       pstree
     ]
-  ++ lib.optionals ( useCabalRun)
-    (with haskellPackages; [
-      cabal-install
-      ghcid
-      haskellBuildUtils
-      pkgs.cabal-plan
-    ])
-  ## Workbench's main script is called directly in dev mode.
-  ++ lib.optionals (!useCabalRun)
-    (with cardanoNodePackages; [
-      cardano-node
-      cardano-tracer
-      tx-generator
-    ]);
+  ;
 
   # Backend-specific Nix bits:
   materialise-profile = { profileBundle }:

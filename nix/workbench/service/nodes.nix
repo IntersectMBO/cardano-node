@@ -137,6 +137,7 @@ let
     } // optionalAttrs (profiling != "none") {
       inherit profiling;
     } // optionalAttrs (profiling == "none") {
+      # Switch to `cardano-node.passthru.noGitRev` if eventlog is not needed.
       eventlog               = mkForce true;
     } // optionalAttrs backend.useCabalRun {
       # Allow the shell function to take precedence.

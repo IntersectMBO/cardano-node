@@ -8,7 +8,7 @@
 , stateDir
 , profileBundle
 , generatorTaskName
-, containerPkgs
+, installables
 , oneTracerPerNode ? false
 , withSsh ? false
 }:
@@ -75,8 +75,8 @@ let
 
   entrypoint =
     let
-      coreutils  = containerPkgs.coreutils.nix-store-path;
-      supervisor = containerPkgs.supervisor.nix-store-path;
+      coreutils  = installables.coreutils.nix-store-path;
+      supervisor = installables.supervisor.nix-store-path;
     in escapeTemplate
       ''
       # Store entrypoint's envars and "uname" in a file for debugging purposes.
@@ -510,7 +510,7 @@ let
             # ERROR: cannot verify iog-cardano-perf.s3.eu-central-1.amazonaws.com's certificate, issued by 'CN=Amazon RSA 2048 M01,O=Amazon,C=US':
             # Unable to locally verify the issuer's authority.
             # To connect to iog-cardano-perf.s3.eu-central-1.amazonaws.com insecurely, use `--no-check-certificate'.
-            SSL_CERT_FILE = "${containerPkgs.cacert.nix-store-path}/etc/ssl/certs/ca-bundle.crt";
+            SSL_CERT_FILE = "${installables.cacert.nix-store-path}/etc/ssl/certs/ca-bundle.crt";
           };
 
           # Sensible defaults.
@@ -946,9 +946,9 @@ let
                   ../service/ssh.nix
                   {
                     inherit pkgs;
-                    bashInteractive = containerPkgs.bashInteractive.nix-store-path;
-                    coreutils = containerPkgs.coreutils.nix-store-path;
-                    sshdExecutable = "${containerPkgs.openssh_hacks.nix-store-path}/bin/sshd";
+                    bashInteractive = installables.bashInteractive.nix-store-path;
+                    coreutils = installables.coreutils.nix-store-path;
+                    sshdExecutable = "${installables.openssh_hacks.nix-store-path}/bin/sshd";
                   }
               ;
             in [
@@ -1002,12 +1002,12 @@ let
           {
             driver = "exec";
             config = {
-              command = "${containerPkgs.bashInteractive.nix-store-path}/bin/bash";
+              command = "${installables.bashInteractive.nix-store-path}/bin/bash";
               args = ["local/entrypoint.sh"];
               nix_installables =
                 (lib.attrsets.mapAttrsToList
-                  (name: attr: attr.installable)
-                  containerPkgs
+                  (name: attr: attr.nix-store-path)
+                  installables
                 )
               ;
             };

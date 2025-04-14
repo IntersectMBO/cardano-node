@@ -96,6 +96,7 @@ project.shellFor {
   # These programs will be available inside the nix-shell.
   nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
     db-analyser
+    cardano-cli.passthru.noGitRev
     pkgs.graphviz
     graphmod
     jq
@@ -118,7 +119,7 @@ project.shellFor {
     workbench-runner.workbench-interactive-stop
     workbench-runner.workbench-interactive-restart
   ]
-  # Backend packages take precendence.
+  # Backend dependent packages take precedence.
   ++ workbench-runner.backend.extraShellPkgs
   ++ [
       # Publish
@@ -129,7 +130,23 @@ project.shellFor {
       em
   ]
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [ cardano-profile cardano-topology cardano-cli locli ]
+  ## Cabal run flag
+  # Include the packages (defined in `lib-cabal.sh`) or the tools to build them.
+  ++ lib.optionals ( workbench-runner.backend.useCabalRun) [
+       cabal-install
+       ghcid
+       haskellBuildUtils
+       pkgs.cabal-plan
+     ]
+  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [
+       cardano-node.passthru.noGitRev
+       cardano-profile
+       cardano-topology
+       cardano-tracer
+       locli
+       tx-generator
+     ]
+  # Include the workbench as a derivation or use the sources directly ?
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
   ;
 }

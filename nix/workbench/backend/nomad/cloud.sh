@@ -330,14 +330,11 @@ allocate-run-nomadcloud() {
   fi
   ## "nix_installables"
   #####################
-  ### Will set the flake URIs from ".installable" in container-specs.json
-  backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
-
-  # The Nomad job spec will contain links ("nix_installables" stanza) to
-  # the Nix Flake outputs it needs inside the container, these are
-  # refereced with a GitHub commit ID inside the "container-specs" file.
+  # The Nomad job spec uses links ("nix_installables" stanza) to the Nix Flake
+  # outputs it needs inside the container, these are built using the packages
+  # metadata in "containerPkgs" and the current commit.
   local gitrev
-  gitrev=$(jq -r .gitrev "${profile_container_specs_file}")
+  gitrev="$(git rev-parse HEAD)"
   msg $(blue "INFO: Found GitHub commit with ID \"$gitrev\"")
   # Check if the Nix package was created from a dirty git tree
   if test "$gitrev" = "0000000000000000000000000000000000000000"
@@ -375,6 +372,8 @@ allocate-run-nomadcloud() {
       fatal "Could not fetch commit info from GitHub (\`curl\` error)"
     fi
   fi
+  ### Will set the flake URIs from ".installable" in container-specs.json
+  backend_nomad allocate-run-nomad-job-patch-nix "${dir}" "${gitrev}"
 
   ############################################################################
   # Memory/resources: ########################################################
