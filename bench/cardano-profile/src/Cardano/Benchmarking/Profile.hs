@@ -476,22 +476,8 @@ unionWithKey _ _ b = b
 -- | Specialize profile to all valid eras and add era suffix(es) to profile name.
 --   An era is considered valid based on the protocol version a profile might define.
 addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
-addEras = foldMap
-  (\profile -> Map.fromList $
-    let
-        -- TODO: Profiles properties other than the "name" and "era" of
-        --       type string are the only thing that change ??? Remove the
-        --       concept of eras from the profile definitions and make it a
-        --       workbench-level feature (???).
-        addEra p era suffix
-          | Just (major, _) <- Types.profileProtocolVersion p
-          , era < Types.firstEraForMajorVersion major
-            = mempty
-          | otherwise
-            = let name = Types.name p
-                  newName = name ++ "-" ++ suffix
-              in [(newName, p {Types.name = newName, Types.era = era})]
-    in mconcat
+addEras = foldMap \profile -> Map.fromList $
+  mconcat
         [ addEra profile Types.Shelley "shey"
         , addEra profile Types.Allegra "alra"
         , addEra profile Types.Mary    "mary"
@@ -499,4 +485,17 @@ addEras = foldMap
         , addEra profile Types.Babbage "bage"
         , addEra profile Types.Conway  "coay"
         ]
-  )
+
+-- TODO: Profiles properties other than the "name" and "era" of
+--       type string are the only thing that change ??? Remove the
+--       concept of eras from the profile definitions and make it a
+--       workbench-level feature (???).
+addEra :: Types.Profile -> Types.Era -> String -> [(String, Types.Profile)]
+addEra p era suffix
+  | Just (major, _) <- Types.profileProtocolVersion p
+  , era < Types.firstEraForMajorVersion major
+    = mempty
+  | otherwise
+    = let name = Types.name p
+          newName = name ++ "-" ++ suffix
+      in [(newName, p {Types.name = newName, Types.era = era})]

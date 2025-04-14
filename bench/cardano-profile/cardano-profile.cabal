@@ -32,7 +32,8 @@ data-files:             data/all-profiles-coay.json
 common project-config
   build-depends:        base >= 4.14 && < 5
   default-language:     Haskell2010
-  default-extensions:   LambdaCase
+  default-extensions:   BlockArguments
+                        LambdaCase
                         NoImplicitPrelude
   ghc-options:          -Wall
                         -Wcompat

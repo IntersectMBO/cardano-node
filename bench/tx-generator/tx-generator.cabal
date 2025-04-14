@@ -25,6 +25,15 @@ flag withplutuslib
 common project-config
   if os(windows)
     buildable: False
+  default-language: Haskell2010
+  default-extensions:
+    BlockArguments
+    LambdaCase
+    OverloadedStrings
+    ScopedTypeVariables
+    ViewPatterns
+    TupleSections
+    TypeApplications
 
 common with-library
   -- This is the inverse to the "buildable" GHC version constraint in plutus-scripts-bench.
@@ -167,14 +176,10 @@ library
                       , scientific
                       , cardano-ledger-babbage
 
-  default-language:     Haskell2010
-  default-extensions:   OverloadedStrings
-
 executable tx-generator
   import:               project-config
   hs-source-dirs:       app
   main-is:              tx-generator.hs
-  default-language:     Haskell2010
   ghc-options:          -threaded
                         -Wall
                         -rtsopts
@@ -189,7 +194,6 @@ executable calibrate-script
   hs-source-dirs:       app
                         src-calibrate
   main-is:              calibrate-script.hs
-  default-language:     Haskell2010
   ghc-options:          -threaded
                         -Wall
                         -rtsopts
@@ -214,8 +218,6 @@ executable calibrate-script
                       , transformers-except
                       , tx-generator
 
-  default-extensions:   ViewPatterns
-
   other-modules:        Cardano.TxGenerator.Calibrate.Utils
                         Paths_tx_generator
   autogen-modules:      Paths_tx_generator
@@ -227,7 +229,6 @@ test-suite tx-generator-apitest
                         test
   main-is:              ApiTest.hs
   type:                 exitcode-stdio-1.0
-  default-language:     Haskell2010
   ghc-options:          -threaded
                         -Wall
                         -rtsopts
@@ -265,8 +266,6 @@ test-suite tx-generator-test
                       , tasty-hunit
                       , tx-generator
 
-  default-language:     Haskell2010
-
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists
                         -fno-warn-safe
@@ -283,8 +282,6 @@ benchmark tx-generator-bench
                       , criterion
                       , stm
                       , tx-generator
-
-  default-language:     Haskell2010
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists
