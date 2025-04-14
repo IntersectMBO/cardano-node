@@ -102,8 +102,8 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  --sha256: sha256-hAu9zKz1bsuudJivxFX8vOKw5spTIhkfS4yu4nKDjtc=
-  tag: edbe5a2857ebb5395b4a77dfe7a0c0d80695c11e
+  --sha256: sha256-jp4H+vRGq0M0YEiD19FcewQo9uYI2xT7lJlEEd+w18Q=
+  tag: 5754257401d1513322d4cf54fea6bc24ad1eaa3c
   subdir:
     network-mux
     cardano-ping
