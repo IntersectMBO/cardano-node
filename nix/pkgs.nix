@@ -141,7 +141,7 @@ in with final;
               # Default values only ("run/current", 30000, profiling "none").
               profile = workbench.profile {
                 inherit profileName;
-                inherit (customConfig) profiling;
+                profiling = "none";
               };
               backend = workbench.backend
                 { backendName = "nomadcloud";
