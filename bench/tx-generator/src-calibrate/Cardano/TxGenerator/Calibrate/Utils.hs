@@ -49,16 +49,20 @@ resolveRedeemer :: Either ScriptData TxGenPlutusParams -> IO (Either TxGenError 
 resolveRedeemer = resolveRedeemerQuiet False
 
 resolveRedeemerQuiet :: Bool -> Either ScriptData TxGenPlutusParams -> IO (Either TxGenError HashableScriptData)
-resolveRedeemerQuiet quiet = \case
+resolveRedeemerQuiet = (runExceptT .) . resolveRedeemerQuiet'
+
+resolveRedeemerQuiet' :: Bool -> Either ScriptData TxGenPlutusParams -> ExceptT TxGenError IO HashableScriptData
+resolveRedeemerQuiet' quiet = \case
   Left hsd -> do
-    unless quiet $ putStrLn "--> a hard-coded redeemer has been provided"
-    pure . Right $ unsafeHashableScriptData hsd
-  Right PlutusOff -> pure . Left $
+    unless quiet . liftIO $
+      putStrLn "--> a hard-coded redeemer has been provided"
+    pure $ unsafeHashableScriptData hsd
+  Right PlutusOff -> throwE $
     TxGenError "resolveRedeemer: no Plutus script defined"
   Right PlutusOn{..}
     -- it's a file path: we rely on a redeemer file that's been
     -- passed explicitly
-    | Right {} <- plutusScript -> runExceptT do
+    | Right {} <- plutusScript -> do
         redeemer <- maybeToExceptT resolvRedeemErr $ hoistMaybe plutusRedeemer
         loader redeemer
 
@@ -70,16 +74,18 @@ resolveRedeemerQuiet quiet = \case
     -- testing only
     | Left n <- plutusScript
     , fallbackName <- "data" </> n <.> "redeemer" <.> "json" -> do
-         fileExists <- and <$> mapM doesFileExist plutusRedeemer
-         runExceptT do
-           file <- maybeToExceptT resolvRedeemErr do
-             (guard fileExists >> hoistMaybe plutusRedeemer)
-                  <|> MaybeT (try' $ getDataFileName fallbackName)
-           loader file
+         fileExists <- liftIO $ and <$> mapM doesFileExist plutusRedeemer
+         file <- maybeToExceptT resolvRedeemErr do
+                   (guard fileExists >> hoistMaybe plutusRedeemer)
+                         <|> MaybeT (try' $ getDataFileName fallbackName)
+         loader file
   where
+    try' :: IO a -> IO (Maybe a)
     try' io = eitherToMaybe <$> try @SomeException io
+    resolvRedeemErr :: TxGenError
     resolvRedeemErr = TxGenError "resolveRedeemer: no redeemer file resolved"
-    loader f = ExceptT do
+    loader :: FilePath -> ExceptT TxGenError IO HashableScriptData
+    loader f = ExceptT $ liftIO do
       unless quiet $ putStrLn $ "--> will read redeemer from: " ++ f
       readScriptData f
 
