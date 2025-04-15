@@ -61,6 +61,7 @@ config1 = TraceConfig {
     , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
     , tcMetricsPrefix = Nothing
+    , tcLedgerMetricsFrequency = Nothing
     }
 
 config2 :: TraceConfig
@@ -80,6 +81,7 @@ config2 = TraceConfig {
     , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
     , tcMetricsPrefix = Nothing
+    , tcLedgerMetricsFrequency = Nothing
     }
 
 testConfig' ::

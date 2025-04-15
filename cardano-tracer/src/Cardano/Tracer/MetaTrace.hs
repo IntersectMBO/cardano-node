@@ -296,7 +296,15 @@ configTracerTracer defSeverity tr = do
  where
    initialTraceConfig :: TraceConfig
    initialTraceConfig =
-     emptyTraceConfig
-     {
-      tcOptions = Map.fromList [([], [ConfSeverity defSeverity])]
+     TraceConfig
+     { tcForwarder         = Nothing
+     , tcNodeName          = Nothing
+     , tcPeerFrequency     = Nothing
+     , tcResourceFrequency = Nothing
+     , tcLedgerMetricsFrequency = Nothing
+     , tcMetricsPrefix     = Nothing
+     , tcOptions = Map.fromList
+                   [ ([],         [ConfSeverity defSeverity])
+                   , (["Tracer"], [ConfDetail DMaximum])
+                   ]
      }
