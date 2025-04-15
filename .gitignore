@@ -40,6 +40,9 @@ supervisord.pid
 tags
 /config
 /data
+/data_human
+/empty_dir
+/tracer_data
 ./*.skey
 ./*.vkey
 ./*.cert
