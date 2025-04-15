@@ -16,8 +16,9 @@ import qualified "network-mux"                 Network.Mux.Types as Mux
 import qualified "network-mux"                 Network.Mux.Codec as Mux
 
 import qualified "typed-protocols"             Network.TypedProtocol.Codec as Codec -- (Codec)
+import qualified "typed-protocols"             Network.TypedProtocol.Core  as Codec -- (StateAgency/Protocol)
 
 import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handshake.Codec as Handshake -- (codecHandshake)
 import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handshake.Type as Handshake -- (Handshake)
 
-import qualified "cardano-tracer"              Cardano.Tracer.Acceptors.Utils as Acceptors
+import qualified "cardano-tracer"              Cardano.Tracer.Acceptors.Utils as Utils
