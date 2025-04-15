@@ -33,8 +33,7 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToCli
                    BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
-                   NodeToClientVersion)
+import           Ouroboros.Network.NodeToClient (NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
@@ -62,9 +61,9 @@ data StartupTrace blk =
   -- | Log startup information.
   --
     StartupInfo
-      [SocketOrSocketInfo Socket.SockAddr Socket.SockAddr]
+      [Socket.SockAddr]
       -- ^ node-to-node addresses
-      (Maybe (SocketOrSocketInfo LocalSocket LocalAddress))
+      (Maybe LocalSocketOrSocketInfo)
       -- ^ node-to-client socket path
       (Map NodeToNodeVersion (BlockNodeToNodeVersion blk))
       -- ^ supported node-to-node versions
@@ -164,7 +163,7 @@ data BasicInfoByron = BasicInfoByron {
   }
 
 data BasicInfoNetwork = BasicInfoNetwork {
-    niAddresses     :: [SocketOrSocketInfo Socket.SockAddr Socket.SockAddr]
+    niAddresses     :: [SocketOrSocketInfo]
   , niDiffusionMode :: DiffusionMode
   , niDnsProducers  :: [DnsSubscriptionTarget]
   , niIpProducers   :: IPSubscriptionTarget

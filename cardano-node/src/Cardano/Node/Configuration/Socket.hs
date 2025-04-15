@@ -5,7 +5,9 @@
 module Cardano.Node.Configuration.Socket
   ( SocketConfig (..)
   , gatherConfiguredSockets
-  , SocketOrSocketInfo(..)
+  , SocketOrSocketInfo' (..)
+  , SocketOrSocketInfo
+  , LocalSocketOrSocketInfo
   , getSocketOrSocketInfoAddr
   , SocketConfigError(..)
   , renderSocketConfigError
@@ -19,7 +21,7 @@ import qualified Prelude
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           Generic.Data.Orphans ()
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (AF_INET, AF_INET6),
-                   SockAddr, Socket, SocketType (..))
+                   Socket, SocketType (..))
 import qualified Network.Socket as Socket
 
 import           Cardano.Node.Configuration.NodeAddress
@@ -42,18 +44,21 @@ import           System.Systemd.Daemon (getActivatedSockets)
 -- given actual already-constructed sockets, or the info needed to make new
 -- sockets later.
 --
-data SocketOrSocketInfo socket info =
+data SocketOrSocketInfo' socket info =
        ActualSocket socket
      | SocketInfo   info
   deriving Show
 
+type SocketOrSocketInfo = SocketOrSocketInfo' Socket Socket.SockAddr
+type LocalSocketOrSocketInfo = SocketOrSocketInfo' LocalSocket LocalAddress
 
-getSocketOrSocketInfoAddr :: SocketOrSocketInfo Socket Socket.SockAddr
-                          -> IO (SocketOrSocketInfo Socket.SockAddr Socket.SockAddr)
+
+getSocketOrSocketInfoAddr :: SocketOrSocketInfo
+                          -> IO Socket.SockAddr
 getSocketOrSocketInfoAddr (ActualSocket sock) =
-    ActualSocket <$> Socket.getSocketName sock
+    Socket.getSocketName sock
 getSocketOrSocketInfoAddr (SocketInfo sockAddr)  =
-    return $ SocketInfo sockAddr
+    return sockAddr
 
 
 -- | Errors for the current module.
@@ -122,9 +127,9 @@ data SocketConfig
 --
 gatherConfiguredSockets :: SocketConfig
                         -> ExceptT SocketConfigError IO
-                                   (Maybe (SocketOrSocketInfo Socket      SockAddr),
-                                    Maybe (SocketOrSocketInfo Socket      SockAddr),
-                                    Maybe (SocketOrSocketInfo LocalSocket LocalAddress))
+                                   (Maybe SocketOrSocketInfo,
+                                    Maybe SocketOrSocketInfo,
+                                    Maybe LocalSocketOrSocketInfo)
 gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
                                        ncNodeIPv6Addr,
                                        ncNodePortNumber,
