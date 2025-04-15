@@ -24,10 +24,10 @@ import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
-import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
+import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
@@ -54,7 +54,8 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Ju
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.Node.GSM (TraceGsmEvent)
+import           Ouroboros.Consensus.Node.GSM
+import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
@@ -137,6 +138,8 @@ getAllNamespaces =
                       (allNamespaces :: [Namespace [PeerT blk]])
         resourcesNS = map nsGetTuple
                           (allNamespaces :: [Namespace ResourceStats])
+        ledgerMetricsNS = map nsGetTuple
+                          (allNamespaces :: [Namespace LedgerMetrics])
         startupNS = map (nsGetTuple . nsReplacePrefix ["Startup"])
                         (allNamespaces :: [Namespace (StartupTrace blk)])
         shutdownNS = map (nsGetTuple . nsReplacePrefix ["Shutdown"])
@@ -190,7 +193,7 @@ getAllNamespaces =
         mempoolNS = map (nsGetTuple . nsReplacePrefix ["Mempool"])
                         (allNamespaces :: [Namespace (TraceEventMempool blk)])
         forgeNS = map (nsGetTuple . nsReplacePrefix ["Forge", "Loop"])
-                        (allNamespaces :: [Namespace (ForgeTracerType blk)])
+                         (allNamespaces :: [Namespace (TraceForgeEvent blk)])
 
         blockchainTimeNS = map (nsGetTuple . nsReplacePrefix  ["BlockchainTime"])
                         (allNamespaces :: [Namespace (TraceBlockchainTimeEvent RelativeTime)])
@@ -391,6 +394,7 @@ getAllNamespaces =
             stateNS
             <> peersNS
             <> resourcesNS
+            <> ledgerMetricsNS
             <> startupNS
             <> shutdownNS
             <> nodeVersionNS
