@@ -36,12 +36,12 @@ let
     };
     in pkgs.runCommand "workbench-backend-data-${profileBundle.profile.value.name}-nomad"
       ({
-        containerSpecsJSON = pkgs.writeText "workbench-cluster-container-pkgs.json"
-          (lib.generators.toJSON {} containerSpecs);
+        containerSpecsJSON = lib.generators.toJSON {} containerSpecs;
+        passAsFile = ["containerSpecsJSON"];
       })
       ''
       mkdir $out
-      ln -s $containerSpecsJSON      $out/container-specs.json
+      cp $containerSpecsJSONPath $out/container-specs.json
       ''
     ;
 
