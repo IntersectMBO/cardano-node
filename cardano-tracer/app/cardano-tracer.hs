@@ -1,10 +1,10 @@
-import           Cardano.Tracer.CLI (TracerParams, parseTracerParams)
-import           Cardano.Tracer.Run (runCardanoTracer)
+import                             Cardano.Tracer.CLI (TracerParams, parseTracerParams)
+import                             Cardano.Tracer.Run (runCardanoTracer)
 
-import           Data.Version (showVersion)
-import           Options.Applicative
+import                             Data.Version (showVersion)
+import "optparse-applicative-fork" Options.Applicative
 
-import           Paths_cardano_tracer (version)
+import                             Paths_cardano_tracer (version)
 
 main :: IO ()
 main =

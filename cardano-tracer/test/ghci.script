@@ -12,8 +12,12 @@ import qualified "bytestring"                  Data.ByteString.Lazy as LBS
 import qualified "cborg"                       Codec.CBOR.Read as CBOR -- (DeserialiseFailure)
 import qualified "cborg"                       Codec.CBOR.Term as CBOR -- (Term)
 
+import qualified "network-mux"                 Network.Mux.Trace as Mux
 import qualified "network-mux"                 Network.Mux.Types as Mux
 import qualified "network-mux"                 Network.Mux.Codec as Mux
+
+import qualified "trace-dispatcher"            Cardano.Logging.Version as Logging -- (ForwardingVersion (..))
+import qualified "trace-dispatcher"            Cardano.Logging as Logging
 
 import qualified "typed-protocols"             Network.TypedProtocol.Codec as Codec -- (Codec)
 import qualified "typed-protocols"             Network.TypedProtocol.Core  as Codec -- (StateAgency/Protocol)
