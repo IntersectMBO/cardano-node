@@ -26,6 +26,7 @@ stack.yaml.lock
 /db-[0-9]
 /logs
 /mainnet
+/mainnetsingle
 /profile
 /launch_*
 /state-*
@@ -41,6 +42,9 @@ supervisord.pid
 tags
 /config
 /data
+/data_human
+/empty_dir
+/tracer_data
 ./*.skey
 ./*.vkey
 ./*.cert
