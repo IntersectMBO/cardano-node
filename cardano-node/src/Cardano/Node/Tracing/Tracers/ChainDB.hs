@@ -11,6 +11,7 @@
 
 module Cardano.Node.Tracing.Tracers.ChainDB
    ( withAddedToCurrentChainEmptyLimited
+   , fragmentChainDensity
    ) where
 
 import           Cardano.Logging
@@ -35,8 +36,8 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkN
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import           Ouroboros.Consensus.Storage.LedgerDB (ReplayStart (..),
                    UpdateLedgerDbTraceEvent (..))
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose

@@ -532,6 +532,8 @@ data TraceConfig = TraceConfig {
   , tcPeerFrequency  :: Maybe Int
     -- | Optional resource trace frequency in milliseconds.
   , tcResourceFrequency :: Maybe Int
+    -- | Optional ledger metrics frequency in milliseconds.
+  , tcLedgerMetricsFrequency :: Maybe Int
 }
   deriving (Eq, Ord, Show)
 
@@ -544,6 +546,7 @@ emptyTraceConfig = TraceConfig {
   , tcMetricsPrefix = Nothing
   , tcPeerFrequency = Just 2000 -- Every 2 seconds
   , tcResourceFrequency = Just 5000 -- Every five seconds
+  , tcLedgerMetricsFrequency = Just 1000
   }
 
 ---------------------------------------------------------------------------

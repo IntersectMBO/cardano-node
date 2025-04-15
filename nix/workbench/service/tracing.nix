@@ -79,6 +79,7 @@ let
       "Net.Subscription.DNS".severity = "Debug";
       "Net.Subscription.IP".severity = "Debug";
       "NodeState".severity = "Notice";
+      "LedgerMetrics".severity = "Info";
       "Resources".severity = "Debug";
       "Shutdown".severity = "Notice";
       "Startup".severity = "Notice";

@@ -53,10 +53,10 @@ startPeerTracer
   -> NodeKernelData blk     -- ^ Node kernel containing peer data
   -> Int                    -- ^ Delay in milliseconds between traces
   -> IO ()
+startPeerTracer _ _ 0 = pure ()
 startPeerTracer tracer nodeKernel delayMilliseconds = do
-  thread <- async peersThread
-  -- Link the thread to the parent to propagate exceptions properly.
-  link thread
+    as <- async peersThread
+    link as
   where
     -- | The background thread that periodically traces the peer list.
     peersThread :: IO ()

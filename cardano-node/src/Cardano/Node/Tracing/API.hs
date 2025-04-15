@@ -20,6 +20,7 @@ import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
+import           Cardano.Node.Tracing.Tracers.LedgerMetrics
 import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 import           Cardano.Node.Types
@@ -85,6 +86,11 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
   startResourceTracer
     (resourcesTracer tracers)
     (fromMaybe 1000 (tcResourceFrequency trConfig))
+
+  startLedgerMetricsTracer
+    (ledgerMetricsTracer tracers)
+    (fromMaybe 1000 (tcLedgerMetricsFrequency trConfig))
+    nodeKernel
 
   startPeerTracer
     (peersTracer tracers)

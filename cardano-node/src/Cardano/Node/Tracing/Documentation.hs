@@ -36,6 +36,7 @@ import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
+import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
@@ -241,6 +242,10 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [resourcesTr]
     resourcesTrDoc <- documentTracer (resourcesTr :: Logging.Trace IO ResourceStats)
 
+    ledgerMetricsTr <- mkCardanoTracer trBase trForward mbTrEKG []
+    configureTracers configReflection trConfig [ledgerMetricsTr]
+    ledgerMetricsTrDoc <- documentTracer (ledgerMetricsTr :: Trace IO LedgerMetrics)
+
     -- Startup tracer
     startupTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -370,8 +375,7 @@ docTracersFirstPhase condConfigFileName = do
                 ["Forge", "Loop"]
     configureTracers configReflection trConfig [forgeTr]
     forgeTrDoc <- documentTracer (forgeTr ::
-      Logging.Trace IO (ForgeTracerType blk))
-
+      Logging.Trace IO (Consensus.TraceForgeEvent blk))
 
     forgeTr' <-  mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -753,6 +757,7 @@ docTracersFirstPhase condConfigFileName = do
             <> nodeStartupInfoDpDoc
             <> stateTrDoc
             <> resourcesTrDoc
+            <> ledgerMetricsTrDoc
             <> startupTrDoc
             <> shutdownTrDoc
             <> nodeVersionDoc

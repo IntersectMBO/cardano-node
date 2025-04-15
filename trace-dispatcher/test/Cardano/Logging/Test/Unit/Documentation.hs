@@ -44,5 +44,6 @@ config1 = TraceConfig {
     , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
     , tcMetricsPrefix = Just "cardano"
+    , tcLedgerMetricsFrequency = Nothing
     }
 
