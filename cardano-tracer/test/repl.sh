@@ -7,8 +7,9 @@ exec cabal --jobs=256 --keep-going --disable-documentation repl \
 	--build-depends bytestring \
 	--build-depends cborg \
 	--build-depends network-mux \
+	--build-depends optparse-applicative-fork \
 	--build-depends ouroboros-network-framework \
+	--build-depends trace-dispatcher \
 	--build-depends typed-protocols \
 	--build-depends typed-protocols-examples \
 	cardano-tracer:exe:cardano-tracer 
-

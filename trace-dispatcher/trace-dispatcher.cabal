@@ -134,7 +134,7 @@ test-suite trace-dispatcher-test
                       , ekg-core
                       , generic-data
                       , hostname
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , ouroboros-network
                       , text
                       , stm

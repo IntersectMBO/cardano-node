@@ -36,6 +36,7 @@ common project-config
                       , GeneralizedNewtypeDeriving
                       , ImportQualifiedPost
                       , InstanceSigs
+                      , PackageImports
                       , ScopedTypeVariables
                       , StandaloneKindSignatures
                       , TypeApplications
@@ -184,7 +185,7 @@ library
                       , io-classes
                       , mime-mail
                       , network-mux
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , ouroboros-network ^>= 0.20
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -224,7 +225,7 @@ executable cardano-tracer
                       , ScopedTypeVariables
 
   build-depends:        cardano-tracer
-                      , optparse-applicative
+                      , optparse-applicative-fork
 
   ghc-options:          -threaded
                         -rtsopts
