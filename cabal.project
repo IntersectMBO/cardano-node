@@ -60,6 +60,7 @@ package plutus-scripts-bench
 allow-newer:
   , katip:Win32
   , ekg-wai:time
+  , resource-registry:nothunks
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -98,3 +99,35 @@ if impl (ghc >= 9.12)
     , network-mux:base
     , ouroboros-network:base
     , cardano-ping:base
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: d5d20424d797348734a7e12a3f227a89ee4f70b9
+  --sha256: sha256-4Ks/GQjig+AXsrsnLQJHkWZHglq7R+1hPztkY89fJro=
+  subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    quickcheck-monoids
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: f91f22f1d6439b8f305f7f69480091760c1be6cd
+  --sha256: sha256-K9ekgy+20lWQc240kiVvVP2EV6gHKRWuzJYgcFEjJ44=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+    sop-extras
+    strict-sop-core
