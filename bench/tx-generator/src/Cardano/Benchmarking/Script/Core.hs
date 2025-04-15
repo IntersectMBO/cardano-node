@@ -427,7 +427,7 @@ makePlutusContext :: forall era. IsShelleyBasedEra era
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
-  script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
+  (script, resolvedTo) <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -457,6 +457,7 @@ makePlutusContext ScriptSpec{..} = do
       let
         strategy = case scriptSpecPlutusType of
           LimitTxPerBlock_8 -> TargetTxsPerBlock 8
+          LimitTxPerBlock_4 -> TargetTxsPerBlock 4
           _                 -> TargetTxExpenditure
 
         -- reflects properties hard-coded into the loop scripts for benchmarking:
@@ -467,11 +468,13 @@ makePlutusContext ScriptSpec{..} = do
           { autoBudgetUnits = perTxBudget
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) (getScriptData redeemer)
+          , autoBudgetUpperBoundHint = Nothing
           }
+        scriptInfo = (show resolvedTo, show strategy)
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
 
-      case plutusAutoScaleBlockfit protocolParameters (either ("builtin: "++) ("plutus file: "++) scriptSpecFile) script autoBudget strategy txInputs of
+      case plutusAutoScaleBlockfit protocolParameters scriptInfo script autoBudget strategy txInputs of
         Left err -> liftTxGenError err
         Right (summary, PlutusAutoBudget{..}, preRun) -> do
           setEnvSummary summary
@@ -527,10 +530,9 @@ preExecuteScriptAction protocolParameters script scriptData redeemer
 dumpBudgetSummaryIfExisting :: ActionM ()
 dumpBudgetSummaryIfExisting
   = do
-    summary_ <- getEnvSummary
-    forM_ summary_ $ \summary -> do
-      liftIO $ BSL.writeFile summaryFile $ prettyPrintOrdered summary
-      traceDebug $ "dumpBudgetSummaryIfExisting : budget summary created/updated in: " ++ summaryFile
+    summary <- maybe "{}" prettyPrintOrdered <$> getEnvSummary
+    liftIO $ BSL.writeFile summaryFile summary
+    traceDebug $ "dumpBudgetSummaryIfExisting : budget summary created/updated in: " ++ summaryFile
   where
     summaryFile = "plutus-budget-summary.json"
 

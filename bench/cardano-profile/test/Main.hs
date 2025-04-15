@@ -1,17 +1,18 @@
 {-# LANGUAGE Trustworthy #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 --------------------------------------------------------------------------------
 module Main (main) where
 
 import           Prelude
-import           Data.List ((\\))
+import           Data.List (foldl', (\\))
 -- Package: aeson.
 import qualified Data.Aeson           as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 -- Package: containers.
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 -- Package: tasty.
 import qualified Test.Tasty           as Tasty
 -- Package: tasty-hunit.
@@ -47,6 +48,7 @@ tests =  Tasty.testGroup "cardano-profile"
     testGroupTypes
   , testGroupMap
   , testGroupOverlay
+  , testGroupEra
   , NodeSpecs.tests
   ]
 
@@ -471,7 +473,6 @@ ciTestBage = Types.Profile {
 
 --------------------------------------------------------------------------------
 
--- All profiles without an overlay.
 profiles :: Map.Map String Types.Profile
 profiles = Map.fromList $ map
   (\p ->
@@ -479,25 +480,28 @@ profiles = Map.fromList $ map
     , Profile.realize p -- No overlay added!
     )
   )
-  (
-       profilesNoEraCloud
-    ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
-    ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
-    ++ profilesNoEraK3               -- K3
-    -- Legacy.
-    ++ profilesNoEraDense
-    ++ profilesNoEraDish
-    ++ profilesNoEraMiniature
-    ++ profilesNoEraModel            --
-    ++ profilesNoEraPlutuscall       --
-    -- Empty datasets not running `FixedLoaded`.
-    ++ profilesNoEraChainsync        -- Scenario `Chainsync`
-    ++ profilesNoEraIdle             -- Scenario `Idle`
-    ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
-    -- Extra modules
-    ++ profilesNoEraScalingLocal
-    ++ profilesNoEraScalingCloud
-  )
+  profilesRaw
+
+-- All profiles without an overlay.
+profilesRaw :: [Types.Profile]
+profilesRaw =
+     profilesNoEraCloud
+  ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
+  ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
+  ++ profilesNoEraK3               -- K3
+  -- Legacy.
+  ++ profilesNoEraDense
+  ++ profilesNoEraDish
+  ++ profilesNoEraMiniature
+  ++ profilesNoEraModel            --
+  ++ profilesNoEraPlutuscall       --
+  -- Empty datasets not running `FixedLoaded`.
+  ++ profilesNoEraChainsync        -- Scenario `Chainsync`
+  ++ profilesNoEraIdle             -- Scenario `Idle`
+  ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
+  -- Extra modules
+  ++ profilesNoEraScalingLocal
+  ++ profilesNoEraScalingCloud
 
 -- Check all builtin profiles (no overlay) with "data/all-profiles.json".
 -- `Profile` properties are checked independently for better error messages.
@@ -760,7 +764,20 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.overlay allProfiles)
               (Map.assocs $ Map.map Types.overlay profiles)
             )
+  , testCase "Profiles (Duplicate names)" $
+      let
+        go (T set duplicates) name
+          | name `Set.member` set = T set (name:duplicates)
+          | otherwise             = T (name `Set.insert` set) duplicates
+      in assertEqual "Duplicate definition(s) for profile(s)" []
+          $ sndT $ foldl' go (T Set.empty []) (map Types.name profilesRaw)
   ]
+
+-- little helper type for tuples strict in the first element
+data TupleStrictFirst a b = T !a b
+
+sndT :: TupleStrictFirst a b -> b
+sndT (T _ b) = b
 
 --------------------------------------------------------------------------------
 
@@ -805,4 +822,29 @@ testGroupOverlay = Tasty.testGroup
           assertEqual "New overlay"
             overlay
             (Types.overlay profileWithOverlay)
+  ]
+
+testGroupEra :: Tasty.TestTree
+testGroupEra = Tasty.testGroup
+  "Cardano.Benchmarking.Profile.addEras"
+  [ testCase "Era specific profiles" $
+      let
+        isDefined = (`Set.member` Map.keysSet (Profile.addEras profiles))
+        failures  =
+          [ "ci-bench-plutusv3-ripemd-bage"     -- PlutusV3 - should require PV 9.0 / Conway
+          , "ci-bench-plutus-secp-schnorr-alzo" -- PlutusV2 - should require PV 7.0 / Babbage
+          , "ci-test-plutus-mary"               -- PlutusV1 - should require PV 5.0 / Alonzo
+          ]
+        successes =
+          [ "ci-bench-plutusv3-ripemd-coay"
+          , "ci-bench-plutus-secp-schnorr-bage"
+          , "ci-test-plutus-alzo"
+          ]
+      in do
+        assertEqual "Profiles that are expected to not be defined, yet they are:"
+          []
+          (filter isDefined failures)
+        assertEqual "Profiles that are expected to be defined, but some are missing:"
+          successes
+          (filter isDefined successes)
   ]

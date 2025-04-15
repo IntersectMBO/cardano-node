@@ -26,6 +26,8 @@ common project-config
   if os(windows)
     buildable: False
 
+  default-language:     Haskell2010
+
 common with-library
   -- This is the inverse to the "buildable" GHC version constraint in plutus-scripts-bench.
   -- It makes sure, we only depend on that package if it is buildable.
@@ -37,6 +39,7 @@ common with-library
 common maybe-unix
   if !os(windows)
     build-depends:      unix
+
 
 library
   import:               project-config, with-library, maybe-unix
@@ -55,7 +58,7 @@ library
                         -fno-warn-missing-import-lists
                         -fobject-code -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas
-                        -- TODO: switch back to -Wwarn=deprecations having dropped Cardano.Api.ProtocolParameters.ProtocolParameters in favour of Cardano.Api.Ledger.PParams
+                        -- TODO: switch back to -Wwarn=deprecations having removed createAndValidateTransactionBody in favour of createTransactionBody (Cardano.Api deprecation)
                         -Wno-deprecations
 
   exposed-modules:      Cardano.Benchmarking.Command
@@ -96,10 +99,8 @@ library
                         Cardano.TxGenerator.Utils
                         Cardano.TxGenerator.UTxO
 
-                        Cardano.TxGenerator.Internal.Orphans
-
   other-modules:        Cardano.TxGenerator.Internal.Fifo
-                        -- Cardano.TxGenerator.Internal.Orphans
+                        Cardano.TxGenerator.Internal.Orphans
                         Paths_tx_generator
 
   autogen-modules:      Paths_tx_generator
@@ -131,6 +132,7 @@ library
                       , constraints-extras
                       , dlist
                       , extra
+                      , filepath
                       , formatting
                       , generic-monoid
                       , ghc-prim
@@ -169,14 +171,12 @@ library
                       , scientific
                       , cardano-ledger-babbage
 
-  default-language:     Haskell2010
   default-extensions:   OverloadedStrings
 
 executable tx-generator
   import:               project-config
   hs-source-dirs:       app
   main-is:              tx-generator.hs
-  default-language:     Haskell2010
   ghc-options:          -threaded
                         -Wall
                         -rtsopts
@@ -185,15 +185,48 @@ executable tx-generator
   build-depends:        base
                       , tx-generator
 
+executable calibrate-script
+  import:               project-config, with-library
+
+  hs-source-dirs:       app
+                        src-calibrate
+  main-is:              calibrate-script.hs
+
+  ghc-options:          -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
+                        -Wno-deprecations
+
+  build-depends:        base
+                      , aeson
+                      , aeson-pretty
+                      , bytestring
+                      , containers
+                      , directory
+                      , extra
+                      , filepath
+                      , optparse-applicative-fork
+                      , cardano-api
+                      , text
+                      , transformers
+                      , transformers-except
+                      , tx-generator
+
+  default-extensions:   ViewPatterns
+
+  other-modules:        Cardano.TxGenerator.Calibrate.Utils
+                        Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
+
 test-suite tx-generator-apitest
   import:               project-config, with-library
 
-  hs-source-dirs:       test
+  hs-source-dirs:       src-calibrate
+                        test
   main-is:              ApiTest.hs
   type:                 exitcode-stdio-1.0
-  default-language:     Haskell2010
-  ghc-options:          -threaded
-                        -Wall
+
+  ghc-options:          -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
                         -Wno-deprecations
@@ -203,6 +236,7 @@ test-suite tx-generator-apitest
                       , aeson-pretty
                       , bytestring
                       , directory
+                      , extra
                       , filepath
                       , optparse-applicative-fork
                       , cardano-api
@@ -213,7 +247,8 @@ test-suite tx-generator-apitest
                       , transformers-except
                       , tx-generator
 
-  other-modules:        Paths_tx_generator
+  other-modules:        Cardano.TxGenerator.Calibrate.Utils
+                        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
 
 test-suite tx-generator-test
@@ -226,8 +261,6 @@ test-suite tx-generator-test
                       , tasty
                       , tasty-hunit
                       , tx-generator
-
-  default-language:     Haskell2010
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists
@@ -245,8 +278,6 @@ benchmark tx-generator-bench
                       , criterion
                       , stm
                       , tx-generator
-
-  default-language:     Haskell2010
 
   ghc-options:          -Weverything
                         -fno-warn-missing-import-lists
