@@ -43,6 +43,7 @@
       "backends": [
         "EKGBackend",
         "Forwarder",
+        "PrometheusSimple suffix 127.0.0.1 12798",
         "Stdout HumanFormatColoured"
       ],
       "detail": "DNormal",
