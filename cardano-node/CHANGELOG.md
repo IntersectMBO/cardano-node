@@ -2,6 +2,10 @@
 
 ## Next version
 
+- 
+
+## 10.3 -- April 2025
+
 - Add a new configuration field for fork-policy.
 
 - Optionally support lightweight checkpointing.
@@ -26,6 +30,21 @@
     ]
   }
   ```
+
+- Tracing
+
+  - New `PrometheusSimple` backend which runs a simple TCP server for direct exposition of metrics, without forwarding, under the URL `/metrics`.
+  - New `maxReconnectDelay` config option in `TraceOptionForwarder`: Specifies maximum delay (seconds) between (re-)connection attempts of a forwarder (default: 60s).
+  - Fix: change semantics of several `Forge.*` metrics to counters - to match semantics of legacy tracing.
+  - Fix: correct `blockdelay_cdf*` metric
+  - Fix: correct `blockReplayProgress` metric
+  - Optimizations to trace + metrics forwarding, aimed at reducing CPU usage when under low / idle load.
+
+- Configuration
+  - For details about changes to configuration for `ouroboros-genesis` please refer to the [Cardano Book](https://book.play.dev.cardano.org/)
+  - The [getting started guide](https://developers.cardano.org/docs/get-started/) may also be helpful for general queries.
+  - Networking options and related changes are listed on the [P2P section](https://staging-dev-portal.netlify.app/docs/get-started/cardano-node/p2p/)
+
 
 ## 10.2 -- January 2025
 
@@ -80,6 +99,42 @@
 - Drop NodeToClient versions 9 through 15, and add 19
 
 - Increase minor protocol version to `10.3`
+
+## 9.2.0 -- September 2024
+
+- Configuration Enhancements
+  - Database Path Customization
+    - **Separate Paths for Volatile and Immutable Databases**: Users can now specify paths for volatile and immutable databases separately.
+
+  - Command Line Options:
+    Users can specify database paths directly via command line:
+    ```
+    [ --database-path FILEPATH
+    | --immutable-database-path FILEPATH --volatile-database-path FILEPATH
+    ]
+    ```
+
+  - Configuration File:
+    Alternatively, paths can be set in the configuration YAML file under the "DatabaseFile" key:
+
+    ```yaml
+    "DatabasePath": {
+      "ImmutableDbPath": "mainnetnode/db/node-imm",
+      "VolatileDbPath": "mainnetnode/db/node-vol"
+    },
+    ```
+
+    or for a single path configuration:
+
+    ```yaml
+    "DatabasePath": "mainnetsingle/db/node",
+    ```
+
+- New tracing system
+  - Major rework of the metrics naming schema
+    - Change all metric names to match those of the current tracing system, simplifying switching back and forth for existing integrations
+    - Augment metric names with type-spefic suffixes (like e.g. `_int`)
+    - Add optional Node config value `TraceOptionMetricsPrefix` (String) to specify a namespace prefix for metric names
 
 ## 8.2.1 -- August 2023
 
