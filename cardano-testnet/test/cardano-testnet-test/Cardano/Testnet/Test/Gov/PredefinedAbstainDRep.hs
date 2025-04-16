@@ -43,7 +43,7 @@ import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
 import           Testnet.Start.Types
 import           Testnet.Types (KeyPair (..),
-                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), StakingKey)
+                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair))
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
@@ -133,7 +133,7 @@ delegateToAlwaysAbstain
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
+  -> KeyPair StakeKey -- ^ Staking key pair used for delegation.
   -> m ()
 delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
                         payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do

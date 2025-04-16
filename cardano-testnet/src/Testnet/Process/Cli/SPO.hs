@@ -7,6 +7,7 @@
 module Testnet.Process.Cli.SPO
   ( checkStakeKeyRegistered
   , createScriptStakeRegistrationCertificate
+  , createScriptStakeDelegationCertificate
   , createStakeDelegationCertificate
   , createStakeKeyRegistrationCertificate
   , createStakeKeyDeregistrationCertificate
@@ -213,6 +214,25 @@ createScriptStakeRegistrationCertificate tempAbsP (AnyCardanoEra cEra) scriptFil
       , "--out-file", tempAbsPath' </> outputFp
       ]
       <> extraArgs
+
+createScriptStakeDelegationCertificate
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => TmpAbsolutePath
+  -> AnyCardanoEra
+  -> FilePath -- ^ Script file
+  -> File (VKey StakePoolKey) In -- ^ Cold stake pool key
+  -> FilePath -- ^ Output file path
+  -> m ()
+createScriptStakeDelegationCertificate tempAbsP (AnyCardanoEra cEra) scriptFile (File coldvkey) outputFp =
+  GHC.withFrozenCallStack $ do
+    let tempAbsPath' = unTmpAbsPath tempAbsP
+    execCli_
+      [ eraToString cEra
+      , "stake-address", "stake-delegation-certificate"
+      , "--stake-script-file", scriptFile
+      , "--cold-verification-key-file", coldvkey
+      , "--out-file", tempAbsPath' </> outputFp
+      ]
 
 createStakeKeyDeregistrationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
