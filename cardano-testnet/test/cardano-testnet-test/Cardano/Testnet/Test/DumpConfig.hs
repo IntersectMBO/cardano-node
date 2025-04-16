@@ -22,7 +22,6 @@ import qualified System.Process as IO
 import           Cardano.Api (writeFileJSON)
 import qualified Cardano.Api.Byron as Byron
 import           Cardano.Api.Byron (GenesisData (..))
-import           Cardano.Api.Ledger (StandardCrypto)
 import qualified Cardano.Api.Shelley as Shelley
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
 import           Cardano.Prelude (canonicalEncodePretty)
@@ -62,12 +61,12 @@ hprop_dump_config = integrationWorkspace "dump-config-files" $ \tempAbsBasePath 
     -- Update start time in Byron genesis file
     eByron <- Byron.runExceptT $ Byron.readGenesisData byronGenesisFile
     (byronGenesis', _) <- H.leftFail eByron
-    let byronGenesis = byronGenesis'{gdStartTime = startTime}
+    let byronGenesis = byronGenesis'{gdStartTime = startTime, gdK = Byron.BlockCount 5}
     H.lbsWriteFile byronGenesisFile $ canonicalEncodePretty byronGenesis
 
     -- Update start time in Shelley genesis file
     eShelley <- H.readJsonFile shelleyGenesisFile
-    shelleyGenesis' :: Shelley.ShelleyGenesis StandardCrypto <- H.leftFail eShelley
+    shelleyGenesis' :: Shelley.ShelleyGenesis <- H.leftFail eShelley
     let shelleyGenesis = shelleyGenesis'{sgSystemStart = startTime}
     H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
 
