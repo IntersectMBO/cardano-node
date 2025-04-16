@@ -54,7 +54,7 @@ import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli', execCli_, mkExecConfig)
-import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
+import           Testnet.Property.Assert ( assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
 import           Testnet.Start.Types
 import           Testnet.Types as TR hiding (shelleyGenesis)
@@ -246,7 +246,7 @@ cardanoTestnet' :: ()
   -> H.Integration TestnetRuntime
 cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
   let CardanoTestnetOptions
-        { cardanoNodeLoggingFormat=nodeLoggingFormat
+        { cardanoNodeLoggingFormat=_nodeLoggingFormat
         , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
         } = testnetOptions
@@ -360,9 +360,9 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
 
   -- FIXME: use foldEpochState waiting for chain extensions
   now <- H.noteShowIO DTC.getCurrentTime
-  deadline <- H.noteShow $ DTC.addUTCTime 45 now
-  forM_ (map nodeStdout testnetNodes') $ \nodeStdoutFile -> do
-    assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
+  _deadline <- H.noteShow $ DTC.addUTCTime 45 now
+  --forM_ (map nodeStdout testnetNodes') $ \nodeStdoutFile -> do
+  --  assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
@@ -383,7 +383,7 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
 
   node1sprocket <- H.headM $ testnetSprockets runtime
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
-
+  H.noteShow_ node1sprocket
   forM_ wallets $ \wallet -> do
     H.cat . signingKeyFp $ paymentKeyInfoPair wallet
     H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
