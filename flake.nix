@@ -15,8 +15,6 @@
       };
     };
 
-    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
-
     # Custom user config (default: empty), eg:
     # { outputs = {...}: {
     #   # Customize listening port of node scripts:
@@ -68,7 +66,6 @@
 
   outputs = {
     cardano-automation,
-    cardano-mainnet-mirror,
     CHaP,
     em,
     haskellNix,
@@ -134,9 +131,22 @@
         # Add some executables from other relevant packages
         inherit (bech32.components.exes) bech32;
         inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
-        # Add cardano-node and cardano-cli with their git revision stamp
-        cardano-node = set-git-rev project.exes.cardano-node;
-        cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
+        # Add cardano-node and cardano-cli with their git revision stamp.
+        # Keep available an alternative without the git revision, like the other
+        # passthru (profiled, asserted and eventlogged in nix/haskell.nix) that
+        # have no git revision but for the same compilation alternative.
+        cardano-node =
+          let node = project.exes.cardano-node;
+          in lib.recursiveUpdate
+               (set-git-rev node)
+               {passthru = {noGitRev = node;};}
+        ;
+        cardano-cli =
+          let cli  = cardano-cli.components.exes.cardano-cli;
+          in lib.recursiveUpdate
+               (set-git-rev cli)
+               {passthru = {noGitRev = cli;};}
+        ;
       });
 
     mkCardanoNodePackages = project:
@@ -158,7 +168,7 @@
 
       # This is used by `nix develop .` to open a devShell
       devShells = let
-        shell = import ./shell.nix {inherit pkgs customConfig cardano-mainnet-mirror;};
+        shell = import ./shell.nix {inherit pkgs customConfig;};
       in {
         inherit (shell) devops workbench-shell;
         default = shell.dev;

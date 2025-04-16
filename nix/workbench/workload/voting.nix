@@ -12,7 +12,8 @@ let
   bashInteractive    = pkgs.bashInteractive;
   coreutils          = pkgs.coreutils;
   jq                 = pkgs.jq;
-  cardano-cli        = pkgs.cardanoNodePackages.cardano-cli;
+  # Avoid rebuilding on every commit because of `set-git-rev`.
+  cardano-cli        = pkgs.cardanoNodePackages.cardano-cli.passthru.noGitRev;
 
   # Script params!
   ################

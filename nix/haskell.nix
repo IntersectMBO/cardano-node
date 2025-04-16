@@ -428,7 +428,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
               (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
           })];
         };
-      # add passthru and gitrev to hsPkgs:
+      # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
           if (lib.isAttrs value) then

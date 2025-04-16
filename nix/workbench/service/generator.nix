@@ -1,5 +1,4 @@
 { pkgs
-, jsonFilePretty
 
 , backend
 , profile
@@ -24,6 +23,20 @@ let
     { i, name, ... }@nodeSpec:
     "127.0.0.1";
 
+  # The Plutus redeemer value/content.
+  plutus-redeemer =
+    if profile.generator.plutus == null || (profile.generator.plutus.redeemer or null) == null
+    then null
+    else profile.generator.plutus.redeemer
+  ;
+
+  # The Plutus datum value/content.
+  plutus-datum =
+    if profile.generator.plutus == null || (profile.generator.plutus.datum or null) == null
+    then null
+    else profile.generator.plutus.datum
+  ;
+
   finaliseGeneratorService =
     profile: svc: recursiveUpdate svc
       ({
@@ -33,11 +46,15 @@ let
         nodeConfigFile      = "../${runningNode}/config.json";
         localNodeSocketPath = "../${runningNode}/node.socket";
         ## Relative paths to use for the Plutus redeemer and datum properties.
-        ## These two properties override the default that is "plutus.redeemer"
-        ## and "plutus.datum" being file paths to the Nix Store that may or may
-        ## exist depending on the workbench's backend requested.
-        plutusRedeemerFile  = "plutus-redeemer.json";
-        plutusDatumFile     = "plutus-datum.json";
+        ## The workbench backend requested handles the creation of these files.
+        plutusRedeemerFile  = if plutus-redeemer != null
+                              then "plutus-redeemer.json"
+                              else null
+        ;
+        plutusDatumFile     = if plutus-datum != null
+                              then "plutus-datum.json"
+                              else null
+        ;
       } // optionalAttrs profile.node.tracer {
         tracerSocketPath = "../tracer/tracer.socket";
       } // optionalAttrs backend.useCabalRun {
@@ -52,7 +69,7 @@ let
     let
       generatorNodeConfigDefault =
         (__fromJSON (__readFile ../../../bench/tx-generator-config-base.json))
-        // { inherit (exemplarNode.config.value)
+        // { inherit (exemplarNode.config)
                Protocol
                ByronGenesisFile
                ShelleyGenesisFile
@@ -125,82 +142,58 @@ let
       serviceConfig = generatorServiceConfig nodeSpecs;
       service       = generatorServiceConfigService serviceConfig;
     in {
-      start = rec {
-        value = ''
-          #!${pkgs.stdenv.shell}
+      start =
+        ''
+        #!${pkgs.stdenv.shell}
 
-          ###########################################
-          # Extra workloads start ###################
-          ###########################################
-          ${builtins.concatStringsSep "" (builtins.map (workload:
-              let workload_name = workload.name;
-                  entrypoint = workload.entrypoints.pre_generator;
-                  node_name = if profile.composition.with_explorer
-                              then "explorer"
-                              else "node-0"
-                  ;
-              in
-                  ''
-                  ###########################################
-                  ########## workload start: ${workload_name}
-                  ###########################################
-                  ${if entrypoint != null
-                    then
-                      ''
-                      ${import ../workload/${workload_name}.nix
-                        {inherit pkgs profile nodeSpecs workload;}
-                      }
-                      (cd ../workloads/${workload_name} && ${entrypoint} ${node_name})
-                      ''
-                    else
-                      ''
-                      ''
-                  }
-                  ###########################################
-                  ########## workload end:   ${workload_name}
-                  ###########################################
-                  ''
-            ) (profile.workloads or []))
-          }
-          #############################################
-          # Extra workloads end #######################
-          #############################################
+        ###########################################
+        # Extra workloads start ###################
+        ###########################################
+        ${builtins.concatStringsSep "" (builtins.map (workload:
+            let workload_name = workload.name;
+                entrypoint = workload.entrypoints.pre_generator;
+                node_name = if profile.composition.with_explorer
+                            then "explorer"
+                            else "node-0"
+                ;
+            in
+                ''
+                ###########################################
+                ########## workload start: ${workload_name}
+                ###########################################
+                ${if entrypoint != null
+                  then
+                    ''
+                    ${import ../workload/${workload_name}.nix
+                      {inherit pkgs profile nodeSpecs workload;}
+                    }
+                    (cd ../workloads/${workload_name} && ${entrypoint} ${node_name})
+                    ''
+                  else
+                    ''
+                    ''
+                }
+                ###########################################
+                ########## workload end:   ${workload_name}
+                ###########################################
+                ''
+          ) (profile.workloads or []))
+        }
+        #############################################
+        # Extra workloads end #######################
+        #############################################
 
-          ${service.script}
-          '';
-        JSON = pkgs.writeScript "startup-generator.sh" value;
-      };
+        ${service.script}
+        ''
+      ;
 
-      config = rec {
-        value = __fromJSON (__readFile JSON);
-        JSON  = jsonFilePretty "generator-run-script.json"
-          (service.decideRunScript service);
-      };
+      config = (service.decideRunScript service);
 
-      # The Plutus redeemer file is handled as an extra service file to deploy.
-      plutus-redeemer = rec {
-        # Not present on every profile.
-        value = if serviceConfig.plutus == null
-                then null
-                else serviceConfig.plutus.redeemer or null
-        ;
-        # Always creates a file, even if it just contains "null".
-        # Easier to handle if always every service properties is not null.
-        JSON = jsonFilePretty "plutus-redeemer.json" (__toJSON value)
-        ;
-      };
+      # Not present on every profile.
+      # Don't create a derivation to a file containing "null" !!!
+      # The corresponding file is created/deployed by the workbench.
+      inherit plutus-redeemer plutus-datum;
 
-      # The Plutus datum file is handled as an extra service file to deploy.
-      plutus-datum = rec {
-        # Not present on every profile.
-        value = if serviceConfig.plutus == null
-                then null
-                else serviceConfig.plutus.datum or null
-        ;
-        # Always creates a file, even if it just contains "null".
-        # Easier to handle if always every service properties is not null.
-        JSON = jsonFilePretty "plutus-datum.json" (__toJSON value);
-      };
     })
     nodeSpecs;
 in

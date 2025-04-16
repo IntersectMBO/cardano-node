@@ -4,208 +4,206 @@
 }:
 
 let
-  profileJson =
-    workbenchNix.runCardanoProfile "profile-${profileName}.json"
-      "by-name ${profileName}"
-  ;
 
-  topologyFiles =
-    pkgs.runCommand "workbench-topology-${profileName}"
-      { requiredSystemFeatures = [ "benchmark" ];
-        nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-          [ bash cardano-cli coreutils gnused jq moreutils workbenchNix.workbench ];
+  # All top-level profile files in one derivation.
+  ##############################################################################
+
+  inherit
+    (let
+      profileDerivedFiles =
+        pkgs.runCommand "workbench-profile-files-${profileName}"
+          { nativeBuildInputs = with pkgs;
+            # A workbench with only the dependencies needed for these commands.
+            [ workbenchNix.workbench
+              moreutils # sponge
+              jq
+              graphviz
+              workbenchNix.cardanoNodePackages.cardano-profile
+              workbenchNix.cardanoNodePackages.cardano-topology
+            ];
+          }
+          ''
+            echo $PATH
+            ls
+            mkdir "$out"
+            wb profile json "${profileName}" > "$out"/profile.json
+            wb topology make "$out"/profile.json "$out"
+            wb profile node-specs  \
+              "$out"/profile.json  \
+              "$out/topology.json" \
+          > "$out"/node-specs.json
+          ''
+      ;
+     in
+      { profileJsonPath   = "${profileDerivedFiles}/profile.json";
+        topologyJsonPath  = "${profileDerivedFiles}/topology.json";
+        topologyDotPath   = "${profileDerivedFiles}/topology.dot";
+        nodeSpecsJsonPath = "${profileDerivedFiles}/node-specs.json";
       }
-      ''
-      mkdir $out
-      wb topology make ${profileJson} $out
-      ''
+    )
+    profileJsonPath
+    topologyJsonPath
+    topologyDotPath
+    nodeSpecsJsonPath
   ;
 
-  nodeSpecsJson =
-    workbenchNix.runCardanoProfile "node-specs-${profileName}.json"
-                 "node-specs ${profileJson} ${topologyFiles}/topology.json"
-  ;
+  # Helper to use around Nix to build the workbench.
+  ##############################################################################
 
-  jsonFilePretty = name: x: workbenchNix.runJq name ''--null-input --sort-keys
-                                         --argjson x '${x}'
-                                       '' "$x";
-
-  ## This ports the (very minimal) config of the deprecated iohk-nix testnet environment to workbench, removing the dependency on it.
-  baseNodeConfigTestnet =
-    {
-      Protocol              = "Cardano";
-      RequiresNetworkMagic  = "RequiresMagic";
-
-      LastKnownBlockVersion-Major = 3;
-      LastKnownBlockVersion-Minor = 0;
-      LastKnownBlockVersion-Alt   = 0;
-    }
-    // workbenchNix.cardanoNodePackages.cardanoLib.defaultLogConfig;
-
-  mkServices = { profile, nodeSpecs, backend }:
-    rec {
+  profileBundle = { backend }:
+    let
+      profile = __fromJSON (__readFile profileJsonPath);
+      nodeSpecs = __fromJSON (__readFile nodeSpecsJsonPath);
       inherit
         (pkgs.callPackage
           ../service/nodes.nix
-          {
-            inherit backend profile nodeSpecs;
-            inherit topologyFiles profiling;
+          { inherit backend profile nodeSpecs;
+            inherit profiling;
+            inherit profileJsonPath topologyJsonPath;
             inherit workbenchNix;
-            inherit jsonFilePretty;
-            baseNodeConfig = baseNodeConfigTestnet;
-          })
-        node-services;
-
+            ## This ports the (very minimal) config of the deprecated iohk-nix
+            ## testnet environment to workbench, removing the dependency on it.
+            baseNodeConfig =
+              { Protocol              = "Cardano";
+                RequiresNetworkMagic  = "RequiresMagic";
+                LastKnownBlockVersion-Major = 3;
+                LastKnownBlockVersion-Minor = 0;
+                LastKnownBlockVersion-Alt   = 0;
+              }
+              //
+              workbenchNix.cardanoNodePackages.cardanoLib.defaultLogConfig
+            ;
+          }
+        )
+        node-services
+      ;
       inherit
         (pkgs.callPackage
           ../service/generator.nix
-          {
-            inherit backend profile nodeSpecs;
+          { inherit backend profile nodeSpecs;
             inherit node-services;
-            inherit jsonFilePretty;
-          })
-        generator-service;
-
-      workloads-service = builtins.map (workload: rec {
-        name = workload.name;
-        start = rec {
-          value = ''
+          }
+        )
+        generator-service
+      ;
+      workloads-service = builtins.map
+        (workload: rec {
+          name = workload.name;
+          start =
+            ''
             ${import ../workload/${name}.nix
-                    {inherit pkgs profile nodeSpecs workload;}
+              {inherit pkgs profile nodeSpecs workload;}
             }
             ${workload.entrypoints.producers}
-          '';
-          JSON = pkgs.writeScript "startup-${name}.sh" value;
-        };
-      }) profile.workloads;
-
+            ''
+          ;
+        })
+        profile.workloads
+      ;
       inherit
         (pkgs.callPackage
           ../service/tracer.nix
-          {
-            inherit backend profile nodeSpecs;
-            inherit jsonFilePretty;
-          })
-        tracer-service;
-
-      inherit
+          {inherit backend profile nodeSpecs;}
+        )
+        tracer-service
+      ;
+      healthcheck-service =
         (pkgs.callPackage
           ../service/healthcheck.nix
-          {
-            inherit backend profile nodeSpecs;
-          })
-        healthcheck-service;
+          {inherit backend profile nodeSpecs;}
+        )
+      ;
+    in {
+      profile = {
+        JSON = profileJsonPath;
+        value = profile;
+      };
+      topology = rec {
+        JSON = "${topologyJsonPath}";
+        value = (__fromJSON (__readFile JSON));
+      };
+      node-specs = {
+        JSON = nodeSpecsJsonPath;
+        value = nodeSpecs;
+      };
+      inherit
+        node-services
+        generator-service
+        workloads-service
+        tracer-service
+        healthcheck-service
+      ;
     };
 
-  materialise-profile =
-    profileArgs@{ backend }:
-      if ! builtins.elem profileName workbenchNix.profile-names
-      then
-        throw "No such profile: ${profileName}; Known profiles: ${toString workbenchNix.profile-names}"
-      else
-        let
-          profile = __fromJSON (__readFile profileJson);
-          nodeSpecs = __fromJSON (__readFile nodeSpecsJson);
-          inherit (mkServices
-            {
-              inherit backend;
-              inherit profile;
-              inherit nodeSpecs;
-            })
-            node-services
-            generator-service
-            workloads-service
-            tracer-service
-            healthcheck-service
-          ;
-        in
-          pkgs.runCommand "workbench-profile-${profileName}"
-            { buildInputs = [];
-              profileJsonPath = profileJson;
-              nodeSpecsJsonPath = nodeSpecsJson;
-              topologyJsonPath = "${topologyFiles}/topology.json";
-              topologyDotPath  = "${topologyFiles}/topology.dot";
-              nodeServices =
-                __toJSON
-                (lib.flip lib.mapAttrs node-services
-                  (name: node-service:
-                    with node-service;
-                    { inherit name;
-                      start          = start.JSON;
-                      config         = config.JSON;
-                      topology       = topology.JSON;
-                    }));
-              generatorService =
-                with generator-service;
-                __toJSON
-                { name            = "generator";
-                  start           = start.JSON;
-                  config          = config.JSON;
-                  plutus-redeemer = plutus-redeemer.JSON;
-                  plutus-datum    = plutus-datum.JSON;
-                };
-              workloadsService = __toJSON (builtins.map (workload: {
-                  name            = workload.name;
-                  start           = workload.start.JSON;
-                }
-              ) workloads-service);
-              tracerService =
-                with tracer-service;
-                __toJSON
-                { name                 = "tracer";
-                  start                = start.JSON;
-                  config               = config.JSON;
-                };
-              healthcheckService =
-                with healthcheck-service;
-                __toJSON
-                { name                 = "healthcheck";
-                  start                = start.JSON;
-                };
-              passAsFile =
-                [
-                  "nodeServices"
-                  "generatorService"
-                  "workloadsService"
-                  "tracerService"
-                  "healthcheckService"
-                  "topologyJson"
-                  "topologyDot"
-                ];
-            }
-            ''
-            mkdir $out
-            cp    $profileJsonPath              $out/profile.json
-            cp    $nodeSpecsJsonPath            $out/node-specs.json
-            cp    $topologyJsonPath             $out/topology.json
-            cp    $topologyDotPath              $out/topology.dot
-            cp    $nodeServicesPath             $out/node-services.json
-            cp    $generatorServicePath         $out/generator-service.json
-            cp    $workloadsServicePath         $out/workloads-service.json
-            cp    $tracerServicePath            $out/tracer-service.json
-            cp    $healthcheckServicePath       $out/healthcheck-service.json
-            ''
-          //
-          (
-            profile
-            //
-            {
-              inherit profileName;
-              JSON = profileJson;
-              value = profile;
-              topology = {
-                files = topologyFiles;
-                value = (__fromJSON (__readFile "${topologyFiles}/topology.json"));
-              };
-              node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
-              inherit node-services generator-service tracer-service healthcheck-service workloads-service;
-            }
+  # Profile output to expose to the profile run directory.
+  ##############################################################################
+
+  materialise-profile = { profileBundle }:
+    pkgs.runCommand "workbench-profile-data-${profileName}"
+      { buildInputs = [];
+        inherit profileJsonPath;
+        inherit topologyJsonPath topologyDotPath;
+        inherit nodeSpecsJsonPath;
+        nodeServices = __toJSON
+          (lib.mapAttrs
+            (name: node-service:
+              { inherit name;
+                inherit (node-service) start config;
+                topology = node-service.topology.JSON;
+              }
+            )
+            profileBundle.node-services
           )
+        ;
+        generatorService = __toJSON
+          { name            = "generator";
+            inherit (profileBundle.generator-service) start config;
+            # Not present on every profile. Can be null.
+            inherit (profileBundle.generator-service) plutus-redeemer;
+            # Not present on every profile. Can be null.
+            inherit (profileBundle.generator-service) plutus-datum;
+          }
+        ;
+        workloadsService = __toJSON (builtins.map (workload:
+          { inherit (workload) name start;
+          }
+        ) profileBundle.workloads-service);
+        tracerService = __toJSON
+          { name = "tracer";
+            inherit (profileBundle.tracer-service) start config;
+          }
+        ;
+        healthcheckService = __toJSON
+          { name = "healthcheck";
+            inherit (profileBundle.healthcheck-service) start;
+          }
+        ;
+        passAsFile =
+          [
+            "nodeServices"
+            "generatorService"
+            "workloadsService"
+            "tracerService"
+            "healthcheckService"
+          ];
+      }
+      ''
+      mkdir $out
+      cp    $profileJsonPath              $out/profile.json
+      cp    $topologyJsonPath             $out/topology.json
+      cp    $topologyDotPath              $out/topology.dot
+      cp    $nodeSpecsJsonPath            $out/node-specs.json
+      cp    $nodeServicesPath             $out/node-services.json
+      cp    $generatorServicePath         $out/generator-service.json
+      cp    $workloadsServicePath         $out/workloads-service.json
+      cp    $tracerServicePath            $out/tracer-service.json
+      cp    $healthcheckServicePath       $out/healthcheck-service.json
+      ''
   ;
 
 in {
   name = profileName;
   inherit profiling;
-  inherit profileJson nodeSpecsJson;
-  inherit materialise-profile;
+  inherit profileJsonPath nodeSpecsJsonPath;
+  inherit profileBundle materialise-profile;
 }

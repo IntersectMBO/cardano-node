@@ -1,6 +1,5 @@
 { pkgs
 , workbenchNix
-, jsonFilePretty
 
 ## The cardano-node config used as baseline:
 , baseNodeConfig
@@ -9,7 +8,9 @@
 , profile
 , profiling
 , nodeSpecs
-, topologyFiles
+
+# Derivations used to generate the topology projections
+, profileJsonPath, topologyJsonPath
 }:
 
 with pkgs.lib;
@@ -136,6 +137,7 @@ let
     } // optionalAttrs (profiling != "none") {
       inherit profiling;
     } // optionalAttrs (profiling == "none") {
+      # Switch to `cardano-node.passthru.noGitRev` if eventlog is not needed.
       eventlog               = mkForce true;
     } // optionalAttrs backend.useCabalRun {
       # Allow the shell function to take precedence.
@@ -200,6 +202,40 @@ let
     in
       eval.config.services.cardano-node;
 
+ topologiesJsonPaths =
+    let projections =
+          pkgs.runCommand "workbench-profile-files-${profileName}-topologies"
+            { nativeBuildInputs = with pkgs;
+              # A workbench with only the dependencies needed for this command.
+              [ workbenchNix.workbench
+                jq
+                workbenchNix.cardanoNodePackages.cardano-topology
+              ];
+            }
+            ''
+            mkdir "$out"
+            ${builtins.concatStringsSep
+              "\n"
+              (pkgs.lib.mapAttrsToList
+                (name: nodeSpec: ''
+                    wb topology projection-for     \
+                    "local-${nodeSpec.kind}"       \
+                    "${toString nodeSpec.i}"       \
+                    "${profileJsonPath}"           \
+                    "${topologyJsonPath}"          \
+                    "${toString backend.basePort}" \
+                  > "$out"/"topology-${name}.json"
+                '')
+                nodeSpecs
+              )
+            }
+            ''
+        ;
+    in  pkgs.lib.mapAttrs
+          (name: _: "${projections}/topology-${name}.json")
+          nodeSpecs
+  ;
+
   nodeService =
     { name, i, mode ? null, ... }@nodeSpec:
     let
@@ -208,12 +244,11 @@ let
       service       = evalServiceConfigToService serviceConfig;
 
       topology =
-        rec {
-          JSON  = workbenchNix.runWorkbench
-                    "topology-${name}.json"
-                    "topology projection-for local-${nodeSpec.kind} ${toString i} ${profileName} ${topologyFiles} ${toString backend.basePort}";
-          value = __fromJSON (__readFile JSON);
-        };
+         rec {
+           JSON  = topologiesJsonPaths.${name};
+           value = __fromJSON (__readFile JSON);
+         }
+      ;
 
       valency =
         let
@@ -224,22 +259,15 @@ let
         in val;
 
     in {
-      start = rec {
-        value = ''
-          #!${pkgs.stdenv.shell}
+      start =
+        ''
+        #!${pkgs.stdenv.shell}
 
-          ${service.script}
-          '';
-        JSON = pkgs.writeScript "startup-${name}.sh" value;
-      };
+        ${service.script}
+        ''
+      ;
 
-      config = {
-        value = service.nodeConfig;
-        JSON  = jsonFilePretty
-                  "node-config-${name + modeIdSuffix}.json"
-                  (__toJSON service.nodeConfig)
-        ;
-      };
+      config = service.nodeConfig;
 
       inherit topology;
     };
