@@ -14,6 +14,7 @@ module Cardano.Testnet.Test.Cli.QuerySlotNumber
 
 import           Cardano.Ledger.Shelley.Genesis (fromNominalDiffTimeMicro)
 import           Cardano.Slotting.Slot
+import           Cardano.Slotting.Time (SystemStart (..))
 import           Cardano.Testnet
 
 import           Prelude
@@ -47,7 +48,7 @@ hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempA
     , testnetNodes
     } <- cardanoTestnetDefault def def conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
-  startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
+  SystemStart startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
 
   let slotLength = fromNominalDiffTimeMicro sgSlotLength
       -- how many slots can the checked value differ from
