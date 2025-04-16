@@ -58,7 +58,7 @@ import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
-import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
+import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (..))
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
 
@@ -226,7 +226,7 @@ installSigTermHandler = do
     Signals.sigTERM
     (Signals.CatchOnce $ do
       runThreadIdMay <- deRefWeak runThreadIdWk
-      forM_ runThreadIdMay $ \runThreadId -> killThread runThreadId
+      forM_ runThreadIdMay $ \runThreadId -> Exception.throwTo runThreadId ExitSuccess
     )
     Nothing
 #endif
