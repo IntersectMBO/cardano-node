@@ -11,6 +11,7 @@ import           Prelude
 
 import qualified Data.Aeson as A
 import           Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Maybe
 import qualified Data.Aeson.KeyMap as A
 import           Data.Default.Class (def)
 import qualified Data.Text as T
@@ -22,7 +23,6 @@ import qualified System.Process as IO
 import           Cardano.Api (writeFileJSON)
 import qualified Cardano.Api.Byron as Byron
 import           Cardano.Api.Byron (GenesisData (..))
-import           Cardano.Api.Ledger (StandardCrypto)
 import qualified Cardano.Api.Shelley as Shelley
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
 import           Cardano.Prelude (canonicalEncodePretty)
@@ -33,7 +33,7 @@ import           Testnet.Start.Types (ConfigFilesBehaviour (..), GenesisOptions 
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
-import           Testnet.Process.Run (execCli')
+import           Testnet.Process.Run (execCli',mkExecConfig)
 import           Hedgehog.Extras (defaultExecConfig)
 
 
@@ -67,7 +67,7 @@ hprop_dump_config = integrationWorkspace "dump-config-files" $ \tempAbsBasePath 
 
     -- Update start time in Shelley genesis file
     eShelley <- H.readJsonFile shelleyGenesisFile
-    shelleyGenesis' :: Shelley.ShelleyGenesis StandardCrypto <- H.leftFail eShelley
+    shelleyGenesis' :: Shelley.ShelleyGenesis <- H.leftFail eShelley
     let shelleyGenesis = shelleyGenesis'{sgSystemStart = startTime}
     H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
 
@@ -105,10 +105,23 @@ hprop_dump_config = integrationWorkspace "dump-config-files" $ \tempAbsBasePath 
     TestnetRuntime
       { testnetNodes = [singleNode]
       } <- cardanoTestnetDefault runTestnetOptions shelleyOptions confRun
+    
 
+
+    H.assert $ isJust $ poolKeys singleNode
     -- Let the node run for a minute, to let problems time to happen
-    H.threadDelay 60_000 -- milliseconds
+    H.threadDelay 30_000 -- milliseconds
     -- If nothing happened, kill the node and exit with success
+
+    poolSprocket1 <- H.noteShow $ nodeSprocket singleNode
+    execConfig <- mkExecConfig tempAbsBasePath poolSprocket1 42
+    s <- execCli' execConfig
+       [ "query", "stake-distribution"
+     
+       ]
+    H.note_ s
+
+
     exit <- H.evalIO $ do
       let handle = nodeProcessHandle singleNode
       IO.terminateProcess handle
