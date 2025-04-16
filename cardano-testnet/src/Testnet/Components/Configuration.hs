@@ -202,8 +202,11 @@ createSPOGenesisAndFiles
       UserProvidedData shelleyGenesis ->
         pure $ sgSystemStart shelleyGenesis
       NoUserProvidedData -> do
-        currentTime <- H.noteShowIO DTC.getCurrentTime
-        H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
+        currentTime <- liftIO DTC.getCurrentTime
+        H.note_ $ "Current time: " <> show currentTime
+        let startTime = DTC.addUTCTime startTimeOffsetSeconds currentTime
+        H.note_ $ "Shelley genesis start time: " <> show startTime
+        return startTime
 
   execCli_ $
     [ eraToString sbe, "genesis", "create-testnet-data" ]
