@@ -458,7 +458,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePromoteWarmBigLedgerPeers {}       -> Info
       TracePromoteWarmBigLedgerPeerFailed {}  -> Error
       TracePromoteWarmBigLedgerPeerDone {}    -> Info
-      TracePromoteWarmBigLedgerPeerAborted {} -> Error
+      TracePromoteWarmBigLedgerPeerAborted {} -> Info
 
       TraceDemoteWarmBigLedgerPeers {}      -> Info
       TraceDemoteWarmBigLedgerPeerFailed {} -> Info
