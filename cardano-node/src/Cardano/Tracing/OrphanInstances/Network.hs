@@ -556,7 +556,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
     case ev of
       InboundGovernor.TrNewConnection {}           -> Debug
       InboundGovernor.TrResponderRestarted {}      -> Debug
-      InboundGovernor.TrResponderStartFailure {}   -> Error
+      InboundGovernor.TrResponderStartFailure {}   -> Info
       InboundGovernor.TrResponderErrored {}        -> Info
       InboundGovernor.TrResponderStarted {}        -> Debug
       InboundGovernor.TrResponderTerminated {}     -> Debug
