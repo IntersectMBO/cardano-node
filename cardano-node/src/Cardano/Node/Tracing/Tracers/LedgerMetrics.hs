@@ -1,13 +1,18 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints -Wno-error=partial-type-signatures #-}
 
 module Cardano.Node.Tracing.Tracers.LedgerMetrics
   ( LedgerMetrics (..)
@@ -20,12 +25,14 @@ import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..), mapNodeKernelDataIO,
                    nkQueryChain, nkQueryLedger)
 import           Cardano.Node.Tracing.Tracers.ChainDB (fragmentChainDensity)
-import           Ouroboros.Consensus.BlockchainTime.API
-import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
+import           Ouroboros.Consensus.BlockchainTime.API (BlockchainTime (..), CurrentSlot (..), getCurrentSlot)
+import           Ouroboros.Consensus.HardFork.Combinator (Header (..))
+import           Ouroboros.Consensus.Ledger.Abstract (IsLedger, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (getBlockchainTime))
-import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.AnchoredFragment as AF (HasHeader (..))
+import           Ouroboros.Network.NodeToClient (LocalConnectionId)
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
@@ -33,12 +40,13 @@ import           Control.Monad.Class.MonadAsync (link)
 import           Control.Monad.STM (atomically, retry)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
-import           Data.Text as Text
+import           Data.Text as Text (unlines)
 import           GHC.Conc (labelThread, myThreadId, unsafeIOToSTM)
 
 startLedgerMetricsTracer
-  :: forall blk
+  :: forall blk nodeKernel
    . IsLedger (LedgerState blk)
+  => nodeKernel ~ NodeKernel IO RemoteAddress LocalConnectionId blk
   => LedgerQueries blk
   => AF.HasHeader (Header blk)
   => AF.HasHeader blk
@@ -70,14 +78,12 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData = do
 
         waitForDifferentSlot :: StrictMaybe SlotNo -> IO (StrictMaybe SlotNo)
         waitForDifferentSlot prev = do
-          mapNodeKernelDataIO (\nk -> atomically $ do
-            mSlot <- getCurrentSlot (getBlockchainTime nk)
-            case mSlot of
+          flip mapNodeKernelDataIO nodeKernelData \(getBlockchainTime -> bcTime :: BlockchainTime IO) -> atomically do
+            getCurrentSlot bcTime >>= \case
               CurrentSlot s' | SJust s' /= prev -> return s'
               _ -> do
                     unsafeIOToSTM ( threadDelay $ 1 * 1000)
                     retry
-            ) nodeKernelData
 
 data LedgerMetrics =
   LedgerMetrics {
