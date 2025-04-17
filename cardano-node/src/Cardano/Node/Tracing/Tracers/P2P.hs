@@ -1760,7 +1760,7 @@ instance MetaTrace (InboundGovernor.Trace addr) where
 
     severityFor (Namespace _ ["NewConnection"]) _ = Just Debug
     severityFor (Namespace _ ["ResponderRestarted"]) _ = Just Debug
-    severityFor (Namespace _ ["ResponderStartFailure"]) _ = Just Error
+    severityFor (Namespace _ ["ResponderStartFailure"]) _ = Just Info
     severityFor (Namespace _ ["ResponderErrored"]) _ = Just Info
     severityFor (Namespace _ ["ResponderStarted"]) _ = Just Debug
     severityFor (Namespace _ ["ResponderTerminated"]) _ = Just Debug
