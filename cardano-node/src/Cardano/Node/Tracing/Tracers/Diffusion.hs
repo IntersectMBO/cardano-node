@@ -408,6 +408,7 @@ instance MetaTrace Mux.Trace where
       Namespace [] ["TCPInfo"]
 
     severityFor (Namespace _ ["RecvHeaderStart"]) _       = Just Debug
+    severityFor (Namespace _ ["RecvRaw"]) _               = Just Debug
     severityFor (Namespace _ ["RecvHeaderEnd"]) _         = Just Debug
     severityFor (Namespace _ ["RecvStart"]) _             = Just Debug
     severityFor (Namespace _ ["RecvEnd"]) _               = Just Debug
@@ -536,6 +537,7 @@ instance MetaTrace Mux.Trace where
       , Namespace [] ["Stopped"]
       , Namespace [] ["Shutdown"]
       , Namespace [] ["TCPInfo"]
+      , Namespace [] ["RecvRaw"]
       ]
 
 --------------------------------------------------------------------------------
