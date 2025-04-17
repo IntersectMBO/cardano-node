@@ -89,7 +89,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
 
   startLedgerMetricsTracer
     (ledgerMetricsTracer tracers)
-    (fromMaybe 1000 (tcLedgerMetricsFrequency trConfig))
+    (fromMaybe 1 (tcLedgerMetricsFrequency trConfig)) -- default is every slot
     nodeKernel
 
   startPeerTracer

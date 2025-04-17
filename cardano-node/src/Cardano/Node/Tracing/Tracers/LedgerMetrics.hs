@@ -29,10 +29,13 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
+import           Control.Concurrent.STM.TVar (readTVar, registerDelay)
 import           Control.Monad.Class.MonadAsync (link)
-import           Control.Monad.STM (atomically, retry)
+import           Control.Monad.STM (STM, atomically, check, retry)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
+import           Data.Text as Text
+import           GHC.Conc (unsafeIOToSTM)
 
 startLedgerMetricsTracer
   :: forall blk
@@ -65,14 +68,21 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData = do
             SNothing -> go i prevSlot
 
         waitForDifferentSlot :: StrictMaybe SlotNo -> IO (StrictMaybe SlotNo)
-        waitForDifferentSlot prev =
+        waitForDifferentSlot prev = do
           mapNodeKernelDataIO (\nk -> atomically $ do
             mSlot <- getCurrentSlot (getBlockchainTime nk)
             case mSlot of
-              CurrentSlot s'
-                | SJust s' /= prev -> return s'
-              _ -> retry
-          ) nodeKernelData
+              CurrentSlot s' | SJust s' /= prev -> return s'
+              _ -> do
+                    delaySTM $ 5 * 1000 -- 5 milliseconds
+                    retry
+            ) nodeKernelData
+
+       -- STM action that completes after a given delay (in microseconds)
+        delaySTM :: Int -> STM ()
+        delaySTM micros = do
+          tvar <- unsafeIOToSTM (registerDelay micros)  -- gives you a TVar Bool
+          readTVar tvar >>= check
 
 data LedgerMetrics =
   LedgerMetrics {
@@ -151,16 +161,19 @@ instance MetaTrace LedgerMetrics where
   severityFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["LedgerMetrics"]) =
-      [ ("utxoSize", "UTxO set size")
-      , ("delegMapSize", "Delegation map size")
-      , ("drepCount", "")
-      , ("drepMapSize", "")
+      [ ("utxoSize",      "Size of the current UTxO set (number of entries)")
+      , ("delegMapSize",  "Size of the delegation map (number of delegators)")
+      , ("drepCount",     "Number of active DReps (Delegated Representatives)")
+      , ("drepMapSize",   "Size of the DRep map (number of stake keys mapped to DReps)")
       ]
   metricsDocFor _ = []
 
-  documentFor (Namespace _ ["LedgerMetrics"]) = Just $ mconcat
-    [ "" -- TODO YUP
-    ]
+  documentFor (Namespace _ ["LedgerMetrics"]) = Just $ Text.unlines
+      [ "Periodic trace emitted every Nth slot, approximately 700 milliseconds after slot start."
+      , "It queries the current ledger state to report metrics such as UTxO size, delegation map size,"
+      , "and DRep participation. This trace helps monitor ledger growth and governance dynamics over time."
+      ]
+
 
   documentFor _ = Nothing
 

@@ -394,8 +394,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith mempoolTr
       , Consensus.forgeTracer =
            Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x)
-          --  <>
-          --  Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeStatsTr x)
+           <>
+           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeStatsTr x)
       , Consensus.blockchainTimeTracer = Tracer $
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $
