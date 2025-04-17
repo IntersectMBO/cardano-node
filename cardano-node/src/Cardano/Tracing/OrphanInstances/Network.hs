@@ -485,7 +485,7 @@ instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags (C
       TracePromoteWarmBigLedgerPeers {}       -> Info
       TracePromoteWarmBigLedgerPeerFailed {}  -> Error
       TracePromoteWarmBigLedgerPeerDone {}    -> Info
-      TracePromoteWarmBigLedgerPeerAborted {} -> Error
+      TracePromoteWarmBigLedgerPeerAborted {} -> Info
 
       TraceDemoteWarmBigLedgerPeers {}      -> Info
       TraceDemoteWarmBigLedgerPeerFailed {} -> Info
