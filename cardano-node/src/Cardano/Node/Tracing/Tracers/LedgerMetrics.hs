@@ -29,13 +29,12 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
-import           Control.Concurrent.STM.TVar (readTVar, registerDelay)
 import           Control.Monad.Class.MonadAsync (link)
-import           Control.Monad.STM (STM, atomically, check, retry)
+import           Control.Monad.STM (atomically, retry)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
 import           Data.Text as Text
-import           GHC.Conc (unsafeIOToSTM)
+import           GHC.Conc (labelThread, myThreadId, unsafeIOToSTM)
 
 startLedgerMetricsTracer
   :: forall blk
@@ -53,7 +52,9 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData = do
     link as
   where
     ledgerMetricsThread :: IO ()
-    ledgerMetricsThread = go 1 SNothing
+    ledgerMetricsThread = do
+      myThreadId >>= flip labelThread "Peer Tracer"
+      go 1 SNothing
       where
         go :: Int -> StrictMaybe SlotNo -> IO ()
         go !i !prevSlot = do
@@ -74,15 +75,9 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData = do
             case mSlot of
               CurrentSlot s' | SJust s' /= prev -> return s'
               _ -> do
-                    delaySTM $ 5 * 1000 -- 5 milliseconds
+                    unsafeIOToSTM ( threadDelay $ 1 * 1000)
                     retry
             ) nodeKernelData
-
-       -- STM action that completes after a given delay (in microseconds)
-        delaySTM :: Int -> STM ()
-        delaySTM micros = do
-          tvar <- unsafeIOToSTM (registerDelay micros)  -- gives you a TVar Bool
-          readTVar tvar >>= check
 
 data LedgerMetrics =
   LedgerMetrics {
