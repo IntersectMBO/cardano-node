@@ -696,6 +696,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     severityFor (Namespace [] ["PromoteWarmFailed"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmDone"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmAborted"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmBigLedgerPeerAborted"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmFailed"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmDone"]) _ = Just Info
