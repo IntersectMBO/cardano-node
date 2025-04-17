@@ -272,7 +272,7 @@ backend_nomad() {
       else
         local gitrev=${1:?$usage}; shift
         # "${flakeReference}/${commit}#${flakeOutput}"
-        installables_array=$(jq ".containerPkgs | map(.flakeReference + \"/${gitrev}#\"+ .flakeOutput)" "${dir}"/container-specs.json)
+        installables_array=$(jq --argjson GITREV "\"${gitrev}\"" '.containerPkgs | map( .["flake-reference"] + "/" + (.commit // $GITREV) + "#"  + .["flake-output"] )' "${dir}"/container-specs.json)
       fi
       # nix_installables
       local groups_array=$(jq -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
