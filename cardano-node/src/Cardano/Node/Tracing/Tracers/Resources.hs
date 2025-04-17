@@ -13,14 +13,14 @@ import           Control.Monad.Class.MonadAsync (link)
 import           "contra-tracer" Control.Tracer
 import           GHC.Conc (labelThread, myThreadId)
 
--- | Starts a background thread to periodically trace resource statistics.
--- The thread reads resource stats and traces them using the given tracer.
--- It is linked to the parent thread to ensure proper error propagation.
-startResourceTracer :: Tracer IO ResourceStats -> Int -> IO ()
+startResourceTracer
+  :: Tracer IO ResourceStats
+  -> Int
+  -> IO ()
+startResourceTracer _ 0 = pure ()
 startResourceTracer tracer delayMilliseconds = do
-  thread <- async resourceThread
-  -- Link the thread to the parent to propagate exceptions properly.
-  link thread
+    as <- async resourceThread
+    link as
   where
     -- | The background thread that periodically traces resource stats.
     resourceThread :: IO ()
