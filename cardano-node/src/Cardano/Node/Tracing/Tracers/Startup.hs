@@ -40,7 +40,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLed
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
-import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
+import           Ouroboros.Network.NodeToClient (LocalAddress (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
                    UseLedgerPeers (..))
@@ -55,7 +55,6 @@ import           Data.Text (Text, pack)
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
-import           Network.Socket (SockAddr)
 
 import           Paths_cardano_node (version)
 
@@ -156,7 +155,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
                                  supportedNodeToClientVersions)
       = mconcat (
         [ "kind" .= String "StartupInfo"
-        , "nodeAddresses" .= toJSON (map ppN2NSocketInfo addresses)
+        , "nodeAddresses" .= toJSON (map show addresses)
         , "localSocket" .= case localSocket of
               Nothing -> Null
               Just a  -> String (pack . ppN2CSocketInfo $ a)
@@ -463,7 +462,7 @@ ppStartupInfoTrace (StartupInfo addresses
                                 supportedNodeToClientVersions)
   = pack
   $ "\n" ++ intercalate "\n"
-    [ "node addresses:          " ++ intercalate ", " (map ppN2NSocketInfo addresses)
+    [ "node addresses:          " ++ intercalate ", " (map show addresses)
     , "local socket:            " ++ maybe "NONE" ppN2CSocketInfo localSocket
     , "node-to-node versions:   " ++ show (fmap nodeToNodeVersionToInt (Map.keys supportedNodeToNodeVersions))
     , "node-to-client versions: " ++ show (fmap nodeToClientVersionToInt (Map.keys supportedNodeToClientVersions))
@@ -586,14 +585,11 @@ nonP2PWarningMessage =
 --
 ppSocketInfo :: Show sock
              => (info -> String)
-             -> SocketOrSocketInfo sock info -> String
+             -> SocketOrSocketInfo' sock info
+             -> String
 ppSocketInfo  ppInfo (SocketInfo addr)   = ppInfo addr
 ppSocketInfo _ppInfo (ActualSocket sock) = show sock
 
-ppN2CSocketInfo :: SocketOrSocketInfo LocalSocket LocalAddress
+ppN2CSocketInfo :: LocalSocketOrSocketInfo
                 -> String
 ppN2CSocketInfo = ppSocketInfo getFilePath
-
-ppN2NSocketInfo :: SocketOrSocketInfo SockAddr SockAddr
-                -> String
-ppN2NSocketInfo = ppSocketInfo show

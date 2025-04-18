@@ -38,7 +38,7 @@ import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..), TimeoutOverride (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP, getForkPolicy)
-import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
+import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo' (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
 import           Cardano.Node.Configuration.TopologyP2P
