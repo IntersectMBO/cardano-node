@@ -1527,7 +1527,8 @@ instance MetaTrace (ConnectionManager.AbstractTransitionTrace peerAddr) where
     severityFor (Namespace _  ["Transition"]) _ = Just Debug
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _  ["Transition"]) = Just ""
+    documentFor (Namespace _  ["Transition"]) =
+      Just "Connection Manager peer state machine transition"
     documentFor _ = Nothing
 
     allNamespaces = [Namespace [] ["Transition"]]
@@ -1646,7 +1647,7 @@ forMachineGov _dtal (TrNewConnection p connId)            =
             , "connectionId" .= toJSON connId
             ]
 forMachineGov _dtal (TrResponderRestarted connId m)       =
-  mconcat [ "kind" .= String "ResponderStarted"
+  mconcat [ "kind" .= String "ResponderRestarted"
             , "connectionId" .= toJSON connId
             , "miniProtocolNum" .= toJSON m
             ]
