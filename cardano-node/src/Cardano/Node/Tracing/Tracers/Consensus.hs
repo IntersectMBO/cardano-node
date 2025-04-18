@@ -1813,7 +1813,7 @@ instance MetaTrace (TraceForgeEvent blk) where
   severityFor (Namespace _ ["LedgerState"]) _ = Just Debug
   severityFor (Namespace _ ["NoLedgerView"]) _ = Just Error
   severityFor (Namespace _ ["LedgerView"]) _ = Just Debug
-  severityFor (Namespace _ ["ForgeStateUpdateError"]) _ = Just Error
+  severityFor (Namespace _ ["ForgeStateUpdateError"]) _ = Just Critical
   severityFor (Namespace _ ["NodeCannotForge"]) _ = Just Error
   severityFor (Namespace _ ["NodeNotLeader"]) _ = Just Info
   severityFor (Namespace _ ["NodeIsLeader"]) _ = Just Info
@@ -1825,6 +1825,9 @@ instance MetaTrace (TraceForgeEvent blk) where
   severityFor (Namespace _ ["AdoptedBlock"]) _ = Just Info
   severityFor (Namespace _ ["AdoptionThreadDied"]) _ = Just Error
   severityFor _ _ = Nothing
+
+  privacyFor (Namespace _ ["ForgeStateUpdateError"]) _ = Just Confidential
+  privacyFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["StartLeadershipCheck"]) =
     [("Forge.about-to-lead", "")]
