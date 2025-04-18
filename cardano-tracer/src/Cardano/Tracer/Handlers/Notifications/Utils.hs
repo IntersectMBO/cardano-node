@@ -41,7 +41,7 @@ initEventsQueues tracer rtvSD nodesNames dpReqs curDPLock = do
       lastTime <- newTVarIO nullTime
       let mkEventQueue ident (evsS, evsP) = do
             evsQ <- newTBQueueIO 2000
-            evsT <- mkTimer
+            evsT <- mkTimer tracer
               (makeAndSendNotification tracer emailSettings nodesNames dpReqs curDPLock lastTime evsQ) evsS evsP
             pure (ident, (evsQ, evsT))
 

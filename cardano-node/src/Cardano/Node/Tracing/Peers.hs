@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Node.Tracing.Peers
   ( NodePeers (..)
@@ -9,24 +7,7 @@ module Cardano.Node.Tracing.Peers
 
 import           Cardano.Logging
 import           Cardano.Node.Tracing.Tracers.Peer (PeerT, ppPeer)
-
-import           Control.DeepSeq (NFData)
-import           Data.Aeson (FromJSON, ToJSON)
-import           Data.Text (Text)
-import           GHC.Generics (Generic)
-
-type PeerInfoPP = Text -- The result of 'ppPeer' function.
-
--- | This type contains an information about current peers of the node.
---   It will be asked by external applications as a DataPoint.
-newtype NodePeers = NodePeers [PeerInfoPP]
-
-deriving instance Generic NodePeers
-deriving instance NFData NodePeers
-
-instance ToJSON NodePeers
-instance FromJSON NodePeers
-
+import           Cardano.Logging.Types.NodePeers (NodePeers(..))
 
 instance MetaTrace NodePeers where
   namespaceFor NodePeers {}  =

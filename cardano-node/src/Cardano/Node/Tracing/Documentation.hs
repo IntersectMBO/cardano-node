@@ -18,7 +18,7 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
-
+import           Cardano.Node.Tracing.NodeStartupInfo () -- MetaTrace NodeVersionTrace
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
@@ -28,6 +28,7 @@ import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.NodeInfo ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB

@@ -5,7 +5,7 @@ module Cardano.Tracer.Handlers.RTView.Update.NodeInfo
   ( askNSetNodeInfo
   ) where
 
-import           Cardano.Node.Startup (NodeInfo (..))
+import           Cardano.Logging.Types.NodeInfo (NodeInfo (..))
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
