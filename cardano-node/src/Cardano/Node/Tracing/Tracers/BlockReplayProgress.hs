@@ -8,7 +8,7 @@ module Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Api (textShow)
 
 import           Cardano.Logging
-import           Ouroboros.Consensus.Block (realPointSlot)
+import           Ouroboros.Consensus.Block (SlotNo, realPointSlot)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Network.Block (pointSlot, unSlotNo)
@@ -20,12 +20,14 @@ import           Data.Text (pack)
 
 data ReplayBlockStats = ReplayBlockStats
   { rpsDisplay      :: Bool
+  , rpsCurSlot      :: SlotNo
+  , rpsGoalSlot     :: SlotNo
   , rpsProgress     :: Double
   , rpsLastProgress :: Double
   }
 
 emptyReplayBlockStats :: ReplayBlockStats
-emptyReplayBlockStats = ReplayBlockStats False 0.0 0.0
+emptyReplayBlockStats = ReplayBlockStats False 0 0 0.0 0.0
 
 --------------------------------------------------------------------------------
 -- ReplayBlockStats Tracer
@@ -37,7 +39,15 @@ instance LogFormatting ReplayBlockStats where
       [ "kind" .= String "ReplayBlockStats"
       , "progress" .= String (pack $ show rpsProgress)
       ]
-  forHuman ReplayBlockStats {..} = "Block replay progress " <> textShow rpsProgress <> "%"
+  forHuman ReplayBlockStats {..} = "Replayed block: slot " <> textShow (unSlotNo rpsCurSlot) <> " out of " <> textShow (unSlotNo rpsGoalSlot) <> ". Progress: " <> textShow (round2 rpsProgress) <> "%"
+    where
+      round2 :: Double -> Double
+      round2 num =
+        let
+          f :: Int
+          f = round $ num * 100
+        in fromIntegral f / 100
+
   asMetrics ReplayBlockStats {..} =
      [DoubleM "blockReplayProgress" rpsProgress]
 
@@ -75,12 +85,12 @@ replayBlockStats :: MonadIO m
   -> m ReplayBlockStats
 replayBlockStats ReplayBlockStats {..} _context
     (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt []
-                                      (LedgerDB.ReplayStart replayTo) _)) = do
-      let slotno = toInteger $ unSlotNo (realPointSlot pt)
-          endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
-          progress' = (fromInteger slotno * 100.0) / fromInteger (max slotno endslot)
+                                       _ (LedgerDB.ReplayGoal replayTo))) = do
+      let slotno = realPointSlot pt
+          endslot = withOrigin 0 id $ pointSlot replayTo
+          progress' = (fromIntegral (unSlotNo slotno) * 100.0) / fromIntegral (unSlotNo $ max slotno endslot)
       pure $ if (progress' == 0.0 && not rpsDisplay)
-                || ((progress' - rpsLastProgress) > 1.0)
-                then ReplayBlockStats True progress' progress'
-                else ReplayBlockStats False progress' rpsLastProgress
+                || ((progress' - rpsLastProgress) > 0.1)
+                then ReplayBlockStats True slotno endslot progress' progress'
+                else ReplayBlockStats False slotno endslot progress' rpsLastProgress
 replayBlockStats st@ReplayBlockStats {} _context _ = pure st

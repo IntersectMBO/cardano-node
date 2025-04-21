@@ -264,7 +264,7 @@ delegateToDRep
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
+  -> KeyPair StakeKey -- ^ Staking key pair used for delegation.
   -> KeyPair PaymentKey -- ^ Delegate Representative (DRep) key pair ('PaymentKeyPair') to which delegate.
   -> m ()
 delegateToDRep execConfig epochStateView sbe work prefix

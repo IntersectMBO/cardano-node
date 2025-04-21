@@ -24,6 +24,7 @@
     "single_shot": true,
     "per_pool_balance": 1000000000000000,
     "funds_balance": 10000000000000,
+    "utxo_keys": 1,
     "utxo": 0,
     "dreps": 0,
     "active_slots_coeff": 0.05,
@@ -276,6 +277,7 @@
     },
     "tx_count": 466819068
   },
+  "workloads": [],
   "node": {
     "rts_flags_override": [],
     "heap_limit": null,

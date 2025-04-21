@@ -31,7 +31,7 @@ usage_topology() {
                           Generate the profile-induced map of node names
                             to pool density: 0, 1 or N (for dense pools)
 
-    $(helpcmd projection-for ROLE N PROFILE TOPO-DIR BASE-PORT)
+    $(helpcmd projection-for ROLE N PROFILE TOPOLOGY-JSON BASE-PORT)
                           Given TOPO-DIR, containing the full cluster topology,
                             print topology for the N-th node, given its ROLE,
                             while assigning it a local port number BASE-PORT+N
@@ -53,7 +53,8 @@ case "${op}" in
         ## 0. Generate:
         #
         mkdir -p                 "$outdir"
-        args=( --topology-output "$outdir"/topology.json
+        args=( make
+               --topology-output "$outdir"/topology.json
                --dot-output      "$outdir"/topology.dot
                "$topology_name"
                --size             $n_hosts
@@ -235,49 +236,53 @@ case "${op}" in
         local role=${1:?$usage}
         local i=${2:?$usage}
         local profile=${3:?$usage}
-        local topo_dir=${4:?$usage}
+        local topology_json=${4:?$usage}
         local basePort=${5:?$usage}
 
         local prof=$(profile json $profile)
 
         case "$role" in
         local-bft | local-pool )
-            local jq_function
+            args=(pool
+                  --baseport $basePort
+                  --node-number $i
+                 )
             if jqtest ".node.verbatim.EnableP2P" <<<$prof
             then
-              jq_function="p2p_loopback_node_topology_from_nixops_topology"
-            else
-              jq_function="loopback_node_topology_from_nixops_topology"
+              args+=('--enable-p2p')
             fi
-            args=(-L$global_basedir
-                  --slurpfile topology "$topo_dir"/topology.json
-                  --argjson   basePort $basePort
-                  --argjson   i        $i
-                  --null-input
+        ;;
+        local-explorer )
+           local nodes
+           nodes=$(
+                jq --raw-output \
+                        '  .composition.n_bft_hosts
+                         + .composition.n_pool_hosts
+                         + if .composition.with_proxy          then 1 else 0 end
+                         + if .composition.with_chaindb_server then 1 else 0 end
+                        ' \
+                "$profile")
+            args=(explorer
+                  --baseport $basePort
+                  --nodes    $nodes
                  )
-            jq \
-                "include \"topology\"; $jq_function(\$topology[0]; \$i)" \
-                "${args[@]}"
         ;;
         local-proxy )
             local   name=$(jq '.name'   <<<$prof --raw-output)
             local preset=$(jq '.preset' <<<$prof --raw-output)
             local topo_proxy=$(profile preset-get-file "$preset" 'proxy topology' 'topology-proxy.json')
 
-            jq . "$topo_proxy";;
+            jq . "$topo_proxy"
+        ;;
         local-chaindb-server )
-            ## ChainDB servers are just that:
-            jq --null-input "{ Producers: [] }";;
-        local-explorer )
-            args=(-L$global_basedir
-                  --argjson   basePort     $basePort
-                 )
-            jq 'include "topology";
+            args=('chaindb-server');;
+        * )
+            fail "unhandled role for topology node '$i': '$role'"
+        ;;
+        esac
 
-            composition_explorer_topology_loopback(.composition; $basePort)
-            ' "${args[@]}" <<<$prof;;
-        * ) fail "unhandled role for topology node '$i': '$role'";;
-        esac;;
+        cardano-topology projection-for --topology-input "$topology_json" "${args[@]}"
+    ;;
 
     * ) usage_topology;; esac
 }

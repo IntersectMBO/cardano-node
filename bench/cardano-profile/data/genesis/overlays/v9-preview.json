@@ -1,7 +1,9 @@
 {
   "shelley": {
-    "protocolVersion": {
-      "major": 9
+    "protocolParams": {
+      "protocolVersion": {
+        "major": 9
+      }
     }
   },
   "conway": {

@@ -1,26 +1,41 @@
 {-# LANGUAGE Trustworthy #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 --------------------------------------------------------------------------------
 module Main (main) where
 
 import           Prelude
-import           Data.List ((\\))
+import           Data.List (foldl', (\\))
 -- Package: aeson.
 import qualified Data.Aeson           as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 -- Package: containers.
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 -- Package: tasty.
 import qualified Test.Tasty           as Tasty
 -- Package: tasty-hunit.
 import           Test.Tasty.HUnit
 -- Package: self.
-import qualified Cardano.Benchmarking.Profile as Profiles
+import qualified Cardano.Benchmarking.Profile as Profile
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Cardano.Benchmarking.Profile.NodeSpecs.Tests as NodeSpecs
 import qualified Paths_cardano_profile as Paths
+-- Static / built-in / profiles part of the test-suite.
+import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesNoEraCloud)
+import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesNoEraEmpty)
+import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesNoEraForgeStress)
+import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesNoEraK3)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesNoEraDense)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesNoEraDish)
+import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesNoEraMiniature)
+import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesNoEraModel)
+import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
+import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
 
 --------------------------------------------------------------------------------
 
@@ -33,6 +48,7 @@ tests =  Tasty.testGroup "cardano-profile"
     testGroupTypes
   , testGroupMap
   , testGroupOverlay
+  , testGroupEra
   , NodeSpecs.tests
   ]
 
@@ -43,7 +59,7 @@ testGroupTypes :: Tasty.TestTree
 testGroupTypes = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Types"
   [ testCase "Profile FromJson / ToJson" $ do
-      fp <- Paths.getDataFileName "data/ci-test-bage.json"
+      fp <- Paths.getDataFileName "data/test/ci-test-bage.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
@@ -101,7 +117,7 @@ ciTestBage = Types.Profile {
         , ("minFeeA", Aeson.Number 44.0)
         , ("minFeeB", Aeson.Number 155381.0)
         , ("minPoolCost", Aeson.Number 3.4e8)
-        , ("minUTxOValue", Aeson.Number 34482.0)
+        , ("minUTxOValue", Aeson.Number 0)
         , ("nOpt", Aeson.Number 500.0)
         , ("poolDeposit", Aeson.Number 5.0e8)
         , ("protocolVersion", Aeson.Object (KeyMap.fromList [
@@ -314,15 +330,17 @@ ciTestBage = Types.Profile {
     , Types.active_slots_coeff = 0.05
     , Types.parameter_k = 3
     , Types.utxo = 0
-    , Types.delegators = Just 0
+    , Types.delegators = 0
     , Types.dreps = 0
     , Types.extra_future_offset = 0
     , Types.per_pool_balance = 1000000000000000
     , Types.funds_balance = 10000000000000
+    , Types.utxo_keys = 1
     , Types.network_magic = 42
     , Types.pool_coin = 1000000000000000
     , Types.delegator_coin = 0
     , Types.single_shot = True
+    , Types.max_block_size = Nothing
   }
   , Types.scenario = Types.FixedLoaded
   , Types.node = Types.Node {
@@ -350,6 +368,7 @@ ciTestBage = Types.Profile {
     , Types.tx_count = Just 9000
     , Types.add_tx_size = 100
   }
+  , Types.workloads = []
   , Types.tracer = Types.Tracer {
       Types.rtview = False
     , Types.ekg = False
@@ -449,14 +468,40 @@ ciTestBage = Types.Profile {
       ]
   }
   , Types.preset = mempty
-  , Types.overlay = Just mempty
+  , Types.overlay = mempty
 }
 
 --------------------------------------------------------------------------------
 
--- All profiles without an overlay.
 profiles :: Map.Map String Types.Profile
-profiles = Profiles.profiles mempty
+profiles = Map.fromList $ map
+  (\p ->
+    ( Types.name p
+    , Profile.realize p -- No overlay added!
+    )
+  )
+  profilesRaw
+
+-- All profiles without an overlay.
+profilesRaw :: [Types.Profile]
+profilesRaw =
+     profilesNoEraCloud
+  ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
+  ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
+  ++ profilesNoEraK3               -- K3
+  -- Legacy.
+  ++ profilesNoEraDense
+  ++ profilesNoEraDish
+  ++ profilesNoEraMiniature
+  ++ profilesNoEraModel            --
+  ++ profilesNoEraPlutuscall       --
+  -- Empty datasets not running `FixedLoaded`.
+  ++ profilesNoEraChainsync        -- Scenario `Chainsync`
+  ++ profilesNoEraIdle             -- Scenario `Idle`
+  ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
+  -- Extra modules
+  ++ profilesNoEraScalingLocal
+  ++ profilesNoEraScalingCloud
 
 -- Check all builtin profiles (no overlay) with "data/all-profiles.json".
 -- `Profile` properties are checked independently for better error messages.
@@ -464,7 +509,7 @@ testGroupMap :: Tasty.TestTree
 testGroupMap = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (Without overlay)"
   [ testCase "Profiles (Builtin)" $ do
-      fp <- Paths.getDataFileName "data/all-profiles.json"
+      fp <- Paths.getDataFileName "data/all-profiles-coay.json"
       eitherAns <- Aeson.eitherDecodeFileStrict fp
       case eitherAns of
         (Left err) -> fail err
@@ -488,7 +533,7 @@ testGroupMap = Tasty.testGroup
               (Map.keys $ Map.map Types.name profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Scenario type.
+          -- Show first profile with differences in the Scenario type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -500,7 +545,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.scenario profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Composition type.
+          -- Show first profile with differences in the Composition type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -512,7 +557,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.composition profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Era type.
+          -- Show first profile with differences in the Era type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -524,19 +569,71 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.era profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Genesis type.
+          -- Show first profile with differences in the Genesis type (main).
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
-              ("Profile == (decode \"" ++ fp ++ "\") - Genesis")
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (main)")
             )
             -- Map.Map to keep the key / profile name.
             (zip
-              (Map.assocs $ Map.map Types.genesis allProfiles)
-              (Map.assocs $ Map.map Types.genesis profiles)
+              -- Everything except "shelley", "alonzo" and "conway".
+              (Map.assocs $ Map.map
+                (\p -> (Types.genesis p) {
+                  Types.shelley = mempty
+                , Types.alonzo = mempty
+                , Types.conway = mempty
+                })
+                allProfiles
+              )
+              -- Everything except "shelley", "alonzo" and "conway".
+              (Map.assocs $ Map.map
+                (\p -> (Types.genesis p) {
+                  Types.shelley = mempty
+                , Types.alonzo = mempty
+                , Types.conway = mempty
+                })
+                profiles
+              )
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the ChainDB type.
+          -- Show first profile with differences in the Genesis type (Shelley).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Shelley)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.shelley . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.shelley . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the Genesis type (Alonzo).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Alonzo)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.alonzo . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.alonzo . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the Genesis type (Conway).
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - Genesis (Conway)")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map (Types.conway . Types.genesis) allProfiles)
+              (Map.assocs $ Map.map (Types.conway . Types.genesis) profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the ChainDB type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -548,7 +645,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.chaindb profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Node type.
+          -- Show first profile with differences in the Node type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -560,7 +657,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.node profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Generator type.
+          -- Show first profile with differences in the Generator type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -572,7 +669,19 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.generator profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Tracer type.
+          -- Show first profile with differences in the Workloads list.
+          ----------------------------------------------------------------------
+          mapM_
+            (uncurry $ assertEqual
+              ("Profile == (decode \"" ++ fp ++ "\") - [Workload]")
+            )
+            -- Map.Map to keep the key / profile name.
+            (zip
+              (Map.assocs $ Map.map Types.workloads allProfiles)
+              (Map.assocs $ Map.map Types.workloads profiles)
+            )
+          ----------------------------------------------------------------------
+          -- Show first profile with differences in the Tracer type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -584,7 +693,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.tracer profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Cluster type.
+          -- Show first profile with differences in the Cluster type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -596,7 +705,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.cluster profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Analysis type.
+          -- Show first profile with differences in the Analysis type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -608,7 +717,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.analysis profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the Derived type.
+          -- Show first profile with differences in the Derived type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -620,7 +729,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.derived profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in the CliArgs type.
+          -- Show first profile with differences in the CliArgs type.
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -632,7 +741,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.cli_args profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in "preset".
+          -- Show first profile with differences in "preset".
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -644,7 +753,7 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.preset profiles)
             )
           ----------------------------------------------------------------------
-          -- Show the first profile with differences in "overlay".
+          -- Show first profile with differences in "overlay".
           ----------------------------------------------------------------------
           mapM_
             (uncurry $ assertEqual
@@ -655,7 +764,20 @@ testGroupMap = Tasty.testGroup
               (Map.assocs $ Map.map Types.overlay allProfiles)
               (Map.assocs $ Map.map Types.overlay profiles)
             )
+  , testCase "Profiles (Duplicate names)" $
+      let
+        go (T set duplicates) name
+          | name `Set.member` set = T set (name:duplicates)
+          | otherwise             = T (name `Set.insert` set) duplicates
+      in assertEqual "Duplicate definition(s) for profile(s)" []
+          $ sndT $ foldl' go (T Set.empty []) (map Types.name profilesRaw)
   ]
+
+-- little helper type for tuples strict in the first element
+data TupleStrictFirst a b = T !a b
+
+sndT :: TupleStrictFirst a b -> b
+sndT (T _ b) = b
 
 --------------------------------------------------------------------------------
 
@@ -676,29 +798,53 @@ overlay =
     ])
   ]
 
--- Lookup profile by name (after applying the overlay).
-profileWithOverlay :: String -> Maybe Types.Profile
-profileWithOverlay name = Profiles.byName name overlay
-
 testGroupOverlay :: Tasty.TestTree
 testGroupOverlay = Tasty.testGroup
   "Cardano.Benchmarking.Profile.Map (With overlay)"
-  [ testCase "HOLA!-bage" $ do
-      case profileWithOverlay "HOLA!-bage" of
-        Nothing -> error "No profile found!"
-        (Just profile) -> do
+  [ testCase "HOLA!" $ do
+      fp <- Paths.getDataFileName "data/test/ci-test-bage.json"
+      eitherAns <- Aeson.eitherDecodeFileStrict fp
+      case eitherAns of
+        (Left err) -> fail err
+        (Right profile) -> do
+          let profileWithOverlay = Profile.realize (profile {Types.overlay = overlay})
           assertEqual "New name"
-            "HOLA!-bage"
-            (Types.name profile)
+            "HOLA!"
+            (Types.name profileWithOverlay)
           assertEqual "New genesis.network_magic"
             1327330847
-            (Types.network_magic $ Types.genesis profile)
+            (Types.network_magic $ Types.genesis profileWithOverlay)
           -- The overlay should be applied before calculating derived values.
           assertEqual "New derived.effective_epochs"
-            25001
-            (Types.effective_epochs $ Types.derived profile)
+            5000
+            (Types.effective_epochs $ Types.derived profileWithOverlay)
           -- The overlay used is added to the profile.
           assertEqual "New overlay"
-            (Just overlay)
-            (Types.overlay profile)
+            overlay
+            (Types.overlay profileWithOverlay)
+  ]
+
+testGroupEra :: Tasty.TestTree
+testGroupEra = Tasty.testGroup
+  "Cardano.Benchmarking.Profile.addEras"
+  [ testCase "Era specific profiles" $
+      let
+        isDefined = (`Set.member` Map.keysSet (Profile.addEras profiles))
+        failures  =
+          [ "ci-bench-plutusv3-ripemd-bage"     -- PlutusV3 - should require PV 9.0 / Conway
+          , "ci-bench-plutus-secp-schnorr-alzo" -- PlutusV2 - should require PV 7.0 / Babbage
+          , "ci-test-plutus-mary"               -- PlutusV1 - should require PV 5.0 / Alonzo
+          ]
+        successes =
+          [ "ci-bench-plutusv3-ripemd-coay"
+          , "ci-bench-plutus-secp-schnorr-bage"
+          , "ci-test-plutus-alzo"
+          ]
+      in do
+        assertEqual "Profiles that are expected to not be defined, yet they are:"
+          []
+          (filter isDefined failures)
+        assertEqual "Profiles that are expected to be defined, but some are missing:"
+          successes
+          (filter isDefined successes)
   ]

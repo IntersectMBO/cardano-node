@@ -1,6 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Cardano.Logging.Version
   ( ForwardingVersion (..)
   , ForwardingVersionData (..)
@@ -16,12 +13,11 @@ import           Ouroboros.Network.Protocol.Handshake.Version (Accept (..), Acce
 import qualified Codec.CBOR.Term as CBOR
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Typeable (Typeable)
 
 data ForwardingVersion
   = ForwardingV_1
   | ForwardingV_2
-  deriving (Eq, Ord, Enum, Bounded, Show, Typeable)
+  deriving (Eq, Ord, Enum, Bounded, Show)
 
 forwardingVersionCodec :: CodecCBORTerm (Text, Maybe Int) ForwardingVersion
 forwardingVersionCodec = CodecCBORTerm { encodeTerm, decodeTerm }
@@ -40,7 +36,7 @@ forwardingVersionCodec = CodecCBORTerm { encodeTerm, decodeTerm }
 
 newtype ForwardingVersionData = ForwardingVersionData
   { networkMagic :: NetworkMagic
-  } deriving (Eq, Show, Typeable)
+  } deriving (Eq, Show)
 
 instance Acceptable ForwardingVersionData where
   acceptableVersion local remote

@@ -9,7 +9,7 @@ module Cardano.Testnet.Test.SanityCheck
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Error
+import           Cardano.Api.Internal.Error
 import           Cardano.Api.Shelley
 
 import           Cardano.Testnet

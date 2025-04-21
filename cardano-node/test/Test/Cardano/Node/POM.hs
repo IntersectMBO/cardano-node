@@ -6,6 +6,7 @@ module Test.Cardano.Node.POM
   ( tests
   ) where
 
+
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
@@ -13,13 +14,16 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
-import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
+import           Ouroboros.Consensus.Node (NodeDatabasePaths (..), pattern DoDiskSnapshotChecksum)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..), pattern DoDiskSnapshotChecksum)
+                   SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
-import           Ouroboros.Network.Diffusion.Configuration
+import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   DiffusionMode (InitiatorAndResponderDiffusionMode))
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -28,6 +32,7 @@ import           Data.Time.Clock (secondsToDiffTime)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
+import Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -98,6 +103,13 @@ testNodeHardForkProtocolConfiguration =
     , npcTestConwayHardForkAtVersion  = Nothing
     }
 
+testNodeCheckpointsConfiguration :: NodeCheckpointsConfiguration
+testNodeCheckpointsConfiguration =
+  NodeCheckpointsConfiguration
+    { npcCheckpointsFile     = Nothing
+    , npcCheckpointsFileHash = Nothing
+    }
+
 testNodeProtocolConfiguration :: NodeProtocolConfiguration
 testNodeProtocolConfiguration =
   NodeProtocolConfigurationCardano
@@ -106,6 +118,7 @@ testNodeProtocolConfiguration =
     testNodeAlonzoProtocolConfiguration
     testNodeConwayProtocolConfiguration
     testNodeHardForkProtocolConfiguration
+    testNodeCheckpointsConfiguration
 
 -- | Example partial configuration theoretically created from a
 -- config yaml file.
@@ -153,6 +166,7 @@ testPartialYamlConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
+    , pncForkPolicy = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -196,11 +210,12 @@ testPartialCliConfig =
     , pncSyncTargetOfKnownBigLedgerPeers = mempty
     , pncSyncTargetOfEstablishedBigLedgerPeers = mempty
     , pncSyncTargetOfActiveBigLedgerPeers = mempty
-    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultMinBigLedgerPeersForTrustedState)
+    , pncMinBigLedgerPeersForTrustedState = Last (Just defaultNumberOfBigLedgerPeers)
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
+    , pncForkPolicy = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -250,11 +265,12 @@ eExpectedConfig = do
     , ncSyncTargetOfKnownBigLedgerPeers = 100
     , ncSyncTargetOfEstablishedBigLedgerPeers = 50
     , ncSyncTargetOfActiveBigLedgerPeers = 30
-    , ncMinBigLedgerPeersForTrustedState = defaultMinBigLedgerPeersForTrustedState
+    , ncMinBigLedgerPeersForTrustedState = defaultNumberOfBigLedgerPeers
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
+    , ncForkPolicy = NoBindForkPolicy
     }
 
 -- -----------------------------------------------------------------------------

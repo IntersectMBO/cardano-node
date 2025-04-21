@@ -37,7 +37,7 @@ sbe :: ShelleyBasedEra ConwayEra
 sbe = ShelleyBasedEraConway
 
 -- Execute this test with:
--- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRepRetirement/"'@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Retirement/"'@
 hprop_drep_retirement :: Property
 hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net

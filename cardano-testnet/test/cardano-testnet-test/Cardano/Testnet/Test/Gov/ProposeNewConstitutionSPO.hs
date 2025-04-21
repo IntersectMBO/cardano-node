@@ -10,7 +10,6 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
-import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
@@ -58,10 +57,10 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
       fastTestnetOptions = def
         { cardanoNodeEra = AnyShelleyBasedEra sbe
         , cardanoNodes =
-          [ SpoNodeOptions Nothing []
-          , SpoNodeOptions Nothing []
-          , SpoNodeOptions Nothing []
-          ]
+          AutomaticNodeOptions [ SpoNodeOptions []
+                               , SpoNodeOptions []
+                               , SpoNodeOptions []
+                               ]
         }
       shelleyOptions = def { genesisEpochLength = 100 }
 
@@ -176,7 +175,7 @@ getConstitutionProposal
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
-  -> m (Maybe (L.GovActionId StandardCrypto))
+  -> m (Maybe L.GovActionId)
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
   result <- H.evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb ->

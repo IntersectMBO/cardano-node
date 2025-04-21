@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-profile
-version:                8.7.0
+version:                8.8.0
 synopsis:               A Cardano benchmarking profile generator
 description:            A Cardano benchmarking profile generator.
 category:               Cardano,
@@ -13,10 +13,15 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-data-files:             data/all-profiles.json
-                        data/ci-test-bage.json
+data-files:             data/all-profiles-coay.json
+                        data/db-sync/epoch_param.json
+                        data/db-sync/cost_model.json
                         data/genesis/epoch-timeline.json
                         data/genesis/overlays/*.json
+                        data/genesis/overlays/budget/block/memory/*.json
+                        data/genesis/overlays/budget/block/steps/*.json
+                        data/presets/*.json
+                        data/test/ci-test-bage.json
                         data/test/default-coay/*.json
                         data/test/chainsync-early-alonzo-coay/*.json
                         data/test/chainsync-early-byron-coay/*.json
@@ -27,7 +32,8 @@ data-files:             data/all-profiles.json
 common project-config
   build-depends:        base >= 4.14 && < 5
   default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
+  default-extensions:   LambdaCase
+                        NoImplicitPrelude
   ghc-options:          -Wall
                         -Wcompat
                         -Wincomplete-record-updates
@@ -55,14 +61,17 @@ library
                       , Cardano.Benchmarking.Profile.Builtin.Plutuscall
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Base
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync
-                      , Cardano.Benchmarking.Profile.Builtin.Scenario.Latency
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.Idle
                       , Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly
                       , Cardano.Benchmarking.Profile.Extra.Scaling
+                      , Cardano.Benchmarking.Profile.Genesis
                       , Cardano.Benchmarking.Profile.NodeSpecs
+                      , Cardano.Benchmarking.Profile.Playground
                       , Cardano.Benchmarking.Profile.Primitives
                       , Cardano.Benchmarking.Profile.Vocabulary
                       , Cardano.Benchmarking.Profile.Types
+                      , Cardano.Benchmarking.Profile.Workload.Latency
+                      , Cardano.Benchmarking.Profile.Workload.Voting
   build-depends:        base >=4.12 && <5
                       , time
                       , aeson
@@ -81,12 +90,26 @@ executable cardano-profile
                       , aeson-pretty
                       , vector
                       , bytestring
+                      , containers
                       , optparse-applicative-fork
                       , text
                       , cardano-profile
 
+executable cardano-timeline
+  import:               project-config
+  hs-source-dirs:       app/
+  main-is:              cardano-timeline.hs
+  build-depends:        aeson
+                      , aeson-pretty
+                      , text
+                      , cardano-profile
+  other-modules:        Paths_cardano_profile
+  autogen-modules:      Paths_cardano_profile
+
 test-suite cardano-profile-test
   import:               project-config
+  -- GHC9.12's warning turns to an error in CI
+  ghc-options:          -Wno-unused-imports
   hs-source-dirs:       test/
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0

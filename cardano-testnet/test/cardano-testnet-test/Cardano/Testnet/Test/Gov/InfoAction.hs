@@ -12,7 +12,7 @@ module Cardano.Testnet.Test.Gov.InfoAction
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Error (displayError)
+import           Cardano.Api.Internal.Error
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 import           Cardano.Api.Shelley
 

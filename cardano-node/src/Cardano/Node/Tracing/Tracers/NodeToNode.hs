@@ -23,6 +23,7 @@ import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
+import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PS
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
@@ -378,4 +379,51 @@ instance MetaTrace (AnyMessage KA.KeepAlive) where
         Namespace [] ["KeepAlive"]
       , Namespace [] ["KeepAliveResponse"]
       , Namespace [] ["Done"]
+      ]
+
+--------------------------------------------------------------------------------
+-- PeerSharing Tracer
+--------------------------------------------------------------------------------
+
+instance ToJSON addr => LogFormatting (AnyMessage (PS.PeerSharing addr)) where
+  forMachine _dtal (AnyMessageAndAgency stok (PS.MsgShareRequest num)) =
+    mconcat
+      [ "kind" .= String "MsgPeerShareRequest"
+      , "agency" .= String (pack $ show stok)
+      , "amount" .= PS.getAmount num
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok (PS.MsgSharePeers peers)) =
+    mconcat
+      [ "kind" .= String "MsgSharePeers"
+      , "agency" .= String (pack $ show stok)
+      , "peers" .= peers
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok PS.MsgDone) =
+    mconcat
+      [ "kind" .= String "Done"
+      , "agency" .= String (pack $ show stok)
+      ]
+
+instance MetaTrace (AnyMessage (PS.PeerSharing addr)) where
+    namespaceFor (AnyMessageAndAgency _stok PS.MsgShareRequest {}) =
+      Namespace [] ["PeerShareRequest"]
+    namespaceFor (AnyMessageAndAgency _stok PS.MsgSharePeers {}) =
+      Namespace [] ["PeerShareResult"]
+    namespaceFor (AnyMessageAndAgency _stok PS.MsgDone) =
+      Namespace [] ["PeerShareDone"]
+
+    severityFor (Namespace _ ["PeerShareRequest"]) _ = Just Debug
+    severityFor (Namespace _ ["PeerShareResult"]) _ = Just Info
+    severityFor (Namespace _ ["PeerShareDone"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["PeerShareRequest"]) = Just "Client asks for peers."
+    documentFor (Namespace _ ["PeerShareResult"]) = Just "Server responds with peers."
+    documentFor (Namespace _ ["PeerShareDone"]) = Just "Termination message, initiated by the client."
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["PeerShareRequest"]
+      , Namespace [] ["PeerShareResult"]
+      , Namespace [] ["PeerShareDone"]
       ]

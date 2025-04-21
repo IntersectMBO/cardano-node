@@ -24,18 +24,18 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
+import           Cardano.Network.ConsensusMode (ConsensusMode(..))
+import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Ouroboros.Network.ConsensusMode
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
-import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
                    UseLedgerPeers (..))
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
@@ -250,7 +250,12 @@ readTopologyFile nc tr = do
       ]
     genesisIncompatible
       = Text.pack $  "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                  <> "Bootstrap peers are not used in Genesis consensus mode."
+                  <> "Bootstrap peers (field 'bootstrapPeers') are not compatible "
+                  <> "with Genesis syncing mode, reverting to 'DontUseBootstrapPeers'. "
+                  <> "Big ledger peers will be leveraged for decentralized syncing - it "
+                  <> "is recommened to provide an up-to-date big ledger peer snapshot file "
+                  <> "(field 'peerSnapshotFile' in topology configuration) to facilitate "
+                  <> "this process."
     handlerBootstrap :: Text
     handlerBootstrap = mconcat
       [ "You seem to have not configured any trustable peers. "
@@ -258,7 +263,7 @@ readTopologyFile nc tr = do
       , "in bootstrap mode. Make sure you provide at least one bootstrap peer "
       , "source. "
       ]
-    isGenesisCompatible GenesisMode (UseBootstrapPeers{}) = False
+    isGenesisCompatible GenesisMode UseBootstrapPeers{} = False
     isGenesisCompatible _ _ = True
 
 readTopologyFileOrError :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO NetworkTopology

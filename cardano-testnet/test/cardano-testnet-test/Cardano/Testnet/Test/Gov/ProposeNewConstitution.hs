@@ -157,6 +157,9 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
     , "--tx-file", stakeCertTxSignedFp
     ]
 
+  -- make sure that stake registration cert gets into a block
+  H.noteShowM_ $ waitForBlocks epochStateView 1
+
   -- Create constitution proposal
   guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
   H.writeFile guardRailScriptFp $ Text.unpack plutusV3Script

@@ -28,28 +28,6 @@ module Cardano.Node.Configuration.Logging
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
 
-import qualified Control.Concurrent as Conc
-import qualified Control.Concurrent.Async as Async
-import           Control.Concurrent.MVar (MVar, newMVar)
-import           Control.Concurrent.STM (STM)
-import           Control.Exception (IOException)
-import           Control.Exception.Safe (MonadCatch)
-import           Control.Monad (forM_, forever, void, when)
-import           Control.Monad.Except (ExceptT)
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
-import           "contra-tracer" Control.Tracer
-import           Data.List (nub)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (isJust)
-import           Data.Text (Text, pack)
-import           Data.Time.Clock (UTCTime, getCurrentTime)
-import           Data.Version (showVersion)
-import           System.Metrics.Counter (Counter)
-import           System.Metrics.Gauge (Gauge)
-import           System.Metrics.Label (Label)
-import qualified System.Remote.Monitoring.Wai as EKG
-
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
 import           Cardano.BM.Backend.Monitoring (plugin)
@@ -65,7 +43,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerNam
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
-#if defined(SYSTEMD)
+#ifdef SYSTEMD
 import           Cardano.BM.Scribe.Systemd (plugin)
 #endif
 import           Cardano.BM.Setup (setupTrace_, shutdown)
@@ -73,10 +51,17 @@ import           Cardano.BM.Stats
 import           Cardano.BM.Stats.Resources
 import qualified Cardano.BM.Trace as Trace
 import           Cardano.BM.Tracing
-
 import qualified Cardano.Chain.Genesis as Gen
+import           Cardano.Git.Rev (gitRev)
 import qualified Cardano.Ledger.Shelley.API as SL
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Types
+import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.Tracing.Config (TraceOptions (..))
+import           Cardano.Tracing.OrphanInstances.Common ()
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
+import           Ouroboros.Consensus.Byron.ByronHFC (byronLedgerConfig)
 import           Ouroboros.Consensus.Byron.Ledger.Conversions
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork
@@ -86,13 +71,28 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger
 
-import           Cardano.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Types
-import           Cardano.Slotting.Slot (EpochSize (..))
-import           Cardano.Tracing.Config (TraceOptions (..))
-import           Cardano.Tracing.OrphanInstances.Common ()
+import qualified Control.Concurrent as Conc
+import qualified Control.Concurrent.Async as Async
+import           Control.Concurrent.MVar (MVar, newMVar)
+import           Control.Concurrent.STM (STM)
+import           Control.Exception (IOException)
+import           Control.Exception.Safe (MonadCatch)
+import           Control.Monad (forM_, forever, void, when)
+import           Control.Monad.Except (ExceptT)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
+import           Data.List (nub)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (isJust)
+import           Data.Text (Text, pack)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
+import           Data.Version (showVersion)
+import           GHC.Conc (labelThread, myThreadId)
+import           System.Metrics.Counter (Counter)
+import           System.Metrics.Gauge (Gauge)
+import           System.Metrics.Label (Label)
+import qualified System.Remote.Monitoring.Wai as EKG
+
 import           Paths_cardano_node (version)
 
 --------------------------------
@@ -255,7 +255,7 @@ createLoggingLayer ver nodeConfig' p = do
 
      when (ncLogMetrics nodeConfig) $
        -- Record node metrics, if configured
-       startCapturingMetrics (ncTraceConfig nodeConfig) trace
+       startCapturingResources (ncTraceConfig nodeConfig) trace
 
    mkLogLayer :: Configuration -> Switchboard Text -> Maybe EKGDirect -> Trace IO Text -> LoggingLayer
    mkLogLayer logConfig switchBoard mbEkgDirect trace =
@@ -278,14 +278,16 @@ createLoggingLayer ver nodeConfig' p = do
        , llEKGDirect = mbEkgDirect
        }
 
-   startCapturingMetrics :: TraceOptions
+   startCapturingResources :: TraceOptions
     -> Trace IO Text
     -> IO ()
-   startCapturingMetrics (TraceDispatcher _) _tr = do
+   startCapturingResources (TraceDispatcher _) _tr = do
       pure ()
 
-   startCapturingMetrics _ tr = do
-     void . Async.async . forever $ do
+   startCapturingResources _ tr = do
+     void . Async.async $ do
+      myThreadId >>= flip labelThread "Resource capturing (old tracing)"
+      forever $ do
        readResourceStats
          >>= maybe (pure ())
                    (traceResourceStats

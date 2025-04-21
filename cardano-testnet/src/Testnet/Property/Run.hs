@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Testnet.Property.Run
   ( runTestnet
   -- Ignore tests on various OSs
@@ -19,11 +21,12 @@ import           Data.Bool (bool)
 import           Data.String (IsString (..))
 import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
+import           System.Directory
 import qualified System.Exit as IO
 import qualified System.Info as SYS
 import qualified System.IO as IO
 
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integration, integrationWorkspace)
 import           Testnet.Start.Types
 
 import           Hedgehog (Property)
@@ -35,11 +38,11 @@ import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
 
-runTestnet :: (Conf -> H.Integration a) -> IO ()
-runTestnet tn = do
+runTestnet :: CardanoTestnetOptions -> (Conf -> H.Integration a) -> IO ()
+runTestnet tnOpts tn = do
   tvRunning <- STM.newTVarIO False
 
-  void . H.check $ testnetProperty $ \c -> do
+  void . H.check $ testnetProperty tnOpts $ \c -> do
     void $ tn c
     H.evalIO . STM.atomically $ STM.writeTVar tvRunning True
 
@@ -60,17 +63,30 @@ runTestnet tn = do
       IO.exitFailure
 
 
-testnetProperty :: (Conf -> H.Integration ()) -> H.Property
-testnetProperty tn = integrationWorkspace "testnet" $ \workspaceDir -> do
-  conf <- mkConf workspaceDir
-
-  -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
-  void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
-
-  void $ tn conf
-
-  H.failure -- Intentional failure to force failure report
-
+testnetProperty :: CardanoTestnetOptions -> (Conf -> H.Integration ()) -> H.Property
+testnetProperty CardanoTestnetOptions{cardanoOutputDir} runTn =
+  case cardanoOutputDir of
+      Nothing -> do
+        integrationWorkspace "testnet" $ \workspaceDir -> do
+          mkConf workspaceDir >>= forkAndRunTestnet
+      Just userOutputDir ->
+        integration $ do
+          absUserOutputDir <- H.evalIO $ makeAbsolute userOutputDir
+          dirExists <- H.evalIO $ doesDirectoryExist absUserOutputDir
+          (if dirExists then
+            -- Likely dangerous, but who are we to judge the user?
+            H.note_ $ "Reusing " <> absUserOutputDir
+          else do
+            liftIO $ createDirectory absUserOutputDir
+            H.note_ $ "Created " <> absUserOutputDir)
+          conf <- mkConf absUserOutputDir
+          forkAndRunTestnet conf
+  where
+    forkAndRunTestnet conf = do
+      -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
+      void $ H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
+      void $ runTn conf
+      H.failure -- Intentional failure to force failure report
 
 -- Ignore properties on various OSs
 

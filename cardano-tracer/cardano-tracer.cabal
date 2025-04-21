@@ -1,12 +1,12 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.3
+version:                0.3.2
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
                         Trace,
-copyright:              2022-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
+copyright:              2022-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -158,6 +158,12 @@ library
                       , utf8-string
                       , vector
 
+  if flag(systemd) && os(linux)
+    build-depends:      libsystemd-journal >= 1.4.4
+
+  if (flag(systemd) && os(linux)) || flag(rtview)
+    build-depends:      unordered-containers
+
   build-depends:        aeson
                       , async
                       , auto-update
@@ -170,7 +176,7 @@ library
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward >= 0.8
+                      , ekg-forward >= 0.9
                       , ekg-wai
                       , extra
                       , filepath
@@ -178,7 +184,7 @@ library
                       , mime-mail
                       , network-mux
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.19
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
@@ -191,13 +197,9 @@ library
                       , trace-dispatcher
                       , trace-forward
                       , trace-resources
-                      , unordered-containers
                       , wai ^>= 3.2
                       , warp ^>= 3.4
                       , yaml
-
-  if flag(systemd) && os(linux)
-    build-depends:      libsystemd-journal >= 1.4.4
 
   if os(windows)
     build-depends:    Win32

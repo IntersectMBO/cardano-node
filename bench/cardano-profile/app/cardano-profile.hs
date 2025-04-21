@@ -4,65 +4,154 @@
 
 import           Prelude
 
-import           Data.Function ((&))
+import           Data.Bool (bool)
 import           System.Environment (lookupEnv)
+import           GHC.Stack (HasCallStack)
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
 -- Package: aeson-pretty
 import           Data.Aeson.Encode.Pretty as Aeson
 -- Package: bytestring.
 import qualified Data.ByteString.Lazy.Char8 as BSL8
+-- Package: containers.
+import qualified Data.Map.Strict as Map
 -- Package: optparse-applicative-fork.
 import qualified Options.Applicative as OA
 -- Package: self.
-import qualified Cardano.Benchmarking.Profile as Profiles
+import qualified Cardano.Benchmarking.Profile as Profile
+import qualified Cardano.Benchmarking.Profile.Genesis as Genesis
 import qualified Cardano.Benchmarking.Profile.NodeSpecs as NodeSpecs
 import qualified Cardano.Benchmarking.Profile.Types as Types
+-- Profiles to export!
+-- Static / built-in / profiles part of the test-suite.
+import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesNoEraCloud)
+import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesNoEraEmpty)
+import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesNoEraForgeStress)
+import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesNoEraK3)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesNoEraDense)
+import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesNoEraDish)
+import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesNoEraMiniature)
+import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesNoEraModel)
+import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
+import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
+import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
+-- Dynamic profiles.
+import           Cardano.Benchmarking.Profile.Playground                  (profilesNoEraPlayground)
+
+--------------------------------------------------------------------------------
+
+allProfiles :: [Types.Profile]
+allProfiles = performanceAndTracingProfiles ++ playgroundProfiles
+
+cloudProfiles :: [Types.Profile]
+cloudProfiles = profilesNoEraCloud
+
+-- "families" of profiles. Grouped by common properties or intentions.
+performanceAndTracingProfiles :: [Types.Profile]
+performanceAndTracingProfiles =
+     cloudProfiles
+  ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
+  ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
+  ++ profilesNoEraK3               -- K3
+  -- Legacy.
+  ++ profilesNoEraDense
+  ++ profilesNoEraDish
+  ++ profilesNoEraMiniature
+  ++ profilesNoEraModel            --
+  ++ profilesNoEraPlutuscall       --
+  -- Empty datasets not running `FixedLoaded`.
+  ++ profilesNoEraChainsync        -- Scenario `Chainsync`
+  ++ profilesNoEraIdle             -- Scenario `Idle`
+  ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
+  -- Extra modules
+  ++ profilesNoEraScalingLocal
+  ++ profilesNoEraScalingCloud
+
+-- Have fun!
+playgroundProfiles :: [Types.Profile]
+playgroundProfiles = profilesNoEraPlayground
 
 --------------------------------------------------------------------------------
 
 data Cli =
-    Names
+    NamesNoEra
   | NamesCloudNoEra
-  | All
-  | ByName PrettyPrint String
+  | Names
+  | All [CliOptions]
+  | ByName [CliOptions] String
   | LibMK
   | NodeSpecs FilePath FilePath
+  | EpochTimeline Integer
   | ToJson String
   | FromJson String
 
-data PrettyPrint =
-    PrettyPrint
-  | SingleLine
+data CliOptions =
+    OptPrettyPrint
+  | OptWithEra
+  | OptWithPlayground
+  deriving Eq
 
 --------------------------------------------------------------------------------
+
+-- | Construct Map with profile name as key, without eras (in name and object).
+toMap :: HasCallStack => Maybe Aeson.Object -> [Types.Profile] -> Map.Map String Types.Profile
+toMap maybeObj ps = Map.fromList $ map
+  (\p ->
+    ( Types.name p
+    , Profile.realize $
+        case maybeObj of
+          Nothing    ->  p
+          (Just obj) -> (p {Types.overlay = obj})
+    )
+  )
+  ps
+
+--------------------------------------------------------------------------------
+
+encoder :: Aeson.ToJSON a => [CliOptions] -> a -> BSL8.ByteString
+encoder opts
+  | OptPrettyPrint `elem` opts = Aeson.encodePretty' prettyConf
+  | otherwise                  = Aeson.encode
+  where
+    prettyConf  = defConfig
+      { confCompare = compare
+      , confTrailingNewline = True
+      , confIndent = Spaces 2
+      }
 
 main :: IO ()
 main = do
   cli <- getOpts
   case cli of
-    -- Print all profile names.
-    Names -> BSL8.putStrLn $ Aeson.encode Profiles.names
-    -- Print all cloud profile (-nomadperf) names.
-    NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode Profiles.namesCloudNoEra
+    -- Print all profile names without the era suffix (does not apply overlays).
+    NamesNoEra -> BSL8.putStrLn $ Aeson.encode $ map Types.name allProfiles
+    -- Print all cloud profile (-nomadperf) names (does not apply overlays).
+    NamesCloudNoEra -> BSL8.putStrLn $ Aeson.encode $ map Types.name cloudProfiles
+    -- Print all profile names (applies overlays!!!!!).
+    Names -> do
+      maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
+      BSL8.putStrLn $ Aeson.encode $ Map.keys $ Profile.addEras $ toMap maybeObj allProfiles
     -- Print a map with all profiles, with an optional overlay.
-    All -> do
-      obj <- lookupOverlay
-      BSL8.putStrLn $ Aeson.encode $ Profiles.profiles obj
+    All cliOptions -> do
+      let
+        targetProfiles = if OptWithPlayground `elem` cliOptions then allProfiles else performanceAndTracingProfiles
+        enc            = encoder cliOptions
+        withEraSuffs   = OptWithEra `elem` cliOptions
+      maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
+      BSL8.putStrLn $ enc $ bool id Profile.addEras withEraSuffs $ toMap maybeObj targetProfiles
     -- Print a single profiles, with an optional overlay.
-    (ByName prettyPrint profileName) -> do
-      obj <- lookupOverlay
-      case Profiles.byName profileName obj of
-        Nothing -> error $ "No profile named \"" ++ profileName ++ "\""
-        (Just profile) ->
-          let
-            prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
-            aeson       = profile & case prettyPrint of
-              PrettyPrint -> Aeson.encodePretty' prettyConf
-              SingleLine  -> Aeson.encode
-          in BSL8.putStrLn aeson
+    ByName cliOptions profileName -> do
+      maybeObj <- lookupOverlay -- Ignored by `NamesNoEra` and `NamesCloudNoEra`.
+      let
+        enc      = encoder cliOptions
+        profiles = Profile.addEras $ toMap maybeObj allProfiles
+      case Map.lookup profileName profiles of
+        Nothing      -> error $ "No profile named \"" ++ profileName ++ "\""
+        Just profile -> BSL8.putStrLn $ enc profile
     LibMK -> do
-      mapM_ putStrLn Profiles.libMk
+      mapM_ putStrLn libMk
     (NodeSpecs profilePath topologyPath) -> do
       eitherProfile <- Aeson.eitherDecodeFileStrict profilePath
       let profile = case eitherProfile of
@@ -75,6 +164,10 @@ main = do
                         error $ "Not a valid topology: " ++ errorMsg
                       (Right value) -> value
       BSL8.putStrLn $ Aeson.encode $ NodeSpecs.nodeSpecs profile topology
+    (EpochTimeline upToEpochNumber) -> do
+      genesisAeson <- Genesis.epochTimeline upToEpochNumber
+      let prettyConf  = defConfig { confCompare = compare, confTrailingNewline = True }
+      BSL8.putStrLn $ Aeson.encodePretty' prettyConf genesisAeson
     -- Print a single profiles, with an optional overlay.
     (ToJson filePath) -> print filePath
 --      str <- readFile filePath
@@ -87,13 +180,13 @@ main = do
         (Left errorMsg) -> fail errorMsg
         (Right profile) -> print (profile :: Types.Profile)
 
-lookupOverlay :: IO Aeson.Object
+lookupOverlay :: IO (Maybe Aeson.Object)
 lookupOverlay = do
   maybeOverlay <- lookupEnv "WB_PROFILE_OVERLAY"
-  case maybeOverlay of
-    Nothing -> mempty
+  return $ case maybeOverlay of
+    Nothing -> Nothing
     (Just str) -> case Aeson.decode (BSL8.pack str) of
-                    (Just (Aeson.Object keyMap)) -> return keyMap
+                    (Just (Aeson.Object keyMap)) -> Just keyMap
                     _ -> error ""
 
 getOpts :: IO Cli
@@ -106,33 +199,51 @@ getOpts = OA.execParser $
 
 cliParser :: OA.Parser Cli
 cliParser = OA.hsubparser $
+      OA.command "names-noera"
+        (OA.info
+          (pure NamesNoEra)
+          (OA.fullDesc <> OA.header "names-noera" <> OA.progDesc "All profiles names (no era suffix)")
+        )
+  <>
+      OA.command "names-cloud-noera"
+        (OA.info
+          (pure NamesCloudNoEra)
+          (OA.fullDesc <> OA.header "names-cloud-noera" <> OA.progDesc "All cloud profiles names (no era suffix)")
+        )
+  <>
       OA.command "names"
         (OA.info
           (pure Names)
           (OA.fullDesc <> OA.header "names" <> OA.progDesc "All profiles names")
         )
   <>
-      OA.command "names-cloud-noera"
-        (OA.info
-          (pure NamesCloudNoEra)
-          (OA.fullDesc <> OA.header "names" <> OA.progDesc "All cloud profiles names (no era suffix)")
-        )
-  <>
       OA.command "all"
         (OA.info
-          (pure All)
+          (pure $ All [OptWithEra, OptWithPlayground])
           (OA.fullDesc <> OA.header "all" <> OA.progDesc "Create all profiles")
+        )
+  <>
+      OA.command "all-noera"
+        (OA.info
+          (pure $ All [OptWithPlayground])
+          (OA.fullDesc <> OA.header "all-noera" <> OA.progDesc "Create all profiles (no era suffix)")
+        )
+  <>
+      OA.command "allpt-noera"
+        (OA.info
+          (pure $ All [OptPrettyPrint])
+          (OA.fullDesc <> OA.header "allpt-noera" <> OA.progDesc "Create P&T profiles (no era suffix)")
         )
   <>
       OA.command "by-name"
         (OA.info
-          (ByName SingleLine <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName [] <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name" <> OA.progDesc "Create profile")
         )
   <>
       OA.command "by-name-pretty"
         (OA.info
-          (ByName PrettyPrint <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
+          (ByName [OptPrettyPrint] <$> OA.argument OA.str (OA.metavar "PROFILE-NAME"))
           (OA.fullDesc <> OA.header "by-name-pretty" <> OA.progDesc "Create profile (pretty-printed)")
         )
   <>
@@ -151,6 +262,12 @@ cliParser = OA.hsubparser $
           (OA.fullDesc <> OA.header "node-specs" <> OA.progDesc "Create the profile's node-specs.json file")
         )
   <>
+      OA.command "epoch-timeline"
+        (OA.info
+          (EpochTimeline <$> OA.argument OA.auto (OA.metavar "EPOCH-NUMBER"))
+          (OA.fullDesc <> OA.header "epoch-timeline" <> OA.progDesc "Construct the genesis object")
+        )
+  <>
       OA.command "to-json"
         (OA.info
           (ToJson <$> OA.argument OA.str (OA.metavar "FILE"))
@@ -162,6 +279,73 @@ cliParser = OA.hsubparser $
           (FromJson <$> OA.argument OA.str (OA.metavar "FILE"))
           (OA.fullDesc <> OA.header "from-json" <> OA.progDesc "JSON to data type")
         )
+
+-- Makefile utils.
+--------------------------------------------------------------------------------
+
+libMKLocations :: [ (String, [ (String, [Types.Profile]) ] ) ]
+libMKLocations =
+  [
+    -- Local profiles.
+    ("LOCAL_PROFILES", [
+      -- Families of local profiles.
+      ("PROFILES_EMPTY"        , profilesNoEraEmpty)
+    , ("PROFILES_MINIATURE"    , profilesNoEraMiniature)
+    , ("PROFILES_FORGE_STRESS" , profilesNoEraForgeStress)
+    , ("PROFILES_PLUTUSCALL"   , profilesNoEraPlutuscall)
+    , ("PROFILES_MODEL"        , profilesNoEraModel)
+    , ("PROFILES_K3"           , profilesNoEraK3)
+    , ("PROFILES_SCENARIOS"    ,
+         profilesNoEraChainsync
+      ++ profilesNoEraIdle
+      ++ profilesNoEraTracerOnly
+      )
+    , ("PROFILES_LEGACY"       ,
+         profilesNoEraDense
+      ++ profilesNoEraDish
+      )
+    , ("PROFILES_SCALING"      , profilesNoEraScalingLocal)
+    ])
+  -- Cloud profiles.
+  , ("CLOUD_PROFILES", [
+      -- Families of cloud profiles.
+      ("PROFILES_NOMAD_PERF"   , profilesNoEraCloud)
+    , ("PROFILES_NOMAD_PERFSSD", profilesNoEraScalingCloud)
+    ])
+  ]
+
+libMk :: [String]
+libMk =
+    foldMap
+      (\(_, families) ->
+        map
+          (\(familyName, ps) ->
+            let profileNames = map Types.name ps
+            in
+              -- For example:
+              -- PROFILES_EMPTY := fast fast-solo ...
+              -- PROFILES_MINIATURE := ci-bench ...
+              familyName ++ " := " ++ unwords profileNames
+          )
+          families
+      )
+      libMKLocations
+  ++
+    [""] -- Empty line.
+  ++
+    foldMap
+      (\(locationName, families) ->
+        map
+          (\(familyName, _) ->
+            -- LOCAL_PROFILES += $(PROFILES_VENDOR)
+            -- ...
+            -- CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
+            -- ...
+            locationName ++ " += $(" ++ familyName ++ ")"
+          )
+          families
+      )
+      libMKLocations
 
 --------------------------------------------------------------------------------
 

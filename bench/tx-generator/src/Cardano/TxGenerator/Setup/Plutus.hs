@@ -26,8 +26,7 @@ import           Control.Monad.Writer (runWriter)
 import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..), fromAlonzoExUnits,
-                   protocolParamCostModels, toPlutusData)
+import           Cardano.Api.Shelley (PlutusScript (..), fromAlonzoExUnits, toPlutusData)
 import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 
 import qualified PlutusLedgerApi.V1 as PlutusV1
@@ -35,11 +34,14 @@ import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx.AssocMap as AssocMap (empty)
 
-import           Cardano.TxGenerator.Types (TxGenError (..))
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters(..))
+import           Cardano.TxGenerator.Types (TxGenError (..), TxGenPlutusResolvedTo (..))
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #endif
 import           Control.Exception (SomeException (..), try)
+import           System.FilePath ((<.>), (</>))
+
 import           Paths_tx_generator
 
 type ProtocolVersion = (Int, Int)
@@ -58,19 +60,22 @@ resolveFromLibrary = const Nothing
 -- What the @WITH_LIBRARY@ flag signifies is to use a set of statically-
 -- defined (via TH) scripts for the script name lookups instead of a
 -- set of library files.
-readPlutusScript :: Either String FilePath -> IO (Either TxGenError ScriptInAnyLang)
+readPlutusScript :: Either String FilePath -> IO (Either TxGenError (ScriptInAnyLang, TxGenPlutusResolvedTo))
 readPlutusScript (Left s)
   = case resolveFromLibrary s of
-      Just s' -> pure $ Right s'
-      Nothing -> try (getDataFileName $ "scripts-fallback/" ++ s ++ ".plutus") >>= either
+      Just s' -> pure $ Right (s', ResolvedToLibrary s)
+      Nothing -> try (getDataFileName $ "scripts-fallback" </> asFileName) >>= either
         (\(SomeException e) -> pure $ Left $ TxGenError $ show e)
-        (readPlutusScript . Right)
+        doLoad
+  where
+    asFileName = s <.> "plutus"
+    doLoad fp  = second (second (const $ ResolvedToFallback asFileName)) <$> readPlutusScript (Right fp)
 readPlutusScript (Right fp)
   = runExceptT $ do
     script <- firstExceptT ApiError $
       readFileScriptInAnyLang fp
     case script of
-      ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure script
+      ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure (script, ResolvedToFileName fp)
       ScriptInAnyLang lang _ -> throwE $ TxGenError $ "readPlutusScript: only PlutusScript supported, found: " ++ show lang
 
 -- | 'preExecutePlutusScript' is a front end for the internal

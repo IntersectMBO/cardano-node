@@ -40,10 +40,10 @@ module Cardano.Benchmarking.Script.Types (
 
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
 import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
 import           Cardano.TxGenerator.Types
 
@@ -117,7 +117,7 @@ data Action where
   -- with testing and quick fixes.
   Reserved           :: [String] -> Action
   -- 'WaitForEra' loops doing delays/sleeps until the current era matches.
-  WaitForEra         :: !AnyCardanoEra -> Action
+  WaitForEra         :: !AnyShelleyBasedEra -> Action
   -- | 'SetProtocolParameters' has one option to read from a file and
   -- another to pass directly and just sets a state variable for
   -- the @protoParams@ field of 'Cardano.Benchmarking.Script.Env.Env'.

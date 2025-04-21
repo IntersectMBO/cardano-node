@@ -20,6 +20,7 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Shelley.State as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 
 import           Prelude
@@ -60,7 +61,7 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
-  | ExecutableRelatedFailure ExecutableError
+  | ExecutableRelatedFailure SomeException
   | FileRelatedFailure IOException
   | NodeExecutableError (Doc Ann)
   | NodeAddressAlreadyInUseError (Doc Ann)
@@ -127,6 +128,7 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
+      nodePidFile = logDir </> node </> "node.pid"
       socketRelPath = socketDir </> node </> "sock"
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 
@@ -142,16 +144,13 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
        left MaxSprocketLengthExceededError
 
     let socketAbsPath = H.sprocketSystemName sprocket
+        completeNodeCmd =  nodeCmd ++
+                             [ "--socket-path", H.sprocketArgumentName sprocket
+                             , "--port", show port
+                             , "--host-addr", showIpv4Address ipv4
+                             ]
 
-    nodeProcess
-      <- firstExceptT ExecutableRelatedFailure
-           $ hoistExceptT liftIO $ procNode $ mconcat
-                         [ nodeCmd
-                         , [ "--socket-path", H.sprocketArgumentName sprocket
-                           , "--port", show port
-                           , "--host-addr", showIpv4Address ipv4
-                           ]
-                         ]
+    nodeProcess <- newExceptT . fmap (first ExecutableRelatedFailure) . try $ procNode completeNodeCmd
 
     -- The port number if it is obtained using 'H.randomPort', it is firstly bound to and then closed. The closing
     -- and release in the operating system is done asynchronously and can be slow. Here we wait until the port
@@ -170,8 +169,11 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
     -- We force the evaluation of initiateProcess so we can be sure that
     -- the process has started. This allows us to read stderr in order
     -- to fail early on errors generated from the cardano-node binary.
-    _ <- liftIO (IO.getPid hProcess)
+    pid <- liftIO (IO.getPid hProcess)
       >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
+
+    -- We then log the pid in the temp dir structure.
+    liftIO $ IO.writeFile nodePidFile $ show pid
 
     -- Wait for socket to be created
     eSprocketError <-
@@ -350,7 +352,7 @@ calculateEpochStateDiff current next =
      then "No changes in epoch state"
      else ppDiff diffResult
 
-instance (L.EraTxOut ledgerera, L.EraGov ledgerera) => ToJSON (L.NewEpochState ledgerera) where
+instance (L.EraTxOut ledgerera, L.EraGov ledgerera, L.EraCertState ledgerera, L.EraStake ledgerera) => ToJSON (L.NewEpochState ledgerera) where
   toJSON (L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu nesPd _stashedAvvm) =
     object
       [ "currentEpoch" .= nesEL

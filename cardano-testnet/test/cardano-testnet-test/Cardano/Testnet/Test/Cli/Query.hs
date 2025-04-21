@@ -13,23 +13,22 @@ module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
   ) where
 
-import           Cardano.Api
+import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
-import qualified Cardano.Api.Genesis as Api
-import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), StandardCrypto,
-                   extractHash, unboundRational)
+import           Cardano.Api.Internal.Genesis as Api
+import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), extractHash,
+                   unboundRational)
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey), StakePoolKey)
+import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
 
-import           Cardano.CLI.Types.Key (VerificationKeyOrFile (VerificationKeyFilePath),
+import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFilePath),
                    readVerificationKeyOrFile)
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
+import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput)
 import           Cardano.Crypto.Hash (hashToStringAsHex)
 import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Core (valueTxOutL)
-import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL,
-                   utxosUtxoL)
-import qualified Cardano.Ledger.UTxO as L
+import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL, utxoL)
+import qualified Cardano.Ledger.State as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -315,6 +314,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- stake-snapshot
       H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-snapshot", "--all-stake-pools" ]
 
+    TestQueryStakePoolDefaultVoteCmd -> pure ()
     TestQueryKesPeriodInfoCmd ->
       -- kes-period-info
       -- This is tested in hprop_kes_period_info in Cardano.Testnet.Test.Cli.KesPeriodInfo
@@ -416,7 +416,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     TestQueryDRepStakeDistributionCmd -> do
       -- drep-stake-distribution
       -- to stdout
-      drepStakeDistribution :: [(L.DRep StandardCrypto, L.Coin)] <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
+      drepStakeDistribution :: [(L.DRep, L.Coin)] <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-stake-distribution", "--all-dreps" ]
 
       -- TODO: we could check that the Coin amount below is the one reported
       -- by query stake-address-info
@@ -447,6 +447,14 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       -- TODO @cardano-cli team
       pure ()
 
+    TestQueryRatifyStateCmd -> do
+      -- TODO @cardano-cli team
+      pure ()
+
+    TestQueryFuturePParamsCmd -> do
+      -- TODO @cardano-cli team
+      pure ()
+
   where
   -- | Wait for the part of the epoch when futurePParams are known
   waitForFuturePParamsToStabilise
@@ -456,7 +464,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     => MonadAssertion m
     => MonadCatch m
     => EpochStateView
-    -> ShelleyGenesis StandardCrypto
+    -> ShelleyGenesis
     -> m SlotNo -- ^ The block number reached
   waitForFuturePParamsToStabilise epochStateView shelleyGenesisConf = withFrozenCallStack $
     H.noteShowM . H.nothingFailM $
@@ -468,7 +476,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
   -- We wait till a slot after: 4 * securityParam / slotCoeff
   -- If we query 'govState' before that we get 'PotentialPParamsUpdate'
   -- in 'futurePParams' field
-  areFuturePParamsStable :: ShelleyGenesis StandardCrypto -> SlotNo -> Bool
+  areFuturePParamsStable :: ShelleyGenesis -> SlotNo -> Bool
   areFuturePParamsStable
     ShelleyGenesis{ Api.sgActiveSlotsCoeff = activeSlotsCoeff
                   , Api.sgEpochLength = L.EpochSize epochLength
@@ -476,7 +484,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
                   }
     (SlotNo slotNo) =
     let firstSlotOfEpoch = slotNo `div` epochLength * epochLength
-        slotsInEpochToWaitOut = ceiling (4 * fromIntegral securityParam / unboundRational activeSlotsCoeff) + 1
+        slotsInEpochToWaitOut = ceiling (4 * fromIntegral (L.unNonZero securityParam) / unboundRational activeSlotsCoeff) + 1
         minSlotInThisEpochToWaitTo = firstSlotOfEpoch + slotsInEpochToWaitOut + 1
     in slotNo >= minSlotInThisEpochToWaitTo
 
@@ -501,7 +509,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
           Nothing | hashToStringAsHex (extractHash thisTxId) == txId &&
                     valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just amount -> Just $ fromIntegral thisTxIx
                   | otherwise -> Nothing
-          x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosUtxoL)
+          x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxoL)
 
 -- | @redactJsonStringFieldInFile [(k0, v0), (k1, v1), ..] sourceFilePath targetFilePath@ reads the JSON at @sourceFilePath@, and then
 -- replaces the value associated to @k0@ by @v0@, replaces the value associated to @k1@ by @v1@, etc.

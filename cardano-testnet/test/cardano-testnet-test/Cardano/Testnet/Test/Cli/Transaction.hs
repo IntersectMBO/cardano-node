@@ -12,6 +12,8 @@ import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
+import           Cardano.CLI.Type.Common
+import           Cardano.Crypto.Hash.Class (hashToStringAsHex)
 import qualified Cardano.Ledger.Core as L
 import           Cardano.Testnet
 
@@ -28,7 +30,7 @@ import qualified System.Info as SYS
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query (findLargestUtxoWithAddress, findUtxosWithAddress,
                    getEpochStateView, waitForBlocks)
-import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Process.Run
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
@@ -108,10 +110,11 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     , "--out-file", txbodySignedFp
     ]
 
-  void $ execCli' execConfig
+  txSubmissionResult :: TxSubmissionResult <- execCliStdoutToJson execConfig
     [ anyEraToString cEra, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
+  let TxId txHash = txhash txSubmissionResult
 
   H.noteShowM_ $ waitForBlocks epochStateView 1
 
@@ -120,6 +123,12 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     txouts2 <- H.noteShow $ L.unCoin . txOutValueToLovelace . txOutValue . snd <$> toList utxo2
     H.assertWith txouts2 $ \txouts2' ->
       [transferAmount, initialAmount - transferAmount - txFee] == txouts2'
+
+    -- Check that the transaction output exists, when querying by id:
+    void $ execCli' execConfig
+      [ anyEraToString cEra, "query", "utxo"
+      , "--tx-in", hashToStringAsHex txHash <> "#0"
+      ]
 
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v

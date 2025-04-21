@@ -133,38 +133,40 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
        , NtN.peerSharing = ownPeerSharing
        , NtN.query = False
        }) $
-      mkApp $
-      NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters
-        NtN.NodeToNodeProtocols
-          { NtN.chainSyncProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
-                                      runPeer
-                                        mempty
-                                        (cChainSyncCodec myCodecs)
-                                        channel
-                                        chainSyncPeerNull
-          , NtN.blockFetchProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
-                                       runPeer
-                                         mempty
-                                         (cBlockFetchCodec myCodecs)
-                                         channel
-                                         (blockFetchClientPeer blockFetchClientNull)
-          , NtN.keepAliveProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
-                                        kaClient n2nVer (remoteAddress $ micConnectionId ctx) channel
-          , NtN.txSubmissionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+      \n2nData ->
+        mkApp $
+        NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters
+          NtN.NodeToNodeProtocols
+            { NtN.chainSyncProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                         runPeer
-                                           submissionTracer
-                                           (cTxSubmission2Codec myCodecs)
-                                           channel
-                                           (txSubmissionClientPeer myTxSubClient)
-          , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
-                                        runPeer
+                                          mempty
+                                          (cChainSyncCodec myCodecs)
+                                          channel
+                                          chainSyncPeerNull
+            , NtN.blockFetchProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+                                         runPeer
                                            mempty
-                                           (cPeerSharingCodec myCodecs)
+                                           (cBlockFetchCodec myCodecs)
                                            channel
-                                           (peerSharingClientPeer peerSharingClientNull)
-          }
-        n2nVer
-        ownPeerSharing
+                                           (blockFetchClientPeer blockFetchClientNull)
+            , NtN.keepAliveProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
+                                          kaClient n2nVer (remoteAddress $ micConnectionId ctx) channel
+            , NtN.txSubmissionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+                                          runPeer
+                                             submissionTracer
+                                             (cTxSubmission2Codec myCodecs)
+                                             channel
+                                             (txSubmissionClientPeer myTxSubClient)
+            , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+                                          runPeer
+                                             mempty
+                                             (cPeerSharingCodec myCodecs)
+                                             channel
+                                             (peerSharingClientPeer peerSharingClientNull)
+            }
+          n2nVer
+          n2nData
+
   -- Stolen from: Ouroboros/Consensus/Network/NodeToNode.hs
   kaClient
     :: Ord remotePeer

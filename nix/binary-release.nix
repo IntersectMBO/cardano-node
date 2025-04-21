@@ -18,7 +18,7 @@ let
   name = "cardano-node-${version}-${platform}";
 
   environments = lib.getAttrs
-    [ "mainnet" "preprod" "preview" "sanchonet" ]
+    [ "mainnet" "preprod" "preview" ]
     pkgs.cardanoLib.environments;
 
 
@@ -32,6 +32,8 @@ let
         AlonzoGenesisFile = "alonzo-genesis.json";
       } // lib.optionalAttrs (env.nodeConfig ? ConwayGenesisFile) {
         ConwayGenesisFile = "conway-genesis.json";
+      } // lib.optionalAttrs (env.nodeConfig ? CheckpointsFile) {
+        CheckpointsFile = "checkpoints.json";
       };
       nodeConfig = pkgs.writeText
         "config.json"
@@ -42,6 +44,10 @@ let
         "config-bp.json"
         (builtins.toJSON
           (env.nodeConfigBp // genesisAttrs));
+
+      peerSnapshot = pkgs.writeText
+        "peer-snapshot.json"
+        (builtins.toJSON env.peerSnapshot);
 
       topologyConfig = pkgs.cardanoLib.mkTopology env;
 
@@ -54,6 +60,7 @@ let
         mkdir -p "share/${name}"
         jq . < "${nodeConfig}" > share/${name}/config.json
         jq . < "${nodeConfigBp}" > share/${name}/config-bp.json
+        jq . < "${peerSnapshot}" > share/${name}/peer-snapshot.json
         jq . < "${topologyConfig}" > share/${name}/topology.json
         cp -n --remove-destination -v \
           "${ByronGenesisFile}" \
@@ -68,6 +75,11 @@ let
         cp -n --remove-destination -v \
           "${env.nodeConfig.ConwayGenesisFile}" \
            share/${name}/conway-genesis.json
+        ''}
+        ${lib.optionalString (env.nodeConfig ? CheckpointsFile) ''
+        cp -n --remove-destination -v \
+          "${env.nodeConfig.CheckpointsFile}" \
+           share/${name}/checkpoints.json
         ''}
       '';
 

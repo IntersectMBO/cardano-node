@@ -113,10 +113,11 @@ launchAcceptorsSimple mode localSock dpName = do
     , logging        = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
     , rotation       = Nothing
     , verbosity      = Just Minimum
-    , metricsComp    = Nothing
+    , metricsNoSuffix = Nothing
     , metricsHelp    = Nothing
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
+    , ekgRequestFull = Nothing
     }
 
 -- | To be able to ask any 'DataPoint' by the name without knowing the actual type,

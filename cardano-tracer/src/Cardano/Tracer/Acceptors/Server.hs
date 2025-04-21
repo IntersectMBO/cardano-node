@@ -83,6 +83,7 @@ runAcceptorsServer tracerEnv tracerEnvRTView p ( ekgConfig, tfConfig, dpfConfig)
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = protocol
          }
@@ -123,7 +124,7 @@ doListenToForwarder snocket address netMagic timeLimits app = do
       (simpleSingletonVersions
         ForwardingV_1
         (ForwardingVersionData $ NetworkMagic netMagic)
-        (SomeResponderApplication app)
+        (\_ -> SomeResponderApplication app)
       )
       nullErrorPolicies
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.

@@ -20,13 +20,12 @@ import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Utils
-import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), OuroborosApplication (..),
-                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+                   MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
+                   miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
@@ -52,6 +51,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
 import           GHC.Generics
+import qualified Network.Mux as Mux
 import           System.Directory
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
@@ -123,6 +123,7 @@ launchForwardersSimple' ts iomgr mode p connSize disconnSize = do
       , EKGF.acceptorEndpoint = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest = const $ return ()
+      , EKGF.useDummyForwarder = False
       }
 
   tfConfig :: TOF.ForwarderConfiguration TraceObject
@@ -167,10 +168,10 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       (simpleSingletonVersions
          ForwardingV_1
          (ForwardingVersionData $ unI tsNetworkMagic)
-         (forwarderApp [ (forwardEKGMetrics ekgConfig store,       1)
-                       , (forwardTraceObjectsInit tfConfig sink,   2)
-                       , (forwardDataPointsInit dpfConfig dpStore, 3)
-                       ]
+         (const $ forwarderApp [ (forwardEKGMetrics ekgConfig store,       1)
+                               , (forwardTraceObjectsInit tfConfig sink,   2)
+                               , (forwardDataPointsInit dpfConfig dpStore, 3)
+                               ]
          )
       )
       Nothing
@@ -195,6 +196,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
@@ -238,8 +240,8 @@ doListenToAcceptor TestSetup{..}
               (HandshakeCallbacks acceptableVersion queryVersion)
               (simpleSingletonVersions
                  ForwardingV_1
-                 (ForwardingVersionData $ unI tsNetworkMagic) -- Taken from mainnet shelley genesis file.
-                 (SomeResponderApplication $
+                 (ForwardingVersionData $ unI tsNetworkMagic)
+                 (const $ SomeResponderApplication $
                     forwarderApp [ (forwardEKGMetricsResp ekgConfig store,   1)
                                  , (forwardTraceObjectsResp tfConfig sink,   2)
                                  , (forwardDataPointsResp dpfConfig dpStore, 3)
@@ -256,6 +258,7 @@ doListenToAcceptor TestSetup{..}
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }

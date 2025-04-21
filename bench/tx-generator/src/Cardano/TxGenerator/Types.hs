@@ -14,19 +14,18 @@ module  Cardano.TxGenerator.Types
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
 
 import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
+import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
 
 import           GHC.Generics (Generic)
 import           GHC.Natural
 import           Prettyprinter
 
 -- convenience alias for use trhougout the API
-type ShelleyGenesis       = Ledger.ShelleyGenesis StandardCrypto
+type ShelleyGenesis       = Ledger.ShelleyGenesis
 
 -- some type aliases to keep compatibility with code in Cardano.Benchmarking
 type NumberOfInputsPerTx  = Int
@@ -84,8 +83,9 @@ data TxGenConfig = TxGenConfig
 
 
 data TxGenPlutusType
-  = LimitSaturationLoop                         -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx script budget
-  | LimitTxPerBlock_8                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 8 Txs into block script budget
+  = LimitSaturationLoop                         -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx budget
+  | LimitTxPerBlock_8                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 8 Txs into block budget
+  | LimitTxPerBlock_4                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 4 Txs into block budget
   | BenchCustomCall                             -- ^ Built-in script for benchmarking various complexity of data passed via Plutus API
   | CustomScript
   deriving (Show, Eq, Enum, Generic, FromJSON, ToJSON)
@@ -93,7 +93,7 @@ data TxGenPlutusType
 data TxGenPlutusParams
   = PlutusOn                                    -- ^ Generate Plutus Txs for given script
       { plutusType        :: !TxGenPlutusType
-      , plutusScript      :: !(Either String FilePath) -- ^ Path to the Plutus script
+      , plutusScript      :: !(Either String FilePath) -- ^ name or path of the Plutus script
       , plutusDatum       :: !(Maybe FilePath)  -- ^ Datum passed to the Plutus script (JSON file in ScriptData schema)
       , plutusRedeemer    :: !(Maybe FilePath)  -- ^ Redeemer passed to the Plutus script (JSON file in ScriptData schema)
       , plutusExecMemory  :: !(Maybe Natural)   -- ^ Max. memory for ExecutionUnits (overriding corresponding protocol parameter)
@@ -102,13 +102,26 @@ data TxGenPlutusParams
   | PlutusOff                                   -- ^ Do not generate Plutus Txs
   deriving (Show, Eq)
 
+-- | Documents how the `plutusScript` parameter above was eventually resolved
+data TxGenPlutusResolvedTo
+  = ResolvedToLibrary     String      -- ^ source is the library from the plutus-scripts-bench package
+  | ResolvedToFallback    FilePath    -- ^ source it the tx-generator's scripts-fallback data directory
+  | ResolvedToFileName    FilePath    -- ^ source is a .plutus file
+  deriving Eq
+
+instance Show TxGenPlutusResolvedTo where
+  show = \case
+    ResolvedToLibrary n ->   "builtin: " ++ n
+    ResolvedToFallback f  -> "fallback: " ++ f
+    ResolvedToFileName f  -> "file: " ++ f
+
 isPlutusMode :: TxGenPlutusParams -> Bool
 isPlutusMode
   = (/= PlutusOff)
 
 hasLoopCalibration :: TxGenPlutusType -> Bool
 hasLoopCalibration t
-  = t == LimitTxPerBlock_8 || t == LimitSaturationLoop
+  = t == LimitTxPerBlock_8 || t == LimitTxPerBlock_4 || t == LimitSaturationLoop
 
 hasStaticBudget :: TxGenPlutusParams -> Maybe ExecutionUnits
 hasStaticBudget
@@ -117,10 +130,11 @@ hasStaticBudget
     _ -> Nothing
 
 data PlutusAutoBudget
-  = PlutusAutoBudget                           -- ^ Specifies a budget and parameters for a PlutusAuto loop script
-    { autoBudgetUnits     :: !ExecutionUnits   -- ^ execution units available per Tx input / script run
-    , autoBudgetDatum     :: !ScriptData       -- ^ datum for the auto script
-    , autoBudgetRedeemer  :: !ScriptRedeemer   -- ^ valid redeemer for the auto script
+  = PlutusAutoBudget                                 -- ^ Specifies a budget and parameters for a PlutusAuto loop script
+    { autoBudgetUnits           :: !ExecutionUnits   -- ^ execution units available per Tx input / script run
+    , autoBudgetDatum           :: !ScriptData       -- ^ datum for the auto script
+    , autoBudgetRedeemer        :: !ScriptRedeemer   -- ^ valid redeemer for the auto script
+    , autoBudgetUpperBoundHint  :: !(Maybe Int)      -- ^ hints at a loop count upper bount; speeds up calibration for scripts with low loop counts, but does not influence outcome
     }
     deriving (Show, Eq)
 

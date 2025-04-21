@@ -87,6 +87,12 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
+
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
+
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
                    StandardHash, blockNo, pointSlot, unBlockNo)
@@ -98,6 +104,7 @@ import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
 import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
@@ -105,7 +112,8 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
-import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..),
+import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
+import           Ouroboros.Network.PeerSelection.Governor (
                    PeerSelectionCounters, PeerSelectionView (..))
 import qualified Ouroboros.Network.PeerSelection.Governor as Governor
 import           Ouroboros.Network.Point (fromWithOrigin)
@@ -142,6 +150,7 @@ import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring.Wai as EKG
 
 
+
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9
 
@@ -164,14 +173,14 @@ data ForgeTracers = ForgeTracers
   , ftTraceAdoptionThreadDied :: Trace IO Text
   }
 
-nullTracersP2P :: Tracers peer localPeer blk 'Diffusion.P2P
+nullTracersP2P :: Applicative m => Tracers peer localPeer blk 'Diffusion.P2P extraState extraDebugState extraFlags extraPeers extraCounters m
 nullTracersP2P = Tracers
   { chainDBTracer = nullTracer
   , consensusTracers = Consensus.nullTracers
   , nodeToClientTracers = NodeToClient.nullTracers
   , nodeToNodeTracers = NodeToNode.nullTracers
   , diffusionTracers = Diffusion.nullTracers
-  , diffusionTracersExtra = Diffusion.P2PTracers P2P.nullTracers
+  , diffusionTracersExtra = Diffusion.P2PTracers P2P.nullTracersExtra
   , startupTracer = nullTracer
   , shutdownTracer = nullTracer
   , nodeInfoTracer = nullTracer
@@ -182,7 +191,7 @@ nullTracersP2P = Tracers
   , peersTracer = nullTracer
   }
 
-nullTracersNonP2P :: Tracers peer localPeer blk 'Diffusion.NonP2P
+nullTracersNonP2P :: Tracers peer localPeer blk 'Diffusion.NonP2P extraState extraDebugState extraFlags extraPeers extraCounters m
 nullTracersNonP2P = Tracers
   { chainDBTracer = nullTracer
   , consensusTracers = Consensus.nullTracers
@@ -317,7 +326,7 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 -- | Tracers for all system components.
 --
 mkTracers
-  :: forall blk p2p.
+  :: forall blk p2p .
      ( Consensus.RunNode blk
      , TraceConstraints blk
      )
@@ -327,7 +336,15 @@ mkTracers
   -> NodeKernelData blk
   -> Maybe EKGDirect
   -> NetworkP2PMode p2p
-  -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
+  -> IO (Tracers RemoteAddress
+                 LocalAddress
+                 blk p2p
+                 Cardano.ExtraState
+                 Cardano.DebugPeerSelectionState
+                 PeerTrustable
+                 (Cardano.PublicRootPeers.ExtraPeers RemoteAddress)
+                 (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress)
+                 IO)
 mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enableP2P = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
@@ -389,11 +406,11 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
         Nothing -> pure ()
 
    diffusionTracers = Diffusion.Tracers
-     { Diffusion.dtMuxTracer                     = muxTracer
-     , Diffusion.dtHandshakeTracer               = handshakeTracer
-     , Diffusion.dtLocalMuxTracer                = localMuxTracer
-     , Diffusion.dtLocalHandshakeTracer          = localHandshakeTracer
-     , Diffusion.dtDiffusionTracer               = initializationTracer
+     { Diffusion.dtMuxTracer            = muxTracer
+     , Diffusion.dtHandshakeTracer      = handshakeTracer
+     , Diffusion.dtLocalMuxTracer       = localMuxTracer
+     , Diffusion.dtLocalHandshakeTracer = localHandshakeTracer
+     , Diffusion.dtDiffusionTracer      = initializationTracer
      }
    diffusionTracersExtra' enP2P =
      case enP2P of
@@ -514,6 +531,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.consensusErrorTracer = nullTracer
       , Consensus.gsmTracer = nullTracer
       , Consensus.csjTracer = nullTracer
+      , Consensus.dbfTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -528,11 +546,12 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       , NodeToNode.tKeepAliveTracer = nullTracer
+      , NodeToNode.tPeerSharingTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
         case enableP2P of
-          EnabledP2PMode  -> Diffusion.P2PTracers P2P.nullTracers
+          EnabledP2PMode  -> Diffusion.P2PTracers P2P.nullTracersExtra
           DisabledP2PMode -> Diffusion.NonP2PTracers NonP2P.nullTracers
     , startupTracer = nullTracer
     , shutdownTracer = nullTracer
@@ -817,6 +836,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     , Consensus.csjTracer = tracerOnOff (traceCsj trSel) verb "CSJ" tr
+    , Consensus.dbfTracer = tracerOnOff (traceDevotedBlockFetch trSel) verb "DevotedBlockFetch" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1428,13 +1448,14 @@ nodeToNodeTracers'
   :: ( Consensus.RunNode blk
      , ConvertTxId blk
      , HasTxs blk
-     , Show peer
-     , ToObject peer
+     , Show addr
+     , ToObject (ConnectionId addr)
+     , ToJSON addr
      )
   => TraceSelection
   -> TracingVerbosity
   -> Trace IO Text
-  -> NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
+  -> NodeToNode.Tracers IO addr blk DeserialiseFailure
 nodeToNodeTracers' trSel verb tr =
   NodeToNode.Tracers
   { NodeToNode.tChainSyncTracer =
@@ -1455,6 +1476,9 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tKeepAliveTracer =
       tracerOnOff (traceKeepAliveProtocol trSel)
                   verb "KeepAliveProtocol" tr
+  , NodeToNode.tPeerSharingTracer =
+      tracerOnOff (tracePeerSharingProtocol trSel)
+                  verb "PeerSharingPrototocol" tr
   }
 
 -- TODO @ouroboros-network
@@ -1544,15 +1568,15 @@ traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
 
 
 tracePeerSelectionTracerMetrics
-    :: forall peeraddr.
+    :: forall extraDebugState extraFlags extraPeers peeraddr.
        OnOff TracePeerSelection
     -> Maybe EKGDirect
-    -> Tracer IO (Governor.TracePeerSelection peeraddr)
+    -> Tracer IO (Governor.TracePeerSelection extraDebugState extraFlags extraPeers peeraddr)
 tracePeerSelectionTracerMetrics _             Nothing          = nullTracer
 tracePeerSelectionTracerMetrics (OnOff False) _                = nullTracer
 tracePeerSelectionTracerMetrics (OnOff True)  (Just ekgDirect) = pstTracer
   where
-    pstTracer :: Tracer IO (Governor.TracePeerSelection peeraddr)
+    pstTracer :: Tracer IO (Governor.TracePeerSelection extraDebugState extraFlags extraPeers peeraddr)
     pstTracer = Tracer $ \a -> do
       case a of
         Governor.TraceChurnAction duration action _ ->
@@ -1566,12 +1590,12 @@ tracePeerSelectionTracerMetrics (OnOff True)  (Just ekgDirect) = pstTracer
 tracePeerSelectionCountersMetrics
     :: OnOff TracePeerSelectionCounters
     -> Maybe EKGDirect
-    -> Tracer IO PeerSelectionCounters
+    -> Tracer IO (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr))
 tracePeerSelectionCountersMetrics _             Nothing          = nullTracer
 tracePeerSelectionCountersMetrics (OnOff False) _                = nullTracer
 tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
   where
-    pscTracer :: Tracer IO PeerSelectionCounters
+    pscTracer :: Tracer IO (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes addr))
     pscTracer = Tracer $ \psc -> do
       let PeerSelectionCountersHWC {..} = psc
       -- Deprecated counters; they will be removed in a future version
@@ -1616,13 +1640,13 @@ tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveNonRootPeers" numberOfActiveNonRootPeers
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveNonRootPeersDemotions" numberOfActiveNonRootPeersDemotions
 
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.KnownBootstrapPeers" numberOfKnownBootstrapPeers
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ColdBootstrapPeersPromotions" numberOfColdBootstrapPeersPromotions
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.EstablishedBootstrapPeers" numberOfEstablishedBootstrapPeers
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBootstrapPeersDemotions" numberOfWarmBootstrapPeersDemotions
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBootstrapPeersPromotions" numberOfWarmBootstrapPeersPromotions
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeers" numberOfActiveBootstrapPeers
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeersDemotions" numberOfActiveBootstrapPeersDemotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.KnownBootstrapPeers" (snd $ Cardano.viewKnownBootstrapPeers extraCounters)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ColdBootstrapPeersPromotions" (snd $ Cardano.viewColdBootstrapPeersPromotions extraCounters)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.EstablishedBootstrapPeers" (snd $ Cardano.viewEstablishedBootstrapPeers extraCounters)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBootstrapPeersDemotions" (snd $ Cardano.viewWarmBootstrapPeersDemotions extraCounters)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBootstrapPeersPromotions" (snd $ Cardano.viewWarmBootstrapPeersPromotions extraCounters)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeers" (snd $ Cardano.viewActiveBootstrapPeers extraCounters)
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeersDemotions" (snd $ Cardano.viewActiveBootstrapPeersDemotions extraCounters)
 
 
 traceChurnCountersMetrics

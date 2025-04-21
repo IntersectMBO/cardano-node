@@ -8,7 +8,7 @@ module Testnet.TestQueryCmds
   , forallQueryCommands
   ) where
 
-import           Cardano.CLI.EraBased.Commands.Query (QueryCmds (..))
+import           Cardano.CLI.EraBased.Query.Command (QueryCmds (..))
 
 import           Testnet.TestEnumGenerator (genAllConstructorsList, genTestType)
 

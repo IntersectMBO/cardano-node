@@ -25,23 +25,24 @@ jobs:
     name: "Wait for hydra check-runs"
     runs-on: ubuntu-latest
     steps:
-    - name: Get specific check run status
+    - name: Waiting for ci/hydra-build:required to complete
       run: |
         while [[ true ]]; do
-          conclusion=$(gh api repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs --jq '.check_runs[] | select(.name == "ci/hydra-build:required") | .conclusion')
+          check_name='ci/hydra-build:required'
+          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check_name" --paginate --jq '.check_runs[].conclusion')
           case "$conclusion" in
             success)
-              echo "ci/hydra-build:required succeeded"
+              echo "$check_name succeeded"
               exit 0;;
-            failure)
-              echo "ci/hydra-build:required failed"
-              exit 1;;
-            *)
-              echo "ci/hydra-build:required pending. Waiting 30s..."
+            '')
+              echo "$check_name pending. Waiting 30s..."
               sleep 30;;
+            *)
+              echo "$check_name terminated unsuccessfully"
+              exit 1;;
           esac
         done
-    
+
   pull:
     needs: [wait-for-hydra]
     strategy:
@@ -76,11 +77,11 @@ jobs:
             win64)
               nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.windows.cardano-node-win64
               cp result/cardano-node-*-*.zip .
-              ;;              
+              ;;
           esac
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}-${{ matrix.arch }}       
+          name: ${{ github.sha }}-${{ matrix.arch }}
           path: cardano-node-*-*.*
           retention-days: 1
 

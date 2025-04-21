@@ -31,7 +31,8 @@
       "backends": [
         "Stdout HumanFormatColoured",
         "EKGBackend",
-        "Forwarder"
+        "Forwarder",
+        "PrometheusSimple 12798"
       ],
       "severity": "Notice"
     },

@@ -3,9 +3,9 @@ module Cardano.Testnet.Test.Misc where
 
 import           Cardano.Api (docToString)
 
-import           Cardano.CLI.EraBased.Run.Query (renderOpCertIntervalInformation)
-import           Cardano.CLI.Types.Common
-import           Cardano.CLI.Types.Output
+import           Cardano.CLI.EraBased.Query.Run (renderOpCertIntervalInformation)
+import           Cardano.CLI.Type.Common
+import           Cardano.CLI.Type.Output
 
 import           Prelude
 

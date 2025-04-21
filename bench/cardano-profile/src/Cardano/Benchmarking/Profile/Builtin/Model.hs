@@ -42,13 +42,12 @@ profilesNoEraModel =
         . P.analysisStandard . P.analysisEpoch3Plus
         . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . P.desc "Status-quo dataset, 7 epochs"
-      secp  = V.plutusDoubleSaturation . V.plutusTypeECDSA
-      value = V.valueBase . P.tps 9 -- "value" with the Plutus `txFee`.
+      secp       = V.plutusDoubleSaturation . V.plutusTypeECDSA . P.analysisSizeModerate
+      value      = V.valueBase . P.tps 9 -- "value" with the Plutus `txFee`.
+      postPlomin = V.genesisVariantVoltaire . P.v10Preview
   in [
-  -- TODO: after dropping jq profiles, bump all to genesisVariantVoltaire
-    model & P.name "model-secp-ecdsa-double" . secp  . V.genesisVariant300          . P.doubleBudget . P.v8Preview . V.datasetCurrent
-  , model & P.name "model-secp-ecdsa-half"   . secp  . V.genesisVariant300          . P.stepHalf     . P.v8Preview . V.datasetCurrent
-  , model & P.name "model-secp-ecdsa-plain"  . secp  . V.genesisVariantPreVoltaire                                 . V.datasetCurrent
-  , model & P.name "model-value"             . value . V.genesisVariantPreVoltaire                                 . V.datasetCurrent . P.analysisSizeFull
-  , model & P.name "model-value-test"        . value . V.genesisVariantPreVoltaire                                 . V.datasetSmall   . P.analysisSizeFull
+    model & P.name "model-secp-ecdsa-stepx2" . secp  . postPlomin . P.budgetBlockStepsDouble . V.datasetCurrent
+  , model & P.name "model-secp-ecdsa"        . secp  . postPlomin                            . V.datasetCurrent
+  , model & P.name "model-value"             . value . postPlomin                            . V.datasetCurrent . P.analysisSizeFull
+  , model & P.name "model-value-test"        . value . postPlomin                            . V.datasetSmall   . P.analysisSizeFull
   ]

@@ -1,13 +1,7 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
 
 module Cardano.Logging.Forwarding
   (
@@ -18,14 +12,13 @@ module Cardano.Logging.Forwarding
 import           Cardano.Logging.Types
 import           Cardano.Logging.Utils (runInLoop)
 import           Cardano.Logging.Version
-import qualified Network.Mux as Mux
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), OuroborosApplication (..),
-                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+                   MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
+                   miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
@@ -40,13 +33,14 @@ import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), Connec
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (async, race_, wait)
-import           Control.Monad (void)
 import           Control.Exception (throwIO)
+import           Control.Monad (void)
 import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void, absurd)
 import           Data.Word (Word16)
+import qualified Network.Mux as Mux
 import           System.IO (hPutStrLn, stderr)
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
@@ -94,12 +88,14 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       forwardSink
       dpStore
       tracerSocketMode
+      maxReconnectDelay
   pure (forwardSink, dpStore, kickoffForwarder)
  where
   p = maybe "" fst tracerSocketMode
   connSize = tofConnQueueSize config
   disconnSize = tofDisconnQueueSize config
   verbosity = tofVerbosity config
+  maxReconnectDelay = tofMaxReconnectDelay config
 
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
@@ -108,6 +104,7 @@ initForwardingDelayed iomgr config magic ekgStore tracerSocketMode = liftIO $ do
       , EKGF.acceptorEndpoint   = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest    = const $ pure ()
+      , EKGF.useDummyForwarder  = False
       }
 
   tfConfig :: TF.ForwarderConfiguration TraceObject
@@ -153,10 +150,11 @@ launchForwarders
   -> ForwardSink TraceObject
   -> DataPointStore
   -> Maybe (FilePath, ForwarderMode)
+  -> Word
   -> IO ()
 launchForwarders iomgr magic
                  ekgConfig tfConfig dpfConfig
-                 ekgStore sink dpStore tracerSocketMode =
+                 ekgStore sink dpStore tracerSocketMode maxReconnectDelay =
   -- If 'tracerSocketMode' is not specified, it's impossible to establish
   -- network connection with acceptor application (for example, 'cardano-tracer').
   -- In this case, we should not lauch forwarders.
@@ -176,7 +174,9 @@ launchForwarders iomgr magic
              dpStore
              socketPath
              mode)
-          socketPath 1
+          socketPath
+          1
+          maxReconnectDelay
 
 launchForwardersViaLocalSocket
   :: IOManager
@@ -222,10 +222,10 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
-       (forwarderApp [ (forwardEKGMetricsRun,                      1)
-                     , (forwardTraceObjectsInit tfConfig  sink,    2)
-                     , (forwardDataPointsInit   dpfConfig dpStore, 3)
-                     ]
+       (const $ forwarderApp [ (forwardEKGMetricsRun,                      1)
+                             , (forwardTraceObjectsInit tfConfig  sink,    2)
+                             , (forwardDataPointsInit   dpfConfig dpStore, 3)
+                             ]
        )
     )
     Nothing
@@ -249,6 +249,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
@@ -294,7 +295,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
             (simpleSingletonVersions
                ForwardingV_1
                (ForwardingVersionData magic)
-               (SomeResponderApplication $
+               (const $ SomeResponderApplication $
                  forwarderApp [ (forwardEKGMetricsRespRun,                  1)
                               , (forwardTraceObjectsResp tfConfig  sink,    2)
                               , (forwardDataPointsResp   dpfConfig dpStore, 3)
@@ -312,6 +313,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
     OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolStart  = Mux.StartEagerly
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }

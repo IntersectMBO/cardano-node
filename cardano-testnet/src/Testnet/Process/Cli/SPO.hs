@@ -3,11 +3,11 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Testnet.Process.Cli.SPO
   ( checkStakeKeyRegistered
   , createScriptStakeRegistrationCertificate
+  , createScriptStakeDelegationCertificate
   , createStakeDelegationCertificate
   , createStakeKeyRegistrationCertificate
   , createStakeKeyDeregistrationCertificate
@@ -140,20 +140,19 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
          Just _ -> StateT.put delegsAndRewards >> return ConditionMet
 
   toDelegationsAndRewards
-    :: L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-    => L.Network
+    :: L.Network
     -> ShelleyBasedEra era
-    -> (Map (L.Credential L.Staking (L.EraCrypto (ShelleyLedgerEra era))) (L.KeyHash L.StakePool (L.EraCrypto (ShelleyLedgerEra era))), Map (L.Credential 'L.Staking (L.EraCrypto (ShelleyLedgerEra era))) L.Coin)
+    -> (Map (L.Credential L.Staking) (L.KeyHash L.StakePool), Map (L.Credential 'L.Staking) L.Coin)
     -> DelegationsAndRewards
   toDelegationsAndRewards n _ (delegationMap, rewardsMap) =
     let apiDelegationMap = Map.map toApiPoolId $ Map.mapKeys (toApiStakeAddress n) delegationMap
         apiRewardsMap = Map.mapKeys (toApiStakeAddress n) rewardsMap
     in DelegationsAndRewards (apiRewardsMap, apiDelegationMap)
 
-toApiStakeAddress :: L.Network -> L.Credential 'L.Staking L.StandardCrypto -> StakeAddress
+toApiStakeAddress :: L.Network -> L.Credential 'L.Staking -> StakeAddress
 toApiStakeAddress = StakeAddress
 
-toApiPoolId ::  L.KeyHash L.StakePool L.StandardCrypto -> PoolId
+toApiPoolId ::  L.KeyHash L.StakePool -> PoolId
 toApiPoolId = StakePoolKeyHash
 
 createStakeDelegationCertificate
@@ -215,6 +214,25 @@ createScriptStakeRegistrationCertificate tempAbsP (AnyCardanoEra cEra) scriptFil
       , "--out-file", tempAbsPath' </> outputFp
       ]
       <> extraArgs
+
+createScriptStakeDelegationCertificate
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => TmpAbsolutePath
+  -> AnyCardanoEra
+  -> FilePath -- ^ Script file
+  -> File (VKey StakePoolKey) In -- ^ Cold stake pool key
+  -> FilePath -- ^ Output file path
+  -> m ()
+createScriptStakeDelegationCertificate tempAbsP (AnyCardanoEra cEra) scriptFile (File coldvkey) outputFp =
+  GHC.withFrozenCallStack $ do
+    let tempAbsPath' = unTmpAbsPath tempAbsP
+    execCli_
+      [ eraToString cEra
+      , "stake-address", "stake-delegation-certificate"
+      , "--stake-script-file", scriptFile
+      , "--cold-verification-key-file", coldvkey
+      , "--out-file", tempAbsPath' </> outputFp
+      ]
 
 createStakeKeyDeregistrationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)

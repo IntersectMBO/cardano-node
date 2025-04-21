@@ -9,12 +9,10 @@
 let
 
   # Backend-specific Nix bits:
-  materialise-profile = { profileData }:
+  materialise-profile = { profileBundle }:
     # Intermediate / workbench-adhoc container specifications
     let containerSpecs = rec {
       ##########################################################################
-      # The actual commit. The one used when entering the workbench.
-      gitrev = pkgs.gitrev;
       # Where to deploy inside the Task, needed to send commands (`nomad exec`).
       diretories = rec {
         work = "/local";
@@ -29,117 +27,97 @@ let
         ;
       };
       # Binaries. Flake references to the local nix store or remote repos.
-      containerPkgs = installables {inherit gitrev;};
+      containerPkgs = installables;
       # The Nomad Job description for the requested sub-backend.
-      nomadJob = nomad-job {inherit profileData containerPkgs;};
+      nomadJob = nomad-job {inherit profileBundle installables;};
       ##########################################################################
     };
-    in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-nomad"
+    in pkgs.runCommand "workbench-backend-data-${profileBundle.profile.value.name}-nomad"
       ({
-        containerSpecsJSON = pkgs.writeText "workbench-cluster-container-pkgs.json"
-          (lib.generators.toJSON {} containerSpecs);
+        containerSpecsJSON = lib.generators.toJSON {} containerSpecs;
+        passAsFile = ["containerSpecsJSON"];
       })
       ''
       mkdir $out
-      ln -s $containerSpecsJSON      $out/container-specs.json
+      cp $containerSpecsJSONPath $out/container-specs.json
       ''
     ;
 
-  # The installables are all the Nix packages that will be avaiable inside the
-  # Nomad Task. This dependencies are defined inside the Nomad Job as strings
-  # that can be either a path to the local nix store or a flake reference to
-  # fetch from some repo.
-  # In the case of cloud deployment the "installable" must always reference
-  # a commit accesible from every Nomad client machine and for local / "exec"
-  # the "nix-store-path" property is used to allow to run with local changes.
-  # The workbench will by default insert in the Nomad Job description the
-  # "installable" property as defined here while keeping the extra details as a
-  # `jq` friendly reference that are used to change it later.
-  installables = {gitrev}:
-    ############################################################################
-    # The "default" / basic environment where the node will run. ###############
-    # This pkgs rarely change and are almost always cached.      ###############
-    ############################################################################
-    (lib.attrsets.mapAttrs
-      (name: attr:
-        # The installable property is always the same.
-        let flakeReference = attr.flake-reference;
-            flakeOutput = attr.flake-output;
-            # The commit must come from `pkgs` because all script are using
-            # this for the shebang and other basic tools ("coreutils") and are
-            # also the dependencies used inside the workbench, like `jq`.
-            commit = pkgs.gitrev;
-        in attr // {installable="${flakeReference}/${commit}#${flakeOutput}";}
-      )
-      {
-        coreutils = {
-          nix-store-path  = pkgs.coreutils;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.coreutils";
-          installable = null;
-        };
-        bashInteractive = {
-          nix-store-path  = pkgs.bashInteractive;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.bashInteractive";
-          installable = null;
-        };
-        findutils = {
-          nix-store-path  = pkgs.findutils;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.findutils";
-          installable = null;
-        };
-        iputils = {
-          nix-store-path  = pkgs.iputils;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.iputils";
-          installable = null;
-        };
-        gnutar = {
-          nix-store-path  = pkgs.gnutar;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.gnutar";
-          installable = null;
-        };
-        zstd = {
-          nix-store-path  = pkgs.zstd;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.zstd";
-          installable = null;
-        };
-        wget = {
-          nix-store-path  = pkgs.wget;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.wget";
-          installable = null;
-        };
-        cacert = {
-          nix-store-path  = pkgs.cacert;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.cacert";
-          installable = null;
-        };
-        supervisor = {
-          nix-store-path  = pkgs.python3Packages.supervisor;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.python3Packages.supervisor";
-          installable = null;
-        };
-        gnugrep = {
-          nix-store-path  = pkgs.gnugrep;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.gnugrep";
-          installable = null;
-        };
-        jq = {
-          nix-store-path  = pkgs.jq;
-          flake-reference = "github:intersectmbo/cardano-node";
-          flake-output = "legacyPackages.x86_64-linux.jq";
-          installable = null;
-        };
-      }
-    )
+  # The installables are all the Nix packages that are needed inside the Nomad
+  # Task. These dependencies are defined inside the Nomad Job as strings that
+  # can either be a path to the local nix store or a flake reference to fetch
+  # from a repo.
+  # In the case of cloud deployment the installables must always reference a
+  # commit accessible from every Nomad client machine, for local / "exec" the
+  # "nix-store-path" property is used for simplicity.
+  # The workbench will by default insert in the Nomad Job description the local
+  # path of this packages while keeping the extra details as a `jq` friendly
+  # reference that are used to change it later appending the desired commit
+  # (interchanging commits it's still an untested feature).
+  # For cloud runs references:
+  # installable="${flakeReference}/${commit}#${flakeOutput}"
+  installables =
+    {
+      ############################################################################
+      # The "default" / basic environment where the node will run. ###############
+      # This pkgs rarely change and are almost always cached.      ###############
+      ############################################################################
+      coreutils = {
+        nix-store-path  = pkgs.coreutils;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.coreutils";
+      };
+      bashInteractive = {
+        nix-store-path  = pkgs.bashInteractive;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.bashInteractive";
+      };
+      findutils = {
+        nix-store-path  = pkgs.findutils;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.findutils";
+      };
+      iputils = {
+        nix-store-path  = pkgs.iputils;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.iputils";
+      };
+      gnutar = {
+        nix-store-path  = pkgs.gnutar;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.gnutar";
+      };
+      zstd = {
+        nix-store-path  = pkgs.zstd;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.zstd";
+      };
+      wget = {
+        nix-store-path  = pkgs.wget;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.wget";
+      };
+      cacert = {
+        nix-store-path  = pkgs.cacert;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.cacert";
+      };
+      supervisor = {
+        nix-store-path  = pkgs.python3Packages.supervisor;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.python3Packages.supervisor";
+      };
+      gnugrep = {
+        nix-store-path  = pkgs.gnugrep;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.gnugrep";
+      };
+      jq = {
+        nix-store-path  = pkgs.jq;
+        flake-reference = "github:intersectmbo/cardano-node";
+        flake-output = "legacyPackages.x86_64-linux.jq";
+      };
+    }
     //
     ############################################################################
     # Optional container enabled OpenSSH to properly fetch ~1TB cloud logs. ####
@@ -157,8 +135,6 @@ let
         nix-store-path  = pkgs.rsync; # Not used locally.
         flake-reference = "github:intersectmbo/cardano-node";
         flake-output = "legacyPackages.x86_64-linux.rsync";
-        # Same commit as the basic packages.
-        installable = "${flake-reference}/${pkgs.gitrev}#${flake-output}";
       };
     }
     //
@@ -172,51 +148,42 @@ let
       cardano-node = rec {
         # Local reference only used if not "cloud".
         nix-store-path = with pkgs;
-          # TODO: - cardano-node.passthru.profiled
-          #       - cardano-node.passthru.eventlogged
-          #       - cardano-node.passthru.asserted
-          # profileData.node-services."node-0".serviceConfig.value.eventlog
-          # builtins.trace (builtins.attrNames profileData.node-services."node-0".serviceConfig.value.eventlog) XXXX
           if eventlogged
             then cardanoNodePackages.cardano-node.passthru.eventlogged
-            else cardanoNodePackages.cardano-node
+            else cardanoNodePackages.cardano-node.passthru.noGitRev
         ;
         flake-reference = "github:intersectmbo/cardano-node";
         flake-output =
           if eventlogged
             then "cardanoNodePackages.cardano-node.passthru.eventlogged"
-            else "cardanoNodePackages.cardano-node"
+            else "cardanoNodePackages.cardano-node.passthru.noGitRev"
         ;
-        installable = "${flake-reference}/${gitrev}#${flake-output}";
       };
       cardano-cli = rec {
         # Local reference only used if not "cloud".
-        nix-store-path = pkgs.cardanoNodePackages.cardano-cli;
+        nix-store-path = pkgs.cardanoNodePackages.cardano-cli.passthru.noGitRev;
         flake-reference = "github:input-output-hk/cardano-cli";
-        flake-output = "cardanoNodePackages.cardano-cli";
-        installable = "${flake-reference}/${gitrev}#${flake-output}";
+        flake-output = "cardanoNodePackages.cardano-cli.passthru.noGitRev";
       };
       cardano-tracer = rec {
         # Local reference only used if not "cloud".
         nix-store-path = pkgs.cardanoNodePackages.cardano-tracer;
         flake-reference = "github:intersectmbo/cardano-node";
         flake-output = "cardanoNodePackages.cardano-tracer";
-        installable = "${flake-reference}/${gitrev}#${flake-output}";
       };
       tx-generator = rec {
         # Local reference only used if not "cloud".
         nix-store-path = pkgs.cardanoNodePackages.tx-generator;
         flake-reference = "github:intersectmbo/cardano-node";
         flake-output = "cardanoNodePackages.tx-generator";
-        installable = "${flake-reference}/${gitrev}#${flake-output}";
       };
     }
   ;
 
   # The "exec" or "cloud" Nomad Job description.
-  nomad-job = {profileData, containerPkgs}:
+  nomad-job = {profileBundle, installables}:
     # TODO: Repeated code, add the generator's node name to profile.json
-    let generatorTaskName = if builtins.hasAttr "explorer" profileData.node-specs.value
+    let generatorTaskName = if builtins.hasAttr "explorer" profileBundle.node-specs.value
       then "explorer"
       else "node-0"
       ;
@@ -228,17 +195,17 @@ let
           # TODO: oneTracerPerGroup
           oneTracerPerCluster = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
-              inherit containerPkgs;
+              inherit installables;
               oneTracerPerNode = false;
               withSsh = false;
             };
           oneTracerPerNode = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
-              inherit containerPkgs;
+              inherit installables;
               oneTracerPerNode = true;
               withSsh = false;
             };
@@ -251,17 +218,17 @@ let
           # TODO: oneTracerPerCluster and oneTracerPerGroup
           nomadExec = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
-              inherit containerPkgs;
+              inherit installables;
               oneTracerPerNode = true;
               withSsh = false;
             };
           ssh = import ./nomad-job.nix
             { inherit pkgs lib stateDir;
-              inherit profileData;
+              inherit profileBundle;
               inherit generatorTaskName;
-              inherit containerPkgs;
+              inherit installables;
               oneTracerPerNode = true;
               withSsh = true;
             };

@@ -1,6 +1,6 @@
 cabal-version:          3.0
 name:                   plutus-scripts-bench
-version:                1.0.4.2
+version:                1.0.4.3
 synopsis:               Plutus scripts used for benchmarking
 description:            Plutus scripts used for benchmarking.
 category:               Cardano,
@@ -10,7 +10,7 @@ maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-copyright:              2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
+copyright:              2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
 build-type:             Simple
 
 flag unexpected_thunks
@@ -82,10 +82,10 @@ library
   -- IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api             ^>=10.6
-    , plutus-ledger-api       ^>=1.37
-    , plutus-tx               ^>=1.37
-    , plutus-tx-plugin        ^>=1.37
+    , cardano-api             ^>=10.13.1
+    , plutus-ledger-api       ^>=1.43
+    , plutus-tx               ^>=1.43
+    , plutus-tx-plugin        ^>=1.43
 
   ------------------------
   -- Non-IOG dependencies

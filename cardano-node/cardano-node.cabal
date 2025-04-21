@@ -1,12 +1,12 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                10.1.4
+version:                10.3.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
                         Validator,
-copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
+copyright:              2019-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -82,6 +82,7 @@ library
                         Cardano.Node.Protocol.Alonzo
                         Cardano.Node.Protocol.Byron
                         Cardano.Node.Protocol.Cardano
+                        Cardano.Node.Protocol.Checkpoints
                         Cardano.Node.Protocol.Conway
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
@@ -109,7 +110,7 @@ library
                         Cardano.Node.Tracing.Tracers.Consensus
                         Cardano.Node.Tracing.Tracers.ConsensusStartupException
                         Cardano.Node.Tracing.Tracers.Diffusion
-                        Cardano.Node.Tracing.Tracers.ForgingThreadStats
+                        Cardano.Node.Tracing.Tracers.ForgingStats
                         Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
@@ -145,7 +146,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.6
+                      , cardano-api ^>= 10.13.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -159,7 +160,7 @@ library
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
-                      , cardano-protocol-tpraos >= 1.0.2
+                      , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
                       , cborg ^>= 0.2.4
                       , containers
@@ -173,9 +174,11 @@ library
                       , filepath
                       , formatting
                       , generic-data
+                      , hashable
                       , hostname
-                      , io-classes >= 1.4
+                      , io-classes >= 1.5
                       , iohk-monitoring ^>= 0.2
+                      , microlens
                       , iproute
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg ^>= 0.2
@@ -186,17 +189,18 @@ library
                       , network-mux >= 0.5
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.22
-                      , ouroboros-consensus-cardano ^>= 0.21
-                      , ouroboros-consensus-diffusion ^>= 0.19
+                      , ouroboros-consensus ^>= 0.24
+                      , ouroboros-consensus-cardano ^>= 0.23
+                      , ouroboros-consensus-diffusion ^>= 0.21
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.12
-                      , ouroboros-network ^>= 0.19
+                      , ouroboros-network-api ^>= 0.13
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.13
+                      , ouroboros-network-protocols ^>= 0.14
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
+                      , random
                       , resource-registry
                       , safe-exceptions
                       , scientific
@@ -207,8 +211,8 @@ library
                       , strict-sop-core
                       , strict-stm
                       , time
-                      , trace-dispatcher ^>= 2.7.0
-                      , trace-forward ^>= 2.2.8
+                      , trace-dispatcher ^>= 2.9
+                      , trace-forward ^>= 2.2.11
                       , trace-resources ^>= 0.2.3
                       , tracer-transformers
                       , transformers
@@ -251,8 +255,8 @@ test-suite cardano-node-test
                       , bytestring
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-api:{cardano-api, internal}
-                      , cardano-ledger-core
+                      , cardano-api
+                      , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting
                       , directory

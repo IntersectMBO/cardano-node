@@ -11,30 +11,10 @@ let
           ## To refer to a plutus script file, do something like:
           ## { Right = pkgs.plutus-scripts + "/generated-plutus-scripts/" + cfg.plutus.script; }
           script   = { Left = cfg.plutus.script; };
-          ## For cardano-ops backwards compatibility the redeemer and datum
-          ## files are file paths to the Nix Store UNLESS cfg.plutusRedeemerFile
-          ## and cfg.plutusDatumFile are present (these should be file paths to
-          ## where they are going to be deployed).
-          redeemer = if cfg.plutus.redeemer == null
-                     then null
-                     else if cfg.plutusRedeemerFile == null
-                       # File path to the Nix Store
-                       then pkgs.writeText
-                              "plutus-redeemer.json"
-                              (__toJSON cfg.plutus.redeemer)
-                       # Config supplied file path.
-                       else cfg.plutusRedeemerFile
-                     ;
-          datum    = if cfg.plutus.datum == null
-                     then null
-                     else if cfg.plutusDatumFile == null
-                       # File path to the Nix Store
-                       then pkgs.writeText
-                              "plutus-datum.json"
-                              (__toJSON cfg.plutus.datum)
-                       # Config supplied file path.
-                       else cfg.plutusDatumFile
-                     ;
+          ## If present, redeemer and datum are the file paths to where they are
+          ## going to be deployed.
+          redeemer = cfg.plutusRedeemerFile or null;
+          datum    = cfg.plutusDatumFile or null;
           inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
         };
       targetNodes = targetNodesList cfg.targetNodes;
@@ -60,10 +40,10 @@ let
   ##  - otherwise compute it from the configuration.
   defaultDecideRunScript =
     cfg: with cfg;
-      __toJSON
-        (if runScript != null
-         then runScript
-         else runScriptFn cfg);
+      if runScript != null
+      then runScript
+      else runScriptFn cfg
+  ;
 
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
@@ -147,7 +127,7 @@ in pkgs.commonLib.defServiceModule
                               "Cardano era to generate transactions for.";
         ## Internals: not user-serviceable.
         ## broken/ignored options !!
-        decideRunScript = opt (functionTo str) defaultDecideRunScript
+        decideRunScript = opt (functionTo attrs) defaultDecideRunScript
           "Decision procedure for the run script content.";
       };
 
@@ -155,7 +135,7 @@ in pkgs.commonLib.defServiceModule
         "json_highlevel"
         (if   cfg.runScriptFile != null
          then cfg.runScriptFile
-         else "${pkgs.writeText "tx-gen-config.json" (cfg.decideRunScript cfg)}")
+         else "${pkgs.writeText "tx-gen-config.json" (__toJSON cfg.decideRunScript cfg)}")
       ] ++ optionals (cfg.tracerSocketPath != null) [
           "--cardano-tracer" cfg.tracerSocketPath
       ];

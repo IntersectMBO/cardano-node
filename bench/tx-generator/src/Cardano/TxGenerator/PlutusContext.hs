@@ -26,9 +26,9 @@ module  Cardano.TxGenerator.PlutusContext
         where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters (..))
 
 import           Cardano.Ledger.Coin (Coin)
+import           Cardano.TxGenerator.ProtocolParameters
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
 import           Cardano.TxGenerator.Types
 
@@ -38,7 +38,6 @@ import           Data.List (maximumBy, minimumBy)
 import           Data.Ord (comparing)
 import           GHC.Generics (Generic)
 import           GHC.Natural (Natural)
-
 
 -- | This collects information describing the budget. It's only
 -- directly referenced in "Cardano.Benchmarking.Script.Env" to supply
@@ -64,29 +63,57 @@ data PlutusBudgetSummary =
   , projectedLoopsPerBlock  :: !Int
   , projectedTxSize         :: !(Maybe Int)
   , projectedTxFee          :: !(Maybe Coin)
-  , strategyMessage         :: !(Maybe String)
+  , messageStrategy         :: !(Maybe String)    -- ^ human-readable description of fitting strategy used
+  , messageId               :: !String            -- ^ one-string summary of fitting strategy and scaling factors used (only used by calibrate-script)
   }
   deriving (Generic, Show)
 
 instance ToJSON PlutusBudgetSummary where
   toJSON = genericToJSON defaultOptions { omitNothingFields = True }
 
+instance FromJSON PlutusBudgetSummary
+
 -- | Nothing references this type's name or uses its constructors
 -- outside this module.
 data PlutusAutoLimitingFactor
   = ExceededMemoryLimit
   | ExceededStepLimit
-  deriving (Generic, Eq, Show, ToJSON)
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
 -- | This type specifies the end to which a script's loop counter is calibrated
 data PlutusBudgetFittingStrategy
   = TargetTxExpenditure                     -- ^ calibrate for maximum expenditure of per-tx-budget
   | TargetBlockExpenditure (Maybe Double)   -- ^ calibrate for maximum expenditure of per-block-budget, with a scaling factor of [1.0, 2.0]
   | TargetTxsPerBlock Int                   -- ^ calibrate for stable tx count per block
-  deriving (Generic, Eq, Show, ToJSON)
+  deriving (Generic, Eq, FromJSON, ToJSON)
+
+instance Show PlutusBudgetFittingStrategy where
+  show = \case
+    TargetTxExpenditure       -> "txbudget"
+    TargetBlockExpenditure mr -> "blockbudget" ++ maybe "" (\r -> "_" ++ show r) mr
+    TargetTxsPerBlock d       -> "txperblock_" ++ show d
+
+instance Read PlutusBudgetFittingStrategy where
+  readsPrec prec inp = case cons of
+    "txbudget"    -> success TargetTxExpenditure
+    "blockbudget"
+      | null num  -> success (TargetBlockExpenditure Nothing)
+      | otherwise -> do
+      (r, rest) <- readsPrec (prec+1) num
+      if null rest then success (TargetBlockExpenditure r) else []
+    "txperblock"  -> do
+      (d, rest) <- readsPrec (prec+1) num
+      if null rest then success (TargetTxsPerBlock d) else []
+    _             -> []
+    where
+      success p             = [(p, "")]
+      (cons, drop 1 -> num) = span (/= '_') inp
 
 instance ToJSON ScriptData where
   toJSON = scriptDataToJson ScriptDataJsonDetailedSchema . unsafeHashableScriptData
+
+instance FromJSON ScriptData where
+  parseJSON = either (fail . docToString . prettyError) (pure . getScriptData) . scriptDataFromJson ScriptDataJsonDetailedSchema
 
 
 -- | Load serialized ScriptData, filling in an empty value if no
@@ -107,13 +134,13 @@ readScriptData jsonFilePath
 -- will calibrate loop for any fully specified fitting strategy otherwise
 plutusAutoScaleBlockfit ::
      ProtocolParameters
-  -> FilePath
+  -> (FilePath, String)
   -> ScriptInAnyLang
   -> PlutusAutoBudget
   -> PlutusBudgetFittingStrategy
   -> Int
   -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, ExecutionUnits)
-plutusAutoScaleBlockfit pparams fp script pab strategy txInputs
+plutusAutoScaleBlockfit pparams scriptInfo script pab strategy txInputs
   = do
     summaries <- mapM go scalingStrats
     let
@@ -130,7 +157,7 @@ plutusAutoScaleBlockfit pparams fp script pab strategy txInputs
     pure $ setMessage msg maxLoops
   where
     fst3 (x, _, _)  = x
-    setMessage msg (summ, b, c) = (summ {strategyMessage = Just msg}, b, c)
+    setMessage msg (summ, b, c) = (summ {messageStrategy = Just msg}, b, c)
 
     scalingStrats
       = case strategy of
@@ -140,7 +167,7 @@ plutusAutoScaleBlockfit pparams fp script pab strategy txInputs
     go strat = do
       result@(pab', _, _) <- plutusAutoBudgetMaxOut pparams script pab strat txInputs
       preRun <- preExecutePlutusScript pparams script (autoBudgetDatum pab') (autoBudgetRedeemer pab')
-      pure  ( plutusBudgetSummary pparams fp strat result preRun txInputs
+      pure  ( plutusBudgetSummary pparams scriptInfo strat result preRun txInputs
             , pab'
             , preRun
             )
@@ -174,8 +201,8 @@ plutusAutoBudgetMaxOut
     let pab' = pab {autoBudgetUnits = targetBudget, autoBudgetRedeemer = unsafeHashableScriptData $ toLoopArgument n}
     pure (pab', fromIntegral n, limitFactors)
   where
-    -- The highest loop counter that is tried - this is about 10 times the current mainnet limit.
-    searchUpperBound  = 20000
+    -- The highest loop counter that is tried
+    searchUpperBound  = maybe 16000 fromIntegral autoBudgetUpperBoundHint
 
     targetTxPerBlock :: Double -> Int
     targetTxPerBlock  s =
@@ -209,7 +236,7 @@ plutusAutoBudgetMaxOut _ _ _ _ _
 -- of the final result to that argument.
 plutusBudgetSummary ::
      ProtocolParameters
-  -> FilePath
+  -> (FilePath, String)
   -> PlutusBudgetFittingStrategy
   -> (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
   -> ExecutionUnits
@@ -220,7 +247,7 @@ plutusBudgetSummary
     { protocolParamMaxBlockExUnits  = Just budgetPerBlock
     , protocolParamMaxTxExUnits     = Just budgetPerTx
     }
-  scriptId
+  (scriptId, messageId)
   budgetStrategy
   (PlutusAutoBudget{..}, loopCounter, loopLimitingFactors)
   budgetUsedPerTxInput
@@ -229,7 +256,7 @@ plutusBudgetSummary
   where
     projectedTxSize         = Nothing           -- we defer this value until after splitting phase
     projectedTxFee          = Nothing           -- we defer this value until after splitting phase
-    strategyMessage         = Nothing
+    messageStrategy         = Nothing
     scriptArgDatum          = autoBudgetDatum
     scriptArgRedeemer       = getScriptData autoBudgetRedeemer
     budgetPerTxInput        = calc budgetPerTx div txInputs

@@ -1,104 +1,98 @@
 { pkgs, lib
-, cardanoNodePackages
 , cardanoNodeProject
+, cardanoNodePackages
 }:
 
 with lib;
 
 let
 
-  # recover CHaP location from cardano's project
-  chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
-  # build plan as computed by nix
-  nixPlanJson = cardanoNodeProject.plan-nix.json;
-
-  # Workbench derivation and functions to create derivations from `wb` commands.
+  # Workbench derivation to create derivations from `wb` commands.
   ##############################################################################
 
-  workbench' = tools:
+  # "Minimal" workbench, manually add the dependencies expected in $PATH.
+  # Which tools to add differs if full workbench needed or `wb` commands subset.
+  workbench =
     pkgs.stdenv.mkDerivation {
       pname = "workbench";
 
       version = "0.1";
 
-      src = ./.;
+      # Only what will be installed to avoid rebuilds on all workbench changes.
+      src = lib.cleanSourceWith {
+        src = ./.;
+        filter = fullPath: type:
+          let relativePath = lib.removePrefix "${toString ./.}/" fullPath;
+              directories = {
+                analyse  = [".sh" ".json"];
+                backend  = [".sh"];
+                ede      = [".ede"];
+                evaluate = [".sh"];
+                genesis  = [""]; # All. Key files, jq files, plutus scripts, etc
+                profile  = [".sh" ".json"];
+                topology = [".sh"];
+              };
+          in  lib.any id [
+            # Include the "wb" file (has no ".sh", workbench's entrypoint).
+            (relativePath == "wb")
+            # Include all top level "*.sh" files.
+            (
+                (dirOf fullPath == toString ./.)
+              &&
+                (lib.hasSuffix ".sh" relativePath)
+            )
+            # Traverse the above specified directories.
+            (   type == "directory"
+              &&
+                (lib.any
+                  (p: lib.hasPrefix p relativePath)
+                  (builtins.attrNames directories)
+                )
+            )
+            # Include only the extensions defined above.
+            (lib.any id
+              (attrValues (mapAttrs
+                (dirName: suffixes:
+                     (lib.hasPrefix (dirName + "/") relativePath)
+                  &&
+                     (lib.any
+                        (s: lib.hasSuffix s relativePath)
+                        suffixes
+                     )
+                )
+                directories
+              ))
+            )
+          ]
+        ;
+      };
 
-      buildInputs = with pkgs; [ makeWrapper ];
-
-      buildPhase = ''
-        patchShebangs .
-      '';
-
-      postFixup = ''
-        wrapProgram "$out/bin/wb"                \
-          --argv0 wb                             \
-          --prefix PATH ":" ${makeBinPath tools} \
-          --set WB_CHAP_PATH ${chap}             \
-          --set WB_NIX_PLAN ${nixPlanJson}
-      '';
-
+      # Install everything "src" provided.
       installPhase = ''
-        mkdir -p                                                    $out/bin
-        cp    -a wb ede profile                                     $out/bin
-        for dir in . analyse backend genesis topology
-        do cp    -a $dir/*                                          $out/bin/$dir
-        done
+        runHook preInstall
+        mkdir -p     "$out"/bin
+        cp    -a ./* "$out"/bin/
+        runHook postInstall
       '';
 
-      dontStrip = true;
-    };
-
-  # Workbench with its dependencies to call from Nix.
-  workbench = workbench' (
-      (with pkgs;
-        [ git graphviz
-          jq
-          moreutils
-          procps
-        ]
-      )
-      ++
-      (with cardanoNodePackages;
-        [
-          cardano-cli
-          cardano-profile
-          cardano-topology
-          locli
-        ]
-      )
-      ++
-      lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) pkgs.db-analyser
-    );
-
-  runWorkbench =
-    name: command: # Name of the derivation and `wb` command to run.
-    pkgs.runCommand name {} ''
-      ${workbench}/bin/wb ${command} > $out
-    '';
-
-  # Helper functions.
-  ##############################################################################
-
-  runCardanoProfile =
-    name: command: # Name of derivation and `cardano-profile` command to run.
-    pkgs.runCommand name {} ''
-      ${cardanoNodePackages.cardano-profile}/bin/cardano-profile ${command} > $out
-    ''
+      # Only the "wb" script gets patched.
+      dontPatchShebangs = true;
+      postFixup = ''
+        patchShebangs "$out"/bin/wb
+      '';
+    }
   ;
 
-  runJq =
-    name: args: query:
-    pkgs.runCommand name {} ''
-      args=(${args})
-      ${pkgs.jq}/bin/jq '${query}' "''${args[@]}" > $out
-    '';
-
-  # Auxiliary functions of `wb` commands.
+  # Extras.
   ##############################################################################
 
   profile-names = __fromJSON (__readFile profile-names-json);
 
-  profile-names-json = runWorkbench "profile-names.json" "profiles list";
+  profile-names-json = pkgs.runCommand "profile-names.json" {}
+    ''
+    ${cardanoNodePackages.cardano-profile}/bin/cardano-profile "names" > $out
+    ''
+  ;
 
 # Output
 ################################################################################
@@ -106,8 +100,7 @@ let
 in pkgs.lib.fix (self: {
 
   inherit cardanoNodePackages;
-  inherit workbench' workbench runWorkbench;
-  inherit runCardanoProfile runJq;
+  inherit workbench;
   inherit profile-names-json profile-names;
 
   # Return a profile attr with a `materialise-profile` function.
@@ -160,7 +153,6 @@ in pkgs.lib.fix (self: {
     , stateDir
     , basePort
     , useCabalRun
-    , workbenchDevMode
     , batchName
     , workbenchStartArgs
     , cardano-node-rev
@@ -177,9 +169,11 @@ in pkgs.lib.fix (self: {
     in import ./backend/runner.nix
       {
           inherit pkgs lib;
+          inherit cardanoNodeProject cardanoNodePackages;
+          inherit workbench;
           inherit profile backend;
-          inherit workbench workbenchDevMode cardanoNodePackages;
           inherit batchName workbenchStartArgs;
           inherit cardano-node-rev;
-      };
+      }
+  ;
 })

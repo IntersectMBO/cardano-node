@@ -14,9 +14,8 @@ module Cardano.Testnet.Test.Gov.TreasuryWithdrawal
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval), KeyRole (Staking),
-                   StandardCrypto)
-import           Cardano.Api.ReexposeLedger (Coin, Credential)
+import           Cardano.Api.Ledger (Coin, Credential, EpochInterval (EpochInterval),
+                   KeyRole (Staking))
 
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
@@ -268,7 +267,7 @@ getAnyWithdrawals
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo
-  -> m (Maybe (Map (Credential Staking StandardCrypto) Coin))
+  -> m (Maybe (Map (Credential Staking) Coin))
 getAnyWithdrawals nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
   fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath FullValidation maxEpoch Nothing
     $ \(AnyNewEpochState actualEra newEpochState) ->
@@ -296,7 +295,7 @@ getTreasuryWithdrawalProposal
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ The termination epoch: the withdrawal proposal must be found *before* this epoch
-  -> m (Maybe (L.GovActionId StandardCrypto))
+  -> m (Maybe L.GovActionId)
 getTreasuryWithdrawalProposal nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
   fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) ->

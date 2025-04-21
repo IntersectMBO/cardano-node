@@ -21,9 +21,9 @@ let
     {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault "ghc8107";
+      compiler-nix-name = lib.mkDefault "ghc96";
       # extra-compilers
-      flake.variants = lib.genAttrs ["ghc96"] (x: {compiler-nix-name = x;});
+      flake.variants = lib.genAttrs ["ghc8107"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
@@ -43,6 +43,7 @@ let
 
         # These programs will be available inside the nix-shell.
         nativeBuildInputs = with pkgs.pkgsBuildBuild; [
+          alejandra
           nix-prefetch-git
           pkg-config
           hlint
@@ -427,7 +428,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
               (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
           })];
         };
-      # add passthru and gitrev to hsPkgs:
+      # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
           if (lib.isAttrs value) then

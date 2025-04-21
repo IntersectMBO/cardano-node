@@ -29,11 +29,11 @@ import           Cardano.Node.Startup
 import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
+import           Ouroboros.Consensus.Byron.ByronHFC (byronLedgerConfig)
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
                    fromByronSlotLength, genesisSlotLength)
 import           Ouroboros.Consensus.Cardano.Block (HardForkLedgerConfig (..))
-import           Ouroboros.Consensus.Cardano.CanHardFork (ByronPartialLedgerConfig (..),
-                   ShelleyPartialLedgerConfig (..))
+import           Ouroboros.Consensus.Cardano.CanHardFork (ShelleyPartialLedgerConfig (..))
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLedgerConfig (..))
@@ -411,7 +411,7 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor _ns = Nothing
 
   metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
-    [("forging_enabled","Can this node forge blocks? (Is it provided with block forging credentials) 0 = no, 1 = yes")]
+    [("forging_enabled","A node without forger credentials or started as non-producing has forging disabled.")]
   metricsDocFor (Namespace _ ["Common"]) =
     [("systemStartTime","The UTC time this node was started."),
      ("node.start.time","The UTC time this node was started represented in POSIX seconds.")]
@@ -447,6 +447,7 @@ nodeToClientVersionToInt = \case
   NodeToClientV_17 -> 17
   NodeToClientV_18 -> 18
   NodeToClientV_19 -> 19
+  NodeToClientV_20 -> 20
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case

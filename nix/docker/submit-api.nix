@@ -1,31 +1,16 @@
 ############################################################################
-# Docker image builder
+# Docker image builder for cardano-submit-api
 #
 # To build and load into the Docker engine:
 #
-#   nix run .#dockerImage/submit-api
+#   nix build -L .#dockerImage/submit-api
 #   docker load -i result
 #
-# cardano-submit-api
-#   To launch with provided mainnet configuration
+# Include `-L` in the nix build command args to see build logs.
 #
-#     docker run -e NETWORK=mainnet ghcr.io/intersectmbo/cardano-submit-api:<TAG>
-#
-#   To launch with provided testnet configuration
-#
-#     docker run -e NETWORK=testnet ghcr.io/intersectmbo/cardano-submit-api:<TAG>
-#
-#   Provide a complete command otherwise:
-#
-#     docker run -v $PWD/config.yaml:/config.yaml ghcr.io/intersectmbo/cardano-submit-api:<TAG> \
-#       --config /config.yaml --mainnet --socket-path /node-ipc/node.socket
-#
-# See the docker-compose.yml for demonstration of using Docker secrets instead of mounting a pgpass
-#
+# See the nix/docker/README.md file for details on modes of operation.
 ############################################################################
-
 { pkgs
-, commonLib
 , dockerTools
 
 # The main contents of the image.
@@ -36,7 +21,6 @@
 
 # Other things to include in the image.
 , bashInteractive
-, buildPackages
 , cacert
 , coreutils
 , curl
@@ -75,14 +59,16 @@ let
         utillinux         # System utilities for Linux
       ];
     };
-    # set up /tmp (override with TMPDIR variable)
+
+    # Set up /tmp (override with TMPDIR variable)
     extraCommands = ''
       mkdir -m 0777 tmp
     '';
   };
 
-  # Image with all iohk-nix network configs or utilizes a configuration volume mount
-  # To choose a network, use `-e NETWORK testnet`
+  # For "script" mode, generate scripts for iohk-nix networks which can be
+  # utilized by setting the environment NETWORK variable to the desired
+  # network in the docker command: `-e NETWORK <network>`
   clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
     scriptBin = scripts.${script};
     in ''
@@ -90,22 +76,33 @@ let
         exec ${scriptBin}/bin/${scriptBin.name} $@
     '') scripts);
 
-  nodeDockerImage = let
-    entry-point = writeScriptBin "entry-point" ''
-      #!${runtimeShell}
-      if [[ -z "$NETWORK" ]]; then
-        exec ${pkgs.${exe}}/bin/${exe} $@
-      ${clusterStatements}
-      else
-        echo "Managed configuration for network "$NETWORK" does not exist"
-      fi
-    '';
+  entry-point = writeScriptBin "entry-point" ''
+    #!${runtimeShell}
+    if [[ -z "$NETWORK" ]]; then
+      exec ${pkgs.${exe}}/bin/${exe} $@
+    ${clusterStatements}
+    else
+      echo "Managed configuration for network "$NETWORK" does not exist"
+    fi
+  '';
 
   in dockerTools.buildImage {
     name = "${repoName}";
-    fromImage = baseImage;
     tag = "${gitrev}";
-    created = "now";   # Set creation date to build time. Breaks reproducibility
+    fromImage = baseImage;
+
+    # Set creation date to build time. Breaks reproducibility.
+    created = "now";
+
+    extraCommands = ''
+      # The "scripts" operation mode of this image, when the NETWORK env var is
+      # set to a valid network, will use the following default directories
+      # mounted at /:
+      mkdir -p ipc
+
+      # Symlink /node-ipc -> /ipc for consistency and backwards compatability
+      ln -sv ipc node-ipc
+    '';
 
     copyToRoot = pkgs.buildEnv {
       name = "image-root";
@@ -119,6 +116,4 @@ let
         "${toString scripts.mainnet.${script}.passthru.service.port}/tcp" = {};
       };
     };
-  };
-
-in nodeDockerImage
+  }

@@ -18,14 +18,13 @@ let
     , stateDir           ? customConfig.localCluster.stateDir
     , basePort           ? customConfig.localCluster.basePort
     , useCabalRun        ? customConfig.localCluster.useCabalRun
-    , workbenchDevMode   ? customConfig.localCluster.workbenchDevMode
     , batchName          ? customConfig.localCluster.batchName
     , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
     , cardano-node-rev   ? null
     }:
     workbench.runner
       { inherit profileName profiling backendName stateDir basePort useCabalRun;
-        inherit batchName workbenchDevMode workbenchStartArgs cardano-node-rev;
+        inherit batchName workbenchStartArgs cardano-node-rev;
       };
 
 in with final;
@@ -64,7 +63,7 @@ in with final;
       ghc963 = haskell-nix.sources."hls-2.5";
       ghc964 = haskell-nix.sources."hls-2.6";
       ghc981 = haskell-nix.sources."hls-2.6";
-    }.${compiler-nix-name} or haskell-nix.sources."hls-2.9";
+    }.${compiler-nix-name} or haskell-nix.sources."hls-2.8";
     cabalProject = builtins.readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
@@ -113,7 +112,7 @@ in with final;
   submitApiDockerImage =
     let
       defaultConfig = {
-        socketPath = "/node-ipc/node.socket";
+        socketPath = "/ipc/node.socket";
         listenAddress = "0.0.0.0";
       };
     in
@@ -142,7 +141,7 @@ in with final;
               # Default values only ("run/current", 30000, profiling "none").
               profile = workbench.profile {
                 inherit profileName;
-                inherit (customConfig) profiling;
+                profiling = "none";
               };
               backend = workbench.backend
                 { backendName = "nomadcloud";
@@ -151,15 +150,20 @@ in with final;
                   useCabalRun = customConfig.localCluster.useCabalRun;
                 }
               ;
-              profileData = profile.materialise-profile
+              profileBundle = profile.profileBundle
                 { inherit backend; }
               ;
-              backendData = backend.materialise-profile {inherit profileData;};
+              materialisedProfile = profile.materialise-profile
+                { inherit profileBundle; }
+              ;
+              backendDataDir = backend.materialise-profile
+                {inherit profileBundle;}
+              ;
           in pkgs.runCommand "workbench-data-${profileName}" {}
             ''
-            mkdir $out
-            ln -s ${profileData} $out/profileData
-            ln -s ${backendData} $out/backendData
+            mkdir "$out"
+            ln -s "${materialisedProfile}" "$out"/profileData
+            ln -s "${backendDataDir}"      "$out"/backendData
             ''
         ;
         }

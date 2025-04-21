@@ -87,7 +87,7 @@ acceptorActions config@AcceptorConfiguration{whatToRequest, shouldWeStop} loHand
       (return $ acceptorActions config loHandler)
 
 data Timeout = Timeout
-  deriving (Typeable, Show)
+  deriving Show
 
 instance Exception Timeout where
 

@@ -7,6 +7,7 @@
 module Cardano.Benchmarking.Profile.Types (
 
   Profile (..)
+, profileProtocolVersion
 
 , Scenario (..)
 
@@ -14,6 +15,7 @@ module Cardano.Benchmarking.Profile.Types (
 , Topology (..), Topology.Location (..), Topology.AWSRegion (..)
 
 , Era (..)
+, firstEraForMajorVersion
 , Genesis (..)
 
 , ChainDB (..), Chunks (..)
@@ -23,6 +25,9 @@ module Cardano.Benchmarking.Profile.Types (
 
 , Generator (..)
 , Plutus (..), Redeemer (..)
+
+, Workload (..)
+, Entrypoints (..)
 
 , Tracer (..)
 
@@ -46,6 +51,7 @@ module Cardano.Benchmarking.Profile.Types (
 --------------------------------------------------------------------------------
 
 import           Prelude
+import           Data.Maybe (isJust)
 import           GHC.Generics
 -- Package: aeson.
 import qualified Data.Aeson as Aeson
@@ -84,6 +90,7 @@ data Profile = Profile
   , node :: Node
 
   , generator :: Generator
+  , workloads :: [Workload]
 
   , tracer :: Tracer
   , cluster :: Cluster
@@ -91,20 +98,35 @@ data Profile = Profile
   , derived :: Derived
   , cli_args :: CliArgs
 
-  -- TODO: USed? Remove?
+  -- TODO: Somehow merge these two!
   , preset :: Maybe String
-  , overlay :: Maybe Aeson.Object
+  , overlay :: Aeson.Object --TODO: Add `Maybe`, empty object for compatibility.
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Profile
+instance Aeson.ToJSON Profile where
+  toJSON = Aeson.genericToJSON
+    -- TODO: Remove after removing `jq` profiles.
+    -- To compare JSONs without "desc", "chaindb" and "preset" properties.
+    (Aeson.defaultOptions {Aeson.omitNothingFields = True})
 
-instance Aeson.FromJSON Profile
+instance Aeson.FromJSON Profile where
+  parseJSON = Aeson.genericParseJSON
+    -- TODO: Change to `True` after removing `jq` profiles.
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = False})
+
+profileProtocolVersion :: Profile -> Maybe (Int, Int)
+profileProtocolVersion Profile{genesis = Genesis{shelley = shey}} = do
+  Aeson.Object pparams <- KM.lookup "protocolParams" shey
+  Aeson.Object protver <- KM.lookup "protocolVersion" pparams
+  Aeson.Number major   <- KM.lookup "major" protver
+  Aeson.Number minor   <- KM.lookup "minor" protver
+  (,) <$> Scientific.toBoundedInteger major <*> Scientific.toBoundedInteger minor
 
 --------------------------------------------------------------------------------
 
 -- Scenario "fixed" is actually not being used.
-data Scenario = Idle | TracerOnly | Fixed | FixedLoaded | Chainsync | Latency
+data Scenario = Idle | TracerOnly | Fixed | FixedLoaded | Chainsync
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON Scenario where
@@ -113,7 +135,6 @@ instance Aeson.ToJSON Scenario where
   toJSON Fixed       = Aeson.toJSON ("fixed"        :: Text.Text)
   toJSON FixedLoaded = Aeson.toJSON ("fixed-loaded" :: Text.Text)
   toJSON Chainsync   = Aeson.toJSON ("chainsync"    :: Text.Text)
-  toJSON Latency     = Aeson.toJSON ("latency"      :: Text.Text)
 
 instance Aeson.FromJSON Scenario where
   parseJSON = Aeson.withText "Scenario" $ \t -> case t of
@@ -122,7 +143,6 @@ instance Aeson.FromJSON Scenario where
     "fixed"        -> return Fixed
     "fixed-loaded" -> return FixedLoaded
     "chainsync"    -> return Chainsync
-    "latency"      -> return Latency
     _              -> fail $ "Unknown Scenario: \"" ++ Text.unpack t ++ "\""
 
 --------------------------------------------------------------------------------
@@ -197,9 +217,15 @@ data Composition = Composition
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Composition
+instance Aeson.ToJSON Composition where
+  toJSON = Aeson.genericToJSON
+    -- TODO: Remove after removing `jq` profiles.
+    -- To compare JSONs without the "with_chaindb_server" property.
+    (Aeson.defaultOptions {Aeson.omitNothingFields = True})
 
-instance Aeson.FromJSON Composition
+instance Aeson.FromJSON Composition where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 -- Scenario "line" is actually not being used.
 data Topology = Line | UniCircle | Torus | TorusDense
@@ -221,19 +247,8 @@ instance Aeson.FromJSON Topology where
 
 --------------------------------------------------------------------------------
 
-{--
-https://docs.cardano.org/explore-cardano/eras-and-phases/
-
-> wb profile all-profiles | jq .[] | jq -r .era | sort | uniq
-allegra
-alonzo
-babbage
-conway
-mary
-shelley
---}
-data Era = Allegra | Shelley | Mary | Alonzo | Babbage | Conway
-  deriving (Eq, Show, Generic)
+data Era = Shelley | Allegra | Mary | Alonzo | Babbage | Conway
+  deriving (Show, Eq, Ord, Generic)
 
 instance Aeson.ToJSON Era where
   toJSON Allegra = Aeson.toJSON ("allegra" :: Text.Text)
@@ -253,6 +268,35 @@ instance Aeson.FromJSON Era where
     "conway"  -> return Conway
     _         -> fail $ "Unknown Era: \"" ++ Text.unpack t ++ "\""
 
+-- | Minimal major protocol version per era
+firstEraForMajorVersion :: Int -> Era
+firstEraForMajorVersion pv
+  | pv >= 9   = Conway
+  | pv >= 7   = Babbage
+  | pv >= 5   = Alonzo
+  | pv >= 4   = Mary
+  | pv >= 3   = Allegra
+  | pv >= 2   = Shelley
+  | otherwise = error $ "firstEraForVersion: unsupported major protocol version " ++ show pv
+
+{-
+cf. https://github.com/cardano-foundation/CIPs/blob/master/CIP-0059/feature-table.md
+
+| Date    | Phase    | Era     | Slot Number | Epoch Number | Protocol Version | Ledger Protocol | Consensus Mechanism     | Notes              |
+|---------|----------|---------|------------:|-------------:|-----------------:|-----------------|-------------------------|--------------------|
+| 2017/09 | Byron    | Byron   |           0 |            0 |              0,0 | -               | Ouroboros Classic       |                    |
+| 2020/02 | Byron    | Byron   |     3801600 |          176 |              1,0 | -               | Ouroboros BFT           |                    |
+| 2020/07 | Shelley  | Shelley |     4492800 |          208 |              2,0 | TPraos          | Ouroboros Praos         |                    |
+| 2020/12 | Goguen   | Allegra |    16588800 |          236 |              3,0 | TPraos          | Ouroboros Praos         |                    |
+| 2021/03 | Goguen   | Mary    |    23068800 |          251 |              4,0 | TPraos          | Ouroboros Praos         |                    |
+| 2021/09 | Goguen   | Alonzo  |    39916975 |          290 |              5,0 | TPraos          | Ouroboros Praos         |                    |
+| 2021/10 | Goguen   | Alonzo  |    43372972 |          298 |              6,0 | TPraos          | Ouroboros Praos         | intra-era hardfork |
+| 2022/09 | Goguen   | Babbage |    72316896 |          365 |              7,0 | Praos           | Ouroboros Praos         | Vasil HF           |
+| 2023/02 | Goguen   | Babbage |    84844885 |          394 |              8,0 | Praos           | Ouroboros Praos         | Valentine HF       |
+| 2024/09 | Voltaire | Conway  |   133660855 |          507 |              9,0 | Praos           | Ouroboros Genesis/Praos | Chang HF           |
+| 2025/01 | Voltaire | Conway  |   146620809 |          537 |             10,0 | Praos           | Ouroboros Genesis/Praos | Plomin HF          |
+-}
+
 --------------------------------------------------------------------------------
 
 data Genesis = Genesis
@@ -264,9 +308,9 @@ data Genesis = Genesis
   -- Genesis result.
     -- TODO: These three could be custom overlays and final objects be part of
     --       the derived properties.
-  , shelley :: Aeson.Object
-  , alonzo :: Aeson.Object
-  , conway :: Maybe Aeson.Object -- TODO: Remove the null.
+  , shelley :: KM.KeyMap Aeson.Value
+  , alonzo :: KM.KeyMap Aeson.Value
+  , conway :: Maybe (KM.KeyMap Aeson.Value) -- TODO: Remove the null.
 
   -- Absolute durations:
   , slot_duration :: Time.NominalDiffTime
@@ -278,13 +322,14 @@ data Genesis = Genesis
 
   -- Size:
   , utxo :: Integer
-  , delegators :: Maybe Integer
+  , delegators :: Integer
   , dreps :: Integer
   , extra_future_offset :: Time.NominalDiffTime -- Size dependent!
 
   -- And the others!
   , per_pool_balance :: Integer
   , funds_balance :: Integer
+  , utxo_keys :: Integer
 
   -- Testnet:
   , network_magic :: Integer
@@ -292,15 +337,19 @@ data Genesis = Genesis
   -- TODO: These two are built like derived properties. Move there?
   , pool_coin :: Integer
   , delegator_coin :: Integer
+
   -- TODO: Not used ?
   , single_shot :: Bool
+  , max_block_size :: Maybe Integer
 
   }
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON Genesis
 
-instance Aeson.FromJSON Genesis
+instance Aeson.FromJSON Genesis where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -313,7 +362,9 @@ data ChainDB = ChainDB
 
 instance Aeson.ToJSON ChainDB
 
-instance Aeson.FromJSON ChainDB
+instance Aeson.FromJSON ChainDB where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data Chunks = Chunks
   { 
@@ -387,13 +438,17 @@ instance Aeson.FromJSON Node where
         <*> o Aeson..: "shutdown_on_slot_synced"
         <*> o Aeson..: "shutdown_on_block_synced"
 
+-- Properties passed directly to the node(s) "config.json" file.
 newtype NodeVerbatim = NodeVerbatim
-  { enableP2P :: Maybe Bool -- TODO: Make it lower case in the workbench.
+  { enableP2P :: Maybe Bool
   }
   deriving (Eq, Show, Generic)
 
--- TODO: Switch to lower-case in workbench/bash
+-- `Nothing` properties are not in the final "config.json", not even "null".
 instance Aeson.ToJSON NodeVerbatim where
+  -- If the "EnableP2P" JSON property is present in a Cardano node version that
+  -- does not support P2P, the profile can fail to properly initiate a cluster.
+  toJSON   (NodeVerbatim Nothing) = Aeson.object []
   toJSON p@(NodeVerbatim _) =
     Aeson.object
       [ "EnableP2P"   Aeson..= enableP2P p
@@ -431,7 +486,9 @@ data Generator = Generator
 
 instance Aeson.ToJSON Generator
 
-instance Aeson.FromJSON Generator
+instance Aeson.FromJSON Generator where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data Plutus = Plutus
   { plutusType :: Maybe String -- TODO: Rename in workbench/bash to "plutus_type"
@@ -442,11 +499,13 @@ data Plutus = Plutus
 
 instance Aeson.ToJSON Plutus where
   toJSON p =
-    Aeson.object
+    Aeson.object $
       [ "type"     Aeson..= plutusType p
       , "script"   Aeson..= plutusScript p
-      , "redeemer" Aeson..= redeemer p
       ]
+      ++
+      -- TODO: Needed to replicate the old "jq" JSON output.
+      ["redeemer" Aeson..= redeemer p | isJust (redeemer p)]
 
 instance Aeson.FromJSON Plutus where
   parseJSON =
@@ -491,6 +550,46 @@ instance Aeson.FromJSON Redeemer where
 
 --------------------------------------------------------------------------------
 
+data Workload = Workload
+  { workloadName :: String
+  , parameters :: Aeson.Object
+  , entrypoints :: Entrypoints
+  , wait_pools :: Bool
+  }
+  deriving (Eq, Show, Generic)
+
+data Entrypoints = Entrypoints
+  { pre_generator :: Maybe String
+  , producers :: String
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON Workload where
+  toJSON p =
+    Aeson.object
+      [ "name"        Aeson..= workloadName p
+      , "parameters"  Aeson..= parameters   p
+      , "entrypoints" Aeson..= entrypoints  p
+      , "wait_pools"  Aeson..= wait_pools   p
+      ]
+
+instance Aeson.FromJSON Workload where
+  parseJSON =
+    Aeson.withObject "Workload" $ \o -> do
+      Workload
+        <$> o Aeson..: "name"
+        <*> o Aeson..: "parameters"
+        <*> o Aeson..: "entrypoints"
+        <*> o Aeson..: "wait_pools"
+
+instance Aeson.ToJSON Entrypoints
+
+instance Aeson.FromJSON Entrypoints where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
+
+--------------------------------------------------------------------------------
+
 data Tracer = Tracer
   { rtview :: Bool
   , ekg :: Bool
@@ -500,7 +599,9 @@ data Tracer = Tracer
 
 instance Aeson.ToJSON Tracer
 
-instance Aeson.FromJSON Tracer
+instance Aeson.FromJSON Tracer where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -516,7 +617,9 @@ data Cluster = Cluster
 
 instance Aeson.ToJSON Cluster
 
-instance Aeson.FromJSON Cluster
+instance Aeson.FromJSON Cluster where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data ClusterNomad = ClusterNomad
   { namespace :: String
@@ -556,7 +659,9 @@ data HostVolume = HostVolume
 
 instance Aeson.ToJSON HostVolume
 
-instance Aeson.FromJSON HostVolume
+instance Aeson.FromJSON HostVolume where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data ClusterAWS = ClusterAWS
   { instance_type :: ByNodeType String
@@ -566,7 +671,9 @@ data ClusterAWS = ClusterAWS
 
 instance Aeson.ToJSON ClusterAWS
 
-instance Aeson.FromJSON ClusterAWS
+instance Aeson.FromJSON ClusterAWS where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data ByNodeType a = ByNodeType
   { producer :: a
@@ -587,7 +694,9 @@ data Resources = Resources
 
 instance Aeson.ToJSON Resources
 
-instance Aeson.FromJSON Resources
+instance Aeson.FromJSON Resources where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -646,7 +755,9 @@ data AnalysisFilterExpression = AnalysisFilterExpression
 
 instance Aeson.ToJSON AnalysisFilterExpression
 
-instance Aeson.FromJSON AnalysisFilterExpression
+instance Aeson.FromJSON AnalysisFilterExpression where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 data AnalysisFilterExpressionContent = AnalysisFilterExpressionContent
   { innerTag :: String
@@ -703,7 +814,9 @@ data Derived = Derived
 
 instance Aeson.ToJSON Derived
 
-instance Aeson.FromJSON Derived
+instance Aeson.FromJSON Derived where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 --------------------------------------------------------------------------------
 
@@ -716,4 +829,6 @@ data CliArgs = CliArgs
 
 instance Aeson.ToJSON CliArgs
 
-instance Aeson.FromJSON CliArgs
+instance Aeson.FromJSON CliArgs where
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})

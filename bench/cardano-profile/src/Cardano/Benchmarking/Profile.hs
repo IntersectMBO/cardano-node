@@ -3,18 +3,16 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.Profile (
-  names, namesNoEra, namesCloudNoEra
-, byName
-, profiles
-, libMk
-) where
+module Cardano.Benchmarking.Profile
+       ( addEras
+       , realize
+       ) where
 
 --------------------------------------------------------------------------------
 
 import           Prelude
-import           Data.List (sort)
 import           Control.Monad (foldM)
+import           Data.Maybe (catMaybes)
 import           System.IO.Unsafe (unsafePerformIO)
 import           GHC.Stack (HasCallStack)
 -- Package: aeson.
@@ -27,98 +25,40 @@ import qualified Data.Text            as Text
 -- Package: scientific.
 import qualified Data.Scientific as Scientific
 -- Package: self.
+import qualified Cardano.Benchmarking.Profile.Genesis as Genesis
 import qualified Cardano.Benchmarking.Profile.Types as Types
 import qualified Paths_cardano_profile as Paths
--- Profiles to export!
-import           Cardano.Benchmarking.Profile.Builtin.Cloud               (profilesNoEraCloud)
-import           Cardano.Benchmarking.Profile.Builtin.Empty               (profilesNoEraEmpty)
-import           Cardano.Benchmarking.Profile.Builtin.ForgeStress         (profilesNoEraForgeStress)
-import           Cardano.Benchmarking.Profile.Builtin.K3                  (profilesNoEraK3)
-import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dense        (profilesNoEraDense)
-import           Cardano.Benchmarking.Profile.Builtin.Legacy.Dish         (profilesNoEraDish)
-import           Cardano.Benchmarking.Profile.Builtin.Miniature           (profilesNoEraMiniature)
-import           Cardano.Benchmarking.Profile.Builtin.Model               (profilesNoEraModel)
-import           Cardano.Benchmarking.Profile.Builtin.Plutuscall          (profilesNoEraPlutuscall)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Chainsync  (profilesNoEraChainsync)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Idle       (profilesNoEraIdle)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.Latency    (profilesNoEraLatency)
-import           Cardano.Benchmarking.Profile.Builtin.Scenario.TracerOnly (profilesNoEraTracerOnly)
-import           Cardano.Benchmarking.Profile.Extra.Scaling               (profilesNoEraScalingLocal, profilesNoEraScalingCloud)
 
 --------------------------------------------------------------------------------
 
-names :: [String]
--- Overlay not supported here, using an empty overlay.
-names = Map.keys (profiles mempty)
-
-namesCloudNoEra :: [String]
--- Overlay not supported here, using an empty overlay.
-namesCloudNoEra = map Types.name profilesNoEraCloud
-
--- Names:
--- wb profile all-profiles | jq .[] | jq -r .name | sort | uniq | grep "\-bage"
-namesNoEra :: [String]
--- Overlay not supported here, using an empty overlay.
-namesNoEra = Map.keys (profilesNoEra mempty)
-
-byName :: String -> Aeson.Object -> Maybe Types.Profile
-byName name obj =
-  case Map.lookup name (profiles obj) of
-    Nothing -> Nothing
-    (Just profile) -> Just profile
-
---------------------------------------------------------------------------------
-
--- | Construct Map with profile name as key, without eras (in name and object).
-profilesNoEra :: HasCallStack => Aeson.Object -> Map.Map String Types.Profile
-profilesNoEra obj = Map.fromList $ map
-  -- Convert to tuple and apply fixes, defaults and derive.
-  (\p ->
-    ( Types.name p
-    , finalize (overlay obj (addUnusedDefaults p))
-    )
-  )
-  -- All the "families" of profiles. Grouped by common properties or intentions.
-  (
-       profilesNoEraCloud
-    ++ profilesNoEraEmpty            -- Empty datasets running `FixedLoaded`.
-    ++ profilesNoEraForgeStress      -- All the "forge-stress*" profiles.
-    ++ profilesNoEraK3               -- K3
-    -- Legacy.
-    ++ profilesNoEraDense
-    ++ profilesNoEraDish
-    ++ profilesNoEraMiniature
-    ++ profilesNoEraModel            --
-    ++ profilesNoEraPlutuscall       --
-    -- Empty datasets not running `FixedLoaded`.
-    ++ profilesNoEraChainsync        -- Scenario `Chainsync`
-    ++ profilesNoEraIdle             -- Scenario `Idle`
-    ++ profilesNoEraLatency          -- Scenario `Latency`
-    ++ profilesNoEraTracerOnly       -- Scenario `TracerOnly`
-    -- Extra modules
-    ++ profilesNoEraScalingLocal
-    ++ profilesNoEraScalingCloud
-  )
-
--- | Adds the eras to `profilesNoEra`.
-profiles :: Aeson.Object -> Map.Map String Types.Profile
-profiles obj = foldMap
-  (\profile -> Map.fromList $
-    let
-        addEra p era suffix =
-          let name = Types.name p
-              newName = name ++ "-" ++ suffix
-          in  (newName, p {Types.name = newName, Types.era = era})
-    in 
-        [ addEra profile Types.Allegra "alra"
-        , addEra profile Types.Shelley "shey"
-        , addEra profile Types.Mary    "mary"
-        , addEra profile Types.Alonzo  "alzo"
-        , addEra profile Types.Babbage "bage"
-        , addEra profile Types.Conway  "coay"
-        ]
-  )
-  (profilesNoEra obj)
+realize :: HasCallStack => Types.Profile -> Types.Profile
+realize =
+    -- Compose the profile in the same order as the `jq` profile machinery!
+    -- 1) `addUnusedDefaults`: Adds all properties that are the same for all
+    --                         profiles. This are all candidates to be removed
+    --                         when we finally switch from `jq` to this.
+    -- 2) `shelleyAlonzoConway`: Given an epoch number ("pparamsEpoch"
+    --                           property) creates the "genesis" property
+    --                           using "epoch-timeline.json" and applying the
+    --                           genesis specific overlays ("pparamsOverlays"
+    --                           property).
+    -- 3) `overlay`: Applies an optional JSON object as an "overlay". The
+    --               object is read from an envar ("WB_PROFILE_OVERLAY") in
+    --               the `main` function and can override anything (some may
+    --               overridden by later steps) as long as the result is a
+    --               valid `Profile`.
+    -- 4)  `derive`: Fills the "derive" property.
+    -- 5)  `finalize`: Applies fixes (porting infelicities) needed to fill
+    --                 the "cli_args" property that is also filled here.
+    -- 6) "presets": A special case of `overlay` above. The JSON file to apply
+    --               as an overlay has its name defined in the "preset"
+    --               property. This file has to be defined in the Cabal file.
+    preset
+  . finalize
+  . derive
+  . overlay
+  . shelleyAlonzoConway
+  . addUnusedDefaults
 
 {-
 
@@ -138,6 +78,7 @@ next to the name.
 
 -}
 
+-- Step 1.
 --------------------------------------------------------------------------------
 
 addUnusedDefaults :: Types.Profile -> Types.Profile
@@ -167,74 +108,62 @@ addUnusedDefaults p =
             }
     }
 
-overlay :: HasCallStack => Aeson.Object -> Types.Profile -> Types.Profile
-overlay overlaykeyMap profile =
-      -- data Value = Object !Object
-      -- type Object = KeyMap Value
-  let profileKeyMap = case Aeson.toJSON profile of -- toJson, an Aeson.Value
-                        (Aeson.Object keyMap) -> keyMap
-                        _ -> error "What have you done?"
-      union = KeyMap.unionWithKey unionWithKey profileKeyMap overlaykeyMap
-  in case Aeson.fromJSON (Aeson.Object union) of
-    -- Add the overlay to the profile.
-    (Aeson.Success profile') -> profile' {Types.overlay = Just overlaykeyMap}
-    (Aeson.Error str) -> error $ "Could not apply overlay: " ++ str
+-- Step 2.
+--------------------------------------------------------------------------------
 
--- Right-biased merge of both JSON objects at all depths.
-unionWithKey :: KeyMap.Key -> Aeson.Value -> Aeson.Value -> Aeson.Value
--- Recurse if it's an object.
-unionWithKey _ (Aeson.Object a) (Aeson.Object b) =
-  Aeson.Object $ KeyMap.unionWithKey unionWithKey a b
--- If not an object prefer the right value.
-unionWithKey _ _ b = b
-
-finalize :: Types.Profile -> Types.Profile
-finalize profile =
-  let
-    -- First fill the genesis' "shelley", "alonzo" and "conway" properties
-    -- using the provided epoch number and overlay names.
-    profile' = shelleyAlonzoConway (getEpochNumber profile) profile
-    -- Second fill the "derive" property.
-    -- "derive" needs above "shelley", "alonzo" and "conway" properties.
-    profile'' = derive profile'
-    -- Third, things not in "derived" that can't be a default.
-    profile''' =
-      (\p -> p {
-          -- Genesis "fixes".
-          Types.genesis =
-            let genesis = Types.genesis p
-            in  genesis {
-                   -- TODO: Remove or move to derive ?
-                  Types.pool_coin =
-                    if Types.n_pools (Types.composition p) == 0
-                    then 0
-                    else Types.per_pool_balance genesis
-                  -- TODO: Remove or move to derive ?
-                , Types.delegator_coin =
-                    if Types.delegators genesis == Just 0
-                    then 0
-                    else Types.per_pool_balance genesis
-                }
-          -- Generator "fixes".
-        , Types.generator = (Types.generator p) {
-            -- TODO: Remove or move to derive ?
-            Types.tx_count = Just $ Types.generator_tx_count $ Types.derived p
-          -- Analysis "fixes".
-        }
-          -- Analysis "fixes".
-        , Types.analysis = (Types.analysis p) {
-            -- TODO: These two were set when constructing "derive".
-            --       Remove from "analysis" and add to "derive" ???
-            Types.minimum_chain_density =
-              Types.active_slots_coeff (Types.genesis p) * 0.5
-          , Types.cluster_startup_overhead_s =
-              Types.dataset_induced_startup_delay_conservative (Types.derived p)
-        }
-      })
-      profile''
-    -- The "cli_args" property need the "derived" property and above fixes.
-    profile'''' = cliArgs profile'''
-  in profile''''
+-- | Fill the "genesis" object "shelley", "alonzo" and "conway" properties
+--   using the profile's epoch number and overlay names.
+shelleyAlonzoConway :: Types.Profile -> Types.Profile
+shelleyAlonzoConway profile =
+  let epochNumber  = getEpochNumber profile
+      -- Collects all the genesis properties from "epoch-timeline.json".
+      epoch  = unsafePerformIO $ Genesis.epochTimeline epochNumber
+      -- Apply the genesis overlays ("pparamsOverlays").
+      epoch' = unsafePerformIO $ foldM
+        (flip genesisOverlay)
+        epoch
+        (Types.pparamsOverlays $ Types.genesis profile)
+      -- Any property that was set before by the user takes precedence.
+      epoch'' = (<>)
+                  epoch'
+                  (Genesis.Epoch
+                    (Just $ Types.shelley $ Types.genesis profile)
+                    (Just $ Types.alonzo  $ Types.genesis profile)
+                    (       Types.conway  $ Types.genesis profile)
+                  )
+      genesis f p = p {Types.genesis = f (Types.genesis p)}
+  -- Fill the profile's genesis field.
+  in genesis (\g -> g {
+      Types.pparamsEpoch = epochNumber
+    , Types.shelley =
+        -- The "shelley" object in "epoch-timeline.json" entries is directly the
+        -- "protocolParams" object used in the node's "shelley-genesis.json".
+        -- We have to add "slotLength", "epochLength", "securityParam" and
+        -- "activeSlotsCoeff" that are treated as first class citizens in this
+        -- library, instead of JSON/KeyMap.
+        case Genesis.shelley epoch'' of
+          (Just sheyKeyMap) -> foldl
+            (\acc (k,v) -> KeyMap.insert k v acc)
+            sheyKeyMap
+            [
+              ("slotLength", Aeson.Number $ realToFrac $ Types.slot_duration g)
+            , ("epochLength", Aeson.Number $ fromInteger $ Types.epoch_length g)
+            , ("securityParam", Aeson.Number $ fromInteger $ Types.parameter_k g)
+            , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
+            , ("protocolParams",
+                case KeyMap.lookup "protocolParams" sheyKeyMap of
+                  (Just shey) -> shey
+                  Nothing -> error "No \"protocolParams\" JSON object in \"shelley\" property"
+              )
+            ]
+          Nothing -> error "No \"shelley\" JSON object from epoch-timeline.json"
+    , Types.alonzo  =
+        case Genesis.alonzo epoch'' of
+          (Just alzo) -> alzo
+          Nothing -> error "No \"alonzo\" JSON object from epoch-timeline.json"
+    -- The only "optional" genesis property.
+    , Types.conway = Genesis.conway epoch''
+    }) profile
 
 getEpochNumber :: HasCallStack => Types.Profile -> Integer
 getEpochNumber profile =
@@ -243,77 +172,36 @@ getEpochNumber profile =
      then error $ "Profile \"" ++ Types.name profile ++ "\" has epoch number = " ++ show number
      else number
 
---------------------------------------------------------------------------------
-
--- | Fill the "genesis" object "shelley", "alonzo" and "conway" properties
---   using the provided epoch number and overlay names.
-shelleyAlonzoConway :: Integer -> Types.Profile -> Types.Profile
-shelleyAlonzoConway epochNumber profile =
-  let epochParams  = unsafePerformIO $ epochTimeline epochNumber
-      epochParams' = unsafePerformIO $ foldM
-        (flip genesisOverlay)
-        epochParams
-        (Types.pparamsOverlays $ Types.genesis profile)
-      genesis f p = p {Types.genesis = f (Types.genesis p)}
-  in genesis (\g -> g {
-      Types.pparamsEpoch = epochNumber
-    , Types.shelley =
-        let shey' = KeyMap.fromList [
-               ("slotLength", Aeson.Number $ realToFrac $ Types.slot_duration g)
-             , ("epochLength", Aeson.Number $ fromInteger $ Types.epoch_length g)
-             , ("securityParam", Aeson.Number $ fromInteger $ Types.parameter_k g)
-             , ("activeSlotsCoeff", Aeson.Number $ Types.active_slots_coeff g)
-             , ("protocolParams",
-                 case KeyMap.lookup "shelley" epochParams' of
-                   (Just shey) -> shey
-                   _ -> error "Obtained no \"shelley\" from epoch-timeline.json"
-               )
-             ]
-        -- Any property that was set before by the user takes precedence.
-        in KeyMap.unionWithKey unionWithKey shey' (Types.shelley g)
-    , Types.alonzo  =
-        case KeyMap.lookup "alonzo" epochParams' of
-          (Just (Aeson.Object alzo)) -> alzo
-          _ -> error "Obtained no \"alonzo\" from epoch-timeline.json"
-    , Types.conway  =
-        case KeyMap.lookup "conway" epochParams' of
-          (Just (Aeson.Object coay)) -> Just coay
-          _ -> Nothing
-    }) profile
-
-epochTimeline :: Integer -> IO (KeyMap.KeyMap Aeson.Value)
-epochTimeline epochNumber = do
-  fp <- Paths.getDataFileName "data/genesis/epoch-timeline.json"
-  eitherValue <- Aeson.eitherDecodeFileStrict fp
-  return $ case eitherValue of
-    (Right (Aeson.Object keyMap)) -> foldl
-      (\acc key ->
-        -- TODO: It will fail if then number used as string key is above 999.
-        if key <= read ("\"" ++ show epochNumber ++ "\"")
-        then case KeyMap.lookup key keyMap of
-          (Just (Aeson.Object obj)) ->
-            -- Right-biased merge of both JSON objects at all depths.
-            KeyMap.unionWithKey unionWithKey acc obj
-          _ -> error "Key not an Aeson Object: \"data/epoch-timeline.json\""
-        else acc
-      )
-      mempty
-      (sort $ KeyMap.keys keyMap)
-    _ -> error "Not an Aeson Object: \"data/epoch-timeline.json\""
-
-genesisOverlay :: String -> KeyMap.KeyMap Aeson.Value -> IO (KeyMap.KeyMap Aeson.Value)
+-- The genesis overlay files are applied to the "genesis" property and the ones
+-- available are defined as functions in `Primitives`.
+genesisOverlay :: String -> Genesis.Epoch -> IO Genesis.Epoch
 genesisOverlay overlayName epochParams = do
   let dataFileName = "data/genesis/overlays/" ++ overlayName ++ ".json"
   fp <- Paths.getDataFileName dataFileName
   eitherValue <- Aeson.eitherDecodeFileStrict fp
   return $ case eitherValue of
-    (Right (Aeson.Object keyMap)) ->
-      -- Right-biased merge of both JSON objects at all depths.
-      KeyMap.unionWithKey unionWithKey epochParams keyMap
-    _ -> error $ "Not an Aeson Object: \"" ++ fp ++ "\""
+    -- Right-biased merge of both JSON objects at all depths.
+    (Right epoch) -> epochParams <> epoch
+    (Left e) -> error $ "\"" ++ fp ++ "\": " ++ e
 
+-- Step 3.
+--------------------------------------------------------------------------------
+
+-- Merges the profile with a JSON object stored in the "overlay" property.
+overlay :: HasCallStack => Types.Profile -> Types.Profile
+overlay profile =
+  let overlaykeyMap = Types.overlay profile -- An `Aeson.Object`.
+  in if overlaykeyMap /= mempty
+     then applyOverlay overlaykeyMap profile
+     else profile
+
+-- Step 4.
+--------------------------------------------------------------------------------
+
+-- Fills the "derive" property.
+-- "derive" needs above "shelley", "alonzo" and "conway" properties.
 derive :: Types.Profile -> Types.Profile
-derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ ana _ _ _ _) =
+derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ _ ana _ _ _ _) =
   let 
       -- Absolute/epoch durations:
       ----------------------------
@@ -370,9 +258,8 @@ derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ ana _ _ _ _) =
       -- UTxO:
       --------
       (effective_delegators, delegators_effective) =
-        case Types.delegators gsis of
-          (Just d) -> (d, max d (Types.n_pools comp))
-          Nothing -> (Types.n_pools comp, Types.n_pools comp)
+        let d = Types.delegators gsis
+        in (d, max d (Types.n_pools comp))
       utxo_generated = generator_tx_count * Types.inputs_per_tx gtor
       utxo_stuffed = max 0 (Types.utxo gsis)
 
@@ -381,9 +268,7 @@ derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ ana _ _ _ _) =
       dataset_measure =
         if Types.utxo gsis == 0
         then 0
-        else case Types.delegators gsis of
-               (Just d) -> Types.utxo gsis + d
-               Nothing -> Types.utxo gsis
+        else Types.utxo gsis + Types.delegators gsis
       -- NominalDiffTime.
       dataset_induced_startup_delay_optimistic =
         if dataset_measure < 10000
@@ -452,42 +337,54 @@ derive p@(Types.Profile _ _ _ comp _era gsis _ n gtor _ _ ana _ _ _ _) =
        }
      }
 
-{--
-  { createStakedArgs:
-    ([ "--testnet-magic",          $p.genesis.network_magic
-     , "--supply",                 fmt_decimal_10_5($p.genesis.funds_balance)
-     , "--gen-utxo-keys",          1
-     , "--gen-genesis-keys",       $p.composition.n_bft_hosts
-     , "--supply-delegated",       fmt_decimal_10_5($p.derived.supply_delegated)
-     , "--gen-pools",              $p.composition.n_pools
-     , "--gen-stake-delegs",       $p.derived.delegators_effective
-     , "--num-stuffed-utxo",       fmt_decimal_10_5($p.derived.utxo_stuffed)
-     ] +
-     if $p.composition.dense_pool_density != 1
-     then
-     [ "--bulk-pool-cred-files",   $p.composition.n_dense_hosts
-     , "--bulk-pools-per-file",    $p.composition.dense_pool_density ]
-     else [] end)
-  , createTestnetDataArgs:
-    ([ "--testnet-magic",          $p.genesis.network_magic
-     , "--total-supply",           fmt_decimal_10_5($p.genesis.funds_balance + $p.derived.supply_delegated)
-     , "--utxo-keys",              1
-     , "--genesis-keys",           $p.composition.n_bft_hosts
-     , "--delegated-supply",       fmt_decimal_10_5($p.derived.supply_delegated)
-     , "--pools",                  $p.composition.n_pools
-     , "--stake-delegators",       $p.derived.delegators_effective
-     , "--drep-keys",              $p.genesis.dreps
-     , "--stuffed-utxo",           fmt_decimal_10_5($p.derived.utxo_stuffed)
-     ])
-  , pools:
-    [ "--argjson"
-    , "initialPoolCoin",           fmt_decimal_10_5($p.genesis.pool_coin)
-    ]
-  }
---}
+-- Step 5.
+--------------------------------------------------------------------------------
+
+-- Many fixes to be able to call `cliArgs`.
+finalize :: Types.Profile -> Types.Profile
+finalize profile =
+  let
+    -- Third, things not in "derived" that can't be a default.
+    profile' =
+      (\p -> p {
+          -- Genesis "fixes".
+          Types.genesis =
+            let genesis = Types.genesis p
+            in  genesis {
+                   -- TODO: Remove or move to derive ?
+                  Types.pool_coin =
+                    if Types.n_pools (Types.composition p) == 0
+                    then 0
+                    else Types.per_pool_balance genesis
+                  -- TODO: Remove or move to derive ?
+                , Types.delegator_coin =
+                    if Types.delegators genesis == 0
+                    then 0
+                    else Types.per_pool_balance genesis
+                }
+          -- Generator "fixes".
+        , Types.generator = (Types.generator p) {
+            -- TODO: Remove or move to derive ?
+            Types.tx_count = Just $ Types.generator_tx_count $ Types.derived p
+          -- Analysis "fixes".
+        }
+          -- Analysis "fixes".
+        , Types.analysis = (Types.analysis p) {
+            -- TODO: These two were set when constructing "derive".
+            --       Remove from "analysis" and add to "derive" ???
+            Types.minimum_chain_density =
+              Types.active_slots_coeff (Types.genesis p) * 0.5
+          , Types.cluster_startup_overhead_s =
+              Types.dataset_induced_startup_delay_conservative (Types.derived p)
+        }
+      })
+      profile
+    -- The "cli_args" property need the "derived" property and above fixes.
+    profile'' = cliArgs profile'
+  in profile''
 
 cliArgs :: Types.Profile -> Types.Profile
-cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ dved _ _ _) =
+cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ _ dved _ _ _) =
   let --toJson = map (\(k,n) -> )
       fmtDecimal i =
            Scientific.formatScientific Scientific.Fixed (Just 0) (fromInteger i / 100000)
@@ -496,7 +393,7 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ dved _ _ _) =
         [
           Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
         , Aeson.String "--supply",           Aeson.String $ Text.pack $ fmtDecimal $ Types.funds_balance gsis
-        , Aeson.String "--gen-utxo-keys",    Aeson.Number 1
+        , Aeson.String "--gen-utxo-keys",    Aeson.Number $ fromInteger $ Types.utxo_keys gsis
         , Aeson.String "--gen-genesis-keys", Aeson.Number $ fromInteger $ Types.n_bft_hosts comp
         , Aeson.String "--supply-delegated", Aeson.String $ Text.pack $ fmtDecimal $ Types.supply_delegated dved
         , Aeson.String "--gen-pools",        Aeson.Number $ fromInteger $ Types.n_pools comp
@@ -515,7 +412,7 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ dved _ _ _) =
         [
           Aeson.String "--testnet-magic",    Aeson.Number $ fromInteger $ Types.network_magic gsis
         , Aeson.String "--total-supply",     Aeson.String $ Text.pack $ fmtDecimal $ Types.funds_balance gsis + Types.supply_delegated dved
-        , Aeson.String "--utxo-keys",        Aeson.Number 1
+        , Aeson.String "--utxo-keys",        Aeson.Number $ fromInteger $ Types.utxo_keys gsis
         , Aeson.String "--genesis-keys",     Aeson.Number $ fromInteger $ Types.n_bft_hosts comp
         , Aeson.String "--delegated-supply", Aeson.String $ Text.pack $ fmtDecimal $ Types.supply_delegated dved
         , Aeson.String "--pools",            Aeson.Number $ fromInteger $ Types.n_pools comp
@@ -534,69 +431,70 @@ cliArgs p@(Types.Profile _ _ _ comp __ gsis _ _ _ _ _ _ dved _ _ _) =
           , Types.pools = poolsArgs
         }}
 
+-- Step 6.
 --------------------------------------------------------------------------------
 
-libMKLocations :: [ (String, [ (String, [Types.Profile]) ] ) ]
-libMKLocations =
-  [
-    -- Local profiles.
-    ("LOCAL_PROFILES", [
-      -- Families of local profiles.
-      ("PROFILES_EMPTY"        , profilesNoEraEmpty)
-    , ("PROFILES_MINIATURE"    , profilesNoEraMiniature)
-    , ("PROFILES_FORGE_STRESS" , profilesNoEraForgeStress)
-    , ("PROFILES_PLUTUSCALL"   , profilesNoEraPlutuscall)
-    , ("PROFILES_MODEL"        , profilesNoEraModel)
-    , ("PROFILES_K3"           , profilesNoEraK3)
-    , ("PROFILES_SCENARIOS"    ,
-         profilesNoEraChainsync
-      ++ profilesNoEraIdle
-      ++ profilesNoEraLatency
-      ++ profilesNoEraTracerOnly
-      )
-    , ("PROFILES_LEGACY"       ,
-         profilesNoEraDense
-      ++ profilesNoEraDish
-      )
-    , ("PROFILES_SCALING"      , profilesNoEraScalingLocal)
-    ])
-  -- Cloud profiles.
-  , ("CLOUD_PROFILES", [
-      -- Families of cloud profiles.
-      ("PROFILES_NOMAD_PERF"   , profilesNoEraCloud)
-    , ("PROFILES_NOMAD_PERFSSD", profilesNoEraScalingCloud)
-    ])
-  ]
+-- Unlike `overlay` the preset content is not stored in the profile, the name of
+-- the already part of the profile.
+preset :: HasCallStack => Types.Profile -> Types.Profile
+preset profile =
+  case Types.preset profile of
+    Nothing -> profile
+    (Just presetName) -> unsafePerformIO $ do
+      let dataFileName = "data/presets/" ++ presetName ++ ".json"
+      fp <- Paths.getDataFileName dataFileName
+      eitherValue <- Aeson.eitherDecodeFileStrict fp
+      case eitherValue of
+        (Right value) -> return $ applyOverlay value profile
+        _ -> error $ "Not an Aeson Object: \"" ++ dataFileName ++ "\""
 
-libMk :: [String]
-libMk =
-    foldMap
-      (\(_, families) ->
-        map
-          (\(familyName, ps) ->
-            let profileNames = map Types.name ps
-            in
-              -- For example:
-              -- PROFILES_EMPTY := fast fast-solo ...
-              -- PROFILES_MINIATURE := ci-bench ...
-              familyName ++ " := " ++ unwords profileNames
-          )
-          families
-      )
-      libMKLocations
-  ++
-    [""] -- Empty line.
-  ++
-    foldMap
-      (\(locationName, families) ->
-        map
-          (\(familyName, _) ->
-            -- LOCAL_PROFILES += $(PROFILES_VENDOR)
-            -- ...
-            -- CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
-            -- ...
-            locationName ++ " += $(" ++ familyName ++ ")"
-          )
-          families
-      )
-      libMKLocations
+-- Merge (overlay / preset) utils.
+--------------------------------------------------------------------------------
+
+applyOverlay :: HasCallStack => Aeson.Object -> Types.Profile -> Types.Profile
+applyOverlay overlaykeyMap profile =
+  let profileKeyMap = case Aeson.toJSON profile of -- toJson, an Aeson.Value
+                        (Aeson.Object keyMap) -> keyMap
+                        _ -> error "What have you done?"
+      union = KeyMap.unionWithKey unionWithKey profileKeyMap overlaykeyMap
+  in case Aeson.fromJSON (Aeson.Object union) of
+    -- Add the overlay to the profile.
+    (Aeson.Success profile') -> profile'
+    (Aeson.Error str) -> error $ "Could not apply overlay: " ++ str
+
+-- Right-biased merge of both JSON objects at all depths.
+unionWithKey :: KeyMap.Key -> Aeson.Value -> Aeson.Value -> Aeson.Value
+-- Recurse if it's an object.
+unionWithKey _ (Aeson.Object a) (Aeson.Object b) =
+  Aeson.Object $ KeyMap.unionWithKey unionWithKey a b
+-- If not an object prefer the right value.
+unionWithKey _ _ b = b
+
+
+-- Post-processing
+--------------------------------------------------------------------------------
+
+-- | Specialize profile to all valid eras and add era suffix(es) to profile name.
+--   An era is considered valid based on the protocol version a profile might define.
+addEras :: Map.Map String Types.Profile -> Map.Map String Types.Profile
+addEras = foldMap
+  (\profile -> Map.fromList $
+      catMaybes
+        [ addEra profile Types.Shelley "shey"
+        , addEra profile Types.Allegra "alra"
+        , addEra profile Types.Mary    "mary"
+        , addEra profile Types.Alonzo  "alzo"
+        , addEra profile Types.Babbage "bage"
+        , addEra profile Types.Conway  "coay"
+        ]
+  )
+
+addEra :: Types.Profile -> Types.Era -> String -> Maybe (String, Types.Profile)
+addEra p era suffix
+  | Just (major, _) <- Types.profileProtocolVersion p
+  , era < Types.firstEraForMajorVersion major
+    = Nothing
+  | otherwise
+    = let name = Types.name p
+          newName = name ++ "-" ++ suffix
+      in Just (newName, p {Types.name = newName, Types.era = era})

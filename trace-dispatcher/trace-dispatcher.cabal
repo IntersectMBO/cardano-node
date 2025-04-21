@@ -1,13 +1,13 @@
 cabal-version: 3.0
 
 name:                   trace-dispatcher
-version:                2.7.0
+version:                2.9
 synopsis:               Tracers for Cardano
 description:            Package for development of simple and efficient tracers
                         based on the arrow based contra-tracer package
 category:               Cardano,
                         Trace,
-copyright:              2020-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
+copyright:              2020-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
 author:                 Juergen Nicklisch-Franken
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -31,6 +31,9 @@ library
                       Cardano.Logging.Formatter
                       Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
+                      Cardano.Logging.Prometheus.Exposition
+                      Cardano.Logging.Prometheus.NetworkRun
+                      Cardano.Logging.Prometheus.TCPServer
                       Cardano.Logging.Trace
                       Cardano.Logging.TraceDispatcherMessage
                       Cardano.Logging.Tracer.DataPoint
@@ -44,7 +47,11 @@ library
                       Control.Tracer.Arrow
                       Control.Tracer
 
-  default-extensions:   OverloadedStrings
+  default-extensions:   LambdaCase
+                        NamedFieldPuns
+                        OverloadedStrings
+
+
   build-depends:        base >=4.12 && <5
                       , aeson >= 2.1.0.0
                       , aeson-pretty
@@ -54,22 +61,26 @@ library
                       , containers
                       , contra-tracer
                       , deepseq
-                      , ekg-wai
                       , ekg-core
-                      , ekg-forward >= 0.8
+                      , ekg-forward >= 0.9
+                      , hashable
                       , hostname
+                      , http-date
+                      , io-classes
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.19
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
                       , stm
                       , text
                       , time
+                      , time-manager
                       , trace-forward
                       , unagi-chan >= 0.4.1.4
+                      , unix-compat
                       , unliftio
                       , unliftio-core
                       , unordered-containers
@@ -88,6 +99,9 @@ library
                         -Widentities
                         -Wredundant-constraints
                         -Wmissing-export-lists
+
+  if impl(ghc >= 9.8)
+    ghc-options:        -Wno-x-partial
 
 
 test-suite trace-dispatcher-test
@@ -164,7 +178,7 @@ benchmark trace-dispatcher-bench
                       , aeson
                       , containers
                       , criterion
-                      , ekg-wai
+                      , ekg-core
                       , text
                       , time
                       , trace-dispatcher

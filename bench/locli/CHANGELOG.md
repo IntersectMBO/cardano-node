@@ -1,5 +1,12 @@
 # Revision history for locli
 
+## 2.1 -- Feb 2025
+
+* New CLI command `dump-tracefreqs` to write out per-host trace frequencies JSON files
+* Introduce `Reducer` type class for `locli-quick` based quick query evaluation
+* Sample `Reducer` instance implmentations: data types `TxsInMempool`, `Silence` and `ResourceMeasure`
+* Add plotting capabilities (experimental) via a heavily modded fork of package `easyplot-1.0` (module `EasyPlot.hs` and its license)
+
 ## 2.0 -- Dec 2024
 
 * New database (DB) persistence backend for log objects using serverless SQLite DBs

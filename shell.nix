@@ -17,7 +17,6 @@ in
     };
   }
 , pkgs ? import ./nix customConfig
-, cardano-mainnet-mirror ? __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix"
 }:
 with pkgs;
 let
@@ -45,19 +44,6 @@ let
   ## XXX: remove this once people retrain their muscle memory:
   dev = project.shell;
 
-  commandHelp =
-    ''
-      echo "
-        Commands:
-          * nix flake lock --update-input <iohkNix|haskellNix> - update nix build input
-          * cardano-cli - used for key generation and other operations tasks
-          * wb - cluster workbench
-          * start-cluster - start a local development cluster
-          * stop-cluster - stop a local development cluster
-          * restart-cluster - restart the last cluster run (in 'run/current')
-                              (WARNING: logs & node DB will be wiped clean)
-      "
-    '';
   # Test cases will assume a UTF-8 locale and provide text in this character encoding.
   # So force the character encoding to UTF-8 and provide locale data.
   setLocale =
@@ -73,8 +59,7 @@ let
     with customConfig.localCluster;
       import ./nix/workbench/shell.nix
         { inherit pkgs lib haskellLib project;
-          inherit setLocale haveGlibcLocales commandHelp;
-          inherit cardano-mainnet-mirror;
+          inherit setLocale haveGlibcLocales;
           inherit workbenchDevMode;
           inherit withHoogle;
           workbench-runner = pkgs.workbench-runner
@@ -95,8 +80,7 @@ let
         devopsShell = with customConfig.localCluster;
           import ./nix/workbench/shell.nix
             { inherit pkgs lib haskellLib project;
-              inherit setLocale haveGlibcLocales commandHelp;
-              inherit cardano-mainnet-mirror;
+              inherit setLocale haveGlibcLocales;
               inherit workbench-runner workbenchDevMode;
               inherit withHoogle;
             };
@@ -106,6 +90,7 @@ let
     packages = _: [];
 
     nativeBuildInputs = with cardanoNodePackages; [
+      alejandra
       nix
       cardano-cli
       bech32
@@ -123,6 +108,11 @@ let
       pkgs.time
       pkgs.util-linux
       workbench.workbench
+      git
+      graphviz
+      jq
+      moreutils
+      procps
       workbench-runner.workbench-interactive-start
       workbench-runner.workbench-interactive-stop
       workbench-runner.workbench-interactive-restart
@@ -137,9 +127,6 @@ let
       | ${lolcat}/bin/lolcat
 
       ${devopsShell.shellHook}
-
-      # Socket path default to first node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${workbench-runner.stateDir} 'node-0')
 
       ${setLocale}
 
@@ -157,7 +144,6 @@ let
 
       echo "NOTE: you may need to use a github access token if you hit rate limits with nix flake update:"
       echo '      edit ~/.config/nix/nix.conf and add line `access-tokens = "github.com=23ac...b289"`'
-      ${commandHelp}
 
     '';
   };

@@ -1,6 +1,14 @@
 # ChangeLog
 
-## NEXT
+## 2.2.11 - Mar 2025
+
+* Updated to `ouroboros-network-framework-0.17`
+
+## 2.2.10 - Feb 2025
+
+* Updated to `ouroboros-network-framework-0.16`
+
+## 2.2.9 - Jan 2025
 
 * Updated to `typed-protocols-0.3`.
 

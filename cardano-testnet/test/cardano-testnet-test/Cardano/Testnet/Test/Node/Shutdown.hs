@@ -68,7 +68,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
       logDir' = makeLogDir $ tempAbsPath conf
       socketDir' = makeSocketDir $ tempAbsPath conf
       testnetMagic' = 42
-      sbe = ShelleyBasedEraBabbage
+      sbe = ShelleyBasedEraConway
 
   -- TODO: We need to uniformly create these directories
   H.createDirectoryIfMissing_ logDir'
@@ -145,17 +145,16 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- Run cardano-node with pipe as stdin.  Use 0 file descriptor as shutdown-ipc
 
-  eRes <- H.evalIO . runExceptT $ procNode
-                         [ "run"
-                         , "--config", tempAbsPath' </> "configuration.yaml"
-                         , "--topology", tempAbsPath' </> "mainnet-topology.json"
-                         , "--database-path", tempAbsPath' </> "db"
-                         , "--socket-path", IO.sprocketArgumentName sprocket
-                         , "--host-addr", "127.0.0.1"
-                         , "--port", show @Int port
-                         , "--shutdown-ipc", "0"
-                         ]
-  res <- H.evalEither eRes
+  res <- procNode
+           [ "run"
+           , "--config", tempAbsPath' </> "configuration.yaml"
+           , "--topology", tempAbsPath' </> "mainnet-topology.json"
+           , "--database-path", tempAbsPath' </> "db"
+           , "--socket-path", IO.sprocketArgumentName sprocket
+           , "--host-addr", "127.0.0.1"
+           , "--port", show @Int port
+           , "--shutdown-ipc", "0"
+           ]
   let process = res { IO.std_in = IO.CreatePipe
                     , IO.std_out = IO.UseHandle hNodeStdout
                     , IO.std_err = IO.UseHandle hNodeStderr
@@ -199,8 +198,9 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
       slotLen = 0.01
   let fastTestnetOptions = def
         { cardanoNodes =
-          [ SpoNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
-          ]
+          AutomaticNodeOptions
+            [ SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
+            ]
         }
       shelleyOptions = def
         { genesisEpochLength = 300

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-
-set -e
-# set -x
+set -euo pipefail
 
 # This script will initiate the transition to protocol version 2 (Shelley).
 
@@ -10,22 +8,24 @@ set -e
 # Also, you need to restart the nodes after running this script in order for the
 # update to be endorsed by the nodes.
 
+[ -n "${DEBUG:-}" ] && set -x
+
 ROOT=example
 
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
+export CARDANO_NODE_NETWORK_ID=42
 
 cardano-cli byron submit-update-proposal \
-            --testnet-magic 42 \
             --filepath update-proposal-1
 
 sleep 2
+
 cardano-cli byron submit-proposal-vote  \
-            --testnet-magic 42 \
             --filepath update-vote-1.000
+
 cardano-cli byron submit-proposal-vote  \
-            --testnet-magic 42 \
             --filepath update-vote-1.001
 
 sed -i configuration.yaml \

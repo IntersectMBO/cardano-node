@@ -46,8 +46,8 @@ instance MetaTrace BaseStats where
   privacyFor  (Namespace _ ["BaseStats"]) _ = Just Public
   documentFor (Namespace _ ["BaseStats"]) = Just "Basic statistics"
   metricsDocFor (Namespace _ ["BaseStats"]) =
-    [ ("measure", "This is the value of a single measurment")
-    , ("sum", "This is the sum of all measurments")]
+    [ ("measure", "This is the value of a single measurement")
+    , ("sum", "This is the sum of all measurements")]
   allNamespaces = [Namespace [] ["BaseStats"]]
 
 emptyStats :: BaseStats
@@ -66,7 +66,7 @@ testAggregation :: IO [Text]
 testAggregation = do
     testTracerRef <- newIORef []
     simpleTracer <- testTracer testTracerRef
-    formTracer <- machineFormatter Nothing simpleTracer
+    formTracer <- machineFormatter simpleTracer
     tracer <- foldTraceM calculate emptyStats (contramap unfold formTracer)
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [formTracer]
