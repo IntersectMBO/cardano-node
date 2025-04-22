@@ -47,7 +47,16 @@ data TraceStartLeadershipCheckPlus =
         tsSlotNo       :: SlotNo
       , tsUtxoSize     :: Int
       , tsDelegMapSize :: Int
-      , tsChainDensity :: Double
+      , tsChainDensity :: Float
+      -- ^ Chain density in last k (`securityParam` / 2160) blocks.
+      --   Last K blocks divided by the slots between those blocks. Divide by
+      --   `.activeSlotsCoeff` to obtain as a percentage the actual number of
+      --   blocks created over the expected number of blocks that could be
+      --   created in the last k blocks.
+      --   We don't use the term "chain quality" or similar because that has a
+      --   specific meaning in the papers, refers to the actual properties of
+      --   the chain (an ontological thing), whereas here we are dealing with
+      --   knowledge or perception of the chain (an epistemological thing).
     }
 
 forgeTracerTransform ::
@@ -76,7 +85,7 @@ forgeTracerTransform nodeKern (Trace tr) =
                                 slotNo
                                 utxoSize
                                 delegMapSize
-                                (fromRational chainDensity)
+                                chainDensity
                     in pure (lc, Right (Right msg))
           (lc, Right a) ->
               pure (lc, Right a)
@@ -96,12 +105,12 @@ fragmentChainDensity ::
 #else
   AF.HasHeader (Header blk)
 #endif
-  => AF.AnchoredFragment (Header blk) -> Rational
+  => AF.AnchoredFragment (Header blk) -> Float
 fragmentChainDensity frag = calcDensity blockD slotD
   where
-    calcDensity :: Word64 -> Word64 -> Rational
+    calcDensity :: Word64 -> Word64 -> Float
     calcDensity bl sl
-      | sl > 0 = toRational bl / toRational sl
+      | sl > 0 = fromIntegral bl / fromIntegral sl
       | otherwise = 0
     slotN  = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     -- Slot of the tip - slot @k@ blocks back. Use 0 as the slot for genesis
