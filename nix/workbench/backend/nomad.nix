@@ -2,8 +2,6 @@
 , lib
 , stateDir
 , subBackendName
-# TODO: Fetch this from config services inside materialise-profile !
-, eventlogged ? true
 , ...
 }:
 let
@@ -147,20 +145,15 @@ let
       # the one used to enter the shell ??????????
       cardano-node = rec {
         # Local reference only used if not "cloud".
-        nix-store-path = with pkgs;
-          if eventlogged
-            then cardanoNodePackages.cardano-node.passthru.eventlogged
-            else cardanoNodePackages.cardano-node.passthru.noGitRev
-        ;
+        # Avoid rebuilding on every commit because of `set-git-rev`.
+        nix-store-path = pkgs.cardanoNodePackages.cardano-node.passthru.noGitRev;
         flake-reference = "github:intersectmbo/cardano-node";
-        flake-output =
-          if eventlogged
-            then "cardanoNodePackages.cardano-node.passthru.eventlogged"
-            else "cardanoNodePackages.cardano-node.passthru.noGitRev"
+        flake-output = "cardanoNodePackages.cardano-node.passthru.noGitRev"
         ;
       };
       cardano-cli = rec {
         # Local reference only used if not "cloud".
+        # Avoid rebuilding on every commit because of `set-git-rev`.
         nix-store-path = pkgs.cardanoNodePackages.cardano-cli.passthru.noGitRev;
         flake-reference = "github:input-output-hk/cardano-cli";
         flake-output = "cardanoNodePackages.cardano-cli.passthru.noGitRev";

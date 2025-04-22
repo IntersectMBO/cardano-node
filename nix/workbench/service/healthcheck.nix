@@ -2,7 +2,6 @@
 , backend
 , profile
 , nodeSpecs
-, eventlogged ? true
 }:
 
 with pkgs.lib;
@@ -14,18 +13,16 @@ let
   grep            = pkgs.gnugrep;
   jq              = pkgs.jq;
   # Avoid rebuilding the script on every commit.
-  # Both `eventlogged` and `noGitRev` do not have `set-git-rev`.
+  # `noGitRev` does not have `set-git-rev` that is set on every commit.
   cardano-node = with pkgs;
     if backend.useCabalRun
     then "cardano-node"
-    else if eventlogged
-         then cardanoNodePackages.cardano-node.passthru.eventlogged + "/bin/cardano-node"
-         else cardanoNodePackages.cardano-node.passthru.noGitRev    + "/bin/cardano-node"
+    else cardanoNodePackages.cardano-node.passthru.noGitRev + "/bin/cardano-node"
   ;
   cardano-cli  = with pkgs;
     if backend.useCabalRun
     then "cardano-cli"
-    else cardanoNodePackages.cardano-cli.passthru.noGitRev          + "/bin/cardano-cli";
+    else cardanoNodePackages.cardano-cli.passthru.noGitRev + "/bin/cardano-cli";
 in {
   start =
     # Assumptions:
