@@ -16,6 +16,7 @@ import           Cardano.Logging
 
 import           Control.Concurrent.STM (atomically)
 import           Data.IORef (readIORef)
+import           Data.Ratio ((%))
 import           Data.Word (Word64)
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -47,7 +48,7 @@ data TraceStartLeadershipCheckPlus =
         tsSlotNo       :: SlotNo
       , tsUtxoSize     :: Int
       , tsDelegMapSize :: Int
-      , tsChainDensity :: Double
+      , tsChainDensity :: Rational
     }
 
 forgeTracerTransform ::
@@ -76,7 +77,7 @@ forgeTracerTransform nodeKern (Trace tr) =
                                 slotNo
                                 utxoSize
                                 delegMapSize
-                                (fromRational chainDensity)
+                                chainDensity
                     in pure (lc, Right (Right msg))
           (lc, Right a) ->
               pure (lc, Right a)
@@ -101,7 +102,7 @@ fragmentChainDensity frag = calcDensity blockD slotD
   where
     calcDensity :: Word64 -> Word64 -> Rational
     calcDensity bl sl
-      | sl > 0 = toRational bl / toRational sl
+      | sl > 0 = toInteger bl % toInteger sl
       | otherwise = 0
     slotN  = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     -- Slot of the tip - slot @k@ blocks back. Use 0 as the slot for genesis
