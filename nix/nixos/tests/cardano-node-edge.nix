@@ -1,6 +1,9 @@
 {pkgs, ...}:
 with pkgs; let
   environment = "mainnet";
+
+  # NixosTest script fns supporting a timeout have a default of 900 seconds.
+  timeout = toString 30;
 in {
   name = "cardano-node-edge-test";
   nodes = {
@@ -45,22 +48,21 @@ in {
       };
     };
   };
+
+  # Only newer nixpkgs have have timeout args for all wait_for_.* fns.
+  # Use the generic wait_until_succeeds w/ timeout arg until nixpkgs is bumped.
   testScript = ''
     start_all()
-    machine.wait_for_unit("cardano-node.service")
-    machine.wait_for_file("/run/cardano-node/node.socket")
-
-    # Re-enable once PrometheusSimple with node >= 10.3 is available
-    # machine.wait_for_open_port(12798)
-
-    machine.wait_for_open_port(3001)
+    machine.wait_for_unit("cardano-node.service", timeout=${timeout})
+    machine.wait_until_succeeds("[ -S /run/cardano-node/node.socket ]", timeout=${timeout})
+    machine.wait_until_succeeds("nc -z localhost 12798", timeout=${timeout})
+    machine.wait_until_succeeds("nc -z localhost 3001", timeout=${timeout})
     machine.succeed("systemctl status cardano-node")
-
-    machine.succeed(
+    out = machine.succeed(
       "${cardanoNodePackages.cardano-cli}/bin/cardano-cli ping -h 127.0.0.1 -c 1 -q --json | ${jq}/bin/jq -c"
     )
-
-    machine.wait_for_open_port(8101)
+    print("ping:", out)
+    machine.wait_until_succeeds("nc -z localhost 8101", timeout=${timeout})
     machine.succeed("systemctl status cardano-submit-api")
   '';
 }
