@@ -71,7 +71,7 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: 40536ca314593a26e7e768da43eda6982a5d6cf3
+  tag: 3479faaae8e061678f1da549f33273d1d78dfa42
   subdir:
     ouroboros-network
     ouroboros-network-framework
