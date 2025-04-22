@@ -1519,13 +1519,13 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
                 , "slot" .= toJSON (unSlotNo tsSlotNo)
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                 , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
-                , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
+                , "chainDensity" .= toJSON (fromRational tsChainDensity :: Double)
                 ]
   forHuman TraceStartLeadershipCheckPlus {..} =
       "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
       <> " utxoSize "     <> showT tsUtxoSize
       <> " delegMapSize " <> showT tsDelegMapSize
-      <> " chainDensity " <> showT tsChainDensity
+      <> " chainDensity " <> showT (fromRational tsChainDensity :: Double)
   asMetrics TraceStartLeadershipCheckPlus {..} =
     [IntM "utxoSize"     (fromIntegral tsUtxoSize),
      IntM "delegMapSize" (fromIntegral tsDelegMapSize)]
