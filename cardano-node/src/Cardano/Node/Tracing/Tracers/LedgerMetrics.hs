@@ -4,15 +4,22 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{-# OPTIONS_GHC -Wno-redundant-constraints -Wno-error=partial-type-signatures #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints
+                -Wno-error=partial-type-signatures
+                -Wno-error=unused-imports
+                -Wno-error=unused-top-binds
+  #-}
 
 module Cardano.Node.Tracing.Tracers.LedgerMetrics
   ( LedgerMetrics (..)
@@ -20,7 +27,7 @@ module Cardano.Node.Tracing.Tracers.LedgerMetrics
   , startLedgerMetricsTracer
   ) where
 
-import           Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..))
+import           Cardano.Ledger.BaseTypes (SlotNo (..))
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..), mapNodeKernelDataIO,
                    nkQueryChain, nkQueryLedger)
@@ -30,18 +37,45 @@ import           Ouroboros.Consensus.HardFork.Combinator (Header (..))
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (getBlockchainTime))
+import           Ouroboros.Consensus.Util.IOLike (IOLike (..))
+import           Ouroboros.Consensus.Util.STM (Watcher (..), withWatcher)
 import qualified Ouroboros.Network.AnchoredFragment as AF (HasHeader (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (async)
-import           Control.Monad.Class.MonadAsync (link)
-import           Control.Monad.STM (atomically, retry)
+import           "io-classes" Control.Concurrent.Class.MonadSTM.TMVar (newEmptyTMVar, takeTMVar, writeTMVar)
+import           "io-classes" Control.Monad.Class.MonadAsync (MonadAsync (..), link)
+import           "io-classes" Control.Monad.Class.MonadSTM (MonadSTM (..), STM, atomically, retry)
+import           Control.Monad (when)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
+import           Data.IORef (readIORef)
+import           Data.Kind (Type)
+import           "cardano-strict-containers" Data.Maybe.Strict (StrictMaybe (..), strictMaybeToMaybe)
 import           Data.Text as Text (unlines)
-import           GHC.Conc (labelThread, myThreadId, unsafeIOToSTM)
+import           GHC.Conc (labelThread, myThreadId)
+
+(!++) :: forall (blk :: Type) (monad :: Type -> Type) (nodeKernel :: Type) . ()
+  => nodeKernel ~ NodeKernel monad RemoteAddress LocalConnectionId blk
+  => IOLike monad
+  => MonadSTM monad
+  => nodeKernel -> StrictMaybe SlotNo -> monad SlotNo
+nodeKernel !++ slotNo = do
+  tmVar <- atomically do newEmptyTMVar
+  let wNotify :: SlotNo -> monad () = atomically . writeTMVar tmVar
+  withWatcher threadLabel Watcher {..} $ atomically do takeTMVar tmVar
+  where
+    threadLabel :: String
+    threadLabel = "startLedgerMetricsTracer awaiting new SlotNo thread"
+    wFingerprint :: SlotNo -> SlotNo
+    wFingerprint = id
+    wInitial :: Maybe SlotNo
+    wInitial = strictMaybeToMaybe slotNo
+    wReader :: STM monad SlotNo
+    wReader = getCurrentSlot (getBlockchainTime nodeKernel) >>= \case
+      CurrentSlot newSlotNo | SJust newSlotNo /= slotNo -> pure newSlotNo
+      _ -> retry
 
 startLedgerMetricsTracer
   :: forall blk nodeKernel
@@ -51,39 +85,28 @@ startLedgerMetricsTracer
   => AF.HasHeader (Header blk)
   => AF.HasHeader blk
   => Tracer IO LedgerMetrics
-  -> Int                         -- ^ Every Nth slot
-  -> NodeKernelData blk
-  -> IO ()
+      -> Int                         -- ^ Every Nth slot
+      -> NodeKernelData blk
+      -> IO ()
 startLedgerMetricsTracer _ 0 _ = pure ()  -- Disabled if 0
-startLedgerMetricsTracer tr everyNThSlot nodeKernelData = do
-    as <- async ledgerMetricsThread
-    link as
-  where
-    ledgerMetricsThread :: IO ()
-    ledgerMetricsThread = do
-      myThreadId >>= flip labelThread "Peer Tracer"
-      go 1 SNothing
-      where
-        go :: Int -> StrictMaybe SlotNo -> IO ()
-        go !i !prevSlot = do
-          !query <- waitForDifferentSlot prevSlot
-          threadDelay $ 700 * 1000
-          case query of
-            SJust slot'
-              | i `mod` everyNThSlot == 0 -> do
-                  traceLedgerMetrics nodeKernelData slot' tr
-                  go (i + 1) (SJust slot')
-              | otherwise -> go (i + 1) (SJust slot')
-            SNothing -> go i prevSlot
-
-        waitForDifferentSlot :: StrictMaybe SlotNo -> IO (StrictMaybe SlotNo)
-        waitForDifferentSlot prev = do
-          flip mapNodeKernelDataIO nodeKernelData \(getBlockchainTime -> bcTime :: BlockchainTime IO) -> atomically do
-            getCurrentSlot bcTime >>= \case
-              CurrentSlot s' | SJust s' /= prev -> return s'
-              _ -> do
-                    unsafeIOToSTM ( threadDelay $ 1 * 1000)
-                    retry
+startLedgerMetricsTracer tr n nkd = work `withAsync` link where
+  readNK :: IO nodeKernel
+  readNK = readIORef (unNodeKernelData nkd) >>= \case
+    SJust nodeKernel -> pure nodeKernel
+    SNothing -> threadDelay 10_000 >> readNK
+  work :: IO ()
+  work = readNK >>= \nodeKernel -> do
+    myThreadId >>= flip labelThread "Peer Tracer"
+    let
+      go :: Int -> StrictMaybe SlotNo -> IO ()
+      infixl 3 `go`
+      go !i !prevSlot = do
+        !slot' <- nodeKernel !++ prevSlot
+        threadDelay $ 700 * 1000
+        when (i `mod` n == 0) do
+          traceLedgerMetrics nkd slot' tr
+        i + 1 `go` SJust slot'
+    go 1 SNothing
 
 data LedgerMetrics =
   LedgerMetrics {

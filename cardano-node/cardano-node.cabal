@@ -162,6 +162,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
+                      , cardano-strict-containers
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
