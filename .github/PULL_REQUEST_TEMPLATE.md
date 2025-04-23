@@ -18,7 +18,7 @@ to the issue.
 - [ ] CI passes. See note on CI.  The following CI checks are required:
   - [ ] Code is linted with `hlint`.  See `.github/workflows/check-hlint.yml` to get the `hlint` version
   - [ ] Code is formatted with `stylish-haskell`.  See `.github/workflows/stylish-haskell.yml` to get the `stylish-haskell` version
-  - [ ] Code builds on Linux, MacOS and Windows for `ghc-8.10.7` and `ghc-9.2.7`
+  - [ ] Code builds on Linux, MacOS and Windows for `ghc-9.6` and `ghc-9.12`
 - [ ] Self-reviewed the diff
 
 # Note on CI
