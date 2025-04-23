@@ -16,6 +16,7 @@ import qualified Data.Aeson.KeyMap as A
 import           Data.Default.Class (def)
 import qualified Data.Text as T
 import qualified Data.Time.Clock as Time
+import qualified System.Directory as IO
 import           System.Exit (ExitCode (..))
 import           System.FilePath ((</>))
 import qualified System.Process as IO
@@ -25,10 +26,10 @@ import qualified Cardano.Api.Byron as Byron
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Shelley as Shelley
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
-import           Cardano.Prelude (canonicalEncodePretty)
+import           Cardano.Prelude (canonicalEncodePretty, whenM)
 import           Cardano.Testnet hiding (shelleyGenesisFile)
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
-import           Testnet.Property.Util (integrationWorkspace)
+-- import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (ConfigFilesBehaviour (..), GenesisOptions (..))
 
 import qualified Hedgehog as H
@@ -36,94 +37,103 @@ import qualified Hedgehog.Extras as H
 import           Testnet.Process.Run (execCli',mkExecConfig)
 import           Hedgehog.Extras (defaultExecConfig)
 
-
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Dumping config files/"'@
 hprop_dump_config :: H.Property
-hprop_dump_config = integrationWorkspace "dump-config-files" $ \tempAbsBasePath -> H.runWithDefaultWatchdog_ $ do
+hprop_dump_config = integration $ H.runFinallies $ do -- integrationWorkspace "dump-config-files" $ \tmpRunDir -> H.runWithDefaultWatchdog_ $ do
 
-  H.workspace "config_files" $ \tmpDir -> do
-    let shelleyOptions = def { genesisEpochLength = 200 }
-        configFile = tmpDir </> "configuration.yaml"
-        byronGenesisFile = tmpDir </> "byron-genesis.json"
-        shelleyGenesisFile = tmpDir </> "shelley-genesis.json"
+  -- Temporarily hardcoded value for debug purposes:
+  let tmpDir = "/tmp/cardano-testnet-test/config-files"
+  let tmpRunDir = tmpDir </> "run"
+      tmpConfigDir = tmpDir </> "config"
 
-    -- Generate config files in a temporary directory
-    let generateTestnetOptions = def
-          { cardanoConfigFilesBehaviour = OnlyGenerate
-          , cardanoOutputDir = Just tmpDir
-          }
-    confGenerate <- mkConf tmpDir
-    _ <- cardanoTestnetDefault generateTestnetOptions shelleyOptions confGenerate
+  H.evalIO $ do
+    -- TODO: useless to remove dirs when workspace is built dynamically
+    whenM (IO.doesDirectoryExist tmpRunDir) $
+      IO.removeDirectoryRecursive tmpRunDir
+    whenM (IO.doesDirectoryExist tmpConfigDir) $
+      IO.removeDirectoryRecursive tmpConfigDir
+    IO.createDirectoryIfMissing True tmpRunDir
+    IO.createDirectoryIfMissing True tmpConfigDir
 
-    currentTime <- H.noteShowIO Time.getCurrentTime
-    startTime <- H.noteShow $ Time.addUTCTime startTimeOffsetSeconds currentTime
+  let shelleyOptions = def { genesisEpochLength = 200 }
+      configFile = tmpConfigDir </> "configuration.yaml"
+      byronGenesisFile = tmpConfigDir </> "byron-genesis.json"
+      shelleyGenesisFile = tmpConfigDir </> "shelley-genesis.json"
 
-    -- Update start time in Byron genesis file
-    eByron <- Byron.runExceptT $ Byron.readGenesisData byronGenesisFile
-    (byronGenesis', _) <- H.leftFail eByron
-    let byronGenesis = byronGenesis'{gdStartTime = startTime}
-    H.lbsWriteFile byronGenesisFile $ canonicalEncodePretty byronGenesis
+  -- Generate config files in a temporary directory
+  let generateTestnetOptions = def
+        { cardanoConfigFilesBehaviour = OnlyGenerate
+        , cardanoOutputDir = Just tmpConfigDir
+        }
+  confGenerate <- mkConf tmpConfigDir
+  _ <- cardanoTestnetDefault generateTestnetOptions shelleyOptions confGenerate
 
-    -- Update start time in Shelley genesis file
-    eShelley <- H.readJsonFile shelleyGenesisFile
-    shelleyGenesis' :: Shelley.ShelleyGenesis <- H.leftFail eShelley
-    let shelleyGenesis = shelleyGenesis'{sgSystemStart = startTime}
-    H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
+  currentTime <- H.noteShowIO Time.getCurrentTime
+  startTime <- H.noteShow $ Time.addUTCTime startTimeOffsetSeconds currentTime
 
-    -- Update hashes in the main configuration file
-    byronHash <- T.strip . T.pack <$> execCli' defaultExecConfig
-      [ "byron"
-      , "genesis"
-      , "print-genesis-hash"
-      , "--genesis-json", byronGenesisFile
-      ]
+  -- Update start time in Byron genesis file
+  eByron <- Byron.runExceptT $ Byron.readGenesisData byronGenesisFile
+  (byronGenesis', _) <- H.leftFail eByron
+  let byronGenesis = byronGenesis'{gdStartTime = startTime}
+  H.lbsWriteFile byronGenesisFile $ canonicalEncodePretty byronGenesis
 
-    shelleyHash <- T.strip . T.pack <$> execCli' defaultExecConfig
-      [ "hash"
-      , "genesis-file"
-      , "--genesis", shelleyGenesisFile
-      ]
+  -- Update start time in Shelley genesis file
+  eShelley <- H.readJsonFile shelleyGenesisFile
+  shelleyGenesis' :: Shelley.ShelleyGenesis <- H.leftFail eShelley
+  let shelleyGenesis = shelleyGenesis'{sgSystemStart = startTime}
+  H.lbsWriteFile shelleyGenesisFile $ encodePretty shelleyGenesis
 
-    eConfig <- H.readJsonFile configFile
-    -- TODO: There should be a type for this config, with proper JSON instances
-    config' :: A.Object <- H.leftFail eConfig
-    let config = A.fromList
-          [ ("ShelleyGenesisHash", A.String shelleyHash)
-          , ("ByronGenesisHash", A.String byronHash)
-          ] <> config' -- Monoid operation is left-biased, so old values are overwritten
+  -- Update hashes in the main configuration file
+  byronHash <- T.strip . T.pack <$> execCli' defaultExecConfig
+    [ "byron"
+    , "genesis"
+    , "print-genesis-hash"
+    , "--genesis-json", byronGenesisFile
+    ]
 
-    eWrite <- H.evalIO $ writeFileJSON configFile config
-    H.leftFail eWrite
+  shelleyHash <- T.strip . T.pack <$> execCli' defaultExecConfig
+    [ "hash"
+    , "genesis-file"
+    , "--genesis", shelleyGenesisFile
+    ]
 
-    -- Run testnet with generated config
-    let runTestnetOptions = def
-          { cardanoConfigFilesBehaviour = GenerateAndRun -- This *is* the default value, but better make it explicit
-          , cardanoNodes = UserProvidedNodeOptions configFile
-          }
-    confRun <- mkConf tempAbsBasePath
-    TestnetRuntime
-      { testnetNodes = [singleNode]
-      } <- cardanoTestnetDefault runTestnetOptions shelleyOptions confRun
-    
+  eConfig <- H.readJsonFile configFile
+  -- TODO: There should be a type for this config, with proper JSON instances
+  config' :: A.Object <- H.leftFail eConfig
+  let config = A.fromList
+        [ ("ShelleyGenesisHash", A.String shelleyHash)
+        , ("ByronGenesisHash", A.String byronHash)
+        ] <> config' -- Monoid operation is left-biased, so old values are overwritten
 
+  eWrite <- H.evalIO $ writeFileJSON configFile config
+  H.leftFail eWrite
 
-    H.assert $ isJust $ poolKeys singleNode
-    -- Let the node run for a minute, to let problems time to happen
-    H.threadDelay 30_000 -- milliseconds
-    -- If nothing happened, kill the node and exit with success
-
-    poolSprocket1 <- H.noteShow $ nodeSprocket singleNode
-    execConfig <- mkExecConfig tempAbsBasePath poolSprocket1 42
-    s <- execCli' execConfig
-       [ "query", "stake-distribution"
-     
-       ]
-    H.note_ s
+  -- Run testnet with generated config
+  let runTestnetOptions = def
+        { cardanoConfigFilesBehaviour = GenerateAndRun -- This *is* the default value, but better make it explicit
+        , cardanoNodes = UserProvidedNodeOptions configFile
+        }
+  confRun <- mkConf tmpRunDir
+  TestnetRuntime
+    { testnetNodes = [singleNode]
+    } <- cardanoTestnetDefault runTestnetOptions shelleyOptions confRun
 
 
-    exit <- H.evalIO $ do
-      let handle = nodeProcessHandle singleNode
-      IO.terminateProcess handle
-      IO.getProcessExitCode handle
-    H.diff exit (==) $ Just $ ExitFailure 143 -- gracefully exit when hit by SIGTERM
+  H.assert $ isJust $ poolKeys singleNode
+  -- Let the node run for a minute, to let problems time to happen
+  H.threadDelay 30_000_000 -- microseconds
+  -- If nothing happened, kill the node and exit with success
+
+  poolSprocket1 <- H.noteShow $ nodeSprocket singleNode
+  execConfig <- mkExecConfig tmpRunDir poolSprocket1 42
+  s <- execCli' execConfig
+    [ "query", "stake-distribution"
+    ]
+  H.note_ s
+
+  exit <- H.evalIO $ do
+    let handle = nodeProcessHandle singleNode
+    IO.terminateProcess handle
+    IO.waitForProcess handle
+  H.diff exit (==) $ ExitFailure 143 -- gracefully exit when hit by SIGTERM
