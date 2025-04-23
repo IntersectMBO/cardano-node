@@ -2,6 +2,8 @@
 
 ## Next version
 
+* [Fix discrepancy in security parameter between Byron and Shelley genesis files](https://github.com/IntersectMBO/cardano-node/pull/6188)
+
 ## 10.0.0
 
 * Bump for node 10
