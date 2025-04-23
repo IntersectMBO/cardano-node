@@ -52,7 +52,7 @@ let
   # path of this packages while keeping the extra details as a `jq` friendly
   # reference that are used to change it later appending the desired commit
   # (interchanging commits it's still an untested feature).
-  # For cloud runs references:
+  # For "nomadcloud" runs workbench's `$WB_GITREV` is used as commit:
   # installable="${flakeReference}/${commit}#${flakeOutput}"
   installables =
     {
@@ -142,7 +142,7 @@ let
     {
       # Provided that all the "start.sh" scripts are taking it into account,
       # this packages could be configured to come from a different commit than
-      # the one used to enter the shell ??????????
+      # the one used to enter the shell.
       cardano-node = rec {
         # Local reference only used if not "cloud".
         # Avoid rebuilding on every commit because of `set-git-rev`.

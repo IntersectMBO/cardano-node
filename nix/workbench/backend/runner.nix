@@ -38,6 +38,7 @@ let
   # build plan as computed by nix
   nixPlanJson = cardanoNodeProject.plan-nix.json;
 
+  # Optimize cache hits setting gitrev using bash once inside the shell.
   workbench-envars =
     ''
     export WB_CHAP_PATH=${chap}
@@ -50,6 +51,10 @@ let
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
     export WB_LOCLI_DB=''${WB_LOCLI_DB:-1}
+    if test -z "$(git status --porcelain --untracked-files=no)"
+    then export WB_GITREV="$(git rev-parse HEAD)"
+    else export WB_GITREV="0000000000000000000000000000000000000000"
+    fi
     export CARDANO_NODE_SOCKET_PATH=${stateDir}/node-0/node.socket
     ''
     + lib.optionalString (profileBundle.profile.value.scenario == "chainsync") (
@@ -112,7 +117,7 @@ let
         gnused
         procps
         nix
-        git
+        git        # `workbench-envars` set the gitrev
         jq
       ]
     )
