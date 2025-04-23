@@ -16,6 +16,7 @@ import qualified Data.Aeson.KeyMap as A
 import           Data.Default.Class (def)
 import qualified Data.Text as T
 import qualified Data.Time.Clock as Time
+import qualified System.Directory as IO
 import           System.Exit (ExitCode (..))
 import           System.FilePath ((</>))
 import qualified System.Process as IO
@@ -25,10 +26,10 @@ import qualified Cardano.Api.Byron as Byron
 import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Shelley as Shelley
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
-import           Cardano.Prelude (canonicalEncodePretty)
+import           Cardano.Prelude (canonicalEncodePretty, whenM)
 import           Cardano.Testnet hiding (shelleyGenesisFile)
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
-import           Testnet.Property.Util (integrationWorkspace)
+-- import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (ConfigFilesBehaviour (..), GenesisOptions (..))
 
 import qualified Hedgehog as H
@@ -36,24 +37,35 @@ import qualified Hedgehog.Extras as H
 import           Testnet.Process.Run (execCli',mkExecConfig)
 import           Hedgehog.Extras (defaultExecConfig)
 
-
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Dumping config files/"'@
 hprop_dump_config :: H.Property
-hprop_dump_config = integrationWorkspace "dump-config-files" $ \tempAbsBasePath -> H.runWithDefaultWatchdog_ $ do
+hprop_dump_config = integration $ H.runFinallies $ do -- integrationWorkspace "dump-config-files" $ \tmpRunDir -> H.runWithDefaultWatchdog_ $ do
 
-  H.workspace "config_files" $ \tmpDir -> do
+  -- Temporarily hardcoded values for debug purposes:
+  let tmpRunDir = "/tmp/cardano-testnet-test/config-files/run"
+      tmpConfigDir = "/tmp/cardano-testnet-test/config-files/dump"
+
+  H.evalIO $ do
+    whenM (IO.doesDirectoryExist tmpRunDir) $
+      IO.removeDirectoryRecursive tmpRunDir
+    whenM (IO.doesDirectoryExist tmpConfigDir) $
+      IO.removeDirectoryRecursive tmpConfigDir
+    IO.createDirectoryIfMissing True tmpRunDir
+    IO.createDirectoryIfMissing True tmpConfigDir
+
+  do -- H.workspace "config_files" $ \tmpConfigDir -> do
     let shelleyOptions = def { genesisEpochLength = 200 }
-        configFile = tmpDir </> "configuration.yaml"
-        byronGenesisFile = tmpDir </> "byron-genesis.json"
-        shelleyGenesisFile = tmpDir </> "shelley-genesis.json"
+        configFile = tmpConfigDir </> "configuration.yaml"
+        byronGenesisFile = tmpConfigDir </> "byron-genesis.json"
+        shelleyGenesisFile = tmpConfigDir </> "shelley-genesis.json"
 
     -- Generate config files in a temporary directory
     let generateTestnetOptions = def
           { cardanoConfigFilesBehaviour = OnlyGenerate
-          , cardanoOutputDir = Just tmpDir
+          , cardanoOutputDir = Just tmpConfigDir
           }
-    confGenerate <- mkConf tmpDir
+    confGenerate <- mkConf tmpConfigDir
     _ <- cardanoTestnetDefault generateTestnetOptions shelleyOptions confGenerate
 
     currentTime <- H.noteShowIO Time.getCurrentTime
@@ -101,7 +113,7 @@ hprop_dump_config = integrationWorkspace "dump-config-files" $ \tempAbsBasePath 
           { cardanoConfigFilesBehaviour = GenerateAndRun -- This *is* the default value, but better make it explicit
           , cardanoNodes = UserProvidedNodeOptions configFile
           }
-    confRun <- mkConf tempAbsBasePath
+    confRun <- mkConf tmpRunDir
     TestnetRuntime
       { testnetNodes = [singleNode]
       } <- cardanoTestnetDefault runTestnetOptions shelleyOptions confRun
@@ -110,20 +122,18 @@ hprop_dump_config = integrationWorkspace "dump-config-files" $ \tempAbsBasePath 
 
     H.assert $ isJust $ poolKeys singleNode
     -- Let the node run for a minute, to let problems time to happen
-    H.threadDelay 30_000 -- milliseconds
+    H.threadDelay 60_000_000 -- microseconds
     -- If nothing happened, kill the node and exit with success
 
     poolSprocket1 <- H.noteShow $ nodeSprocket singleNode
-    execConfig <- mkExecConfig tempAbsBasePath poolSprocket1 42
+    execConfig <- mkExecConfig tmpRunDir poolSprocket1 42
     s <- execCli' execConfig
-       [ "query", "stake-distribution"
-     
-       ]
+      [ "query", "stake-distribution"
+      ]
     H.note_ s
-
 
     exit <- H.evalIO $ do
       let handle = nodeProcessHandle singleNode
       IO.terminateProcess handle
-      IO.getProcessExitCode handle
-    H.diff exit (==) $ Just $ ExitFailure 143 -- gracefully exit when hit by SIGTERM
+      IO.waitForProcess handle
+    H.diff exit (==) $ ExitFailure 143 -- gracefully exit when hit by SIGTERM
