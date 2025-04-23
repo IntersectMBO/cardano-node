@@ -160,6 +160,8 @@ data NodeConfiguration
          --
        , ncTimeWaitTimeout       :: DiffTime
 
+       , ncEgressPollInterval    :: DiffTime
+
          -- | Timeout override for ChainSync, see
          -- 'Ouroboros.Network.Protocol.ChainSync.Codec.ChainSyncTimeout'
        , ncChainSyncIdleTimeout :: TimeoutOverride
@@ -254,6 +256,7 @@ data PartialNodeConfiguration
          -- Network timeouts
        , pncProtocolIdleTimeout   :: !(Last DiffTime)
        , pncTimeWaitTimeout       :: !(Last DiffTime)
+       , pncEgressPollInterval    :: !(Last DiffTime)
 
        , pncChainSyncIdleTimeout      :: !(Last DiffTime)
 
@@ -357,6 +360,7 @@ instance FromJSON PartialNodeConfiguration where
       -- Network timeouts
       pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
       pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
+      pncEgressPollInterval    <- Last <$> v .:? "EgressPollInterval"
 
 
       -- AcceptedConnectionsLimit
@@ -423,6 +427,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
            , pncChainSyncIdleTimeout
+           , pncEgressPollInterval
            , pncAcceptedConnectionsLimit
            , pncDeadlineTargetOfRootPeers
            , pncDeadlineTargetOfKnownPeers
@@ -651,6 +656,7 @@ defaultPartialNodeConfiguration =
             noDeprecatedOptions
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
+    , pncEgressPollInterval    = Last (Just 0)
     , pncAcceptedConnectionsLimit =
         Last
       $ Just
@@ -759,6 +765,9 @@ makeNodeConfiguration pnc = do
   ncTimeWaitTimeout <-
     lastToEither "Missing TimeWaitTimeout"
     $ pncTimeWaitTimeout pnc
+  ncEgressPollInterval <-
+    lastToEither "Missing EgressPollInterval"
+    $ pncEgressPollInterval pnc
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
@@ -845,6 +854,7 @@ makeNodeConfiguration pnc = do
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
              , ncChainSyncIdleTimeout
+             , ncEgressPollInterval
              , ncAcceptedConnectionsLimit
              , ncDeadlineTargetOfRootPeers
              , ncDeadlineTargetOfKnownPeers
