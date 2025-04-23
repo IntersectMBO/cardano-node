@@ -166,6 +166,7 @@ testPartialYamlConfig =
     , pncGenesisConfigFlags = mempty
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
+    , pncEgressPollInterval = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -213,6 +214,7 @@ testPartialCliConfig =
     , pncGenesisConfigFlags = mempty
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
+    , pncEgressPollInterval = mempty
     }
 
 -- | Expected final NodeConfiguration
