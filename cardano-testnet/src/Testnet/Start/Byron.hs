@@ -29,7 +29,7 @@ data ByronGenesisOptions = ByronGenesisOptions
 byronDefaultGenesisOptions :: ByronGenesisOptions
 byronDefaultGenesisOptions = ByronGenesisOptions
   { byronNumBftNodes = 3
-  , byronSecurityParam = 10
+  , byronSecurityParam = 5
   -- TODO: createByronGenesis should have a check that errors
   -- if totalBalance can be evenly split between numBftNodes
   -- with no remainder. Having a remainder results in rounding errors.
