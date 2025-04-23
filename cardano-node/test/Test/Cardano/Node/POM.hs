@@ -166,6 +166,7 @@ testPartialYamlConfig =
     , pncGenesisConfigFlags = mempty
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
+    , pncEgressPollInterval = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -213,6 +214,7 @@ testPartialCliConfig =
     , pncGenesisConfigFlags = mempty
     , pncForkPolicy = mempty
     , pncLedgerDbConfig = mempty
+    , pncEgressPollInterval = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -232,6 +234,7 @@ eExpectedConfig = do
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncExperimentalProtocolsEnabled = True
+    , ncEgressPollInterval = 0
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
     , ncLoggingSwitch = True

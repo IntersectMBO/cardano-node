@@ -400,6 +400,7 @@ instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
     Mux.TraceRecvHeaderStart -> Debug
     Mux.TraceRecvHeaderEnd {} -> Debug
     Mux.TraceRecvStart {} -> Debug
+    Mux.TraceRecvRaw {} -> Debug
     Mux.TraceRecvEnd {} -> Debug
     Mux.TraceSendStart {} -> Debug
     Mux.TraceSendEnd -> Debug
