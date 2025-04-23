@@ -35,8 +35,6 @@ main = do
     case cmd of
       RunCmd args -> do
         warnIfSet args pncMaybeMempoolCapacityOverride "mempool-capacity-override" "MempoolCapacityBytesOverride"
-        warnIfSet args pncNumOfDiskSnapshots "num-of-disk-snapshots" "NumOfDiskSnapshots"
-        warnIfSet args pncSnapshotInterval "snapshot-interval" "SnapshotInterval"
         runNode args
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
@@ -45,15 +43,15 @@ main = do
       p = Opt.prefs Opt.showHelpOnEmpty
 
       warnIfSet :: PartialNodeConfiguration -> (PartialNodeConfiguration -> Last a) -> String -> String -> IO ()
-      warnIfSet args f name key = 
-          maybe 
-            (pure ()) 
-            (\_ -> hPutStrLn stderr $ "WARNING: Option --" ++ name ++ " was set via CLI flags.\ 
+      warnIfSet args f name key =
+          maybe
+            (pure ())
+            (\_ -> hPutStrLn stderr $ "WARNING: Option --" ++ name ++ " was set via CLI flags.\
             \ This CLI flag will be removed in upcoming node releases.\
-            \ Please, set this configuration option in the configuration file instead with key " ++ key ++ ".") 
+            \ Please, set this configuration option in the configuration file instead with key " ++ key ++ ".")
         $ getLast
         $ f args
-        
+
       opts :: Opt.ParserInfo Command
       opts =
         Opt.info (fmap RunCmd nodeCLIParser

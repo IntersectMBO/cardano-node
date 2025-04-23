@@ -12,7 +12,7 @@ import           Cardano.Api ()
 
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfigFlags (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag(..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 

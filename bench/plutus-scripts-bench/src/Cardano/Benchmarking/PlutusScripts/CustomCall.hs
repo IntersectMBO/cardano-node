@@ -21,6 +21,8 @@ import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptVersion (..
 import qualified Data.ByteString.Short as SBS
 import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx
+import           PlutusTx.Foldable (sum)
+import           PlutusTx.List (length, all)
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
 
 import           Cardano.Benchmarking.ScriptAPI

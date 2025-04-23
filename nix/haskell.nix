@@ -44,6 +44,7 @@ let
         # These programs will be available inside the nix-shell.
         nativeBuildInputs = with pkgs.pkgsBuildBuild; [
           alejandra
+          lmdb
           nix-prefetch-git
           pkg-config
           hlint
