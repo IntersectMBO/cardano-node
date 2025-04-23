@@ -64,6 +64,17 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-network.git
+  tag: 7951c702841150cededb3c515d166d50bca5b627
+  subdir:
+    cardano-ping
+    ouroboros-network
+    ouroboros-network-framework
+    network-mux
+  --sha256: sha256-u8jW/VH7vhABaOVXMWu7IqAsPDiTq+BhDcVWfCrLGv0=
+
 
 if impl (ghc >= 9.12)
   allow-newer:

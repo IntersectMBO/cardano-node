@@ -451,6 +451,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
           , Diffusion.daAcceptedConnectionsLimit = ncAcceptedConnectionsLimit nc
           , Diffusion.daMode                     = ncDiffusionMode nc
           , Diffusion.daPublicPeerSelectionVar   = publicPeerSelectionVar
+          , Diffusion.daEgressPollInterval       = ncEgressPollInterval nc
           }
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
