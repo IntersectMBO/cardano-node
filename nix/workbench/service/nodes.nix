@@ -53,6 +53,11 @@ let
        then go {} (__head eras) (__tail eras)
        else throw "configHardforksIntoEra:  unknown era '${era}'";
 
+  liveTablesPath = i: 
+    if (profile.cluster ? "ssd_directory" && profile.cluster.ssd_directory != null)
+    then "${profile.cluster.ssd_directory}/lmdb-node-${toString i}"
+    else null;
+
   ##
   ## nodeServiceConfig :: NodeSpec -> ServiceConfig
   ##
@@ -70,10 +75,7 @@ let
 
       # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory
       withUtxoHdLmdb   = profile.node.utxo_lmdb;
-      lmdbDatabasePath =
-          if (profile.cluster ? "ssd_directory" && profile.cluster.ssd_directory != null)
-          then "${profile.cluster.ssd_directory}/lmdb-node-${toString i}"
-          else null;
+      lmdbDatabasePath = liveTablesPath i;
 
       ## Combine:
       ##   0. baseNodeConfig (coming cardanoLib's testnet environ)
@@ -115,6 +117,12 @@ let
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
+                } // optionalAttrs profile.node.utxo_lmdb
+                {
+                  LedgerDB = {
+                    Backend = "V1LMDB";
+                    LiveTablesPath = liveTablesPath i;
+                  };
                 })
               (if __hasAttr "preset" profile && profile.preset != null
                ## It's either an undisturbed preset,
