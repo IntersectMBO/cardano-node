@@ -326,11 +326,6 @@ in {
         '';
       };
 
-      # Consider adding hasForwarding config once more documentation is
-      # available on the feature. Ex:
-      #
-      # hasForwarding = {...};
-
       logging = mkOption {
         type = listOf (submodule {
           options = {
