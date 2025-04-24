@@ -60,8 +60,6 @@ with builtins; let
           // optionalAttrs (!isNull cfg.rotation.rpMaxAgeMinutes) {
             inherit (cfg.rotation) rpMaxAgeMinutes;
           };
-
-      WarnRTViewMissing = cfg.warnRtviewMissing;
     }
     // optionalAttrs cfg.ekgEnable {
       hasEKG = {
@@ -798,19 +796,6 @@ in {
             Maximum - all the messages will be shown in standard output. Caution: the number of messages can be huge.
 
           If null cardano-tracer will set a default: ErrorsOnly.
-        '';
-      };
-
-      warnRtviewMissing = mkOption {
-        type = nullOr bool;
-        default = null;
-        description = ''
-          Whether to provide a warning if RTView is requested in config but
-          cardano-tracer was built without it.
-
-          If null cardano-tracer will set a default: true if RTView
-          config is provided but cardano-tracer was built without it, false
-          otherwise.
         '';
       };
     };
