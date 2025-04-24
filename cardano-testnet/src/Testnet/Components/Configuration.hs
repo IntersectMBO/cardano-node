@@ -192,7 +192,7 @@ createSPOGenesisAndFiles
   -- Alonzo and Conway genesis that are optional and if not
   -- supplised the users get a default
   H.note_ $ "Number of pools: " <> show nPoolNodes
-  H.note_ $ "Number of stake delegators: " <> show nPoolNodes
+  H.note_ $ "Number of stake delegators: " <> show numStakeDelegators
   H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
 
   let era = toCardanoEra sbe
