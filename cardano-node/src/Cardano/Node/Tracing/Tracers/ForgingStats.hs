@@ -1,6 +1,10 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Node.Tracing.Tracers.ForgingStats
     ( ForgingStats (..)
@@ -81,17 +85,20 @@ instance MetaTrace ForgingStats where
 emptyForgingStats :: ForgingStats
 emptyForgingStats = ForgingStats 0 0 0 0 0
 
+combineForgingStats :: forall foldingTracerStats forgeTracerBlk blk . ()
+  => forgeTracerBlk ~ ForgeTracerType blk
+  => foldingTracerStats ~ Folding forgeTracerBlk ForgingStats
+  => Trace IO foldingTracerStats
+  -> (forgeTracerBlk -> Bool)
+  -> IO (Trace IO forgeTracerBlk)
+combineForgingStats = flip $ foldCondTraceM calculateForgingStats emptyForgingStats
+
 calcForgeStats :: Trace IO ForgingStats
   -> IO (Trace IO (ForgeTracerType blk))
-calcForgeStats tr =
-  let tr' = contramap unfold tr
-  in foldCondTraceM calculateForgingStats emptyForgingStats
-      (\case
-          Left Consensus.TraceStartLeadershipCheck{} -> True
-          Left _ -> False
-          Right _  -> True
-          )
-      tr'
+calcForgeStats (contramap unfold -> tr) = combineForgingStats tr $
+  (`either` const True) \case
+      Consensus.TraceStartLeadershipCheck {} -> True
+      _ -> False
 
 calculateForgingStats :: MonadIO m
   => ForgingStats
@@ -100,14 +107,14 @@ calculateForgingStats :: MonadIO m
   -> m ForgingStats
 calculateForgingStats stats _context
     (Left TraceNodeCannotForge {}) =
-      pure $ stats { fsNodeCannotForgeNum = fsNodeCannotForgeNum stats + 1 }
+      pure stats { fsNodeCannotForgeNum = fsNodeCannotForgeNum stats + 1 }
 calculateForgingStats stats _context
     (Left (TraceNodeIsLeader (SlotNo slot))) =
-        pure $ stats
+        pure stats
     { fsNodeIsLeaderNum = fsNodeIsLeaderNum stats + 1, fsLastSlot = fromIntegral slot }
 calculateForgingStats stats _context
     (Left TraceForgedBlock {}) =
-        pure $ stats { fsBlocksForgedNum = fsBlocksForgedNum stats + 1 }
+        pure stats { fsBlocksForgedNum = fsBlocksForgedNum stats + 1 }
 calculateForgingStats stats _context
     (Left (TraceNodeNotLeader (SlotNo slot'))) =
       -- Node is not a leader again: The number of blocks forged by
@@ -115,9 +122,9 @@ calculateForgingStats stats _context
       -- this node was a leader.
       let slot = fromIntegral slot'
       in if fsLastSlot stats == 0 || succ (fsLastSlot stats) == slot
-            then pure $ stats { fsLastSlot = slot }
+            then pure stats { fsLastSlot = slot }
             else
               let missed = slot - fsLastSlot stats
-              in pure $ stats { fsLastSlot = slot
-                              , fsSlotsMissedNum = fsSlotsMissedNum stats + missed }
+              in pure stats { fsLastSlot = slot
+                            , fsSlotsMissedNum = fsSlotsMissedNum stats + missed }
 calculateForgingStats stats _context _message = pure stats
