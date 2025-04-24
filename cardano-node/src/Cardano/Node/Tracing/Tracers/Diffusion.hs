@@ -17,20 +17,19 @@ module Cardano.Node.Tracing.Tracers.Diffusion
 
 import           Cardano.Logging
 import           Cardano.Node.Configuration.TopologyP2P ()
-
 import qualified Ouroboros.Network.Diffusion.Common as Common
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
                    TraceLedgerPeers (..))
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
-import qualified Network.Mux as Mux
-import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
-import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 import           Data.Aeson (Value (String), (.=))
 import qualified Data.List as List
 import           Data.Text (pack)
 import           Formatting
+import qualified Network.Mux as Mux
+import           Network.Mux.Types (SDUHeader (..), unRemoteClockModel)
+import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 
 --------------------------------------------------------------------------------
 -- Mux Tracer
@@ -324,13 +323,14 @@ instance LogFormatting Mux.Trace where
             { tcpi_snd_mss, tcpi_rcv_mss, tcpi_lost, tcpi_retrans
             , tcpi_rtt, tcpi_rttvar, tcpi_snd_cwnd }
             len) =
-      sformat ("TCPInfo rtt % int % " rttvar " % ínt % " cwnd " % int %
+      let toWord i = fromIntegral i :: Word
+      in sformat ("TCPInfo rtt " % int % " rttvar " % ínt % " cwnd " % int %
                " smss " % int % " rmss " % int % " lost " % int %
-               " retrans " % int % " len " %int)
-              (fromIntegral tcpi_rtt :: Word) (fromIntegral tcpi_rttvar :: Word)
-              (fromIntegral tcpi_snd_cwnd :: Word) (fromIntegral tcpi_snd_mss :: Word)
-              (fromIntegral tcpi_rcv_mss :: Word) (fromIntegral tcpi_lost :: Word)
-              (fromIntegral tcpi_retrans :: Word)
+               " retrans " % int % " len " % int)
+              (toWord tcpi_rtt) (toWord tcpi_rttvar)
+              (toWord tcpi_snd_cwnd) (toWord tcpi_snd_mss)
+              (toWord tcpi_rcv_mss) (toWord tcpi_lost)
+              (toWord tcpi_retrans)
               len
 #else
     forHuman (Mux.TraceTCPInfo _ len) = sformat ("TCPInfo len " % int) len
