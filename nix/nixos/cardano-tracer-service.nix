@@ -124,9 +124,8 @@ in {
         type = bool;
         default = false;
         description = ''
-          Enable cardano-tracer, a service for logging and monitoring of
-          Cardano nodes. After it is connected to the node(s), it periodically
-          asks for different information, receives it, and handles it.
+          Enable cardano-tracer, a service for logging and monitoring of log
+          and metrics providers such as cardano-node.
         '';
       };
 
@@ -140,8 +139,15 @@ in {
         type = nullOr (either str path);
         default = "${runtimeDir}/tracer.socket";
         description = ''
-          If accepting connections from node(s) to a cardano-tracer socket, the
-          path.
+          Declaring this option means that cardano-tracer will operate in an
+          `AcceptAt` tag mode where cardano-tracer works as a server: it
+          receives network connections from providers such as node via a single
+          local socket provided by cardano-tracer.
+
+          Except for special use cases, declaring this `acceptingSocket` option
+          instead of the `connectToSocket` option is recommended, as the
+          `AcceptAt` tag mode supports dynamic provider addition or removal
+          without requiring cardano-tracer reconfiguration and restart.
 
           Either this option, or the connectToSocket option must be declared.
         '';
@@ -192,10 +198,18 @@ in {
       };
 
       connectToSocket = mkOption {
-        type = nullOr (either str path);
+        type = nullOr (listOf (either str path));
         default = null;
         description = ''
-          If connecting to a cardano-node socket, the path.
+          Declaring this option means that cardano-tracer will operate in a
+          `ConnectTo` tag mode where cardano-tracer works as a client: it
+          establishes network connections to local socket(s) provided by the
+          provider(s). In this case a socket is used for each provider.
+
+          Except for special use cases, declaring `acceptingSocket` instead of
+          this option is recommended, as the `AcceptAt` tag mode supports
+          dynamic provider addition or removal without requiring cardano-tracer
+          reconfiguration and restart.
 
           Either this option, or the acceptingSocket option must be declared.
         '';
@@ -229,7 +243,7 @@ in {
         type = nullOr bool;
         default = null;
         description = ''
-          When recieving forwarded metrics, cardano-tracer can request a full
+          When receiving forwarded metrics, cardano-tracer can request a full
           set of EKG metrics, or a delta from the previous request.
 
           If true, a full set of metrics will be sent on each request.
@@ -248,7 +262,7 @@ in {
           will be requested, in seconds. For example, if ekgRequestFreq is 10,
           cardano-tracer will ask for new EKG metrics every ten seconds. There
           is no limit as loRequestNum, so every request returns all the metrics
-          the node has in this moment of time.
+          the provider has at that moment of time.
 
           If null cardano-tracer will set a default: 1.
         '';
@@ -281,7 +295,6 @@ in {
       executable = mkOption {
         type = str;
         default = "${cfg.package}/bin/cardano-tracer";
-        defaultText = "cardano-node";
         description = ''
           The cardano-tracer executable invocation to use.
         '';
@@ -330,7 +343,7 @@ in {
                 The logFormat option specifies the format of logs. There are two
                 possible modes: `ForMachine` and `ForHuman`. ForMachine is for JSON
                 format, ForHuman is for human-friendly text format. Since the logging
-                option accepts a list more than one logging section can be declared.
+                option accepts a list, more than one logging section can be declared.
               '';
             };
 
@@ -352,7 +365,7 @@ in {
                 The logRoot option specifies the path to the root directory. This
                 directory will contain all the subdirectories with the log files
                 inside. Remember that each subdirectory corresponds to the particular
-                node. If the root directory does not exist, it will be created.
+                provider. If the root directory does not exist, it will be created.
               '';
             };
           };
@@ -371,15 +384,15 @@ in {
         type = nullOr ints.positive;
         default = null;
         description = ''
-          This optional attribute specifies the number of log items
-          that will be requested from the node. For example, if loRequestNum is
-          10, cardano-tracer will periodically ask 10 log items in one request.
-          This value is useful for fine-tuning network traffic: it is possible
-          to ask 50 log items in one request, or ask them in 50 requests one at
-          a time. loRequestNum is the maximum number of log items. For example,
-          if cardano-tracer requests 50 log items but the node has only 40 at
-          that moment, these 40 items will be returned, the request won't block
-          to wait for an additional 10 items.
+          This optional attribute specifies the number of log items that will
+          be requested from the providing source. For example, if loRequestNum
+          is 10, cardano-tracer will periodically ask for 10 log items in one
+          request. This value is useful for fine-tuning network traffic: it is
+          possible to ask 50 log items in one request, or ask for them in 50
+          requests one at a time. loRequestNum is the maximum number of log
+          items. For example, if cardano-tracer requests 50 log items but the
+          provider has only 40 at that moment, these 40 items will be returned,
+          and the request won't block to wait for an additional 10 items.
 
           If null cardano-tracer will set a default: 100.
         '';
@@ -400,18 +413,18 @@ in {
         type = nullOr (either str (attrsOf str));
         default = null;
         description = ''
-          Passing metric help annotations to cardano-tracer can be done as a an
-          attribute set of strings from metric name to help text where
-          cardano-tracer's internal metric names have to be used as attribute
-          names.
+          Passing metrics help annotations to cardano-tracer can be done as an
+          attribute set of strings from metric's name to help text where
+          cardano-tracer's internal metric names have to be used as the
+          attribute names.
 
           If such a set is already available as JSON in a file, this option can
-          be declared as a string of the path to such file.
+          be declared as a string of the path to such a file.
 
-          Any metrics prefix name declared with `TraceOptionMetricsPrefix` in
-          cardano-node config should not be included in the attribute name.
-          Similarly metric type suffixes, such as `.int` or `.real` should also
-          not be included.
+          Any metrics prefix declared in provider config, such as
+          `TraceOptionMetricsPrefix` in cardano-node, should not be included in
+          the attribute name. Similarly, metric type suffixes such as `.int` or
+          `.real`, should also not be included.
 
           The effect of this option applies to prometheus metrics only, ie: not
           EKG.
@@ -427,7 +440,7 @@ in {
         default = null;
         description = ''
           If set true, metrics name suffixes, like "_int", will be dropped,
-          increases similiarity with old system names.
+          thus increasing the similarity with legacy tracing system names.
 
           The effect of this option applies to prometheus metrics only, ie: not
           EKG.
@@ -538,7 +551,6 @@ in {
           The port to listen on if prometheus is enabled.
 
           Defaults to the legacy prometheus listening port, 12798, plus 10.
-
           This avoids a conflict with the cardano-node default metrics port binding
           when PrometheusSimple backend is in use.
         '';
@@ -548,9 +560,10 @@ in {
         type = nullOr ints.positive;
         default = null;
         description = ''
-          The period for tracing cardano-tracer resource usage in milliseconds.
-          The frequency will be 1/resourceFreq times per millisecond.  If null
-          cardano-tracer will not display resource usage.
+          The period for tracing cardano-tracer's own resource usage in
+          milliseconds. For example, if set to 60000, resources will traced
+          every 60 seconds. If null cardano-tracer will not display resource
+          usage.
         '';
       };
 
@@ -642,8 +655,8 @@ in {
           `rpFrequencySecs`, `rpKeepFilesNum`, `rpLogLimitBytes`,
           `rpMaxAgeMinutes`.
 
-          Please note that if you skip this field, all log items will be stored
-          in a single file, and usually that's not what is desired.
+          Please note that if the rotation declaration is skipped, all log items will
+          be stored in a single file, and usually that's not what is desired.
 
           This option will be ignored if all logging has `logMode` configured
           as `JournalMode`.
@@ -777,7 +790,7 @@ in {
         type = nullOr (enum ["Minimum" "ErrorsOnly" "Maximum"]);
         default = null;
         description = ''
-          The optional attribute specifies the verbosity level for the
+          The verbosity optional attribute specifies the level for
           cardano-tracer itself.  There are 3 levels:
 
             Minimum - cardano-tracer will work as silently as possible.
