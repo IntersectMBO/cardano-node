@@ -105,26 +105,23 @@ calculateForgingStats :: MonadIO m
   -> LoggingContext
   -> ForgeTracerType blk
   -> m ForgingStats
-calculateForgingStats stats _context
-    (Left TraceNodeCannotForge {}) =
-      pure stats { fsNodeCannotForgeNum = fsNodeCannotForgeNum stats + 1 }
-calculateForgingStats stats _context
-    (Left (TraceNodeIsLeader (SlotNo slot))) =
-        pure stats
-    { fsNodeIsLeaderNum = fsNodeIsLeaderNum stats + 1, fsLastSlot = fromIntegral slot }
-calculateForgingStats stats _context
-    (Left TraceForgedBlock {}) =
-        pure stats { fsBlocksForgedNum = fsBlocksForgedNum stats + 1 }
-calculateForgingStats stats _context
-    (Left (TraceNodeNotLeader (SlotNo slot'))) =
+calculateForgingStats stats@ForgingStats {..} _context = pure . \case
+  Left TraceNodeCannotForge {} ->
+    stats { fsNodeCannotForgeNum = fsNodeCannotForgeNum + 1 }
+  Left (TraceNodeIsLeader (SlotNo slot)) ->
+    stats { fsNodeIsLeaderNum = fsNodeIsLeaderNum + 1
+          , fsLastSlot = fromIntegral slot }
+  Left TraceForgedBlock {} ->
+    stats { fsBlocksForgedNum = fsBlocksForgedNum + 1 }
+  Left (TraceNodeNotLeader (SlotNo slot'))
+    | slot <- fromIntegral slot'
+    , stats' <- stats { fsLastSlot = slot }
       -- Node is not a leader again: The number of blocks forged by
       -- this node should now be equal to the number of slots when
       -- this node was a leader.
-      let slot = fromIntegral slot'
-      in if fsLastSlot stats == 0 || succ (fsLastSlot stats) == slot
-            then pure stats { fsLastSlot = slot }
-            else
-              let missed = slot - fsLastSlot stats
-              in pure stats { fsLastSlot = slot
-                            , fsSlotsMissedNum = fsSlotsMissedNum stats + missed }
-calculateForgingStats stats _context _message = pure stats
+    -> if fsLastSlot == 0 || succ fsLastSlot == slot
+         then stats'
+         else
+           let missed = slot - fsLastSlot
+           in  stats' { fsSlotsMissedNum = fsSlotsMissedNum + missed }
+  _ -> stats
