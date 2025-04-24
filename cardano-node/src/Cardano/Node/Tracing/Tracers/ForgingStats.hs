@@ -29,7 +29,7 @@ data ForgingStats
     fsNodeCannotForgeNum :: !Int
   , fsNodeIsLeaderNum    :: !Int
   , fsBlocksForgedNum    :: !Int
-  , fsLastSlot           :: !Int
+  , fsLastSlot           :: !Int -- Internal value, to track last slot.
   , fsSlotsMissedNum     :: !Int
   }
 
@@ -73,8 +73,6 @@ instance MetaTrace ForgingStats where
         "How many blocks did this node forge?")
       ,("slotsMissed",
         "How many slots did this node miss?")
-      ,("lastSlot",
-        "")
       ]
 
     allNamespaces = [Namespace [] ["ForgingStats"]]
@@ -102,21 +100,24 @@ calculateForgingStats :: MonadIO m
   -> m ForgingStats
 calculateForgingStats stats _context
     (Left TraceNodeCannotForge {}) =
-      pure $ stats  { fsNodeCannotForgeNum  = fsNodeCannotForgeNum stats + 1 }
+      pure $ stats { fsNodeCannotForgeNum = fsNodeCannotForgeNum stats + 1 }
 calculateForgingStats stats _context
-    (Left TraceNodeIsLeader {}) =
-        pure $ stats  { fsNodeIsLeaderNum  = fsNodeIsLeaderNum stats + 1 }
+    (Left (TraceNodeIsLeader (SlotNo slot))) =
+        pure $ stats
+    { fsNodeIsLeaderNum = fsNodeIsLeaderNum stats + 1, fsLastSlot = fromIntegral slot }
 calculateForgingStats stats _context
     (Left TraceForgedBlock {}) =
-        pure $ stats  { fsBlocksForgedNum  = fsBlocksForgedNum stats + 1 }
+        pure $ stats { fsBlocksForgedNum = fsBlocksForgedNum stats + 1 }
 calculateForgingStats stats _context
     (Left (TraceNodeNotLeader (SlotNo slot'))) =
+      -- Node is not a leader again: The number of blocks forged by
+      -- this node should now be equal to the number of slots when
+      -- this node was a leader.
       let slot = fromIntegral slot'
       in if fsLastSlot stats == 0 || succ (fsLastSlot stats) == slot
             then pure $ stats { fsLastSlot = slot }
             else
-              let missed = (slot - fsLastSlot stats)
+              let missed = slot - fsLastSlot stats
               in pure $ stats { fsLastSlot = slot
-                              , fsSlotsMissedNum = fsSlotsMissedNum stats + missed}
-
+                              , fsSlotsMissedNum = fsSlotsMissedNum stats + missed }
 calculateForgingStats stats _context _message = pure stats
