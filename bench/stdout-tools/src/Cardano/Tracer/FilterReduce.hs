@@ -3,6 +3,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 --------------------------------------------------------------------------------
 
@@ -321,11 +322,15 @@ cpuTicksFR = uncurry MkFilterReduce cpuTicks
 
 --------------------------------------------------------------------------------
 
+{--
 type family Id a where
   Id a = a
+--}
 
+{--
 type family Composable i o where
   Composable i o = i -> (i -> Maybe o)
+--}
 {--
   Composable f1 f2 =  Filter.FilterInput f1
                    -> (Filter.FilterOutput f1 -> Maybe (Filter.FilterOutput f2))
