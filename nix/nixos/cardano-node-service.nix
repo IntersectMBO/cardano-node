@@ -80,26 +80,33 @@ let
             })) cfg.extraNodeConfig;
         baseInstanceConfig =
           i:
-          if !cfg.useLegacyTracing
-          then baseConfig //
-               { ## XXX: remove once legacy tracing is dropped
-                 minSeverity = "Critical";
-                 setupScribes = [];
-                 setupBackends = [];
-                 defaultScribes = [];
-                 defaultBackends = [];
-                 options = {};
-               }
-          else baseConfig //
-               {
-                 UseTraceDispatcher = false;
-               } //
-               (optionalAttrs (baseConfig ? hasEKG) {
-                  hasEKG = baseConfig.hasEKG + i;
-               }) //
-               (optionalAttrs (baseConfig ? hasPrometheus) {
-                 hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
-               });
+          ( if !cfg.useLegacyTracing
+            then baseConfig //
+                 { ## XXX: remove once legacy tracing is dropped
+                   minSeverity = "Critical";
+                   setupScribes = [];
+                   setupBackends = [];
+                   defaultScribes = [];
+                   defaultBackends = [];
+                   options = {};
+                 }
+            else baseConfig //
+                 {
+                   UseTraceDispatcher = false;
+                 } //
+                 (optionalAttrs (baseConfig ? hasEKG) {
+                    hasEKG = baseConfig.hasEKG + i;
+                 }) //
+                 (optionalAttrs (baseConfig ? hasPrometheus) {
+                   hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
+                 })
+            )
+            // optionalAttrs (cfg.withUtxoHdLmdb i){
+              LedgerDB = {
+                Backend = "V1LMDB";
+                LiveTablesPath = cfg.lmdbDatabasePath i;
+              };
+            };
     in i: let
     instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
@@ -133,10 +140,6 @@ let
       ];
     };
     instanceDbPath = cfg.databasePath i;
-    utxoLmdbParams = ["--utxos-on-disk"]
-      ++ lib.optionals (cfg.lmdbDatabasePath i != null)
-        [ "--utxos-database-path ${cfg.lmdbDatabasePath i}"
-        ];
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
@@ -152,8 +155,7 @@ let
       "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
     ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
       "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
-    ] ++ lib.optionals (cfg.withUtxoHdLmdb i) utxoLmdbParams
-      ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
+    ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
       echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
       echo "..or, once again, in a single line:"

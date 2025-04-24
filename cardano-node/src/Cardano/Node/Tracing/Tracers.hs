@@ -654,7 +654,7 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
     configureTracers configReflection trConfig [inboundGovernorTransitionsTr]
 
     !localConnectionManagerTr  <-  mkCardanoTracer
-      trBase trForward mbTrEKG
+      trBase trForward Nothing -- never conflate metrics of the same name with those originating from `connectionManagerTr`
       ["Net", "ConnectionManager", "Local"]
     configureTracers configReflection trConfig [localConnectionManagerTr]
 
