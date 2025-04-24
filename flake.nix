@@ -330,6 +330,8 @@
                     #
                     # It stands to question though, whether or not we want those to be
                     # in the cardano-node-linux as executables anyway?
+                    #
+                    # Also explicitly excluded from musl in nix/haskell.nix.
                     removeAttrs projectExes ["tx-generator" "gen-plutus"]
                   );
                 };
@@ -387,7 +389,7 @@
             # FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
             "musl\\.(.*\\.)?tx-generator.*"
             "musl\\.(.*\\.)?gen-plutus.*"
-            # hlint required status is controled via the github action:
+            # hlint required status is controlled via the github action:
             "native\\.(.*\\.)?checks/hlint"
             # system-tests are build and run separately:
             "native\\.(.*\\.)?system-tests"

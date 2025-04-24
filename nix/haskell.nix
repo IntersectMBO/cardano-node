@@ -134,10 +134,6 @@ let
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
-            # Remvoe this once mingwx is mapped to null in haskell.nix (haskell.nix#2032), and we bumped _past_ that.
-            # we need to plugin in pthreads as force overrides https://github.com/input-output-hk/haskell.nix/blob/9823e12d5b6e66150ddeea146aea682f44ee4d44/overlays/windows.nix#L109.
-            packages.unix-time.components.library.libs = lib.mkForce [ pkgs.windows.mingw_w64_pthreads ];
-
             # This fix seems fairly fishy; but somehow it's required to make this work :confused_parrot:
             packages.unix-compat.postPatch = ''
               sed -i 's/msvcrt//g' unix-compat.cabal
