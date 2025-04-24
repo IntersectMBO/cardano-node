@@ -3,7 +3,7 @@ bump-cardano-node-workbench:
 bump-node-measured:
 	nix flake lock --update-input node-measured
 bump-cardano-deployment: ## Sync the flake.lock to the CI check
-	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
+	nix --max-jobs 256 --cores 256 run nixpkgs#nixVersions.latest -- build .#hydraJobs.cardano-deployment
 
 CI_TEST_NIXATTR = workbench-ci-test
 workbench-ci-test smoke: ## Workbench:  test a-la Hydra, the ci-test profile, full Nix engaged
