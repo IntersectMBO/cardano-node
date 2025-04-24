@@ -6,11 +6,33 @@
 -- :set -package ouroboros-network-framework
 -- :set -package cardano-tracer
 
+-- import                                         Prelude hiding ((.), id)
+import                                         Control.Applicative (Applicative (..), Alternative (..))
+import qualified                               Control.Applicative as Base
+import                                         Control.Arrow (Arrow (..), ArrowChoice (..), ArrowPlus (..), ArrowZero (..), (^<<), (^>>), (<<^), (>>^))
+import qualified                               Control.Arrow as Base
+-- hide id and (.)
+import                                         Control.Category (Category, (<<<), (>>>))
+import qualified                               Control.Category as Base
+import qualified                               Control.Monad as Base
+import qualified                               Data.Either as Base
+import                                         Data.Function (on)
+import qualified                               Data.Function as Base
+import                                         Data.Functor ((<&>))
+import qualified                               Data.Functor as Base
+import qualified                               Data.List as Base
+import qualified                               Data.Maybe as Base
+import qualified                               Data.Ord as Base
+
 import qualified "bytestring"                  Data.ByteString as BS
 import qualified "bytestring"                  Data.ByteString.Lazy as LBS
 
 import qualified "cborg"                       Codec.CBOR.Read as CBOR -- (DeserialiseFailure)
 import qualified "cborg"                       Codec.CBOR.Term as CBOR -- (Term)
+
+import qualified "extra"                       Control.Monad.Extra as Monad
+import qualified "extra"                       Data.Either.Extra as Either
+import qualified "extra"                       Data.List.Extra as List
 
 import qualified "network-mux"                 Network.Mux.Trace as Mux
 import qualified "network-mux"                 Network.Mux.Types as Mux
@@ -19,6 +41,9 @@ import qualified "network-mux"                 Network.Mux.Codec as Mux
 import qualified "trace-dispatcher"            Cardano.Logging.Version as Logging -- (ForwardingVersion (..))
 import qualified "trace-dispatcher"            Cardano.Logging as Logging
 
+import qualified "transformers"                Control.Monad.Trans.Except as Except
+import qualified "transformers"                Control.Monad.Trans.RWS as RWS
+
 import qualified "typed-protocols"             Network.TypedProtocol.Codec as Codec -- (Codec)
 import qualified "typed-protocols"             Network.TypedProtocol.Core  as Codec -- (StateAgency/Protocol)
 
@@ -26,3 +51,5 @@ import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handsh
 import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handshake.Type as Handshake -- (Handshake)
 
 import qualified "cardano-tracer"              Cardano.Tracer.Acceptors.Utils as Utils
+
+:set prompt "%s> "

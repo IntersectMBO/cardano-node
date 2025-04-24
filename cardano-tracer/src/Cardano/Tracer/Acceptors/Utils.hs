@@ -39,7 +39,7 @@ import           Cardano.Logging (SeverityS (..))
 import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Handlers.Notifications.Utils
 #endif
-import           Cardano.Logging.Version (ForwardingVersion, forwardingVersionCodec)
+import           Cardano.Logging.Version (ForwardingVersion, forwardingVersionCodec, forwardingCodecCBORTerm)
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
@@ -60,12 +60,12 @@ import           Control.Arrow (ArrowChoice (..))
 -- This as-of-yet unused import reflects a goal to generalize from
 -- monomorphic use of the IO monad to future monad-polymorphic
 -- potentially pure use in the decoding functions.
-import           Control.Monad.Class.MonadST () -- (MonadST)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import           Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Bimap as BM
 import qualified Data.ByteString.Lazy as LBS (ByteString, readFile, splitAt)
+import           Data.Kind (Type)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import           Data.Time.Clock.POSIX (getPOSIXTime)
@@ -78,7 +78,19 @@ import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsL
 
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
 
-handshakeCodec :: Codec (Handshake ForwardingVersion CBOR.Term) CBOR.DeserialiseFailure IO LBS.ByteString
+handshakeCodec :: forall
+      (error :: Type)
+      (handshake :: Type)
+      (monad :: Type -> Type)
+      (string :: Type)
+      (term :: Type)
+      . ()
+  => error ~ CBOR.DeserialiseFailure
+  => handshake ~ Handshake ForwardingVersion term
+  => monad ~ IO
+  => string ~ LBS.ByteString
+  => term ~ CBOR.Term
+  => Codec handshake error monad string
 handshakeCodec = codecHandshake forwardingVersionCodec
 
 parseSDU :: LBS.ByteString -> Either Mux.Error (Mux.SDU, LBS.ByteString)
@@ -89,27 +101,64 @@ deriving instance Show Mux.RemoteClockModel
 deriving instance Show Mux.SDUHeader
 deriving instance Show Mux.SDU
 
-decodeHandshake
-  :: forall (st :: Handshake ForwardingVersion CBOR.Term) . ()
+decodeHandshake :: forall (error :: Type)
+                          (vNumber :: Type)
+                          (vParams :: Type)
+                          (st :: Handshake vNumber vParams)
+                          (string :: Type)
+                        . ()
+  => error ~ CBOR.DeserialiseFailure
+  => vNumber ~ ForwardingVersion
+  => vParams ~ CBOR.Term
+  => string ~ LBS.ByteString
   => IsActiveState st (StateAgency st)
   => SingHandshake st
-       -> IO (DecodeStep
-             LBS.ByteString CBOR.DeserialiseFailure IO (SomeMessage st))
+       -> IO (DecodeStep string error IO (SomeMessage st))
 decodeHandshake = decode handshakeCodec
 
-decodePropose :: 'StPropose ~ (stPropose :: Handshake ForwardingVersion CBOR.Term)
+decodePropose :: forall (error :: Type)
+                        (vNumber :: Type)
+                        (vParams :: Type)
+                        (stPropose :: Handshake vNumber vParams)
+                        (string :: Type)
+                      . ()
+  => error ~ CBOR.DeserialiseFailure
+  => vNumber ~ ForwardingVersion
+  => vParams ~ CBOR.Term
+  => stPropose ~ 'StPropose
+  => string ~ LBS.ByteString
   => IsActiveState stPropose (StateAgency stPropose)
-  => IO (DecodeStep LBS.ByteString CBOR.DeserialiseFailure IO (SomeMessage stPropose))
+  => IO (DecodeStep string error IO (SomeMessage stPropose))
 decodePropose = decodeHandshake SingPropose
 
-decodeConfirm :: 'StConfirm ~ (stConfirm :: Handshake ForwardingVersion CBOR.Term)
+decodeConfirm :: forall (error :: Type)
+                        (vNumber :: Type)
+                        (vParams :: Type)
+                        (stConfirm :: Handshake vNumber vParams)
+                        (string :: Type)
+                      . ()
+  => error ~ CBOR.DeserialiseFailure
+  => vNumber ~ ForwardingVersion
+  => vParams ~ CBOR.Term
+  => stConfirm ~ 'StConfirm
+  => string ~ LBS.ByteString
   => IsActiveState stConfirm (StateAgency stConfirm)
-  => IO (DecodeStep LBS.ByteString CBOR.DeserialiseFailure IO (SomeMessage stConfirm))
+  => IO (DecodeStep string error IO (SomeMessage stConfirm))
 decodeConfirm = decodeHandshake SingConfirm
 
-decodeDone :: 'StDone ~ (stDone :: Handshake ForwardingVersion CBOR.Term)
+decodeDone :: forall (error :: Type)
+                     (vNumber :: Type)
+                     (vParams :: Type)
+                     (stDone :: Handshake vNumber vParams)
+                     (string :: Type)
+                   . ()
+  => error ~ CBOR.DeserialiseFailure
+  => vNumber ~ ForwardingVersion
+  => vParams ~ CBOR.Term
+  => stDone ~ 'StDone
+  => string ~ LBS.ByteString
   => IsActiveState stDone (StateAgency stDone)
-  => IO (DecodeStep LBS.ByteString CBOR.DeserialiseFailure IO (SomeMessage stDone))
+  => IO (DecodeStep string error IO (SomeMessage stDone))
 decodeDone = decodeHandshake SingDone
 
 data Either3 t t' t''
@@ -118,17 +167,28 @@ data Either3 t t' t''
   | Right3 t''
   deriving (Eq, Foldable, FromJSON, ToJSON, Generic, Ord, Read, Show)
 
-decodeToken' :: forall stConfirm stDone stPropose . ()
-  => 'StConfirm ~ (stConfirm :: Handshake ForwardingVersion CBOR.Term)
+decodeToken' :: forall (error :: Type)
+                       (vNumber :: Type)
+                       (vParams :: Type)
+                       (stConfirm :: Handshake vNumber vParams)
+                       (stDone :: Handshake vNumber vParams)
+                       (stPropose :: Handshake vNumber vParams)
+                       (string :: Type)
+                     . ()
+  => error ~ CBOR.DeserialiseFailure
+  => vNumber ~ ForwardingVersion
+  => vParams ~ CBOR.Term
+  => stConfirm ~ 'StConfirm
   => IsActiveState stConfirm (StateAgency stConfirm)
-  => 'StDone ~ (stDone :: Handshake ForwardingVersion CBOR.Term)
+  => stDone ~ 'StDone
   => IsActiveState stDone (StateAgency stDone)
-  => 'StPropose ~ (stPropose :: Handshake ForwardingVersion CBOR.Term)
+  => stPropose ~ 'StPropose
   => IsActiveState stPropose (StateAgency stPropose)
-  => [LBS.ByteString]
-     -> IO ( Either CBOR.DeserialiseFailure (SomeMessage stConfirm)
-           , Either CBOR.DeserialiseFailure (SomeMessage stDone)
-           , Either CBOR.DeserialiseFailure (SomeMessage stPropose))
+  => string ~ LBS.ByteString
+  => [string]
+     -> IO ( Either error (SomeMessage stConfirm)
+           , Either error (SomeMessage stDone)
+           , Either error (SomeMessage stPropose))
 decodeToken' bytes = do
   confirm <- runDecoder bytes =<< decodeConfirm
   done    <- runDecoder bytes =<< decodeDone
@@ -141,7 +201,6 @@ parseHandshakeLog logFile = parseSDU <$> LBS.readFile logFile >>= \case
   Right (sdu, cborBS) -> do
     print sdu
     print . take 1024 $ show cborBS
-    -- decodeHandshake undefined
     pure ()
 
 prepareDataPointRequestor

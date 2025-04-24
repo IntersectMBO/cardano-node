@@ -101,4 +101,5 @@ mkConfig TestSetup{..} rootDir p = TracerConfig
   , hasForwarding  = Nothing
   , resourceFreq   = Nothing
   , ekgRequestFull = Nothing
+  , tracerConfigDebug = Nothing
   }

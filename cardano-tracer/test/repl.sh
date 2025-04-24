@@ -6,6 +6,7 @@ exec cabal --jobs=256 --keep-going --disable-documentation repl \
 	--repl-options=-Wno-unused-packages \
 	--build-depends bytestring \
 	--build-depends cborg \
+	--build-depends extra \
 	--build-depends network-mux \
 	--build-depends optparse-applicative-fork \
 	--build-depends ouroboros-network-framework \

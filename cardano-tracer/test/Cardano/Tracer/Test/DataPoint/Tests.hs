@@ -95,4 +95,5 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , tracerConfigDebug = Nothing
     }

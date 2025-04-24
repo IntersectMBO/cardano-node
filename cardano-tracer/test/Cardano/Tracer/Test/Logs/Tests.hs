@@ -87,6 +87,7 @@ propLogs ts@TestSetup{..} format logRotLimitBytes logRotMaxAgeMinutes rootDir lo
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , tracerConfigDebug = Nothing
     }
 
 propMultiInit :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
@@ -119,6 +120,7 @@ propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , tracerConfigDebug = Nothing
     }
 
 propMultiResp :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> IO Property
@@ -151,6 +153,7 @@ propMultiResp ts@TestSetup{..} format rootDir localSock = do
     , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     , ekgRequestFull = Nothing
+    , tracerConfigDebug = Nothing
     }
 
 checkMultiResults :: FilePath -> IO Property
