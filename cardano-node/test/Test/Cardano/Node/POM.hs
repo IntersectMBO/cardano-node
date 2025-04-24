@@ -164,7 +164,7 @@ testPartialYamlConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = mempty
     , pncGenesisConfigFlags = mempty
-    , pncForkPolicy = mempty
+    , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
     }
@@ -212,7 +212,7 @@ testPartialCliConfig =
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     , pncConsensusMode = Last (Just PraosMode)
     , pncGenesisConfigFlags = mempty
-    , pncForkPolicy = mempty
+    , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
     }
@@ -267,7 +267,7 @@ eExpectedConfig = do
     , ncPeerSharing = PeerSharingDisabled
     , ncConsensusMode = PraosMode
     , ncGenesisConfig = disableGenesisConfig
-    , ncForkPolicy = NoBindForkPolicy
+    , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
     , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
     }
 

@@ -12,7 +12,7 @@
 
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
-  , NCForkPolicy (..)
+  , ResponderCoreAffinityPolicy (..)
   , NetworkP2PMode (..)
   , SomeNetworkP2PMode (..)
   , PartialNodeConfiguration(..)
@@ -51,7 +51,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapsh
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
-import           Ouroboros.Network.Mux (ForkPolicy, noBindForkPolicy, responderForkPolicy)
+import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 
 import           Control.Concurrent (getNumCapabilities)
@@ -199,20 +199,22 @@ data NodeConfiguration
          -- Ouroboros Genesis
        , ncGenesisConfig :: GenesisConfig
 
-       , ncForkPolicy :: NCForkPolicy
+       , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
--- * `NoBindForkPolicy` corresponds to `Ouroboros.Network.Mux.noBindForkPolicy`
--- * `ResponderForkPolicy` corresponds to `Ouroboros.Network.Mux.responderForkPolicy`
---   with a `randomIO` generated salt and `getNumCapabilities`
-data NCForkPolicy = NoBindForkPolicy | ResponderForkPolicy deriving (Eq, Show, Generic, FromJSON)
+--
+-- * `NoResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.noBindForkPolicy`
+-- * `ResponderCoreAffinity` corresponds to `Ouroboros.Network.Mux.responderForkPolicy`
+--   with a `randomIO` generated salt and `getNumCapabilities`.
+--
+data ResponderCoreAffinityPolicy = NoResponderCoreAffinity | ResponderCoreAffinity deriving (Eq, Show, Generic, FromJSON)
 
 -- | Convert `NCForkPolicy` to a `Ouroboros.Network.Mux.ForkPolicy`
-getForkPolicy :: Hashable peerAddr => NCForkPolicy -> IO (ForkPolicy peerAddr)
+getForkPolicy :: Hashable peerAddr => ResponderCoreAffinityPolicy -> IO (Mux.ForkPolicy peerAddr)
 getForkPolicy = \case
-  NoBindForkPolicy -> pure noBindForkPolicy
-  ResponderForkPolicy -> responderForkPolicy <$> randomIO <*> getNumCapabilities
+  NoResponderCoreAffinity -> pure Mux.noBindForkPolicy
+  ResponderCoreAffinity -> Mux.responderForkPolicy <$> randomIO <*> getNumCapabilities
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
@@ -291,7 +293,7 @@ data PartialNodeConfiguration
          -- Ouroboros Genesis
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
-       , pncForkPolicy :: !(Last NCForkPolicy)
+       , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -402,7 +404,10 @@ instance FromJSON PartialNodeConfiguration where
       -- pncConsensusMode determines whether Genesis is enabled in the first place.
       pncGenesisConfigFlags <- Last <$> v .:? "LowLevelGenesisOptions"
 
-      pncForkPolicy <- Last <$> v .:? "ForkPolicy"
+      pncResponderCoreAffinityPolicy <-
+            (\a b -> Last a <> Last b)
+        <$> v .:? "ResponderCoreAffinityPolicy"
+        <*> v .:? "ForkPolicy" -- deprecated
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -445,7 +450,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncEnableP2P
            , pncPeerSharing
            , pncGenesisConfigFlags
-           , pncForkPolicy
+           , pncResponderCoreAffinityPolicy
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -682,7 +687,7 @@ defaultPartialNodeConfiguration =
     , pncEnableP2P     = Last (Just EnabledP2PMode)
     , pncPeerSharing   = Last (Just Ouroboros.defaultPeerSharing)
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
-    , pncForkPolicy = Last $ Just NoBindForkPolicy
+    , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
     }
   where
     PeerSelectionTargets {
@@ -792,7 +797,7 @@ makeNodeConfiguration pnc = do
       $ pncGenesisConfigFlags pnc
   let ncGenesisConfig = mkGenesisConfig mGenesisConfigFlags
 
-  ncForkPolicy <- lastToEither "Missing ForkPolicy" $ pncForkPolicy pnc
+  ncResponderCoreAffinityPolicy <- lastToEither "Missing ResponderCoreAffinityPolicy" $ pncResponderCoreAffinityPolicy pnc
 
   let deadlineTargets =
         PeerSelectionTargets {
@@ -874,7 +879,7 @@ makeNodeConfiguration pnc = do
              , ncPeerSharing
              , ncConsensusMode
              , ncGenesisConfig
-             , ncForkPolicy
+             , ncResponderCoreAffinityPolicy
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
