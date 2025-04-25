@@ -12,8 +12,15 @@ maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-build-type:             Simple
+build-type:             Custom
 extra-doc-files:        ChangeLog.md
+extra-source-files:     proto/*.proto
+
+custom-setup
+  setup-depends:
+     base
+   , Cabal
+   , proto-lens-setup
 
 Flag unexpected_thunks
   Description:          Turn on unexpected thunks checks
@@ -81,6 +88,10 @@ library
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
+                        Cardano.Node.Rpc.Client
+                        Cardano.Node.Rpc.Proto.Api.Node
+                        Cardano.Node.Rpc.Proto.Api.NodeMetadata
+                        Cardano.Node.Rpc.Server
                         Cardano.Node.Run
                         Cardano.Node.Startup
                         Cardano.Node.STM
@@ -169,6 +180,8 @@ library
                       , ekg-core
                       , filepath
                       , formatting
+                      , grapesy
+                      , grpc-spec
                       , generic-data
                       , hashable
                       , hostname
@@ -196,6 +209,9 @@ library
                       , ouroboros-network-protocols ^>= 0.14
                       , prettyprinter
                       , prettyprinter-ansi-terminal
+                      , proto-lens-protobuf-types
+                      , proto-lens-runtime
+                      , proto-lens
                       , psqueues
                       , random
                       , resource-registry
@@ -220,6 +236,8 @@ library
                       , typed-protocols >= 0.3
                       , typed-protocols-stateful >= 0.3
                       , yaml
+
+  build-tool-depends: proto-lens-protoc:proto-lens-protoc
 
 executable cardano-node
   import:               project-config
