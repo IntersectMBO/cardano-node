@@ -99,6 +99,7 @@ let
       cardano-topology
       cardano-tracer
       locli
+      locli-quick
       tx-generator
       pkgs.graphviz
       python3Packages.supervisor
