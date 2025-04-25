@@ -1,11 +1,13 @@
+:!echo ghci.script: setting language options
 :set -XBlockArguments
 :set -XLambdaCase
 :set -XPackageImports
 -- :set -package cborg
 -- :set -package network-mux
 -- :set -package ouroboros-network-framework
--- :set -package cardano-tracer
+-- :set -package-id cardano-tracer-0.3.1
 
+:!echo ghci.script: importing base modules
 -- import                                         Prelude hiding ((.), id)
 import                                         Control.Applicative (Applicative (..), Alternative (..))
 import qualified                               Control.Applicative as Base
@@ -24,32 +26,39 @@ import qualified                               Data.List as Base
 import qualified                               Data.Maybe as Base
 import qualified                               Data.Ord as Base
 
+:!echo ghci.script: importing bytestring modules
 import qualified "bytestring"                  Data.ByteString as BS
 import qualified "bytestring"                  Data.ByteString.Lazy as LBS
 
+:!echo ghci.script: importing cborg modules
 import qualified "cborg"                       Codec.CBOR.Read as CBOR -- (DeserialiseFailure)
 import qualified "cborg"                       Codec.CBOR.Term as CBOR -- (Term)
 
+:!echo ghci.script: importing extra modules
 import qualified "extra"                       Control.Monad.Extra as Monad
 import qualified "extra"                       Data.Either.Extra as Either
 import qualified "extra"                       Data.List.Extra as List
 
+:!echo ghci.script: importing network-mux modules
 import qualified "network-mux"                 Network.Mux.Trace as Mux
 import qualified "network-mux"                 Network.Mux.Types as Mux
 import qualified "network-mux"                 Network.Mux.Codec as Mux
 
+:!echo ghci.script: importing trace-dispatcher modules
 import qualified "trace-dispatcher"            Cardano.Logging.Version as Logging -- (ForwardingVersion (..))
 import qualified "trace-dispatcher"            Cardano.Logging as Logging
 
+:!echo ghci.script: importing transformers modules
 import qualified "transformers"                Control.Monad.Trans.Except as Except
 import qualified "transformers"                Control.Monad.Trans.RWS as RWS
 
+:!echo ghci.script: importing typed-protocols modules
 import qualified "typed-protocols"             Network.TypedProtocol.Codec as Codec -- (Codec)
 import qualified "typed-protocols"             Network.TypedProtocol.Core  as Codec -- (StateAgency/Protocol)
 
+:!echo ghci.script: importing ouroboros-network-framework modules
 import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handshake.Codec as Handshake -- (codecHandshake)
 import qualified "ouroboros-network-framework" Ouroboros.Network.Protocol.Handshake.Type as Handshake -- (Handshake)
 
-import qualified "cardano-tracer"              Cardano.Tracer.Acceptors.Utils as Utils
-
+:!echo ghci.script: setting prompt
 :set prompt "%s> "
