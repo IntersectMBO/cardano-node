@@ -52,6 +52,7 @@ import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..)
                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
+import           Cardano.Node.Rpc.Server
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing.API
@@ -123,6 +124,7 @@ import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
+import           Control.Concurrent.Async
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
 import qualified Control.Exception as Exception
@@ -201,7 +203,9 @@ runNode cmdPc = do
          -- don't need these.
          (Just $ ncProtocolFiles nc)
 
-    handleNodeWithTracers cmdPc nc consensusProtocol
+    race_
+      (handleNodeWithTracers cmdPc nc consensusProtocol)
+      (rungrpcServer cmdPc)
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
