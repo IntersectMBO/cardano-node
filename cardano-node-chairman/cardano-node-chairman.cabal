@@ -45,7 +45,7 @@ executable cardano-node-chairman
                       , cardano-crypto-class
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-core ^>= 1.17
-                      , cardano-node ^>= 10.3
+                      , cardano-node ^>= 10.4
                       , cardano-prelude
                       , containers
                       , contra-tracer
