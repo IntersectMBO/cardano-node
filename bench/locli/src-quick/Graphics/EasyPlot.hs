@@ -197,8 +197,9 @@ data Graph3D x y z =
       -- ^ plots data read from a file, optionally giving indices of which columns to plot as x, y and z
 
 -- | Options which can be used with 'plot''
-data GnuplotOption = Interactive -- ^ keeps gnuplot open, so that you can interact with the plot (only usefull with 'X11')
-                   | Debug       -- ^ keeps intermediate files used to invoke gnuplot, such as the script '_plot.p' and the datafiles '_plot*.dat'.
+data GnuplotOption = Interactive        -- ^ keeps gnuplot open, so that you can interact with the plot (only usefull with 'X11')
+                   | Debug              -- ^ keeps intermediate files used to invoke gnuplot, such as the script '_plot.p' and the datafiles '_plot*.dat'.
+                   | Preamble [String]  -- ^ a preamble for the plot, typically set statements for axis labels and formats
     deriving Eq
 
 -- | Provides the plot function for different kinds of graphs (2D and 3D)
@@ -416,8 +417,9 @@ exec options term@Terminal{..} plotfunc plotops datasets = do
 
   return $ exitCode == ExitSuccess
   where
-    preamble  = [ toString term ]
-    fileNames = [ "_plot" ++ show ix ++ ".dat" | ix <- [1 :: Int ..] ]
+    preamble      = toString term : preStatements
+    preStatements = concat [ stmts | Preamble stmts <- options ]
+    fileNames     = [ "_plot" ++ show ix ++ ".dat" | ix <- [1 :: Int ..] ]
     -- additional CLI options that may be terminal-specific
     cliArgs
       | tType == Windows                    = [ "-persist" ]
