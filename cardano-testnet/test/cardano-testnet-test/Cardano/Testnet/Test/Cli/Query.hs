@@ -69,6 +69,8 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion, readJsonFile)
 import qualified Hedgehog.Extras as H
 
+import           RIO (runRIO)
+
 -- | Test CLI queries
 -- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/CliQueries/"'@
