@@ -24,6 +24,8 @@ module Cardano.Tracer.Acceptors.Utils
   , notifyAboutNodeDisconnected
   , parseHandshakeLog
   , parseSDU
+  , parseFileSDUs
+  , parseSDUatOffset
   , prepareDataPointRequestor
   , prepareMetricsStores
   , removeDisconnectedNode
@@ -62,9 +64,13 @@ import           Control.Arrow (ArrowChoice (..))
 -- potentially pure use in the decoding functions.
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT, except, runExceptT, tryE)
 import           Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Bimap as BM
-import qualified Data.ByteString.Lazy as LBS (ByteString, readFile, splitAt)
+import qualified Data.ByteString.Lazy as LBS (ByteString, hGet, readFile, splitAt)
+import           Data.Either.Extra (eitherToMaybe)
+import           Data.Functor ((<&>))
 import           Data.Kind (Type)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -75,6 +81,8 @@ import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import           GHC.Generics (Generic (..))
 import qualified System.Metrics as EKG
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
+import           System.IO (Handle, IOMode (..), SeekMode (..))
+import qualified System.IO as IO (hSeek, hTell, openFile)
 
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
 
@@ -202,6 +210,34 @@ parseHandshakeLog logFile = parseSDU <$> LBS.readFile logFile >>= \case
     print sdu
     print . take 1024 $ show cborBS
     pure ()
+
+preadLBS :: Handle -> Integer -> Int -> IO LBS.ByteString
+preadLBS handle offset count = do
+  savedOffset <- IO.hTell handle
+  IO.hSeek handle AbsoluteSeek offset
+  byteString <- LBS.hGet handle count
+  IO.hSeek handle AbsoluteSeek savedOffset
+  pure byteString
+
+parseSDUatOffset :: Handle -> Integer -> Int -> ExceptT Mux.Error IO Mux.SDU
+parseSDUatOffset handle offset count = do
+  byteString <- liftIO do preadLBS handle offset count
+  except $ fst <$> parseSDU byteString
+
+-- | A monadic unfold.
+unfoldM :: Monad m => (s -> m (Maybe (a, s))) -> s -> m [a]
+unfoldM f s = do
+    f s >>= maybe (pure []) \(a, s') -> (a :) <$> unfoldM f s'
+
+parseFileSDUs :: FilePath -> ExceptT Mux.Error IO [(Mux.SDUHeader, Integer)]
+parseFileSDUs filePath = do
+  handle <- liftIO do IO.openFile filePath ReadMode
+  flip unfoldM 0 \(offset :: Integer) -> do
+    maybeSDUH <- fmap eitherToMaybe . tryE $
+      Mux.msHeader <$> parseSDUatOffset handle offset 8
+    pure $ maybeSDUH <&> \sduH@Mux.SDUHeader {..} ->
+      let newOffset = offset + fromIntegral mhLength
+       in ((sduH, newOffset), newOffset)
 
 prepareDataPointRequestor
   :: TracerEnv
