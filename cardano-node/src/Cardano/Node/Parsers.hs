@@ -15,27 +15,26 @@ module Cardano.Node.Parsers
 
 import           Cardano.Logging.Types
 import qualified Cardano.Logging.Types as Net
-import           Cardano.Node.Configuration.NodeAddress (
-                   NodeHostIPv4Address (NodeHostIPv4Address), File (..),
+import           Cardano.Node.Configuration.NodeAddress (File (..),
+                   NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
+import           Cardano.Rpc.Server.Config (PartialRpcConfig, RpcConfigF (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
-import           Data.Foldable
 import           Data.Char (isDigit)
+import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word16, Word32)
 import           Options.Applicative hiding (str, switch)
--- Don't use switch.  It will not allow to set an option in a configuration
--- file.  See `parseStartAsNonProducingNode` and `parseValidateDB`.
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
@@ -56,7 +55,7 @@ nodeRunParser = do
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseNodeDatabasePaths
   validate <- lastOption parseValidateDB
-  socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
+  socketFp <- lastOption $ parseSocketPath "socket-path" "Path to a cardano-node socket"
   traceForwardSocket <- lastOption parseTracerSocketMode
   nodeConfigFp <- lastOption parseConfigFile
 
@@ -82,6 +81,9 @@ nodeRunParser = do
 
   -- Hidden options (to be removed eventually)
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
+
+  -- gRPC
+  pncRpcConfig <- parseRpcConfig
 
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
@@ -141,12 +143,15 @@ nodeRunParser = do
            , pncPeerSharing = mempty
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty
+           , pncRpcConfig
            }
 
-parseSocketPath :: Text -> Parser SocketPath
-parseSocketPath helpMessage =
+parseSocketPath :: Text -- ^ option name
+                -> Text -- ^ help text
+                -> Parser SocketPath
+parseSocketPath optionName helpMessage =
   fmap File $ strOption $ mconcat
-    [ long "socket-path"
+    [ long (toS optionName)
     , help (toS helpMessage)
     , completer (bashCompleter "file")
     , metavar "FILEPATH"
@@ -420,6 +425,23 @@ parseStartAsNonProducingNode =
         ]
     ]
 
+parseRpcConfig :: Parser PartialRpcConfig
+parseRpcConfig = do
+  isEnabled <- lastOption parseRpcToggle
+  socketPath <- lastOption parseRpcSocketPath
+  pure $ RpcConfig isEnabled socketPath mempty
+  where
+    parseRpcToggle :: Parser Bool
+    parseRpcToggle =
+      Opt.switch (
+           long "grpc-enable"
+        <> help "[EXPERIMENTAL] Enable node gRPC endpoint."
+      )
+    parseRpcSocketPath :: Parser SocketPath
+    parseRpcSocketPath =
+      parseSocketPath
+        "gprc-socket-path"
+        "[EXPERIMENTAL] gRPC socket path. Defaults to rpc.sock in the same directory as node socket."
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

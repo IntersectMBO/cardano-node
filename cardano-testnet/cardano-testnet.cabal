@@ -56,6 +56,7 @@ library
                       , cardano-node
                       , cardano-ping ^>= 0.8
                       , cardano-prelude
+                      , cardano-rpc
                       , contra-tracer
                       , containers
                       , data-default-class
@@ -220,6 +221,8 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
+                        Cardano.Testnet.Test.Rpc.Query
+                        Cardano.Testnet.Test.Rpc.Transaction
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.P2PTopology
@@ -238,12 +241,15 @@ test-suite cardano-testnet-test
                       , bytestring
                       , cardano-api
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib}
+                      , cardano-ledger-api
                       , cardano-crypto-class
+                      , cardano-ledger-binary
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
                       , cardano-prelude
+                      , cardano-rpc
                       , cardano-slotting
                       , cardano-strict-containers ^>= 0.1
                       , cardano-testnet
@@ -261,6 +267,7 @@ test-suite cardano-testnet-test
                       , monad-control
                       , mtl
                       , process
+                      , rio
                       , regex-compat
                       , tasty ^>= 1.5
                       , text

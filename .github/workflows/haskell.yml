@@ -38,7 +38,7 @@ jobs:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
         # TODO add 9.8 again to the versions list when GHC-9.8 gets released with stm > 2.5.2,
         # see https://github.com/haskell/stm/issues/76
-        ghc: ["9.6", "9.12"]
+        ghc: ["9.6", "9.10"]
         cabal: ["3.12"]
         sys:
           - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
@@ -96,6 +96,18 @@ jobs:
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: true # default is true
+
+    - name: "[Linux] Install grpc dependencies"
+      if: runner.os == 'Linux'
+      run: sudo apt install libsnappy-dev protobuf-compiler
+
+    - name: "[Windows] Install grpc dependencies"
+      if: runner.os == 'Windows'
+      run: /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-snappy mingw-w64-x86_64-protobuf
+
+    - name: "[macOS] Install grpc dependencies"
+      if: runner.os == 'macOS'
+      run: brew install snappy protobuf
 
     - uses: actions/checkout@v4
 
@@ -230,9 +242,9 @@ jobs:
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
     # - name: Setup tmate session
-    #  if: ${{ failure() }}
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
     #     limit-access-to-actor: true
 
   build-complete:

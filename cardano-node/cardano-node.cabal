@@ -158,6 +158,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
+                      , cardano-rpc ^>= 10.0
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
@@ -221,6 +222,7 @@ library
                       , typed-protocols-stateful >= 0.3
                       , yaml
 
+
 executable cardano-node
   import:               project-config
   hs-source-dirs:       app
@@ -256,6 +258,7 @@ test-suite cardano-node-test
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-api
+                      , cardano-rpc
                       , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting
