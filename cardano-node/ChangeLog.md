@@ -27,6 +27,9 @@
   }
   ```
 
+- KeepAlive client tracing: dropped `KeepAliveClient` from `kind` of
+  `AddSample` messages in the legacy tracing system.
+
 ## 10.2 -- January 2025
 
 - Use p2p network stack by default, warn when using the legacy network stack.

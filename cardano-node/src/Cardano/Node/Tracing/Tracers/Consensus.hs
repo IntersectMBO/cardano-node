@@ -68,14 +68,11 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
-import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Control.Monad (guard)
-import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (toList))
@@ -84,7 +81,7 @@ import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
 import qualified Data.List as List
 import qualified Data.Text as Text
-import           Data.Time (DiffTime, NominalDiffTime)
+import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
 
@@ -2162,41 +2159,6 @@ instance MetaTrace (TraceBlockchainTimeEvent t) where
     , Namespace [] ["CurrentSlotUnknown"]
     , Namespace [] ["SystemClockMovedBack"]
     ]
-
---------------------------------------------------------------------------------
--- KeepAliveClient Tracer
---------------------------------------------------------------------------------
-
-instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) where
-    forMachine _dtal (AddSample peer rtt pgsv) =
-        mconcat
-          [ "kind" .= String "AddSample"
-          , "address" .= show peer
-          , "rtt" .= rtt
-          , "sampleTime" .= show (dTime $ sampleTime pgsv)
-          , "outboundG" .= (realToFrac $ gGSV (outboundGSV pgsv) :: Double)
-          , "inboundG" .= (realToFrac $ gGSV (inboundGSV pgsv) :: Double)
-          ]
-        where
-          gGSV :: GSV -> DiffTime
-          gGSV (GSV g _ _) = g
-
-          dTime :: Time -> Double
-          dTime (Time d) = realToFrac d
-
-    forHuman = showT
-
-instance MetaTrace (TraceKeepAliveClient remotePeer) where
-  namespaceFor AddSample {} = Namespace [] ["KeepAliveClient"]
-
-  severityFor (Namespace _ ["KeepAliveClient"]) Nothing = Just Info
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace _ ["KeepAliveClient"]) = Just
-    "A server read has occurred, either for an add block or a rollback"
-  documentFor _ = Just ""
-
-  allNamespaces = [Namespace [] ["KeepAliveClient"]]
 
 --------------------------------------------------------------------------------
 -- Gsm Tracer
