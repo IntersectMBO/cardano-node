@@ -399,6 +399,7 @@ instance MetaTrace Mux.Trace where
       Namespace [] ["TCPInfo"]
 
     severityFor (Namespace _ ["RecvHeaderStart"]) _       = Just Debug
+    severityFor (Namespace _ ["RecvRaw"]) _               = Just Debug
     severityFor (Namespace _ ["RecvHeaderEnd"]) _         = Just Debug
     severityFor (Namespace _ ["RecvStart"]) _             = Just Debug
     severityFor (Namespace _ ["RecvEnd"]) _               = Just Debug
@@ -433,6 +434,8 @@ instance MetaTrace Mux.Trace where
 
     documentFor (Namespace _ ["RecvHeaderStart"])       = Just
       "Bearer receive header start."
+    documentFor (Namespace _ ["RecvRaw"])               = Just
+      "Bearer receive raw."
     documentFor (Namespace _ ["RecvHeaderEnd"])         = Just
       "Bearer receive header end."
     documentFor (Namespace _ ["RecvStart"])             = Just
@@ -497,6 +500,7 @@ instance MetaTrace Mux.Trace where
 
     allNamespaces = [
         Namespace [] ["RecvHeaderStart"]
+      , Namespace [] ["RecvRaw"]
       , Namespace [] ["RecvHeaderEnd"]
       , Namespace [] ["RecvStart"]
       , Namespace [] ["RecvEnd"]
