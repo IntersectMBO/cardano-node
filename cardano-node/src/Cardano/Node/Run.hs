@@ -22,7 +22,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Api (File (..), FileDirection (..))
+import           Cardano.Api (File (..), FileDirection (..), NetworkMagic, fromNetworkMagic)
 import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
@@ -40,7 +40,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..), TimeoutOverride (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP, getForkPolicy)
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo' (..),
-                   gatherConfiguredSockets, getSocketOrSocketInfoAddr)
+                   gatherConfiguredSockets, getSocketOrSocketInfoAddr, SocketConfig (..))
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
@@ -52,6 +52,8 @@ import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..)
                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
+import           Cardano.Rpc.Server
+import           Cardano.Rpc.Server.Config
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing.API
@@ -125,6 +127,7 @@ import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
+import           Control.Concurrent.Async
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, Exception, IOException)
 import qualified Control.Exception as Exception
@@ -156,6 +159,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+import           System.FilePath (takeDirectory, (</>))
 import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -168,6 +172,7 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
+import GHC.Stack
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -177,36 +182,57 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
-    installSigTermHandler
+  installSigTermHandler
 
-    Crypto.cryptoInit
+  Crypto.cryptoInit
 
-    configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
+  let earlyTracer = stdoutTracer
+  nc@NodeConfiguration
+    { ncProtocolConfig
+    , ncProtocolFiles=ncProtocolFiles@ProtocolFilepaths{shelleyVRFFile=mShelleyVrfFile}
+    } <- buildNodeConfiguration cmdPc
 
-    nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
-            Left err -> error $ "Error in creating the NodeConfiguration: " <> err
-            Right nc' -> return nc'
+  traceWith earlyTracer $ "Node configuration: " <> show nc
 
-    putStrLn $ "Node configuration: " <> show nc
+  forM_ mShelleyVrfFile $
+    runThrowExceptT . checkVRFFilePermissions earlyTracer . File
 
-    case ncProtocolFiles nc of
-      ProtocolFilepaths{shelleyVRFFile=Just vrfFp} ->
-        runThrowExceptT $
-          checkVRFFilePermissions stdoutTracer (File vrfFp)
-      _ -> pure ()
+  consensusProtocol@(SomeConsensusProtocol _ runP) <-
+    runThrowExceptT $
+      mkConsensusProtocol
+       ncProtocolConfig
+       -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
+       -- don't need these.
+       (Just ncProtocolFiles)
 
-    consensusProtocol <-
-      runThrowExceptT $
-        mkConsensusProtocol
-         (ncProtocolConfig nc)
-         -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
-         -- don't need these.
-         (Just $ ncProtocolFiles nc)
-
+  let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
+      networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
+  -- TODO move initialisation somewhere else, so that the correct tracer is used, instead of stdout default one
+  withAsync (runRpcServer earlyTracer $ buildRpcConfiguration networkMagic cmdPc) $ \_ ->
     handleNodeWithTracers cmdPc nc consensusProtocol
 
 runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
 runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
+
+-- | Read node configuration from a file specified in 'PartialNodeConfiguration'
+buildNodeConfiguration :: HasCallStack
+                       => PartialNodeConfiguration -- ^ defaults
+                       -> IO NodeConfiguration
+buildNodeConfiguration partialConf = do
+  configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile partialConf
+  either
+    (\err -> error $ "Error in creating the NodeConfiguration: " <> err)
+    pure
+    $ makeNodeConfiguration (defaultPartialNodeConfiguration <> configYamlPc <> partialConf)
+
+-- | Build RPC configuration. Reads the configuration file again. Allows RPC server to dynamically reload configuration from disk again.
+buildRpcConfiguration :: HasCallStack
+                      => NetworkMagic
+                      -> PartialNodeConfiguration
+                      -> IO (RpcConfig, NetworkMagic)
+buildRpcConfiguration networkMagic partialConf = do
+  NodeConfiguration{ncRpcConfig} <- buildNodeConfiguration partialConf
+  pure (ncRpcConfig, networkMagic)
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
@@ -736,6 +762,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers
 --------------------------------------------------------------------------------
+
+-- TODO add SIGHUP handler for RPC configuration reloading
 
 -- | The P2P SIGHUP handler can update block forging & reconfigure network topology.
 --

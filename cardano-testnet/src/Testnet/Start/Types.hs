@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
@@ -92,6 +94,8 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
   , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
+  , cardanoEnableRpc :: Bool
+  -- ^ True to enable gRPC endpoints in all testnet nodes
   } deriving (Eq, Show)
 
 -- | Path to the configuration file of the node, specified by the user
@@ -127,6 +131,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
     , cardanoOutputDir = def
+    , cardanoEnableRpc = False
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.
@@ -173,7 +178,15 @@ cardanoDefaultTestnetNodeOptions =
   , RelayNodeOptions []
   ]
 
-data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
+data NodeLoggingFormat
+  = NodeLoggingFormatAsJson
+  | NodeLoggingFormatAsText
+  deriving (Eq, Show)
+
+instance Pretty NodeLoggingFormat where
+  pretty = \case
+    NodeLoggingFormatAsJson -> "json"
+    NodeLoggingFormatAsText -> "text"
 
 data NodeConfiguration
 
