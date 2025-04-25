@@ -4,7 +4,7 @@
       - define_profile_targets [[file:~/cardano-node/lib.mk::define define_profile_targets]]
         - proftgt [[file:~/cardano-node/lib.mk::$(1): shell]]
           - shell [[file:~/cardano-node/Makefile::shell: ## Nix shell, (workbench from /nix/store), vars: PROFILE, CMD, RUN]]
-            - =Makefile= -> Nix =workbench-shell= [[file:~/cardano-node/Makefile::nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}]]
+            - =Makefile= -> Nix =workbench-shell= [[file:~/cardano-node/Makefile::nix-shell -A 'workbench-shell' --max-jobs 256 --cores 256 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}]]
 *** =start-cluster= /shell script available inside workbench shell/
     - workbench-interactive-start [[file:backend/runner.nix::workbench-interactive-start = pkgs.writeScriptBin "start-cluster" '']]
 *** =workbench-shell= /Nix attribute implementing the workbench shell/

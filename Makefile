@@ -20,7 +20,7 @@ CMD     ?=
 RUN     ?=
 
 lint hlint: ## Run the CI version of hlint
-	nix build --no-link '.#checks/hlint' --cores 0
+	nix build --no-link '.#checks/hlint' --max-jobs 256 --cores 256
 haddock-hoogle haddocks hoogle:
 	if test -z "$$IN_NIX_SHELL"; then nix-shell --run 'cabal update && cabal haddock all --haddock-hoogle'; else cabal update && cabal haddock all --haddock-hoogle; fi
 host-hlint: ## Run the system (not Nix) version of hlint
@@ -55,7 +55,7 @@ workbench-internals-walkthrough:
 ## Base targets:
 ##
 shell:                                           ## Nix shell, (workbench from /nix/store), vars: PROFILE, CMD, RUN
-	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
+	nix-shell -A 'workbench-shell' --max-jobs 256 --cores 256 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
 shell-dev shell-prof shell-nix: shell
 shell-nix: ARGS += --arg 'useCabalRun' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD, RUN
 shell-prof: ARGS += --arg 'profiling' '"space"'  ## Nix shell, everything Haskell built profiled
@@ -84,7 +84,7 @@ $(eval $(call define_profile_targets_nomadcloud,$(CLOUD_PROFILES)))
 
 # Dynamic local/supervisor profile targets.
 playground-%: 
-	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName $*-${ERA} --argstr backendName supervisor
+	nix-shell -A 'workbench-shell' --max-jobs 256 --cores 256 --show-trace --argstr profileName $*-${ERA} --argstr backendName supervisor
 
 ###
 ### Misc
