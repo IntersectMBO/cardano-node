@@ -1,9 +1,10 @@
-
 module Cardano.Unlog.BackendDB
        ( prepareDB
        , runLiftLogObjectsDB
+       , runLiftLogObjectsRawDB
        , LoadFromDB(..)
        , LoadLogObjects(..)
+       , LoadRawResult(..)
        , LoadSummaryOnly(..)
 
        -- specific SQLite queries or statements
@@ -26,6 +27,7 @@ import           Prelude hiding (log)
 
 import           Control.Exception (SomeException (..), catch)
 import           Control.Monad
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           Data.Aeson as Aeson (decode, eitherDecode)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Kind (Type)
@@ -80,9 +82,14 @@ instance LoadFromDB LoadSummaryOnly where
   loadQuery = const $ Just "SELECT null"
   loadConvert _ summary _ = summary
 
+data LoadRawResult = LoadRawResult
+  { lrrSummary     :: SummaryDB
+  , lrrDBRows      :: [[SQLData]]
+  }
+
 
 runLiftLogObjectsDB :: LoadFromDB l => l -> RunLogs a -> ExceptT String IO (RunLogs [LoadResult l])
-runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = liftIO $ do
+runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = handleIOExceptT show $ do
   hostLogs' <- Map.fromList
     <$> sequenceConcurrentlyChunksOf numCapabilities loadActions
   pure $ RunLogs{rlHostLogs = hostLogs', ..}
@@ -92,8 +99,24 @@ runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = liftIO $ do
       | loadTimingInfo loadMode = withTimingInfo ("loadHostLogsDB/" ++ ShortText.unpack h)
       | otherwise               = id
 
+    yieldResult summary = map (loadConvert loadMode summary)
+
     load (host@(Host h), hl) = timingInfo h $
-      (,) host <$> loadHostLogsDB loadMode hl
+      (,) host <$> loadHostLogsDB loadMode yieldResult hl
+
+-- same as above but: 1) retain SQL result rows without conversion, 2) quiet mode: leave stdout alone
+runLiftLogObjectsRawDB :: LoadFromDB l => l -> RunLogs a -> ExceptT String IO (RunLogs LoadRawResult)
+runLiftLogObjectsRawDB loadMode RunLogs{rlHostLogs, ..} = handleIOExceptT show $ do
+  hostLogs' <- Map.fromList
+    <$> sequenceConcurrentlyChunksOf numCapabilities loadActions
+  pure $ RunLogs{rlHostLogs = hostLogs', ..}
+  where
+    loadActions = map load (Map.toList rlHostLogs)
+
+    yieldResult = LoadRawResult
+
+    load (host, hl) =
+      (,) host <$> loadHostLogsDB loadMode yieldResult hl
 
 -- If the logs have been split up into multiple files, e.g. by a log rotator,
 -- this assumes sorting log files by *name* results in chronological order
@@ -182,8 +205,11 @@ getTraceFreqs =
   ML.fromList . map fromSqlDataPair
     <$> run "SELECT * FROM tracefreq"
 
-loadHostLogsDB :: LoadFromDB l => l -> HostLogs a -> IO (HostLogs [LoadResult l])
-loadHostLogsDB loadMode HostLogs{..} =
+
+type YieldResult r = SummaryDB -> [[SQLData]] -> r
+
+loadHostLogsDB :: LoadFromDB l => l -> YieldResult r -> HostLogs a -> IO (HostLogs r)
+loadHostLogsDB loadMode yield HostLogs{..} =
   case fst hlLogs of
     log@(LogObjectSourceSQLite dbFile) ->
       withDb (fromString dbFile) $ do
@@ -193,14 +219,12 @@ loadHostLogsDB loadMode HostLogs{..} =
                                    else pure hlRawTraceFreqs
         rows                  <- maybe (pure []) run (loadQuery loadMode)
 
-        let rows'             = map (loadConvert loadMode summary) rows
-
         pure $ HostLogs
           { hlRawTraceFreqs   = traceFreqs
           , hlRawFirstAt      = Just sdbFirstAt
           , hlRawLastAt       = Just sdbLastAt
           , hlRawLines        = sdbLines
-          , hlLogs            = (log, rows')
+          , hlLogs            = (log, yield summary rows)
           , ..
           }
-    other -> error $ "loadHostLogsDB: expected SQLite DB file, got " ++ show other
+    other -> fail $ "loadHostLogsDB: expected SQLite DB file, got " ++ show other
