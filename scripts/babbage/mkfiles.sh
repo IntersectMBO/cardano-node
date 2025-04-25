@@ -82,31 +82,33 @@ $CARDANO_CLI byron genesis genesis \
 cp scripts/babbage/alonzo-babbage-test-genesis.json "${ROOT}/genesis.alonzo.spec.json"
 cp scripts/babbage/conway-babbage-test-genesis.json "${ROOT}/genesis.conway.spec.json"
 
-cp configuration/defaults/byron-mainnet/configuration.yaml "${ROOT}/"
-$SED -i "${ROOT}/configuration.yaml" \
-     -e 's/Protocol: RealPBFT/Protocol: Cardano/' \
-     -e '/Protocol/ aPBftSignatureThreshold: 0.6' \
-     -e 's/minSeverity: Info/minSeverity: Debug/' \
-     -e 's|GenesisFile: genesis.json|ByronGenesisFile: genesis/byron/genesis.json|' \
-     -e '/ByronGenesisFile/ aShelleyGenesisFile: genesis/shelley/genesis.json' \
-     -e '/ByronGenesisFile/ aAlonzoGenesisFile: genesis/shelley/genesis.alonzo.json' \
-     -e '/ByronGenesisFile/ aConwayGenesisFile: genesis/shelley/genesis.conway.json' \
-     -e 's/RequiresNoMagic/RequiresMagic/' \
-     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 6/' \
-     -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
+# 1. Copy the original config
+cp scripts/babbage/configuration.json "${ROOT}/configuration.json"
 
-  echo "TestShelleyHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestAllegraHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestBabbageHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestConwayHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
+jq '
+    . * {
+        "ByronGenesisFile": "genesis/byron/genesis.json",
+        "ShelleyGenesisFile": "genesis/shelley/genesis.json",
+        "AlonzoGenesisFile": "genesis/shelley/genesis.alonzo.json",
+        "ConwayGenesisFile": "genesis/shelley/genesis.conway.json",
+        "TestShelleyHardForkAtEpoch": 0,
+        "TestAllegraHardForkAtEpoch": 0,
+        "TestMaryHardForkAtEpoch": 0,
+        "TestAlonzoHardForkAtEpoch": 0,
+        "TestBabbageHardForkAtEpoch": 0,
+        "TestConwayHardForkAtEpoch": 0,
+        "ExperimentalProtocolsEnabled": true,
+        "Protocol": "Cardano",
+        "PBftSignatureThreshold": 0.6,
+        "RequiresNetworkMagic": "RequiresMagic"
+    }' "${ROOT}/configuration.json" > "${ROOT}/config.tmp" && 
+mv "${ROOT}/config.tmp" "${ROOT}/configuration.json"
+
 
 # Because in Babbage the overlay schedule and decentralization parameter
 # are deprecated, we must use the "create-staked" cli command to create
 # SPOs in the ShelleyGenesis
-$CARDANO_CLI genesis create-staked --genesis-dir "${ROOT}" \
+$CARDANO_CLI conway genesis create-staked --genesis-dir "${ROOT}" \
   --testnet-magic "${NETWORK_MAGIC}" \
   --gen-pools 3 \
   --supply            2000000000000 \
@@ -180,53 +182,71 @@ echo 3003 > "${ROOT}/node-spo3/port"
 #TODO generalise this over the N BFT nodes and pool nodes
 cat > "${ROOT}/node-spo1/topology.json" <<EOF
 {
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3002,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3003,
-       "valency": 1
-     }
-   ]
- }
+  "localRoots": [
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 3002
+        },
+        {
+          "address": "127.0.0.1",
+          "port": 3003
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
+      "valency": 2
+    }
+  ],
+  "publicRoots": []
+}
 EOF
 
 cat > "${ROOT}/node-spo2/topology.json" <<EOF
 {
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3001,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3003,
-       "valency": 1
-     }
-   ]
- }
+  "localRoots": [
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 3001
+        },
+        {
+          "address": "127.0.0.1", 
+          "port": 3003
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
+      "valency": 2
+    }
+  ],
+  "publicRoots": []
+}
 EOF
 
 cat > "${ROOT}/node-spo3/topology.json" <<EOF
 {
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3001,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3002,
-       "valency": 1
-     }
-   ]
- }
+  "localRoots": [
+    {
+      "accessPoints": [
+        {
+          "address": "127.0.0.1",
+          "port": 3001
+        },
+        {
+          "address": "127.0.0.1",
+          "port": 3002
+        }
+      ],
+      "advertise": false,
+      "trustable": true,
+      "valency": 2
+    }
+  ],
+  "publicRoots": []
+}
 EOF
 
 
@@ -238,7 +258,7 @@ for NODE in ${SPO_NODES}; do
 CARDANO_NODE="\${CARDANO_NODE:-cardano-node}"
 
 \$CARDANO_NODE run \\
-  --config                          '${ROOT}/configuration.yaml' \\
+  --config                          '${ROOT}/configuration.json' \\
   --topology                        '${ROOT}/${NODE}/topology.json' \\
   --database-path                   '${ROOT}/${NODE}/db' \\
   --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\
