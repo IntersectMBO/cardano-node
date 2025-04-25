@@ -330,33 +330,6 @@ EOF
         test -f "$dir"/profile.json -a -f "$dir"/genesis-shelley.json ||
             run fix-legacy-run-structure "$run";;
 
-    fix-systemstart )
-        local usage="USAGE: wb run $op RUN [MACH=node-1]"
-        local run=${1:?$usage}
-        local mach=${2:-node-0}
-        local dir=$(run compute-path "$run")
-        local nodelog=$(ls $dir/logs/$mach/node-*.json | head -n1)
-        local genesis=$dir/genesis-shelley.json
-
-        msg "cross-checking systemStart of $run:  $nodelog"
-        local apparent_systemStart=$(grep -F 'TraceStartLeadershipCheck' $nodelog |
-                                     head -n2 |
-                                     tail -n1 |
-                                     jq '[ (.at | "\(.[:19])Z" | fromdateiso8601)
-                                         , .data.slot
-                                         ] | .[0] - .[1]
-                                           | todateiso8601' -r)
-        local genesis_systemStart=$(jq .systemStart $genesis -r)
-
-        if test "$genesis_systemStart" != "$apparent_systemStart"
-        then msg "Fixing genesis systemStart in $run:  $apparent_systemStart (log), $genesis_systemStart (genesis)"
-             jq_fmutate "$dir"/genesis-shelley.json '. *
-               { systemStart: $systemStart
-               }
-               ' --arg systemStart $apparent_systemStart
-        else msg "Good: both genesis and log-implied systemStart are at:  $genesis_systemStart"
-        fi;;
-
     get-path | get )
         local usage="USAGE: wb run $op [--query] RUN"
         local check_args=()
@@ -588,71 +561,9 @@ EOF
         profile describe "$dir"/profile.json
         ;;
 
-    allocate-from-machine-run-slice | alloc-from-mrs )
-        local usage="USAGE: wb run $op MACH RUN-SLICE-ID PRESET"
-        local mach=${1:?$usage}; shift
-        local run_slice_id=${1:?$usage}; shift
-        local preset=${1:?$usage}; shift
-
-        local args=(
-            --arg id     $run_slice_id
-            --arg mach   $mach
-            --arg preset $preset
-        )
-        local meta=$(jq '
-            { Y:  $id[0:4], M:   $id[4:6], D: $id[6:8]   }     as $d
-          | { h: $id[8:10], m: $id[10:12], s: $id[12:14] }     as $t
-          | { tag:     "\($d.Y)-\($d.M)-\($d.D)-\($t.h).\($t.m).\($mach)"
-            , profile: $preset
-            , date:    "\($d.Y)-\($d.M)-\($d.D)T\($t.h):\($t.m):\($t.s)Z"
-            , batch:   $mach
-            }
-            | . +
-              { timestamp: (.date | fromdateiso8601)
-              }
-          | { meta: . }
-          ' "${args[@]}" --null-input)
-        local run=$(jq '.meta.tag' -r <<<$meta)
-        local dir="$global_rundir"/$run
-
-        mkdir -p "$dir"/$mach
-        local genesis=$(profile preset-get-file "$preset" 'genesis' 'genesis/genesis-shelley.json')
-        cp -f  "$genesis" "$dir"/genesis-shelley.json
-        ln -sf genesis-shelley.json "$dir"/genesis.json
-        jq <<<$meta '
-              $gsisf[0] as $gsis
-            | . *
-            { meta:
-              { profile_content:
-                { genesis:
-                  { active_slots_coeff: $gsis.activeSlotsCoeff
-                  , delegators:         1000000
-                  , dense_pool_density: 1
-                  , epoch_length:       $gsis.epochLength
-                  , parameter_k:        $gsis.securityParam
-                  , n_pools:            1
-                  , slot_duration:      $gsis.slotLength
-                  , utxo:               4000000
-                  }
-                , generator:
-                  { add_tx_size:        0
-                  , inputs_per_tx:      1
-                  , outputs_per_tx:     1
-                  , tps:                8
-                  , tx_count:           0
-                  , era:                "alonzo"
-                  }
-                }
-              }
-            }
-           ' --slurpfile gsisf "$dir"/genesis-shelley.json > "$dir"/meta.json
-
-        echo $dir;;
-
     fetch-run | fetch | fr )
-        local usage="USAGE: wb run $op RUN [MACHINE]"
+        local usage="USAGE: wb run $op RUN"
         local run=${1:?$usage}
-        local mach=${2:-all-hosts}
 
         local env=$( jq <<<$remote '.env' -r)
         local depl=$(jq <<<$remote '.depl' -r)
@@ -674,7 +585,6 @@ EOF
              '
 
             common-run-files
-            $mach
         )
         run_remote_get "${args[@]}";;
 
@@ -909,9 +819,8 @@ run_remote_get() {
         generator/plutus-budget-summary.json
     )
     local xs0=(${objects[*]})
-    local xs1=(${xs0[*]/#all-hosts/        $(jq -r '.hostname | keys | .[]' <<<$meta)})
-    local xs2=(${xs1[*]/#common-run-files/ ${common_run_files[*]}})
-    local xs=(${xs2[*]})
+    local xs1=(${xs0[*]/#common-run-files/ ${common_run_files[*]}})
+    local xs=(${xs1[*]})
 
     local count=${#xs[*]}
     progress "run | fetch $(white $run)" "objects to fetch:  $(white $count) total:  ${objects[*]}"

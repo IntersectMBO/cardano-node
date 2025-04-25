@@ -145,11 +145,11 @@ let
     } // optionalAttrs (profiling != "none") {
       inherit profiling;
     } // optionalAttrs (profiling == "none") {
-      # Switch to `cardano-node.passthru.noGitRev` if eventlog is not needed.
-      eventlog               = mkForce true;
+      # Switch to `noGitRev` to avoid rebuilding with every commit.
+      package    = pkgs.cardano-node.passthru.noGitRev;
     } // optionalAttrs backend.useCabalRun {
       # Allow the shell function to take precedence.
-      executable             = "cardano-node";
+      executable = "cardano-node";
     } // optionalAttrs isProducer {
       operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
       kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";

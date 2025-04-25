@@ -334,8 +334,8 @@ allocate-run-nomadcloud() {
   # outputs it needs inside the container, these are built using the packages
   # metadata in "containerPkgs" and the current commit.
   local gitrev
-  gitrev="$(git rev-parse HEAD)"
-  msg $(blue "INFO: Found GitHub commit with ID \"$gitrev\"")
+  gitrev="${WB_GITREV:?"No WB_GITREV"}"
+  msg $(blue "INFO: Found GitHub commit with ID \"$gitrev\" set on shell creation")
   # Check if the Nix package was created from a dirty git tree
   if test "$gitrev" = "0000000000000000000000000000000000000000"
   then
