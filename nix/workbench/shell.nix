@@ -144,6 +144,7 @@ project.shellFor {
        cardano-topology
        cardano-tracer
        locli
+       locli-quick
        tx-generator
      ]
   # Include the workbench as a derivation or use the sources directly ?

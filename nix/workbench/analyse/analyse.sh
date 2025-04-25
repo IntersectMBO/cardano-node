@@ -27,6 +27,9 @@ usage_analyse() {
 
     $(helpcmd call RUN-NAME OPS..)    Execute 'locli' "uops" on the specified run
 
+    $(helpcmd quickquery-remote QUERY)
+     $(blk qqr)             Perform a quick query on run data on WB_REMOTE but process query results locally.
+
     $(helpcmd trace-frequencies LOGFILENAME)
      $(blk trace-freq freq)       Classify trace messages by namespace frequency.
                              Output will be stored in a filename derived from argument
@@ -742,6 +745,26 @@ EOF
                  wait
              }
         fi;;    
+
+    quickquery-remote | qqr )
+        local usage="USAGE: wb analyse $op QUERY"
+
+        local query=${1:?$usage}; shift
+
+        if test -v "WB_REMOTE"
+        then local remote=$WB_REMOTE
+        else local remote='{"env":"deployer","depl":"cardano-node"}'            # FOR DEVELOPMENT ONLY: perf.deployer ~/cardano-node as fallback default
+        fi
+
+        local env=$( jq <<<$remote '.env' -r)
+        local depl=$(jq <<<$remote '.depl' -r)
+
+        progress "quickquery-remote" "env $(yellow $env) depl $(yellow $depl)"
+
+        ssh $env -- \
+        sh -c "'cd $depl && make locli-qq LOCLI_QQ=$query | zstd'" |
+          zstd -d | locli-quick testpipe -r
+        ;;
 
     trace-frequencies | trace-freq | freq | tf )
         local new_only= sargs=()

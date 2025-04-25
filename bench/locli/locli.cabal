@@ -176,6 +176,7 @@ executable locli-quick
 
   other-modules:        Cardano.Analysis.Reducer
                         Cardano.Analysis.Reducer.Util
+                        Cardano.Analysis.Quick.Types
                         Data.Reducer
                         Graphics.EasyPlot
 
@@ -191,7 +192,10 @@ executable locli-quick
                       , containers
                       , directory
                       , extra
+                      , filepath
                       , process
+                      , optparse-applicative-fork
+                      , serialise
                       , split
                       , text
                       , text-short
