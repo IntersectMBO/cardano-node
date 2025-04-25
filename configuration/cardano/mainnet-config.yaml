@@ -43,7 +43,7 @@ TargetNumberOfKnownPeers: 150
 TargetNumberOfRootPeers: 60
 
 
-##### Network Configuration #####
+##### Consensus Configuration #####
 
 ConsensusMode: PraosMode
 SyncTargetNumberOfActivePeers: 0
@@ -53,9 +53,29 @@ SyncTargetNumberOfKnownBigLedgerPeers: 100
 MinBigLedgerPeersForTrustedState: 5
 
 
+##### Ledger Configuration #####
+
+# Additional configuration options can be found at:
+# https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/utxo-hd/migrating
+LedgerDB:
+  # The time interval between snapshots, in seconds.
+  SnapshotInterval: 4320
+
+  # The number of disk snapshots to keep.
+  NumOfDiskSnapshots: 2
+
+  # When querying the store for a big range of UTxOs (such as with
+  # QueryUTxOByAddress), the store will be read in batches of this size.
+  QueryBatchSize: 100
+
+  # The backend can either be in memory with `V2InMemory` or on disk with
+  # `V1LMDB`.
+  Backend: V2InMemory
+
+
 ##### Version Information #####
 
-MinNodeVersion: 10.2.1
+MinNodeVersion: 10.4.0
 
 ##### Logging configuration #####
 

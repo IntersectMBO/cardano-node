@@ -59,6 +59,10 @@ in {
     machine = {config, ...}: {
       nixpkgs.pkgs = pkgs;
 
+      # The default disk size of 1024 MB is insufficient for the binary artifact
+      # and tar gzip expansion.
+      virtualisation.diskSize = 2048;
+
       system.activationScripts.prepTest.text = let
         binPath = makeBinPath [gnutar gzip];
       in ''

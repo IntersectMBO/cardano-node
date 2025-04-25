@@ -12,9 +12,15 @@
   "LastKnownBlockVersion-Alt": 0,
   "LastKnownBlockVersion-Major": 3,
   "LastKnownBlockVersion-Minor": 0,
+  "LedgerDB": {
+    "Backend": "V2InMemory",
+    "NumOfDiskSnapshots": 2,
+    "QueryBatchSize": 100,
+    "SnapshotInterval": 4320
+  },
   "MaxKnownMajorProtocolVersion": 2,
   "MinBigLedgerPeersForTrustedState": 5,
-  "MinNodeVersion": "10.2.1",
+  "MinNodeVersion": "10.4.0",
   "PeerSharing": true,
   "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresNoMagic",
