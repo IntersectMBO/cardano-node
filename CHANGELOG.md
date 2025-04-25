@@ -8,6 +8,7 @@ Changelogs for components can be found as follows:
 - [cardano-submit-api](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-submit-api/CHANGELOG.md) 
 - [trace-forward](https://github.com/IntersectMBO/cardano-node/blob/master/trace-forward/CHANGELOG.md) 
 - [cardano-tracer](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-tracer/CHANGELOG.md)  
+- [cardano-node](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-node/CHANGELOG.md)
 - [cardano-node-capi](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-node-capi/CHANGELOG.md) 
 - [bench/tx-generator](https://github.com/IntersectMBO/cardano-node/blob/master/bench/tx-generator/CHANGELOG.md) 
 
