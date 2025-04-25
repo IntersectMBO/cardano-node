@@ -8,6 +8,12 @@
   "LastKnownBlockVersion-Alt": 0,
   "LastKnownBlockVersion-Major": 3,
   "LastKnownBlockVersion-Minor": 1,
+  "LedgerDB": {
+    "Backend": "V2InMemory",
+    "NumOfDiskSnapshots": 2,
+    "QueryBatchSize": 100,
+    "SnapshotInterval": 216
+  },
   "MaxConcurrencyDeadline": 4,
   "MaxKnownMajorProtocolVersion": 2,
   "PBftSignatureThreshold": 1.1,
