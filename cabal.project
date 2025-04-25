@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-04-16T18:30:40Z
-  , cardano-haskell-packages 2025-04-22T10:01:33Z
+  , cardano-haskell-packages 2025-04-25T11:43:03Z
 
 packages:
   cardano-node
@@ -90,4 +90,3 @@ if impl (ghc >= 9.12)
     -- https://github.com/haskell-servant/servant/pull/1810
     , servant:base
     , servant-server:base
-
