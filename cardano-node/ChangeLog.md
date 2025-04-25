@@ -7,6 +7,8 @@
   (from `cardano-node:Cardano.Node.Tracing.Peers` to `trace-dispatcher:Cardano.Logging.Types.NodePeers`), and
   `NodeStartupInfo` (from `cardano-tracer:Cardano.Node.Startup` to `cardano-node:Cardano.Node.Tracing.NodeStartupInfo.hs`).
 
+- Lower the log severity from Error to Info for TracePromoteWarmBigLedgerPeerAborted and ResponderStartFailure
+
 - Add a new configuration field for fork-policy.
 
 - Optionally support lightweight checkpointing.
