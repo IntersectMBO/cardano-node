@@ -1564,18 +1564,17 @@ traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
   where
     cmtTracer :: Tracer IO (ConnectionManager.Trace peerAddr handlerTrace)
     cmtTracer = Tracer $ \case
-      (ConnectionManager.TrConnectionManagerCounters
-                (ConnectionManagerCounters
-                  prunableConns
-                  duplexConns
-                  unidirectionalConns
-                  incomingConns
-                  outgoingConns
-                )
-              ) -> do
+      ConnectionManager.TrConnectionManagerCounters
+          ConnectionManagerCounters {
+            fullDuplexConns,
+            duplexConns,
+            unidirectionalConns,
+            inboundConns,
+            outboundConns
+          } -> do
         sendEKGDirectInt ekgDirect
-                         "cardano.node.metrics.connectionManager.prunableConns"
-                         prunableConns
+                         "cardano.node.metrics.connectionManager.fullDuplexConns"
+                         fullDuplexConns
         sendEKGDirectInt ekgDirect
                          "cardano.node.metrics.connectionManager.duplexConns"
                          duplexConns
@@ -1584,10 +1583,10 @@ traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
                          unidirectionalConns
         sendEKGDirectInt ekgDirect
                          "cardano.node.metrics.connectionManager.incomingConns"
-                         incomingConns
+                         inboundConns
         sendEKGDirectInt ekgDirect
                          "cardano.node.metrics.connectionManager.outgoingConns"
-                         outgoingConns
+                         outboundConns
       _ -> return ()
 
 
