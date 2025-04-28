@@ -93,7 +93,15 @@ jobs:
         echo "Latest release tag is: $LATEST_TAG"
 
     - name: Tagging intersectmbo container latest
-      if: ${{ github.event.release.tag_name == steps.latest-tag.outputs.LATEST_TAG }}
+      # Github releases are checked for latest tag in the first `or` operand of
+      # the if statement. However, promoted pre-releases or changed full
+      # releases do not count as a `published` event and so won't trigger
+      # this workflow.  For those use cases a manual workflow must be run
+      # from the matching release tag which the second `or` operand checks
+      # for.
+      if: |
+        (github.event_name == 'release' && github.event.release.tag_name == steps.latest-tag.outputs.LATEST_TAG) ||
+        (github.event_name == 'workflow_dispatch' && github.ref == format('refs/tags/{0}', steps.latest-tag.outputs.LATEST_TAG))
       run: |
         echo "::group::Tagging latest for intersectmbo/cardano-node"
         skopeo copy docker-archive:./result-node docker://ghcr.io/intersectmbo/cardano-node:latest
