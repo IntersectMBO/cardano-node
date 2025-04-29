@@ -2,9 +2,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-partial-fields  #-}
 
@@ -252,7 +252,7 @@ data LoggingContext = LoggingContext {
   , lcPrivacy   :: Maybe Privacy
   , lcDetails   :: Maybe DetailLevel
   }
-  deriving stock 
+  deriving stock
     (Show, Generic)
   deriving anyclass
     Serialise
@@ -377,7 +377,7 @@ data TraceObject = TraceObject {
   , toTimestamp :: !UTCTime
   , toHostname  :: !Text
   , toThreadId  :: !Text
-} deriving stock 
+} deriving stock
     (Eq, Show, Generic)
   -- ^ Instances for 'TraceObject' to forward it using 'trace-forward' library.
   deriving anyclass

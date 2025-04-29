@@ -72,10 +72,10 @@ data RotationParams = RotationParams
   deriving stock (Eq, Generic, Show)
   deriving anyclass ToJSON
 
--- | Some fields are defaulted: 
--- 
--- `rpFrequencySecs` defaults to 1 minute. 
--- 
+-- | Some fields are defaulted:
+--
+-- `rpFrequencySecs` defaults to 1 minute.
+--
 -- Max age for `RotationParams` can be specified in `rpMaxAgeMinutes`
 -- or `rpMaxAgeHours`: otherwise defaulting to 24 hours.
 instance FromJSON RotationParams where
@@ -84,7 +84,7 @@ instance FromJSON RotationParams where
                    <|> pure 60
     rpLogLimitBytes <- o .: "rpLogLimitBytes"
     rpMaxAgeMinutes <- o .: "rpMaxAgeMinutes"
-                   <|> o .: "rpMaxAgeHours" <&> (* 60)
+                   <|> (o .: "rpMaxAgeHours" <&> (* 60))
                    <|> pure (24 * 60)
     rpKeepFilesNum  <- o .: "rpKeepFilesNum"
     pure RotationParams{..}

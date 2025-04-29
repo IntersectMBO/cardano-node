@@ -30,7 +30,7 @@ checkPeriod :: PeriodInSec
 checkPeriod = 1
 
 traceOnly :: Trace IO TracerTrace -> String -> IO ()
-traceOnly tracer = 
+traceOnly tracer =
   traceWith tracer . TracerError . Text.pack
 
 type Timer :: Type
@@ -48,7 +48,7 @@ mkTimer
   -> Bool
   -> PeriodInSec
   -> IO Timer
-mkTimer = mkTimerOnFailure (pure ()) 
+mkTimer = mkTimerOnFailure (pure ())
 
 mkTimerStderr
   :: IO ()
@@ -89,7 +89,7 @@ mkTimerOnFailure onFailure tracer io state callPeriod_sec = do
   let tryIO :: IO () = try @SomeException io >>= \case
         Left exception -> do
           traceOnly tracer (displayException exception)
-          onFailure 
+          onFailure
         _ -> reset
 
   let run ::  IO ()
@@ -110,4 +110,3 @@ mkTimerOnFailure onFailure tracer io state callPeriod_sec = do
     , startTimer    = modifyIORef' isRunning (const True)
     , stopTimer     = modifyIORef' isRunning (const False)
     }
-

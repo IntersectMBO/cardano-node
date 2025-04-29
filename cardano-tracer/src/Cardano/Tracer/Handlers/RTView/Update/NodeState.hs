@@ -7,7 +7,6 @@ module Cardano.Tracer.Handlers.RTView.Update.NodeState
   , askNSetNodeState
   ) where
 
--- import           Cardano.Node.Tracing.StateRep
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
 import           Cardano.Tracer.Environment
@@ -18,7 +17,7 @@ import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
 import           Control.Monad.Extra (whenJustM)
-import           Data.Text (Text, pack)
+import           Data.Text (Text, pack, unpack)
 import           Text.Printf (printf)
 
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
@@ -68,6 +67,12 @@ instance FromJSON NodeStateWrapper where
   parseJSON = withObject "NodeState" \obj -> do
     -- Check if this is a NodeAddBlock constructor, verify that it's
     -- AddedToCurrentChain and extract the Double.
-    "NodeAddBlock" :: Text <- obj .: "tag"
-    [_, _, double] <- obj .: "contents"
-    pure (NodeStateWrapper double)
+    tag :: Text <- obj .: "tag"
+    unless (tag == "NodeAddBlock") do
+      fail ("parseJSON @NodeStateWrapper: Expected tag 'NodeAddBlock', but got: " ++ unpack tag)
+    contents <- obj .: "contents"
+    withArray "contents" \arr -> do
+      unless (V.length arr == 3) do
+        fail ("parseJSON @NodeStateWrapper: Expected contents array of length 3, but got: " ++ show arr)
+      double <- parseJSON (arr V.! 2)
+      pure (NodeStateWrapper double)

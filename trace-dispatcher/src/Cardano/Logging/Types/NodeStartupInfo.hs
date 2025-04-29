@@ -23,8 +23,8 @@ data NodeStartupInfo = NodeStartupInfo
   , suiSlotLength        :: NominalDiffTime
   , suiEpochLength       :: Word64
   , suiSlotsPerKESPeriod :: Word64
-  } 
-  deriving stock 
+  }
+  deriving stock
     (Eq, Show, Generic)
   deriving anyclass
     (NFData, ToJSON, FromJSON)

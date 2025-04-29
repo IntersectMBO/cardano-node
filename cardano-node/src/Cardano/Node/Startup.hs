@@ -136,14 +136,14 @@ data StartupTrace blk =
   | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
   | MovedTopLevelOption String
 
-data EnabledBlockForging 
+data EnabledBlockForging
   = EnabledBlockForging
   | DisabledBlockForging
   | NotEffective
     -- ^ one needs to send `SIGHUP` after consensus
     -- initialised itself (especially after replying all
     -- blocks).
-  deriving stock 
+  deriving stock
     (Eq, Show)
 
 data BasicInfoCommon = BasicInfoCommon {

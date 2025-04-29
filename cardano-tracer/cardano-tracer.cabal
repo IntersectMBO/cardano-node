@@ -193,10 +193,9 @@ library
                       , string-qq
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.8.1
+                      , trace-dispatcher ^>= 2.9
                       , trace-forward ^>= 2.2.10
                       , trace-resources ^>= 0.2.3
-                      , unordered-containers
                       , wai ^>= 3.2
                       , warp ^>= 3.4
                       , yaml
@@ -251,11 +250,11 @@ library demo-forwarder-lib
                       , generic-data
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.12
+                      , ouroboros-network-api ^>= 0.13
                       , ouroboros-network-framework
                       , tasty-quickcheck
                       , time
-                      , trace-dispatcher ^>= 2.8.1
+                      , trace-dispatcher ^>= 2.9
                       , trace-forward ^>= 2.2.10
                       , vector
                       , vector-algorithms
@@ -294,7 +293,7 @@ library demo-acceptor-lib
                       , filepath
                       , generic-data
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.12
+                      , ouroboros-network-api ^>= 0.13
                       , stm <2.5.2 || >=2.5.3
                       , text
                       , tasty-quickcheck
@@ -353,14 +352,14 @@ test-suite cardano-tracer-test
                       , generic-data
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.12
+                      , ouroboros-network-api ^>= 0.13
                       , ouroboros-network-framework
                       , stm <2.5.2 || >=2.5.3
                       , tasty
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.8.1
+                      , trace-dispatcher ^>= 2.9
                       , trace-forward ^>= 2.2.10
                       , unix-compat
                       , vector
@@ -412,8 +411,8 @@ test-suite cardano-tracer-test-ext
                       , Glob
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network ^>= 0.19.0.3
-                      , ouroboros-network-api ^>= 0.12
+                      , ouroboros-network ^>= 0.20
+                      , ouroboros-network-api ^>= 0.13
                       , ouroboros-network-framework
                       , process
                       , QuickCheck
@@ -421,7 +420,7 @@ test-suite cardano-tracer-test-ext
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.8.1
+                      , trace-dispatcher ^>= 2.9
                       , trace-forward ^>= 2.2.10
                       , unix-compat
                       , vector
@@ -448,7 +447,7 @@ benchmark cardano-tracer-bench
                       , extra
                       , filepath
                       , time
-                      , trace-dispatcher ^>= 2.8.1
+                      , trace-dispatcher ^>= 2.9
 
   ghc-options:          -threaded
                         -rtsopts
