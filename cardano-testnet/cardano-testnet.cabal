@@ -185,12 +185,13 @@ test-suite cardano-testnet-test
 
   main-is:              cardano-testnet-test.hs
 
-  other-modules:        Cardano.Testnet.Test.Cli.Conway.Plutus
-                        Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
+  other-modules:        Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
                         Cardano.Testnet.Test.Cli.LeadershipSchedule
                         Cardano.Testnet.Test.Cli.Query
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
+                        Cardano.Testnet.Test.Cli.Plutus.Scripts
+                        Cardano.Testnet.Test.Cli.Plutus.CostCalculation
                         Cardano.Testnet.Test.Cli.StakeSnapshot
                         Cardano.Testnet.Test.Cli.Transaction
                         Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
