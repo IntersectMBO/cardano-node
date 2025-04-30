@@ -15,12 +15,13 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
+import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
+import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
@@ -33,7 +34,6 @@ import           Data.Text (Text)
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
-import Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
