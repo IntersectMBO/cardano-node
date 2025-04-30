@@ -8,6 +8,7 @@
 import           Cardano.Api (ExceptT, SlotNo (..), runExceptT)
 
 import           Cardano.Analysis.API.Ground (JsonInputFile (..))
+import           Cardano.Analysis.Quick.Types ()
 import           Cardano.Analysis.Reducer
 import           Cardano.Analysis.Reducer.Util
 import           Cardano.Unlog.BackendDB
@@ -291,22 +292,21 @@ parserQuickQuery =
   CMDQuery
     <$> pure ()
     <*> parseRuns
-    <*> pure []
+    <*> parseHosts
     <*> switch (short 'd' <> long "dump-only" <> help "dump result blob to stdout only; don't process")
   where
-    {-
-    parseScriptName =
-          strArgument (help "name of a known script"        <> metavar "NAME")
-      <|> strArgument (help "custom serialized script file" <> metavar "FILE" <> completer (bashCompleter "file"))
-    parseParamPath =
-      strOption $ long "param" <> metavar "JSON" <> completer (bashCompleter "file")
-        <> help "protocol parameter file; default: data/protocol-parameters-v10.json"
-    parseBudgetHint =
-      option auto $ long "hint" <> metavar "BUDGET"
-        <> help "Which budget does the script target? <Mem|Steps>"
-    -}
+    parseHosts = parseNodes <|> parseAllNodes
+
+    parseAllNodes =
+      flag' [] $ long "all-nodes"
+        <> help "explicitly query all nodes; potentially expensive operation"
+
+    parseNodes =
+      option readCommaSepList $ long "nodes" <> short 'n' <> metavar "node(s)"
+        <> help "comma-separated list of node names (e.g. node-10,node20) to query"
+
     parseRuns =
-      option readCommaSepList $ long "run" <> short 'r' <> metavar "run(s)"
+      option readCommaSepList $ long "runs" <> short 'r' <> metavar "run(s)"
         <> help "comma-separated list of run dirs or log manifest JSONs, or a single SQLite DB"
 
 readCommaSepList :: Opt.ReadM [String]

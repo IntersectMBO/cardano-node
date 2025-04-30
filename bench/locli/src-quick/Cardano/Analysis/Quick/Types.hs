@@ -17,6 +17,7 @@ import           Cardano.Unlog.LogObjectDB (SummaryDB (..))
 import           Cardano.Util (I)
 
 import           Codec.Serialise (Serialise (..))
+import           Data.Map.Strict (Map)
 import           Data.Profile (ProfileEntry)
 import           Data.Text.Short (ShortText, fromShortByteString, toShortByteString)
 import           GHC.Generics (Generic)
@@ -59,7 +60,7 @@ data RemoteQueryMeta = QueryRemote
 data RemoteQueryResult
   = RemoteQueryResult
     { rqrQuery  :: ()
-    , rqrResult :: RunLogs LoadRawResult
+    , rqrResult :: Map String (RunLogs LoadRawResult)     -- map key: runId
     }
   | RemoteQueryError
     { rqrError  :: String
