@@ -61,6 +61,8 @@ printRunEnv () {
   echo "CARDANO_PORT=$CARDANO_PORT"
   echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
   echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
+  [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]] && echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=$CARDANO_TRACER_SOCKET_PATH_ACCEPT"
+  [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]] && echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=$CARDANO_TRACER_SOCKET_PATH_CONNECT"
 
   if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
 
@@ -92,6 +94,19 @@ cat << EOF > /usr/local/bin/env
 #!/usr/bin/env bash
 
 # Docker run ENV vars
+EOF
+
+if [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]]; then
+  echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=\"$CARDANO_TRACER_SOCKET_PATH_ACCEPT\"" \
+    >> /usr/local/bin/env
+fi
+
+if [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]]; then
+  echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=\"$CARDANO_TRACER_SOCKET_PATH_CONNECT\"" \
+    >> /usr/local/bin/env
+fi
+
+cat << EOF >> /usr/local/bin/env
 CARDANO_BIND_ADDR="$CARDANO_BIND_ADDR"
 CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
 CARDANO_CONFIG="$CARDANO_CONFIG"
@@ -134,6 +149,9 @@ runRelayNode () {
     "--port" "$CARDANO_PORT"
   )
 
+  [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]] && effopts+=("--tracer-socket-path-accept" "$CARDANO_TRACER_SOCKET_PATH_ACCEPT")
+  [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]] && effopts+=("--tracer-socket-path-connect" "$CARDANO_TRACER_SOCKET_PATH_CONNECT")
+
   effopts+=("${filteredOpts[@]}")
 
   echo "cardano-node run ${effopts[*]}"
@@ -157,6 +175,9 @@ runBlockProducerNode () {
     "--shelley-vrf-key" "$CARDANO_SHELLEY_VRF_KEY" \
     "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
   )
+
+  [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]] && effopts+=("--tracer-socket-path-accept" "$CARDANO_TRACER_SOCKET_PATH_ACCEPT")
+  [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]] && effopts+=("--tracer-socket-path-connect" "$CARDANO_TRACER_SOCKET_PATH_CONNECT")
 
   effopts+=("${filteredOpts[@]}")
 
@@ -189,6 +210,8 @@ do
       --shelley-kes-key) CARDANO_SHELLEY_KES_KEY=${val}; found=true;;
       --shelley-vrf-key) CARDANO_SHELLEY_VRF_KEY=${val}; found=true;;
       --shelley-operational-certificate) CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=${val}; found=true;;
+      --tracer-socket-path-accept) CARDANO_TRACER_SOCKET_PATH_ACCEPT=${val}; found=true;;
+      --tracer-socket-path-connect) CARDANO_TRACER_SOCKET_PATH_CONNECT=${val}; found=true;;
     esac
 
     if [[ $found == true ]]; then
@@ -198,7 +221,10 @@ do
 done
 
 # Filter blank args from match removal above
-filteredOpts=(); for arg in "${options[@]}"; do [[ $arg ]] && filteredOpts+=("$arg"); done
+filteredOpts=()
+for arg in "${options[@]}"; do
+  [[ -n $arg ]] && filteredOpts+=("$arg")
+done
 
 printRunEnv
 writeRootEnv
