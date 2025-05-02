@@ -85,7 +85,10 @@ do
 done
 
 # Filter blank args from match removal above
-filteredOpts=(); for arg in "${options[@]}"; do [[ $arg ]] && filteredOpts+=("$arg"); done
+filteredOpts=()
+for arg in "${options[@]}"; do
+  [[ -n $arg ]] && filteredOpts+=("$arg")
+done
 
 printRunEnv
 writeRootEnv
