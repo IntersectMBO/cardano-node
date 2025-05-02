@@ -366,10 +366,10 @@ mode to append the extra cli arg:
 docker run \
   -v node-ipc:/ipc \
   -e NETWORK=mainnet \
+  -e CARDANO_TRACER_SOCKET_PATH_ACCEPT="/ipc/node-tracer.socket" \
   -e CARDANO_CONFIG_JSON_MERGE='{}' \
   ghcr.io/intersectmbo/cardano-node:dev \
-  run \
-  --tracer-socket-path-accept /ipc/node-tracer.socket
+  run
 
 docker run \
   -v node-ipc:/ipc \
