@@ -39,6 +39,8 @@
     };
   };
 
+  # Only newer nixpkgs have have timeout args for all wait_for_.* fns.
+  # Use the generic wait_until_succeeds w/ timeout arg until nixpkgs is bumped.
   mkScriptTest = env: ''
     machine.systemctl("start cardano-node-${env}")
     machine.wait_until_succeeds("[ -S /var/lib/cardano-node-${env}/node.socket ]", timeout=${timeout})
