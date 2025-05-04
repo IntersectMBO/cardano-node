@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -12,15 +13,20 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-error=unused-imports #-}
+{-# OPTIONS_GHC -Wno-error=unused-imports
+                -Wno-error=partial-type-signatures
+                -Wno-error=unused-local-binds
+                -Wno-error=unused-top-binds #-}
 
 module Cardano.Tracer.Acceptors.Utils
-  ( fileOffsetsSDU
+  ( cmpFileOffsetsSDU
+  , fileOffsetsSDU
   , handshakeCodec
   , notifyAboutNodeDisconnected
   , parseHandshakeLog
@@ -39,6 +45,7 @@ module Cardano.Tracer.Acceptors.Utils
   , decodeToken'
   ) where
 
+import           Prelude hiding (unzip)
 #if RTVIEW
 import           Cardano.Logging (SeverityS (..))
 import           Cardano.Tracer.Handlers.Notifications.Types
@@ -68,6 +75,7 @@ import           Control.Arrow (ArrowChoice (..))
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import           Control.Exception (throw)
+import           Control.Monad (forM)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, except, runExceptT, tryE)
 import           Data.Aeson (FromJSON (..), ToJSON (..))
@@ -84,8 +92,10 @@ import           Data.Time.Clock.POSIX (getPOSIXTime)
 #if RTVIEW
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 #endif
+import           Data.Tuple.Extra (both)
 import           GHC.Generics (Generic (..))
 import           Numeric (showHex)
+import qualified System.FilePath as FilePath (splitExtension)
 import qualified System.Metrics as EKG
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
 import           System.IO (Handle, IOMode (..), SeekMode (..))
@@ -256,9 +266,44 @@ f <$$> xss = fmap f <$> xss
 fileOffsetsSDU :: FilePath -> ExceptT Mux.Error IO [Integer]
 fileOffsetsSDU filePath = snd <$$> parseFileSDUs filePath
 
+showHex' :: Integral int => int -> String
+showHex' int = "0x" <> showHex int ""
+
+unzip :: Functor functor => functor (t, t') -> (functor t, functor t')
+unzip structure = (fst <$> structure, snd <$> structure)
+
+bothFoldr1 :: forall (fold :: Type -> Type) (t :: Type) . ()
+  => Foldable fold
+  => Functor fold
+  => (t -> t -> t) -> fold (t, t) -> (t, t)
+bothFoldr1 op struct = (foldr1 op leftStruct, foldr1 op rightStruct) where
+  (leftStruct, rightStruct) :: (fold t, fold t) = unzip struct
+
+pad :: Int -> String -> String
+pad w s = replicate (w - length s) ' ' <> s
+
+showOffsetPairs :: forall (offset :: Type) . ()
+  => Integral offset
+  => String -> String -> [(offset, offset)] -> [String]
+showOffsetPairs ((<>":")->labelA) ((<>":")->labelB) pairList = strings where
+  pairList' :: [(String, String)] = both showHex' <$> pairList
+  (maxA, maxB) :: (Int, Int) = bothFoldr1 max $ both length <$> pairList'
+  strings = forM pairList' \(pad maxA -> a, pad maxB -> b) -> do
+    unwords [labelA, a, labelB, b]
+
+zipDropEqOnM :: (Monad monad, Eq t')
+  => (t -> monad [t']) -> t -> t -> monad [(t', t')]
+zipDropEqOnM f x y = dropWhile (uncurry (==)) <$> liftA2 zip (f x) (f y)
+
+cmpFileOffsetsSDU :: FilePath -> FilePath -> ExceptT Mux.Error IO ()
+cmpFileOffsetsSDU filePath1 filePath2
+  | (_, label1) <- FilePath.splitExtension filePath1
+  , (_, label2) <- FilePath.splitExtension filePath2
+  = liftIO . mapM_ putStrLn . showOffsetPairs label1 label2
+            =<< zipDropEqOnM fileOffsetsSDU filePath1 filePath2
+
 printSDU :: Mux.SDUHeader -> Integer -> String
 printSDU Mux.SDUHeader {..} offset = unlines is''' where
-  showHex' n = "0x" <> showHex n ""
   Mux.MiniProtocolNum mhNum' = mhNum
   is''' :: [String]
   is''' = [ "SDU header at off=" <> showHex' offset ] <> is''

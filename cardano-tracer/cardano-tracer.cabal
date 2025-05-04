@@ -199,6 +199,7 @@ library
                       , trace-dispatcher
                       , trace-forward
                       , trace-resources
+                      , transformers
                       , typed-protocols
                       , typed-protocols-examples
                       , unordered-containers
