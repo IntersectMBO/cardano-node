@@ -133,7 +133,7 @@
         inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
         # Add cardano-node and cardano-cli with their git revision stamp.
         # Keep available an alternative without the git revision, like the other
-        # passthru (profiled, asserted and eventlogged in nix/haskell.nix) that
+        # passthru (profiled and asserted in nix/haskell.nix) that
         # have no git revision but for the same compilation alternative.
         cardano-node =
           let node = project.exes.cardano-node;

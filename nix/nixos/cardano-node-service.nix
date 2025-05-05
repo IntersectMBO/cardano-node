@@ -226,7 +226,6 @@ in {
         type = types.package;
         default = if (cfg.profiling != "none")
           then cfg.cardanoNodePackages.cardano-node.passthru.profiled
-          else if cfg.eventlog then cfg.cardanoNodePackages.cardano-node.passthru.eventlogged
           else if cfg.asserts then cfg.cardanoNodePackages.cardano-node.passthru.asserted
           else cfg.cardanoNodePackages.cardano-node;
         defaultText = "cardano-node";
