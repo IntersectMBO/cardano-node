@@ -176,7 +176,9 @@ executable locli-quick
 
   other-modules:        Cardano.Analysis.Reducer
                         Cardano.Analysis.Reducer.Util
+                        Cardano.Analysis.Quick.Trace
                         Cardano.Analysis.Quick.Types
+                        Data.Log
                         Data.Reducer
                         Graphics.EasyPlot
 
@@ -198,6 +200,7 @@ executable locli-quick
                       , serialise
                       , split
                       , text
+                      , text-iso8601
                       , text-short
                       , time
                       , trace-resources
