@@ -415,16 +415,6 @@ project.appendOverlays (with haskellLib.projectOverlays; [
             (name: { flags.asserts = true; });
         }];
       };
-      eventlogged = final.appendModule
-        {
-          # From 9.2+
-          # on the commandline: error: [-Wdeprecated-flags, Werror=deprecated-flags]
-          #     -eventlog is deprecated: the eventlog is now enabled in all runtime system ways
-          modules = [({ lib, pkgs, config, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.2" < 0) {
-            packages = final.pkgs.lib.genAttrs [ "cardano-node" ]
-              (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
-          })];
-        };
       # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
@@ -436,7 +426,6 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                 passthru = {
                   profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
-                  eventlogged = lib.getAttrFromPath path final.eventlogged.hsPkgs;
                 };
               }
           else value)
