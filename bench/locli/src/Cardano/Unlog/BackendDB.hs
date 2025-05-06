@@ -2,9 +2,10 @@ module Cardano.Unlog.BackendDB
        ( prepareDB
        , runLiftLogObjectsDB
        , runLiftLogObjectsRawDB
-       , LoadFromDB(..)
+       , LoadFromRunData(..)
        , LoadLogObjects(..)
        , LoadRawResult(..)
+       , LoadRunDataQueryMode(..)
        , LoadSummaryOnly(..)
 
        -- specific SQLite queries or statements
@@ -25,7 +26,7 @@ import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
 
 import           Prelude hiding (log)
 
-import           Control.Exception (SomeException (..), catch)
+import           Control.Exception (SomeException (..), catch, evaluate)
 import           Control.Monad
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           Data.Aeson as Aeson (decode, eitherDecode)
@@ -43,10 +44,10 @@ import           System.Directory (removeFile)
 import           Database.Sqlite.Easy hiding (Text)
 
 
-class LoadFromDB l where
+class LoadFromRunData l where
   type family LoadResult l :: Type
 
-  loadQuery       :: l -> Maybe SQL
+  loadQuery       :: l -> LoadRunDataQueryMode
 
   loadConvert     :: l -> SummaryDB -> [SQLData] -> LoadResult l
 
@@ -55,6 +56,11 @@ class LoadFromDB l where
 
   loadTimingInfo  :: l -> Bool
   loadTimingInfo  = const False
+
+data LoadRunDataQueryMode
+  = LoadRunDataSQL SQL
+  | LoadRunDataTQ ()
+  | LoadRunDataNoQuery
 
 data LoadLogObjects =
     LoadLogObjectsAll
@@ -65,21 +71,21 @@ data LoadLogObjects =
 data LoadSummaryOnly =
     LoadSummaryOnly
 
-instance LoadFromDB LoadLogObjects where
+instance LoadFromRunData LoadLogObjects where
   type instance LoadResult LoadLogObjects = LogObject
 
   loadTraceFreqs = \case {LoadLogObjectsWith{} -> False; _ -> True}
   loadQuery = \case
-    LoadLogObjectsAll          -> Just selectAll
-    LoadLogObjectsWith selects -> Just $ sqlOrdered selects
-    LoadTraceFreqsOnly         -> Nothing
+    LoadLogObjectsAll          -> LoadRunDataSQL selectAll
+    LoadLogObjectsWith selects -> LoadRunDataSQL $ sqlOrdered selects
+    LoadTraceFreqsOnly         -> LoadRunDataNoQuery
   loadConvert    = const sqlToLogObject
   loadTimingInfo = (== LoadLogObjectsAll)
 
-instance LoadFromDB LoadSummaryOnly where
+instance LoadFromRunData LoadSummaryOnly where
   type instance LoadResult LoadSummaryOnly = SummaryDB
 
-  loadQuery = const $ Just "SELECT null"
+  loadQuery = const $ LoadRunDataSQL "SELECT null"
   loadConvert _ summary _ = summary
 
 data LoadRawResult = LoadRawResult
@@ -88,13 +94,16 @@ data LoadRawResult = LoadRawResult
   }
 
 
-runLiftLogObjectsDB :: LoadFromDB l => l -> RunLogs a -> ExceptT String IO (RunLogs [LoadResult l])
+runLiftLogObjectsDB :: LoadFromRunData l => l -> RunLogs a -> ExceptT String IO (RunLogs [LoadResult l])
 runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = handleIOExceptT show $ do
+  when (case loadQuery loadMode of {LoadRunDataTQ{} -> True; _ -> False}) $
+    fail "runLiftLogObjectsDB: TQ evaluation not yet implemented"
   hostLogs' <- Map.fromList
     <$> sequenceConcurrentlyChunksOf numCapabilities loadActions
   pure $ RunLogs{rlHostLogs = hostLogs', ..}
   where
     loadActions = map load (Map.toList rlHostLogs)
+
     timingInfo h
       | loadTimingInfo loadMode = withTimingInfo ("loadHostLogsDB/" ++ ShortText.unpack h)
       | otherwise               = id
@@ -105,7 +114,7 @@ runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = handleIOExceptT show $ do
       (,) host <$> loadHostLogsDB loadMode yieldResult hl
 
 -- same as above but: 1) retain SQL result rows without conversion, 2) quiet mode: leave stdout alone
-runLiftLogObjectsRawDB :: LoadFromDB l => l -> RunLogs a -> ExceptT String IO (RunLogs LoadRawResult)
+runLiftLogObjectsRawDB :: LoadFromRunData l => l -> RunLogs a -> ExceptT String IO (RunLogs LoadRawResult)
 runLiftLogObjectsRawDB loadMode RunLogs{rlHostLogs, ..} = handleIOExceptT show $ do
   hostLogs' <- Map.fromList
     <$> sequenceConcurrentlyChunksOf numCapabilities loadActions
@@ -208,7 +217,7 @@ getTraceFreqs =
 
 type YieldResult r = SummaryDB -> [[SQLData]] -> r
 
-loadHostLogsDB :: LoadFromDB l => l -> YieldResult r -> HostLogs a -> IO (HostLogs r)
+loadHostLogsDB :: LoadFromRunData l => l -> YieldResult r -> HostLogs a -> IO (HostLogs r)
 loadHostLogsDB loadMode yield HostLogs{..} =
   case fst hlLogs of
     log@(LogObjectSourceSQLite dbFile) ->
@@ -217,14 +226,15 @@ loadHostLogsDB loadMode yield HostLogs{..} =
         traceFreqs            <- if loadTraceFreqs loadMode
                                    then getTraceFreqs
                                    else pure hlRawTraceFreqs
-        rows                  <- maybe (pure []) run (loadQuery loadMode)
+        rows_                 <- case loadQuery loadMode of {LoadRunDataSQL sql -> run sql; _ -> pure []}
+        rows                  <- liftIO $ evaluate $ yield summary rows_
 
         pure $ HostLogs
           { hlRawTraceFreqs   = traceFreqs
           , hlRawFirstAt      = Just sdbFirstAt
           , hlRawLastAt       = Just sdbLastAt
           , hlRawLines        = sdbLines
-          , hlLogs            = (log, yield summary rows)
+          , hlLogs            = (log, rows)
           , ..
           }
     other -> fail $ "loadHostLogsDB: expected SQLite DB file, got " ++ show other
