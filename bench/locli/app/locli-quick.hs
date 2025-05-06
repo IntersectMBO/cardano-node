@@ -1,14 +1,16 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-redundant-constraints -Wwarn=unused-top-binds -Wwarn=partial-fields -Wno-orphans #-}
 
 import           Cardano.Api (ExceptT, SlotNo (..), runExceptT)
 
 import           Cardano.Analysis.API.Ground (JsonInputFile (..))
-import           Cardano.Analysis.Quick.Types ()
+import           Cardano.Analysis.Quick.Types
 import           Cardano.Analysis.Reducer
 import           Cardano.Analysis.Reducer.Util
 import           Cardano.Unlog.BackendDB
@@ -21,12 +23,15 @@ import           Prelude hiding (log, seq)
 
 import           Data.Bifunctor
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL (writeFile)
 import           Data.Either
 import           Data.Function (on)
+import           Data.Kind
 import           Data.List (find, isSuffixOf)
 import           Data.List.Extra (splitOn)
-import           Data.Map.Strict as Map (restrictKeys, (!))
+import           Data.Map.Strict as Map (restrictKeys, toAscList, (!))
 import           Data.Maybe
+import           Data.Proxy
 import           Data.Reducer
 import qualified Data.Set as Set (fromList, null)
 import           Data.Word
@@ -51,6 +56,7 @@ main = do
       inputs
         -> mapM (runManifest cNodes) (zip inputs [0 :: Int ..]) >>= runPlot
     CMDTestPipe r -> testPipe r
+    CMDList -> mapM_ (putStrLn . fst) quickQueryAll
 
 -- for testing the EasyPlot module
 testPlot :: IO Bool
@@ -100,18 +106,17 @@ runManifest targetNodes (logManifest, ix) = do
   -}
 
   let
-    target =  snd $ hlLogs $ rlHostLogs rls Map.! fromString targetNode
+    qqRes :: RunLogs (QueryResult LoadResourceData)
+    qqRes = qqReduce LoadHeapData `fmap` rls
 
-    bySlotValue :: [BySlot Word64]
-    bySlotValue = bySlot (either (const Nothing) Just) (fromLeft undefined) False target
+    bumps     = snd $ hlLogs $ rlHostLogs qqRes Map.! fromString targetNode
 
-    res    = reduce ResourceMeasurePerSlot bySlotValue
-    bumps  = reduce changes res
     gibibytes = map (second (\w -> fromIntegral w / 1073741824)) (toDouble bumps)
+    plotData  = Data2D [Title targetTitle, Color targetColor, Style Steps] [] gibibytes
 
-    plotData = Data2D [Title targetTitle, Color targetColor, Style Steps] [] gibibytes
-  putStrLn $ "--> target node: " ++ targetNode
-  mapM_ print bumps
+  putStrLn $ qqShow @LoadResourceData qqRes
+  BL.writeFile "test.qq.dat" $ qqEncode @LoadResourceData qqRes
+
   pure plotData
 
   where
@@ -133,7 +138,7 @@ runPlot plotData =
       , "set ytics nomirror"
       ]
 
-runOnRun :: forall l. LoadFromDB l => l -> FilePath -> [String] -> IO (RunLogs [LoadResult l])
+runOnRun :: forall l. LoadFromRunData l => l -> FilePath -> [String] -> IO (RunLogs [LoadResult l])
 runOnRun loadFromDB logManifest onlyHosts =
   runExceptT go >>= either error pure
   where
@@ -185,41 +190,64 @@ selectMempoolTxs =
 toDouble :: [(SlotNo, a)] -> [(Double, a)]
 toDouble = map (first (fromIntegral . unSlotNo))
 
-{-
-  This should eventually be part of a QuickQuery typeclass. This class is defined by:
-  - a query + (possibly parametrizable) filter, making use of the LoadFromDB typeclass
-  - a (possibly parametrizable) reducer, making use of the Reducer typeclass
-  - meaningful stdout output
-  - optionally: file output, like e.g. CSV
-  - optionally: a plot / plots
--}
 
-data LoadHeapData = LoadHeapData
+quickQueryAll :: [QuickQueryOnCLI]
+quickQueryAll =
+     qqCLI2 @LoadResourceData
+
+instance QuickQuery LoadResourceData where
+  type instance QueryResult LoadResourceData = [(SlotNo, Word64)]
+
+  qqQuery _ _env = undefined
+
+  qqReduce LoadHeapData result =
+    let
+      bySlotValue :: [LoadResult LoadResourceData] -> [BySlot Word64]
+      bySlotValue = bySlot (either (const Nothing) Just) (fromLeft undefined) False
+
+    in reduce (ResourceMeasurePerSlot <-> changes) $ bySlotValue result
+
+  qqShow rls =
+    let
+      perNode             = Map.toAscList (rlHostLogs rls)
+      showNode (node, xs) = unlines $ ("--> source: " ++ show node) :  map show (snd $ hlLogs xs)
+    in unlines $ map showNode perNode
+
+  qqCLI2 = [("heapbumps", \s -> if s == "heapbumps" then Just (MkQuickQuery LoadHeapData) else Nothing)]
+
+
+data LoadResourceData = LoadHeapData
+     deriving Show
 
 
 -- TODO: use timestamp to infer slot numbers during startup
-instance LoadFromDB LoadHeapData where
-  type instance LoadResult LoadHeapData = Either Word64 SlotNo
+instance LoadFromRunData LoadResourceData where
+  type instance LoadResult LoadResourceData = Either Word64 SlotNo
 
-  loadQuery _ = Just "SELECT at, slot, null as heap FROM slot UNION SELECT at, null, heap FROM resource ORDER BY at ASC"
+  loadQuery resource = LoadRunDataSQL $
+    "SELECT at, slot, null as res FROM slot UNION SELECT at, null, " <> columnName <> " as res FROM resource ORDER BY at ASC"
+    where
+      columnName = case resource of
+        LoadHeapData  -> "heap"
 
   loadConvert _ _ = \case
-    [_, slot_, heap_] ->
+    [_, slot_, res_] ->
       let
         slot :: SMaybe SlotNo
         slot = fromSqlData slot_
-        heap :: SMaybe Word64
-        heap = fromSqlData heap_
-      in smaybe (Left $ unsafeFromSJust heap) Right slot
-    _ -> error "loadConvert(LoadHeapData): expected 3 result columns"
+        res :: SMaybe Word64
+        res = fromSqlData res_
+      in smaybe (Left $ unsafeFromSJust res) Right slot
+    _ -> error "loadConvert(LoadHeLoadResourceData): expected 3 result columns"
 
 
 data LoadTimestamps = LoadTimestamps
 
-instance LoadFromDB LoadTimestamps where
+instance LoadFromRunData LoadTimestamps where
   type instance LoadResult LoadTimestamps = (UTCTime, SMaybe SlotNo)
 
-  loadQuery _ = Just $ "SELECT at, slot FROM slot" <> from "resource" <> from "txns" <> from "event" <> from "ledgermetrics" <> " ORDER BY at ASC"
+  loadQuery _ = LoadRunDataSQL $
+    "SELECT at, slot FROM slot" <> from "resource" <> from "txns" <> from "event" <> from "ledgermetrics" <> " ORDER BY at ASC"
     where from t = " UNION SELECT at, null FROM " <> t
 
   loadConvert _ _ = \case
@@ -244,7 +272,7 @@ instance Show ProcessMode where
 data Command
     = CMDTestPlot
     | CMDQuery
-      { cQuery        :: ()                           -- ^ the query to run
+      { cQuery        :: QuickQueryAny                -- ^ the query to run
       , cInputs       :: [FilePath]                   -- ^ log manifests of all runs to query, or a single .sqlite3 DB
       , cNodes        :: [String]                     -- ^ hosts to query (e.g. ["node-10", "node-12"]; empty: all hosts
       , cDumpResult   :: Bool                         -- ^ dump result blob to stdout only; don't process
@@ -252,6 +280,7 @@ data Command
     | CMDProcess
       { cProcessMode  :: ProcessMode
       }
+    | CMDList
     | CMDTestPipe
       { cReadMode     :: Bool
       }
@@ -273,7 +302,8 @@ parseCommandLine
 
 parserCommandLine :: Parser Command
 parserCommandLine = subparser $ mconcat
-  [ parserOp "qq"       "run a quick query"                 parserQuickQuery
+  [ parserOp "list"     "list available quick queries"      (pure CMDList)
+  , parserOp "qq"       "run a quick query"                 parserQuickQuery
   , parserOp "proc"     "process a query result"            (CMDProcess <$> parserProcessMode)
   , parserOp "testpipe" "test stdout/stdin piping a buffer" parserTestPipe
   , parserOp "testplot" "test plotting with dummy data"     (pure CMDTestPlot)
@@ -290,7 +320,7 @@ parserCommandLine = subparser $ mconcat
 parserQuickQuery :: Parser Command
 parserQuickQuery =
   CMDQuery
-    <$> pure ()
+    <$> argument readQuery (metavar "QUERY" <> help "query string (use 'list' command for available queries)")
     <*> parseRuns
     <*> parseHosts
     <*> switch (short 'd' <> long "dump-only" <> help "dump result blob to stdout only; don't process")
@@ -308,6 +338,10 @@ parserQuickQuery =
     parseRuns =
       option readCommaSepList $ long "runs" <> short 'r' <> metavar "run(s)"
         <> help "comma-separated list of run dirs or log manifest JSONs, or a single SQLite DB"
+
+readQuery :: Opt.ReadM QuickQueryAny
+readQuery = Opt.maybeReader $ \inp ->
+  asum [tryRead inp | (_, tryRead) <- quickQueryAll]
 
 readCommaSepList :: Opt.ReadM [String]
 readCommaSepList = Opt.maybeReader
