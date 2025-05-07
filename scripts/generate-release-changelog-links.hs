@@ -1,4 +1,4 @@
-#!/usr/bin/env -S cabal --verbose=1 --index-state=2024-04-09T14:49:48Z run --
+#!/usr/bin/env -S cabal --verbose=1 --index-state=2025-04-16T18:30:40Z run --
 {- cabal:
   build-depends:
     base,
@@ -14,7 +14,6 @@
     network-uri,
     optparse-applicative ^>= 0.18,
     ansi-wl-pprint >= 1,
-    pandoc ^>= 3.1,
     prettyprinter,
     req,
     text,
@@ -36,7 +35,6 @@
 
 module Main (main) where
 
-import           Cabal.Plan
 import qualified Control.Foldl as Foldl
 import           Data.Aeson
 import           Data.ByteString.Char8 (ByteString)
@@ -47,11 +45,11 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as Text
 import           Data.Version
-import qualified GitHub
-import           Network.HTTP.Client (HttpExceptionContent(..), HttpException(..), responseStatus, responseHeaders)
+import           Network.HTTP.Client (HttpException (..), HttpExceptionContent (..),
+                   responseHeaders, responseStatus)
 import           Network.HTTP.Req
 import           Network.HTTP.Types.Header (hLocation)
 import           Network.HTTP.Types.Status (found302)
@@ -60,7 +58,9 @@ import qualified Network.URI.Encode as URIE
 import           Options.Applicative
 import           Prettyprinter
 import qualified Prettyprinter.Util as PP
-import qualified Text.Pandoc as Pandoc
+
+import           Cabal.Plan
+import qualified GitHub
 import           Turtle
 
 main :: IO ()
@@ -91,15 +91,8 @@ main = sh do
     pure (n, v, changelogLocation)
 
   -- generate a massive markdown table
-  let writerOptions =
-        Pandoc.def { Pandoc.writerExtensions = Pandoc.githubMarkdownExtensions }
-      pandocOutput = Pandoc.runPure do
-        Pandoc.writeMarkdown writerOptions (generatePandoc changelogPaths)
-
-  case pandocOutput of
-    Left pandocError -> die $
-      "Failed to render markdown with error " <> Pandoc.renderError pandocError
-    Right res -> liftIO . Text.writeFile outputPath $ format (s%"\n") res
+  let res = generateMarkdown changelogPaths
+  liftIO . Text.writeFile outputPath $ format (s%"\n") res
 
 generateReleaseChangelogLinksDescription :: Description
 generateReleaseChangelogLinksDescription = Description $
@@ -212,38 +205,38 @@ findChangelogFromGitHub :: MonadIO m => GitHubAccessToken -> CHaPEntry -> m (May
 findChangelogFromGitHub accessToken c@CHaPEntry{..} = do
   liftIO $ print c
   let query = changelogLookupGitHub entryGitHubOwner entryGitHubRepo entrySubdir entryGitHubRevision
-  liftIO $ print query 
+  liftIO $ print query
   contentDir <- liftIO (runGitHub accessToken query) >>= \case
-    Left (GitHub.HTTPError originalError@(HttpExceptionRequest _originalReq (StatusCodeException resp _))) -> do 
+    Left (GitHub.HTTPError originalError@(HttpExceptionRequest _originalReq (StatusCodeException resp _))) -> do
       if responseStatus resp == found302
       then do
               let responseHeaders' = responseHeaders resp
-              case List.lookup hLocation responseHeaders' of 
+              case List.lookup hLocation responseHeaders' of
                 Nothing -> die "findChangelogFromGitHub: Got HTTP 302 redirect but no location header found"
                 Just redirectLocation -> do
 
                   -- We must construct the redirect URL
                   -- We drop 2 characters at the end because the location appears to be malformed
                   let responseLocation = URIE.decodeText $ Text.dropEnd 2 $ Text.decodeUtf8 redirectLocation
-                      finalResponseQueryURl = responseLocation 
+                      finalResponseQueryURl = responseLocation
 
-                  newLocationQuery <- case query of 
+                  newLocationQuery <- case query of
                                        GitHub.Query _ queryString -> do
                                          redirectPathSegments <- generateRedirectPathSegments finalResponseQueryURl
-                                         pure $ GitHub.query redirectPathSegments queryString 
+                                         pure $ GitHub.query redirectPathSegments queryString
                                        unexpected  -> die $ "findChangelogFromGitHub: Expected a Query type but got: " <> repr unexpected
-              
-                  r <- liftIO (runGitHub accessToken newLocationQuery)            
-                  case r of 
+
+                  r <- liftIO (runGitHub accessToken newLocationQuery)
+                  case r of
                     Left e' -> die $ Text.unlines [ "Redirect failed: " <> repr e'
                                                   , "Original http error: " <> repr originalError
                                                   ]
                     Right (GitHub.ContentFile _) -> die
                       "Redirect result: Expected changelogLookupGitHub to return a directory, but got a single file"
                     Right (GitHub.ContentDirectory dir) -> pure dir
-    
+
           else die $
-            "GitHub lookup failed with HTTP exception: " <> Text.pack (show resp) 
+            "GitHub lookup failed with HTTP exception: " <> Text.pack (show resp)
     Left gitHubError -> die $
       "GitHub lookup failed with error " <> repr gitHubError
     Right (GitHub.ContentFile _) -> die
@@ -258,9 +251,9 @@ findChangelogFromGitHub accessToken c@CHaPEntry{..} = do
       Just (name, constructGitHubPath entryGitHubOwner entryGitHubRepo entryGitHubRevision path)
 
 generateRedirectPathSegments :: MonadIO m => Text -> m [Text]
-generateRedirectPathSegments url = 
+generateRedirectPathSegments url =
     case URI.parseURI (Text.unpack url) of
-        Just uri -> 
+        Just uri ->
             let segments = map Text.pack $ URI.pathSegments uri
             in if null segments
                then die $ "generateRedirectPathSegments: No path segments found in URL: " <> url
@@ -298,25 +291,33 @@ runGitHub :: GitHub.GitHubRW req res => GitHubAccessToken -> req -> res
 runGitHub (GitHubAccessToken tok) =
     GitHub.github (GitHub.OAuth tok)
 
-generatePandoc :: [(PkgName, Ver, Maybe (Text, Text))] -> Pandoc.Pandoc
-generatePandoc ps =
-  Pandoc.Pandoc mempty
-    [ Pandoc.Plain [Pandoc.Str "Package changelogs"]
-    , Pandoc.Table mempty (Pandoc.Caption Nothing []) colSpec tableHead [tableBody] (Pandoc.TableFoot mempty mempty)
-    ]
+generateMarkdown :: [(PkgName, Ver, Maybe (Text, Text))] -> Text
+generateMarkdown changelogPaths =
+  let
+    rows  = mkHeader : map mkRow changelogPaths
+    table = render rows
+  in Text.unlines $ "Package changelogs" : "" : table
   where
-    colSpec = replicate 3 (Pandoc.AlignDefault, Pandoc.ColWidthDefault)
-    tableHead = Pandoc.TableHead mempty [Pandoc.Row mempty tableHeadCells]
-    tableHeadCells =
-      [ mkCell [Pandoc.Str "Package"]
-      , mkCell [Pandoc.Str "Version"]
-      , mkCell [Pandoc.Str "Changelog"]
-      ]
-    tableBody = Pandoc.TableBody mempty 0 [] (fmap mkTableRow ps)
-    mkTableRow (PkgName n, v, linkMaybe) =
-      Pandoc.Row mempty
-        [ mkCell [Pandoc.Str n]
-        , mkCell [Pandoc.Str (dispVer v)]
-        , mkCell (foldMap (\(fn, link) -> [Pandoc.Link mempty [Pandoc.Str fn] (link, fn)]) linkMaybe)
-        ]
-    mkCell t = Pandoc.Cell mempty Pandoc.AlignDefault 1 1 [Pandoc.Plain t]
+    mkHeader                        = ["Package", "Version", "Changelog"]
+    mkRow (PkgName n, v, linkMaybe) = [n        , dispVer v, dispLink linkMaybe]
+
+    -- example result: [CHANGELOG.md](https://github.com/IntersectMBO/cardano-base/blob/f11ddc7f/cardano-slotting/CHANGELOG.md "CHANGELOG.md")
+    dispLink (Just (file, link)) = format ("["%s%"]("%s%" \""%s%"\")") file link file
+    dispLink Nothing             = ""
+
+    render :: [[Text]] -> [Text]
+    render = map renderRow . List.transpose . map (separator . innerMargins . alignLeft) . List.transpose
+      where
+        renderRow = surroundWith '|' . Text.intercalate "|"
+
+    alignLeft ts =
+      let maxLen = maximum (Text.length <$> ts)
+      in map (Text.justifyLeft maxLen ' ') ts
+
+    surroundWith c = Text.cons c . flip Text.snoc c
+
+    innerMargins = map (surroundWith ' ')
+
+    -- insert separator line after the first entry (assumed to be the header in its final width)
+    separator (h:rs)  = h : Text.replicate (Text.length h) "-" : rs
+    separator []      = []
