@@ -2,6 +2,8 @@
 
 ## Next version
 
+- Change to exit with 0 rather than 1 when a SIGTERM is caught.
+
 - Add a new configuration field for fork-policy.
 
 - Optionally support lightweight checkpointing.
