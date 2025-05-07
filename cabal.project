@@ -60,7 +60,6 @@ package plutus-scripts-bench
 allow-newer:
   , katip:Win32
   , ekg-wai:time
-  , data-default
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
