@@ -2,6 +2,8 @@
 
 ## Next version
 
+- Lower the log severity from Error to Info for TracePromoteWarmBigLedgerPeerAborted and ResponderStartFailure
+
 - Add a new configuration field for fork-policy.
 
 - Optionally support lightweight checkpointing.
