@@ -68,32 +68,27 @@ startPeerTracer tracer nodeKernel delayMilliseconds = do
         traceWith tracer peers
         threadDelay (delayMilliseconds * 1000)
 
-
 data PeerT blk = PeerT
     RemoteConnectionId
     (Net.AnchoredFragment (Header blk))
     (PeerFetchStatus (Header blk))
     (PeerFetchInFlight (Header blk))
 
-
 ppPeer :: PeerT blk -> Text
 ppPeer (PeerT cid _af status inflight) =
   Text.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
 
-ppCid :: RemoteConnectionId -> String
-ppCid = takeWhile (/= ':') . show . remoteAddress
+  where
+  ppCid :: RemoteConnectionId -> String
+  ppCid = takeWhile (/= ':') . show . remoteAddress
 
-ppInFlight :: PeerFetchInFlight header -> String
-ppInFlight f = printf
- "%5s  %3d  %5d  %6d"
- (ppMaxSlotNo $ peerFetchMaxSlotNo f)
- (peerFetchReqsInFlight f)
- (Set.size $ peerFetchBlocksInFlight f)
- (peerFetchBytesInFlight f)
-
-ppMaxSlotNo :: Net.MaxSlotNo -> String
-ppMaxSlotNo Net.NoMaxSlotNo   = "???"
-ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
+  ppInFlight :: PeerFetchInFlight header -> String
+  ppInFlight f = printf
+    "%5s  %3d  %5d  %6d"
+    (ppMaxSlotNo $ peerFetchMaxSlotNo f)
+    (peerFetchReqsInFlight f)
+    (Set.size $ peerFetchBlocksInFlight f)
+    (peerFetchBytesInFlight f)
 
 ppStatus :: PeerFetchStatus header -> String
 ppStatus = \case
@@ -102,6 +97,10 @@ ppStatus = \case
   PeerFetchStatusAberrant -> "aberrant"
   PeerFetchStatusBusy     -> "fetching"
   PeerFetchStatusReady {} -> "ready"
+
+ppMaxSlotNo :: Net.MaxSlotNo -> String
+ppMaxSlotNo Net.NoMaxSlotNo   = "???"
+ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
 
 getCurrentPeers
   :: NodeKernelData blk

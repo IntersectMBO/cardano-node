@@ -2,6 +2,11 @@
 
 ## Next version
 
+* Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
+  (from `cardano-tracer:Cardano.Node.Startup` to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`), `NodePeers`
+  (from `cardano-node:Cardano.Node.Tracing.Peers` to `trace-dispatcher:Cardano.Logging.Types.NodePeers`), and
+  `NodeStartupInfo` (from `cardano-tracer:Cardano.Node.Startup` to `cardano-node:Cardano.Node.Tracing.NodeStartupInfo.hs`).
+
 - Add a new configuration field for fork-policy.
 
 - Optionally support lightweight checkpointing.

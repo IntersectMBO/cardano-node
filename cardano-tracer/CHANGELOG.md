@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.3.3 (April, 2025)
+* Redesigned `Cardano.Tracer.Handlers.Notifications.Timer` interface with IO-actions instead of TVars.
+* Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
+  (from `cardano-tracer:Cardano.Node.Startup` to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`), `NodePeers`
+  (from `cardano-node:Cardano.Node.Tracing.Peers` to `trace-dispatcher:Cardano.Logging.Types.NodePeers`), and
+  `NodeStartupInfo` (from `cardano-tracer:Cardano.Node.Startup` to `cardano-node:Cardano.Node.Tracing.NodeStartupInfo.hs`).
+
 ## 0.3.2 (March 2025)
 
 * When requesting forwarded metrics, ask for delta to previous request only. New config option `ekgRequestFull` defaults to `false`; set to `true` to revert this behavior.
