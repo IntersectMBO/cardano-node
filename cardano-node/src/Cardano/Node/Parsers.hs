@@ -23,6 +23,7 @@ import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
+import           Data.Default.Class
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
@@ -31,6 +32,7 @@ import           Data.Word (Word32)
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
+import           System.Info.Extra (isWindows)
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
 
@@ -60,6 +62,7 @@ nodeRunParser = do
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
+  isGroupPermissionChecked <- parseSkipGroupPermissionCheck
   startAsNonProducingNode <- lastOption parseStartAsNonProducingNode
 
   -- Node Address
@@ -93,6 +96,7 @@ nodeRunParser = do
              , shelleyVRFFile
              , shelleyCertFile
              , shelleyBulkCredsFile
+             , isGroupPermissionChecked
              }
            , pncValidateDB = validate
            , pncShutdownConfig =
@@ -349,6 +353,15 @@ parseVrfKeyFilePath =
         <> completer (bashCompleter "file")
     )
 
+parseSkipGroupPermissionCheck :: Parser IsGroupPermissionChecked
+parseSkipGroupPermissionCheck = asum
+  [ whenA (not isWindows) $
+      flag def SkipFileGroupPermissionCheck $
+        long "skip-key-group-permission-check"
+            <> help "Skip checking of group permissions for the key files."
+  , pure def
+  ]
+
 parseStartAsNonProducingNode :: Parser Bool
 parseStartAsNonProducingNode =
   switch $ mconcat
@@ -373,3 +386,6 @@ parserHelpOptions = fromMaybe mempty . OptI.unChunk . OptI.fullDesc (Opt.prefs m
 renderHelpDoc :: Int -> OptI.Doc -> String
 renderHelpDoc cols =
   (`OptI.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))
+
+whenA :: Alternative f => Bool -> f a -> f a
+whenA cond v = if cond then v else empty

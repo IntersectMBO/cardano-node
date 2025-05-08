@@ -31,21 +31,20 @@ import           Data.Function (const, ($), (.))
 import qualified Data.List as L
 import           Data.Maybe (Maybe (..))
 import           Data.Semigroup (Semigroup (..))
-import           Hedgehog (Property, PropertyT, property, success)
-import qualified Hedgehog
+import           Hedgehog
 import           Hedgehog.Internal.Property (Group (..), failWith)
 import           System.IO (FilePath, IO)
 import           Text.Show (Show (..))
+import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..), IsGroupPermissionChecked(..))
 
 #ifdef UNIX
-import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
 
 import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
 import           Control.Exception (bracket)
-import           Hedgehog (Gen, classify, forAll)
+import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 #endif
 
@@ -56,10 +55,10 @@ prop_createVRFFileWithOwnerPermissions :: Property
 prop_createVRFFileWithOwnerPermissions =
   property $ do
     let vrfSign = "vrf-signing-key"
-    vrfSkey <- liftIO $ generateSigningKey AsVrfKey
+    vrfSkey <- evalIO $ generateSigningKey AsVrfKey
     createFileWithOwnerPermissions vrfSign vrfSkey
 
-    fResult <- liftIO . runExceptT $ checkVRFFilePermissions vrfSign
+    fResult <- evalIO . runExceptT $ checkVRFFilePermissions CheckFileGroupPermission vrfSign
     case fResult of
       Left err -> failWith Nothing $ show err
       Right () -> liftIO (removeFile (unFile vrfSign)) >> success
@@ -84,7 +83,7 @@ prop_sanityCheck_checkVRFFilePermissions =
     correctResult <-
       liftIO $ bracket  (createFile (unFile vrfPrivateKeyCorrect) correctPermission)
                         (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyCorrect))
-                        (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyCorrect)
+                        (const . liftIO . runExceptT $ checkVRFFilePermissions CheckFileGroupPermission vrfPrivateKeyCorrect)
     case correctResult of
       Left err ->
         failWith Nothing $ "checkVRFFilePermissions should not have failed with error: "
@@ -105,7 +104,7 @@ prop_sanityCheck_checkVRFFilePermissions =
                             setFileMode (unFile vrfPrivateKeyOther) $ createPermissions oPermissions
                             return h)
                         (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyOther))
-                        (const .liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyOther)
+                        (const .liftIO . runExceptT $ checkVRFFilePermissions CheckFileGroupPermission vrfPrivateKeyOther)
     case otherResult of
       Left (OtherPermissionsExist _) -> success
       Left err ->
@@ -128,7 +127,7 @@ prop_sanityCheck_checkVRFFilePermissions =
                             setFileMode (unFile vrfPrivateKeyGroup) $ createPermissions gPermissions
                             return h)
                         (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyGroup))
-                        (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyGroup)
+                        (const . liftIO . runExceptT $ checkVRFFilePermissions CheckFileGroupPermission vrfPrivateKeyGroup)
     case groupResult of
       Left (GroupPermissionsExist _) -> success
       Left err ->
@@ -157,7 +156,7 @@ genOtherPermissions =
 
 tests :: IO Bool
 tests =
-  Hedgehog.checkParallel $ Group "Test.Cardano.Node.FilePermissons"
+  checkParallel $ Group "Test.Cardano.Node.FilePermissons"
 #ifdef UNIX
     [ ("prop_createVRFFileWithOwnerPermissions", prop_createVRFFileWithOwnerPermissions)
     , ("prop_sanityCheck_checkVRFFilePermissions", prop_sanityCheck_checkVRFFilePermissions)

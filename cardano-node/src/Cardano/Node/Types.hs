@@ -17,6 +17,7 @@ module Cardano.Node.Types
   , PeerSnapshotFile (..)
   , CheckpointsFile(..)
   , ProtocolFilepaths (..)
+  , IsGroupPermissionChecked(..)
   , GenesisHash(..)
   , CheckpointsHash(..)
   , MaxConcurrencyBulkSync(..)
@@ -50,6 +51,7 @@ import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 import           Control.Exception
 import           Data.Aeson
 import           Data.ByteString (ByteString)
+import           Data.Default.Class (Default (..))
 import           Data.Monoid (Last (..))
 import           Data.String (IsString)
 import           Data.Text (Text)
@@ -172,7 +174,16 @@ data ProtocolFilepaths =
      , shelleyVRFFile       :: !(Maybe FilePath)
      , shelleyCertFile      :: !(Maybe FilePath)
      , shelleyBulkCredsFile :: !(Maybe FilePath)
+     , isGroupPermissionChecked :: !IsGroupPermissionChecked
      } deriving (Eq, Show)
+
+data IsGroupPermissionChecked
+  = CheckFileGroupPermission
+  | SkipFileGroupPermissionCheck
+  deriving stock (Eq, Show)
+
+instance Default IsGroupPermissionChecked where
+  def = CheckFileGroupPermission
 
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)

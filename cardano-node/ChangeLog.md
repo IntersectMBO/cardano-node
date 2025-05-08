@@ -35,6 +35,8 @@
 - KeepAlive client tracing: dropped `KeepAliveClient` from `kind` of
   `AddSample` messages in the legacy tracing system.
 
+- Add `--skip-key-group-permission-check` command line argument, disabling group permissions check for VRF key.
+
 ## 10.2 -- January 2025
 
 - Use p2p network stack by default, warn when using the legacy network stack.

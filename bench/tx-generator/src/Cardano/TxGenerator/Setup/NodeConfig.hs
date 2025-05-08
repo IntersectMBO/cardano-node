@@ -24,6 +24,7 @@ import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import           Control.Applicative (Const (Const), getConst)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
+import           Data.Default.Class
 import           Data.Monoid
 
 
@@ -74,6 +75,7 @@ mkNodeConfig configFp_
                  , shelleyVRFFile = Just ""
                  , shelleyCertFile = Just ""
                  , shelleyBulkCredsFile = Just ""
+                 , isGroupPermissionChecked = def
                  }
                , pncValidateDB = Last $ Just False
                , pncShutdownConfig = Last $ Just $ ShutdownConfig Nothing Nothing

@@ -15,25 +15,26 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
+import           Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (disableGenesisConfig)
+import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.Diffusion.Configuration (ConsensusMode (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
+import           Data.Default.Class
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
-import Ouroboros.Cardano.Network.Diffusion.Configuration (defaultNumberOfBigLedgerPeers)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -181,7 +182,7 @@ testPartialCliConfig =
     , pncDatabaseFile = mempty
     , pncDiffusionMode = mempty
     , pncExperimentalProtocolsEnabled = Last $ Just True
-    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing def
     , pncValidateDB = Last $ Just True
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
@@ -227,7 +228,7 @@ eExpectedConfig = do
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = OnePathForAllDbs "mainnet/db/"
-    , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+    , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing def
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
