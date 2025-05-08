@@ -21,6 +21,7 @@ module Testnet.Types
   , testnetSprockets
   , TestnetNode(..)
   , nodeSocketPath
+  , node0ConnectionInfo
   , isTestnetNodeSpo
   , SpoNodeKeys(..)
   , Delegator(..)
@@ -62,7 +63,6 @@ import           Data.List (intercalate)
 import           Data.Maybe
 import           Data.MonoTraversable (Element, MonoFunctor (..))
 import           Data.Text (Text)
-import           Data.Time.Clock (UTCTime)
 import           GHC.Exts (IsString (..))
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
@@ -73,7 +73,9 @@ import qualified System.Process as IO
 
 import           Testnet.Start.Types
 
+import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 
@@ -115,7 +117,7 @@ data SKey k
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: !(NodeConfigFile In)
   , shelleyGenesisFile :: !FilePath
-  , testnetMagic :: !Int
+  , testnetMagic :: !Int -- TODO change to Word32
   , testnetNodes :: ![TestnetNode]
   , wallets :: ![PaymentKeyInfo]
   , delegators :: ![Delegator]
@@ -147,6 +149,18 @@ isTestnetNodeSpo = isJust . poolKeys
 
 nodeSocketPath :: TestnetNode -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
+
+-- | Connection data for the first node in the testnet
+node0ConnectionInfo :: MonadTest m => TestnetRuntime -> m LocalNodeConnectInfo
+node0ConnectionInfo TestnetRuntime{testnetMagic, testnetNodes} = do
+  case testnetNodes of
+    [] -> H.note_ "There are no nodes in the testnet" >> H.failure
+    node0:_ -> do
+        pure LocalNodeConnectInfo
+              { localNodeSocketPath= nodeSocketPath node0
+              , localNodeNetworkId=Testnet (NetworkMagic $ fromIntegral testnetMagic)
+              , localConsensusModeParams=CardanoModeParams $ EpochSlots 21600}
+
 
 data SpoNodeKeys = SpoNodeKeys
   { poolNodeKeysCold :: KeyPair StakePoolKey
@@ -187,14 +201,14 @@ getStartTime
   => HasCallStack
   => FilePath
   -> TestnetRuntime
-  -> m UTCTime
+  -> m SystemStart
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
     decodeNodeConfiguration configurationFile >>= \case
       NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ _ ->
         pure $ unGenesisFile npcByronGenesisFile
   let byronGenesisFilePath = tempRootPath </> byronGenesisFile
-  G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
+  SystemStart . G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
   where
     decodeNodeConfiguration :: File NodeConfig In -> ExceptT String IO NodeProtocolConfiguration
     decodeNodeConfiguration (File file) = do

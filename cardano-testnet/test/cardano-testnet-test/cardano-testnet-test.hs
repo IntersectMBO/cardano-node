@@ -5,6 +5,7 @@ module Main
   ) where
 
 import qualified Cardano.Crypto.Init as Crypto
+import qualified Cardano.Testnet.Test.Api.TxSupplementalDatum
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
@@ -82,6 +83,8 @@ tests = do
                   ]
                 ]
            ]
+        , T.testGroup "API"
+        [ignoreOnWindows "transaction with supplemental datum" Cardano.Testnet.Test.Api.TxSupplementalDatum.hprop_tx_supp_datum]
         , T.testGroup "CLI"
           [ ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
           -- ShutdownOnSigint fails on Mac with

@@ -97,7 +97,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   CommitteeColdKeyHash comKeyHash1 <-
     H.evalEither
-      $ deserialiseFromRawBytesHex (AsHash AsCommitteeColdKey)
+      $ deserialiseFromRawBytesHex
       $ BSC.pack comKeyHash1Str
 
   let comKeyCred1 = L.KeyHashObj comKeyHash1

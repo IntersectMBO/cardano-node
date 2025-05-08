@@ -185,7 +185,8 @@ test-suite cardano-testnet-test
 
   main-is:              cardano-testnet-test.hs
 
-  other-modules:        Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
+  other-modules:        Cardano.Testnet.Test.Api.TxSupplementalDatum
+                        Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
                         Cardano.Testnet.Test.Cli.LeadershipSchedule
                         Cardano.Testnet.Test.Cli.Query
