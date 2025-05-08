@@ -39,7 +39,7 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor (Counters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
+import           Ouroboros.Network.PeerSelection.Governor (DemotionTimeoutException (..), DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
                    PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
                    peerSelectionStateToCounters)
@@ -625,7 +625,7 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     namespaceFor TracePromoteWarmAborted {}    =
       Namespace [] ["PromoteWarmAborted"]
     namespaceFor TracePromoteWarmBigLedgerPeers {}      =
-      Namespace [] ["PromoteWarmPBigLedgereers"]
+      Namespace [] ["PromoteWarmBigLedgerPeers"]
     namespaceFor TracePromoteWarmBigLedgerPeerFailed {}     =
       Namespace [] ["PromoteWarmBigLedgerPeerFailed"]
     namespaceFor TracePromoteWarmBigLedgerPeerDone {}       =
@@ -634,28 +634,36 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       Namespace [] ["PromoteWarmBigLedgerPeerAborted"]
     namespaceFor TraceDemoteWarmPeers {}       =
       Namespace [] ["DemoteWarmPeers"]
-    namespaceFor TraceDemoteWarmFailed {}      =
-      Namespace [] ["DemoteWarmFailed"]
+    namespaceFor TraceDemoteWarmFailed _ _ _ e =
+      case fromException e :: Maybe DemotionTimeoutException of
+        Just _  -> Namespace [] ["DemoteWarmFailed", "CoolingToColdTimeout"]
+        Nothing -> Namespace [] ["DemoteWarmFailed"]
     namespaceFor TraceDemoteWarmDone {}        =
       Namespace [] ["DemoteWarmDone"]
     namespaceFor TraceDemoteWarmBigLedgerPeers {}       =
       Namespace [] ["DemoteWarmBigLedgerPeers"]
-    namespaceFor TraceDemoteWarmBigLedgerPeerFailed {}      =
-      Namespace [] ["DemoteWarmBigLedgerPeerFailed"]
+    namespaceFor TraceDemoteWarmBigLedgerPeerFailed _ _ _ e =
+      case fromException e :: Maybe DemotionTimeoutException of
+        Just _  -> Namespace [] ["DemoteWarmBigLedgerPeerFailed", "CoolingToColdTimeout"]
+        Nothing -> Namespace [] ["DemoteWarmBigLedgerPeerFailed"]
     namespaceFor TraceDemoteWarmBigLedgerPeerDone {}        =
       Namespace [] ["DemoteWarmBigLedgerPeerDone"]
     namespaceFor TraceDemoteHotPeers {}        =
       Namespace [] ["DemoteHotPeers"]
     namespaceFor TraceDemoteLocalHotPeers {}   =
       Namespace [] ["DemoteLocalHotPeers"]
-    namespaceFor TraceDemoteHotFailed {}       =
-      Namespace [] ["DemoteHotFailed"]
+    namespaceFor TraceDemoteHotFailed _ _ _ e  =
+      case fromException e :: Maybe DemotionTimeoutException of
+        Just _  -> Namespace [] ["DemoteHotFailed", "CoolingToColdTimeout"]
+        Nothing -> Namespace [] ["DemoteHotFailed"]
     namespaceFor TraceDemoteHotDone {}         =
       Namespace [] ["DemoteHotDone"]
     namespaceFor TraceDemoteHotBigLedgerPeers {}        =
       Namespace [] ["DemoteHotBigLedgerPeers"]
-    namespaceFor TraceDemoteHotBigLedgerPeerFailed {}       =
-      Namespace [] ["DemoteHotBigLedgerPeerFailed"]
+    namespaceFor TraceDemoteHotBigLedgerPeerFailed _ _ _ e  =
+      case fromException e :: Maybe DemotionTimeoutException of
+        Just _  -> Namespace [] ["DemoteHotBigLedgerPeerFailed", "CoolingToColdTimeout"]
+        Nothing -> Namespace [] ["DemoteHotBigLedgerPeerFailed"]
     namespaceFor TraceDemoteHotBigLedgerPeerDone {}         =
       Namespace [] ["DemoteHotBigLedgerPeerDone"]
     namespaceFor TraceDemoteAsynchronous {}    =
@@ -696,36 +704,62 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     severityFor (Namespace [] ["PublicRootsRequest"]) _ = Just Info
     severityFor (Namespace [] ["PublicRootsResults"]) _ = Just Info
     severityFor (Namespace [] ["PublicRootsFailure"]) _ = Just Error
-    severityFor (Namespace [] ["GossipRequests"]) _ = Just Debug
-    severityFor (Namespace [] ["GossipResults"]) _ = Just Debug
     severityFor (Namespace [] ["ForgetColdPeers"]) _ = Just Info
+    severityFor (Namespace [] ["BigLedgerPeersRequest"]) _ = Just Info
+    severityFor (Namespace [] ["BigLedgerPeersResults"]) _ = Just Info
+    severityFor (Namespace [] ["BigLedgerPeersFailure"]) _ = Just Info
+    severityFor (Namespace [] ["ForgetBigLedgerPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PeerShareRequests"]) _ = Just Debug
+    severityFor (Namespace [] ["PeerShareResults"]) _ = Just Debug
+    severityFor (Namespace [] ["PeerShareResultsFiltered"]) _ = Just Info
     severityFor (Namespace [] ["PromoteColdPeers"]) _ = Just Info
     severityFor (Namespace [] ["PromoteColdLocalPeers"]) _ = Just Info
     severityFor (Namespace [] ["PromoteColdFailed"]) _ = Just Info
     severityFor (Namespace [] ["PromoteColdDone"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteColdBigLedgerPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteColdBigLedgerPeerFailed"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteColdBigLedgerPeerDone"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmPeers"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmLocalPeers"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmFailed"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmDone"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmAborted"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmBigLedgerPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmBigLedgerPeerFailed"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmBigLedgerPeerDone"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmBigLedgerPeerAborted"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmFailed"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteWarmFailed", "CoolingToColdTimeout"]) = Just Error
     severityFor (Namespace [] ["DemoteWarmDone"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteWarmBigLedgerPeers"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteWarmBigLedgerPeerFailed"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteWarmBigLedgerPeerFailed", "CoolingToColdTimeout"]) = Just Error
     severityFor (Namespace [] ["DemoteHotPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteLocalHotPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteHotFailed"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteHotFailed", "CoolingToColdTimeout"]) = Just Error
     severityFor (Namespace [] ["DemoteHotDone"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteHotBigLedgerPeers"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteHotBigLedgerPeerFailed"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteHotBigLedgerPeerFailed", "CoolingToColdTimeout"]) = Just Error
+    severityFor (Namespace [] ["DemoteHotBigLedgerPeerDone"]) _ = Just Info
     severityFor (Namespace [] ["DemoteAsynchronous"]) _ = Just Info
     severityFor (Namespace [] ["DemoteLocalAsynchronous"]) _ = Just Warning
+    severityFor (Namespace [] ["DemoteBigLedgerPeersAsynchronous"]) _ = Just Info
     severityFor (Namespace [] ["GovernorWakeup"]) _ = Just Info
     severityFor (Namespace [] ["ChurnWait"]) _ = Just Info
     severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
     severityFor (Namespace [] ["PickInboundPeers"]) _ = Just Info
+    severityFor (Namespace [] ["LedgerStateJudgementChanged"]) _ = Just Info
+    severityFor (Namespace [] ["OnlyBootstrapPeers"]) _ = Just Info
+    severityFor (Namespace [] ["UseBootstrapPeersChanged"]) _ = Just Notice
+    severityFor (Namespace [] ["VerifyPeerSnapshot"]) _ = Just Error
+    severityFor (Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]) _ = Just Warning
     severityFor (Namespace [] ["OutboundGovernorCriticalFailure"]) _ = Just Error
     severityFor (Namespace [] ["ChurnAction"]) _ = Just Info
     severityFor (Namespace [] ["ChurnTimeout"]) _ = Just Notice
     severityFor (Namespace [] ["DebugState"]) _ = Just Info
-    severityFor (Namespace [] ["VerifyPeerSnapshot"]) _ = Just Error
     severityFor _ _ = Nothing
 
     documentFor (Namespace [] ["LocalRootPeersChanged"]) = Just  ""
@@ -733,11 +767,11 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     documentFor (Namespace [] ["PublicRootsRequest"]) = Just  ""
     documentFor (Namespace [] ["PublicRootsResults"]) = Just  ""
     documentFor (Namespace [] ["PublicRootsFailure"]) = Just  ""
-    documentFor (Namespace [] ["GossipRequests"]) = Just $ mconcat
+    documentFor (Namespace [] ["PeerShareRequests"]) = Just $ mconcat
       [ "target known peers, actual known peers, peers available for gossip,"
       , " peers selected for gossip"
       ]
-    documentFor (Namespace [] ["GossipResults"]) = Just  ""
+    documentFor (Namespace [] ["PeerShareResults"]) = Just  ""
     documentFor (Namespace [] ["ForgetColdPeers"]) = Just
       "target known peers, actual known peers, selected peers"
     documentFor (Namespace [] ["PromoteColdPeers"]) = Just
@@ -763,6 +797,10 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       "target established, actual established, selected peers"
     documentFor (Namespace [] ["DemoteWarmFailed"]) = Just
       "target established, actual established, peer, reason"
+    documentFor (Namespace [] ["DemoteWarmFailed", "CoolingToColdTimeout"]) =
+      "Impossible asynchronous demotion timeout"
+    documentFor (Namespace [] ["DemoteWarmBigLedgerPeerFailed", "CoolingToColdTimeout"]) =
+      "Impossible asynchronous demotion timeout"
     documentFor (Namespace [] ["DemoteWarmDone"]) = Just
       "target established, actual established, peer"
     documentFor (Namespace [] ["DemoteHotPeers"]) = Just
@@ -771,6 +809,10 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       "local per-group (target active, actual active), selected peers"
     documentFor (Namespace [] ["DemoteHotFailed"]) = Just
       "target active, actual active, peer, reason"
+    documentFor (Namespace [] ["DemoteHotFailed", "CoolingToColdTimeout"]) =
+      "Impossible asynchronous demotion timeout"
+    documentFor (Namespace [] ["DemoteHotBigLedgerPeerFailed", "CoolingToColdTimeout"]) =
+      "Impossible asynchronous demotion timeout"
     documentFor (Namespace [] ["DemoteHotDone"]) = Just
       "target active, actual active, peer"
     documentFor (Namespace [] ["DemoteAsynchronous"]) = Just  ""
@@ -804,34 +846,63 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
       , Namespace [] ["PublicRootsRequest"]
       , Namespace [] ["PublicRootsResults"]
       , Namespace [] ["PublicRootsFailure"]
-      , Namespace [] ["GossipRequests"]
-      , Namespace [] ["GossipResults"]
       , Namespace [] ["ForgetColdPeers"]
+      , Namespace [] ["BigLedgerPeersRequest"]
+      , Namespace [] ["BigLedgerPeersResults"]
+      , Namespace [] ["BigLedgerPeersFailure"]
+      , Namespace [] ["ForgetBigLedgerPeers"]
+      , Namespace [] ["PeerShareRequests"]
+      , Namespace [] ["PeerShareResults"]
+      , Namespace [] ["PeerShareResultsFiltered"]
       , Namespace [] ["PromoteColdPeers"]
       , Namespace [] ["PromoteColdLocalPeers"]
       , Namespace [] ["PromoteColdFailed"]
       , Namespace [] ["PromoteColdDone"]
+      , Namespace [] ["PromoteColdBigLedgerPeers"]
+      , Namespace [] ["PromoteColdBigLedgerPeerFailed"]
+      , Namespace [] ["PromoteColdBigLedgerPeerDone"]
       , Namespace [] ["PromoteWarmPeers"]
       , Namespace [] ["PromoteWarmLocalPeers"]
       , Namespace [] ["PromoteWarmFailed"]
       , Namespace [] ["PromoteWarmDone"]
       , Namespace [] ["PromoteWarmAborted"]
+      , Namespace [] ["PromoteWarmBigLedgerPeers"]
+      , Namespace [] ["PromoteWarmBigLedgerPeerFailed"]
+      , Namespace [] ["PromoteWarmBigLedgerPeerDone"]
+      , Namespace [] ["PromoteWarmBigLedgerPeerAborted"]
       , Namespace [] ["DemoteWarmPeers"]
       , Namespace [] ["DemoteWarmFailed"]
+      , Namespace [] ["DemoteWarmFailed", "CoolingToColdTimeout"]
       , Namespace [] ["DemoteWarmDone"]
+      , Namespace [] ["DemoteWarmBigLedgerPeers"]
+      , Namespace [] ["DemoteWarmBigLedgerPeerFailed"]
+      , Namespace [] ["DemoteWarmBigLedgerPeerFailed", "CoolingToColdTimeout"]
+      , Namespace [] ["DemoteWarmBigLedgerPeerDone"]
       , Namespace [] ["DemoteHotPeers"]
       , Namespace [] ["DemoteLocalHotPeers"]
       , Namespace [] ["DemoteHotFailed"]
+      , Namespace [] ["DemoteHotFailed", "CoolingToColdTimeout"]
       , Namespace [] ["DemoteHotDone"]
+      , Namespace [] ["DemoteHotBigLedgerPeers"]
+      , Namespace [] ["DemoteHotBigLedgerPeerFailed"]
+      , Namespace [] ["DemoteHotBigLedgerPeerFailed", "CoolingToColdTimeout"]
+      , Namespace [] ["DemoteHotBigLedgerPeerDone"]
       , Namespace [] ["DemoteAsynchronous"]
       , Namespace [] ["DemoteLocalAsynchronous"]
+      , Namespace [] ["DemoteBigLedgerPeersAsynchronous"]
       , Namespace [] ["GovernorWakeup"]
       , Namespace [] ["ChurnWait"]
       , Namespace [] ["ChurnMode"]
       , Namespace [] ["PickInboundPeers"]
-      , Namespace [] ["OutboundGovernorCriticalFailure"]
-      , Namespace [] ["DebugState"]
+      , Namespace [] ["LedgerStateJudgementChanged"]
+      , Namespace [] ["OnlyBootstrapPeers"]
+      , Namespace [] ["UseBootstrapPeersChanged"]
       , Namespace [] ["VerifyPeerSnapshot"]
+      , Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
+      , Namespace [] ["OutboundGovernorCriticalFailure"]
+      , Namespace [] ["ChurnAction"]
+      , Namespace [] ["ChurnTimeout"]
+      , Namespace [] ["DebugState"]
       ]
 
 --------------------------------------------------------------------------------
