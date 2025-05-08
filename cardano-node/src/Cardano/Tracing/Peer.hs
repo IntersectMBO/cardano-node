@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracing.Peer
   ( Peer (..)
@@ -17,6 +19,7 @@ import           Cardano.BM.Tracing
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries
 import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.HeaderValidation (HeaderWithTime (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (ChainSyncClientHandle,
                    csCandidate, cschcMap, viewChainSyncState)
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -87,7 +90,8 @@ ppStatus = \case
   PeerFetchStatusStarting -> "starting"
 
 getCurrentPeers
-  :: NodeKernelData blk
+  :: forall blk. Net.HasHeader (Header blk)
+  => NodeKernelData blk
   -> IO [Peer blk]
 getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
                       <&> fromSMaybe mempty
@@ -95,10 +99,22 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
   tuple3pop :: (a, b, c) -> (a, b)
   tuple3pop (a, b, _) = (a, b)
 
+  peerFetchStatusForgetTime :: PeerFetchStatus (HeaderWithTime blk) -> PeerFetchStatus (Header blk)
+  peerFetchStatusForgetTime = \case
+      PeerFetchStatusShutdown          -> PeerFetchStatusShutdown
+      PeerFetchStatusStarting          -> PeerFetchStatusStarting
+      PeerFetchStatusAberrant          -> PeerFetchStatusAberrant
+      PeerFetchStatusBusy              -> PeerFetchStatusBusy
+      PeerFetchStatusReady points idle -> PeerFetchStatusReady (Set.mapMonotonic Net.castPoint points) idle
+
+  peerFetchInFlightForgetTime :: PeerFetchInFlight (HeaderWithTime blk) -> PeerFetchInFlight (Header blk)
+  peerFetchInFlightForgetTime inflight =
+    inflight {peerFetchBlocksInFlight = Set.mapMonotonic Net.castPoint (peerFetchBlocksInFlight inflight)}
+
   getCandidates
     :: STM.STM IO (Map peer (ChainSyncClientHandle IO blk))
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
-  getCandidates handle = viewChainSyncState handle csCandidate
+  getCandidates handle = viewChainSyncState handle (Net.mapAnchoredFragment hwtHeader . csCandidate)
 
   extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [Peer blk]
@@ -112,7 +128,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
 
     let peers = flip Map.mapMaybeWithKey candidates $ \cid af ->
                   maybe Nothing
-                        (\(status, inflight) -> Just $ Peer cid af status inflight)
+                        (\(status, inflight) -> Just $ Peer cid af (peerFetchStatusForgetTime status) (peerFetchInFlightForgetTime inflight))
                         $ Map.lookup cid peerStates
     pure . Map.elems $ peers
 
