@@ -15,9 +15,9 @@ import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (
 import           Cardano.Node.Tracing.StateRep (NodeState)
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
-import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
+import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-
+import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -57,4 +57,5 @@ data Tracers peer localPeer blk p2p extraState extraDebugState extraFlags extraP
   , nodeStateTracer       :: !(Tracer IO NodeState)
   , resourcesTracer       :: !(Tracer IO ResourceStats)
   , peersTracer           :: !(Tracer IO [PeerT blk])
+  , ledgerMetricsTracer   :: !(Tracer IO LedgerMetrics)
   }

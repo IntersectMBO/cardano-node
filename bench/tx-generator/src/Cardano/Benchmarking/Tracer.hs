@@ -177,6 +177,7 @@ initialTraceConfig = TraceConfig {
     , tcPeerFrequency = Just 2000 -- Every 2 seconds
     , tcResourceFrequency = Just 1000 -- Every second
     , tcMetricsPrefix = Nothing
+    , tcLedgerMetricsFrequency = Nothing
     }
   where
     setMaxDetail :: Text -> ([Text], [ConfigOption])
