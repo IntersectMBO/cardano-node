@@ -150,7 +150,7 @@ readLeaderCredentialsSingleton
                       shelleyKESFile = Just kesFile
                     } = do
     vrfSKey <-
-      firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) (File vrfFile))
+      firstExceptT FileError (newExceptT $ readFileTextEnvelope (File vrfFile))
 
     (opCert, kesSKey) <- opCertKesKeyCheck (File kesFile) (File opCertFile)
 
@@ -172,9 +172,9 @@ opCertKesKeyCheck
   -> ExceptT PraosLeaderCredentialsError IO (OperationalCertificate, SigningKey KesKey)
 opCertKesKeyCheck kesFile certFile = do
   opCert <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope AsOperationalCertificate certFile)
+    firstExceptT FileError (newExceptT $ readFileTextEnvelope certFile)
   kesSKey <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile)
+    firstExceptT FileError (newExceptT $ readFileTextEnvelope kesFile)
   let opCertSpecifiedKesKeyhash = verificationKeyHash $ getHotKey opCert
       suppliedKesKeyHash = verificationKeyHash $ getVerificationKey kesSKey
   -- Specified KES key in operational certificate should match the one
@@ -201,9 +201,9 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
      mkPraosLeaderCredentials
-       <$> parseEnvelope AsOperationalCertificate scCert
-       <*> parseEnvelope (AsSigningKey AsVrfKey) scVrf
-       <*> parseEnvelope (AsSigningKey AsKesKey) scKes
+       <$> parseEnvelope scCert
+       <*> parseEnvelope scVrf
+       <*> parseEnvelope scKes
 
    readBulkFile
      :: Maybe FilePath
@@ -246,12 +246,11 @@ mkPraosLeaderCredentials
 
 parseEnvelope ::
      HasTextEnvelope a
-  => AsType a
-  -> (TextEnvelope, String)
+  => (TextEnvelope, String)
   -> ExceptT PraosLeaderCredentialsError IO a
-parseEnvelope as (te, loc) =
+parseEnvelope (te, loc) =
   firstExceptT (FileError . Api.FileError loc) . hoistEither $
-    deserialiseFromTextEnvelope as te
+    deserialiseFromTextEnvelope te
 
 
 ------------------------------------------------------------------------------

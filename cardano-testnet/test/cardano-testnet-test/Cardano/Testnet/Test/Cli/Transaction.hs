@@ -52,7 +52,6 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
 
   let
     sbe = ShelleyBasedEraConway
-    txEra = AsConwayEra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
@@ -93,8 +92,8 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
     , "--out-file", txbodyFp
     ]
   cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
-  apiTx <- H.evalEither $ deserialiseFromTextEnvelope (AsTx txEra) cddlUnwitnessedTx
-  let txFee = L.unCoin $ extractTxFee apiTx
+  apiTx <- H.evalEither $ deserialiseFromTextEnvelope cddlUnwitnessedTx
+  let txFee = L.unCoin $ extractTxFee sbe apiTx
 
   -- This is the current calculated fee.
   -- It's a sanity check to see if anything has
@@ -133,6 +132,6 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v
 
-extractTxFee :: Tx era -> L.Coin
-extractTxFee (ShelleyTx sbe ledgerTx) =
+extractTxFee :: ShelleyBasedEra era -> Tx era -> L.Coin
+extractTxFee _ (ShelleyTx sbe ledgerTx) =
   shelleyBasedEraConstraints sbe $ ledgerTx ^. (L.bodyTxL . L.feeTxBodyL)
