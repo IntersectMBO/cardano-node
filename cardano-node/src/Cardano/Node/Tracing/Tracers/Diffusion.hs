@@ -97,6 +97,11 @@ instance LogFormatting Mux.Trace where
       , "msg"  .= String "Bearer Receive Start"
       , "length" .= String (showT len)
       ]
+    forMachine _dtal (Mux.TraceRecvRaw len) = mconcat
+      [ "kind" .= String "Mux.TraceRecvRaw"
+      , "msg"  .= String "Bearer Receive Raw"
+      , "length" .= String (showT len)
+      ]
     forMachine _dtal (Mux.TraceRecvEnd len) = mconcat
       [ "kind" .= String "Mux.TraceRecvEnd"
       , "msg"  .= String "Bearer Receive End"
@@ -268,6 +273,8 @@ instance LogFormatting Mux.Trace where
         d sp so dqs dqvm dqvs estR sdud
     forHuman (Mux.TraceRecvStart len) =
       sformat ("Bearer Receive Start: length " % int) len
+    forHuman (Mux.TraceRecvRaw len) =
+      sformat ("Bearer Receive Raw: length " % int) len
     forHuman (Mux.TraceRecvEnd len) =
       sformat ("Bearer Receive End: length " % int) len
     forHuman (Mux.TraceSendStart SDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) =
@@ -343,6 +350,8 @@ instance MetaTrace Mux.Trace where
       Namespace [] ["RecvHeaderEnd"]
     namespaceFor Mux.TraceRecvStart {}             =
       Namespace [] ["RecvStart"]
+    namespaceFor Mux.TraceRecvRaw {}             =
+      Namespace [] ["RecvRaw"]
     namespaceFor Mux.TraceRecvEnd {}               =
       Namespace [] ["RecvEnd"]
     namespaceFor Mux.TraceSendStart {}             =
@@ -399,6 +408,7 @@ instance MetaTrace Mux.Trace where
       Namespace [] ["TCPInfo"]
 
     severityFor (Namespace _ ["RecvHeaderStart"]) _       = Just Debug
+    severityFor (Namespace _ ["RecvRaw"]) _               = Just Debug
     severityFor (Namespace _ ["RecvHeaderEnd"]) _         = Just Debug
     severityFor (Namespace _ ["RecvStart"]) _             = Just Debug
     severityFor (Namespace _ ["RecvEnd"]) _               = Just Debug
@@ -433,6 +443,8 @@ instance MetaTrace Mux.Trace where
 
     documentFor (Namespace _ ["RecvHeaderStart"])       = Just
       "Bearer receive header start."
+    documentFor (Namespace _ ["RecvRaw"])               = Just
+      "Bearer receive raw."
     documentFor (Namespace _ ["RecvHeaderEnd"])         = Just
       "Bearer receive header end."
     documentFor (Namespace _ ["RecvStart"])             = Just
@@ -497,6 +509,7 @@ instance MetaTrace Mux.Trace where
 
     allNamespaces = [
         Namespace [] ["RecvHeaderStart"]
+      , Namespace [] ["RecvRaw"]
       , Namespace [] ["RecvHeaderEnd"]
       , Namespace [] ["RecvStart"]
       , Namespace [] ["RecvEnd"]

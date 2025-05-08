@@ -80,7 +80,7 @@ pingNode networkMagic sprocket = liftIO $ bracket
     Socket.connect sd (Socket.addrAddress peer)
     peerStr <- peerString
 
-    bearer <- getBearer makeSocketBearer sduTimeout nullTracer sd
+    bearer <- getBearer makeSocketBearer sduTimeout nullTracer sd Nothing
 
     let versions = supportedNodeToClientVersions networkMagic
     !_ <- Mux.write bearer timeoutfn $ wrap handshakeNum InitiatorDir (handshakeReq versions doHandshakeQuery)
