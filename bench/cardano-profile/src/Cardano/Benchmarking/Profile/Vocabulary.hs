@@ -70,8 +70,8 @@ timescaleCompressed =
 
 timescaleSmall :: Types.Profile -> Types.Profile
 timescaleSmall =
-    P.epochLength 1200 . P.parameterK 6
-  . P.slotDuration 1 . P.activeSlotsCoeff 0.05
+    P.slotDuration 1 . P.activeSlotsCoeff 0.05
+  . P.epochLength 1200 . P.parameterK 6
 
 -- Used by "model", "value", and "plutus".
 timescaleModel :: Types.Profile -> Types.Profile
