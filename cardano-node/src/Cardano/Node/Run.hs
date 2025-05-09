@@ -51,6 +51,7 @@ import           Cardano.Node.Protocol.Shelley (PraosLeaderCredentialsError (..)
                    ShelleyProtocolInstantiationError (PraosLeaderCredentialsError))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
+import           Cardano.Node.Rpc.Server
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing.API
@@ -122,6 +123,7 @@ import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
+import           Control.Concurrent.Async
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try, IOException)
 import qualified Control.Exception as Exception
@@ -212,7 +214,9 @@ runNode cmdPc = do
 
     case p of
       SomeConsensusProtocol blockType runP ->
-        handleNodeWithTracers cmdPc nc p networkMagic blockType runP
+        race_
+        (handleNodeWithTracers cmdPc nc p networkMagic blockType runP)
+        (rungrpcServer cmdPc)
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.

@@ -65,6 +65,13 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+
+if impl (ghc >= 9.10)
+  allow-newer:
+    -- TODO: remove - this is for protolens
+    , *:base
+    , *:ghc-prim
+
 if impl (ghc >= 9.12)
   allow-newer:
     -- https://github.com/phadej/vec/issues/118
@@ -90,3 +97,4 @@ if impl (ghc >= 9.12)
     -- https://github.com/haskell-servant/servant/pull/1810
     , servant:base
     , servant-server:base
+
