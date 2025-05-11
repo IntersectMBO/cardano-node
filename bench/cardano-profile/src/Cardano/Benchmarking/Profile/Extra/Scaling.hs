@@ -40,7 +40,6 @@ profilesNoEraScalingLocal =
         . P.loopback
         . V.valueLocal
         . E.fastDuration
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     fastStartup & P.name "faststartup-24M"                    . P.utxo 24000000 . V.fundsDefault . V.genesisVariant300
   ]

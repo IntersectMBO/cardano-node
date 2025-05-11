@@ -283,6 +283,7 @@
     "heap_limit": null,
     "shutdown_on_slot_synced": 237599,
     "shutdown_on_block_synced": null,
+    "ssd_directory": null,
     "tracing_backend": "trace-dispatcher",
     "tracer": false,
     "utxo_lmdb": false,
@@ -336,8 +337,7 @@
       "producer": 12582912,
       "explorer": 14155776
     },
-    "keep_running": false,
-    "ssd_directory": null
+    "keep_running": false
   },
   "extra_desc": "without cardano-tracer",
   "suffix": "notrc",

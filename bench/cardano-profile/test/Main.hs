@@ -345,6 +345,7 @@ ciTestBage = Types.Profile {
   , Types.scenario = Types.FixedLoaded
   , Types.node = Types.Node {
       Types.utxo_lmdb = False
+    , Types.ssd_directory = Nothing
     , Types.verbatim = Types.NodeVerbatim Nothing
     , Types.trace_forwarding = True
     , Types.tracing_backend = "trace-dispatcher"
@@ -374,31 +375,7 @@ ciTestBage = Types.Profile {
     , Types.ekg = False
     , Types.withresources = False
   }
-  , Types.cluster = Types.Cluster {
-      Types.nomad = Types.ClusterNomad {
-        Types.namespace = "default"
-      , Types.nomad_class = ""
-      , Types.resources = Types.ByNodeType {
-          Types.producer = Types.Resources 2 15000 16000
-        , Types.explorer = Just $ Types.Resources 2 15000 16000
-        }
-      , Types.host_volumes = Nothing
-      , Types.fetch_logs_ssh = False
-      }
-    , Types.aws = Types.ClusterAWS {
-        Types.instance_type = Types.ByNodeType {
-          Types.producer = "c5.2xlarge"
-        , Types.explorer = Just "m5.4xlarge"
-        }
-      , Types.use_public_routing = False
-      }
-    , Types.minimun_storage = Just $ Types.ByNodeType {
-        Types.producer = 12582912
-      , Types.explorer = Just 14155776
-      }
-    , Types.ssd_directory = Nothing
-    , Types.keep_running = False
-  }
+  , Types.cluster = Nothing
   , Types.analysis = Types.Analysis {
       Types.analysisType = Just "standard"
     , Types.cluster_base_startup_overhead_s = 40

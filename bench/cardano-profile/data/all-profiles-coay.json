@@ -66,39 +66,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -484,39 +452,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -902,39 +838,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -1324,39 +1228,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -1748,39 +1620,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -2616,39 +2456,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -3484,39 +3292,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -4355,39 +4131,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -5223,39 +4967,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -6094,39 +5806,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -6964,39 +6644,7 @@
         "000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -7386,39 +7034,7 @@
         "000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -7808,39 +7424,7 @@
         "000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -8230,39 +7814,7 @@
         "000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -8654,39 +8206,7 @@
         "000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -9076,39 +8596,7 @@
         "000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -9498,39 +8986,7 @@
         "000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -9918,39 +9374,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -10336,39 +9760,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -10754,39 +10146,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": "/tmp"
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -11091,6 +10451,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
+      "ssd_directory": "/tmp",
       "tracer": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": true,
@@ -11204,8 +10565,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -11626,8 +10986,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -12016,39 +11375,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -12464,8 +11791,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -12856,39 +12182,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -13278,39 +12572,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -13890,39 +13152,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -14516,39 +13746,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -15142,39 +14340,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -15754,39 +14920,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -16639,39 +15773,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -17559,39 +16661,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -18478,39 +17548,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -18896,39 +17934,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -19318,39 +18324,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 10,
       "locations": [
@@ -19738,39 +18712,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -20381,8 +19323,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -20803,8 +19744,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -21193,39 +20133,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -21641,8 +20549,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -22031,39 +20938,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -22453,39 +21328,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -22874,39 +21717,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -23294,39 +22105,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -23743,8 +22522,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -24166,8 +22944,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -24557,39 +23334,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -24978,39 +23723,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -25398,39 +24111,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -25817,39 +24498,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -26236,39 +24885,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -26658,39 +25275,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -27078,39 +25663,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -27496,39 +26049,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -27944,8 +26465,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -28555,8 +27075,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -29172,8 +27691,7 @@
             "memory_max": 124000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -29753,39 +28271,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -30171,39 +28657,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -30589,39 +29043,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -31011,39 +29433,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -31432,39 +29822,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -31850,39 +30208,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -32270,39 +30596,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -32689,39 +30983,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -33551,39 +31813,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -33970,39 +32200,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -34394,39 +32592,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -34816,39 +32982,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -35427,39 +33561,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -35846,39 +33948,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -36708,39 +34778,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -37572,39 +35610,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -38436,39 +36442,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -39301,39 +37275,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -40167,39 +38109,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -40586,39 +38496,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -41008,39 +38886,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -41429,39 +39275,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -41851,39 +39665,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -42272,39 +40054,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -42694,39 +40444,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -43115,39 +40833,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -43536,39 +41222,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -44144,39 +41798,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -44752,39 +42374,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -45360,39 +42950,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -45968,39 +43526,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -46576,39 +44102,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -46996,39 +44490,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -47415,39 +44877,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -47834,39 +45264,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -48281,8 +45679,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -48910,8 +46307,7 @@
             "memory_max": 124000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -49504,39 +46900,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -50431,39 +47795,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -51359,39 +48691,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -52269,39 +49569,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -53178,39 +50446,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -53627,8 +50863,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -54050,8 +51285,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -54441,39 +51675,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -55083,8 +52285,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -55700,8 +52901,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -56317,8 +53517,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -56934,8 +54133,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -57551,8 +54749,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -58135,39 +55332,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -58791,8 +55956,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -59391,39 +56555,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -60047,8 +57179,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -60678,8 +57809,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -61563,8 +58693,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -62448,8 +59577,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -63317,8 +60445,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -64189,8 +61316,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -65144,8 +62270,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -66098,8 +63223,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -67053,8 +64177,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -67640,39 +64763,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -68553,39 +65644,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -69481,39 +66540,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -70408,39 +67435,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -71336,39 +68331,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -72263,39 +69226,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -73190,39 +70121,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -74123,39 +71022,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -75035,39 +71902,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -75986,8 +72821,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -76924,8 +73758,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -77863,8 +74696,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -78802,8 +75634,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -79727,8 +76558,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -80653,8 +77483,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -81546,39 +78375,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -81964,39 +78761,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -82382,39 +79147,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -82800,39 +79533,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -83218,39 +79919,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -83636,39 +80305,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -84056,39 +80693,7 @@
         "1000000000000000"
       ]
     },
-    "cluster": {
-      "aws": {
-        "instance_type": {
-          "explorer": "m5.4xlarge",
-          "producer": "c5.2xlarge"
-        },
-        "use_public_routing": false
-      },
-      "keep_running": false,
-      "minimun_storage": {
-        "explorer": 14155776,
-        "producer": 12582912
-      },
-      "nomad": {
-        "class": "",
-        "fetch_logs_ssh": false,
-        "host_volumes": null,
-        "namespace": "default",
-        "resources": {
-          "explorer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          },
-          "producer": {
-            "cores": 2,
-            "memory": 15000,
-            "memory_max": 16000
-          }
-        }
-      },
-      "ssd_directory": null
-    },
+    "cluster": null,
     "composition": {
       "dense_pool_density": 1,
       "locations": [
@@ -84515,8 +81120,7 @@
             "memory_max": 124000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -85136,8 +81740,7 @@
             "memory_max": 124000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -85755,8 +82358,7 @@
             "memory_max": 124000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -86366,8 +82968,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -86980,8 +83581,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -87594,8 +84194,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -88208,8 +84807,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -88822,8 +85420,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -89442,8 +86039,7 @@
             "memory_max": 124000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -90055,8 +86651,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -90669,8 +87264,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -91281,8 +87875,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -92147,8 +88740,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -93016,8 +89608,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -93968,8 +90559,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
@@ -94919,8 +91509,7 @@
             "memory_max": 16000
           }
         }
-      },
-      "ssd_directory": null
+      }
     },
     "composition": {
       "dense_pool_density": 1,
