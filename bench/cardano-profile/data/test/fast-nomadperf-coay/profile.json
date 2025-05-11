@@ -477,6 +477,7 @@
     "heap_limit": null,
     "shutdown_on_slot_synced": null,
     "shutdown_on_block_synced": 1,
+    "ssd_directory": null,
     "tracing_backend": "trace-dispatcher",
     "tracer": true,
     "utxo_lmdb": false,
@@ -540,8 +541,7 @@
       "producer": 12582912,
       "explorer": 14155776
     },
-    "keep_running": true,
-    "ssd_directory": null
+    "keep_running": true
   },
   "desc": "Stop as soon as we've seen a single block",
   "extra_desc": "with P2P networking",
