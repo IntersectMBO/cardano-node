@@ -93,7 +93,7 @@ data Profile = Profile
   , workloads :: [Workload]
 
   , tracer :: Tracer
-  , cluster :: Cluster
+  , cluster :: Maybe Cluster
   , analysis :: Analysis
   , derived :: Derived
   , cli_args :: CliArgs
@@ -392,6 +392,7 @@ instance Aeson.FromJSON Chunks where
 data Node = Node
   { 
     utxo_lmdb :: Bool
+  , ssd_directory :: Maybe String
 
   -- TODO: Move up "EnableP2P". A new level only for this?
   , verbatim :: NodeVerbatim
@@ -414,6 +415,7 @@ instance Aeson.ToJSON Node where
   toJSON n =
     Aeson.object
       [ "utxo_lmdb"                Aeson..= utxo_lmdb n
+      , "ssd_directory"            Aeson..= ssd_directory n
       , "verbatim"                 Aeson..= verbatim n
       -- TODO: Rename in workbench/bash to "trace_forwarding".
       , "tracer"                   Aeson..= trace_forwarding n
@@ -428,15 +430,16 @@ instance Aeson.FromJSON Node where
   parseJSON =
     Aeson.withObject "Node" $ \o -> do
       Node
-        <$> o Aeson..: "utxo_lmdb"
-        <*> o Aeson..: "verbatim"
+        <$> o Aeson..:  "utxo_lmdb"
+        <*> o Aeson..:? "ssd_directory"
+        <*> o Aeson..:  "verbatim"
         -- TODO: Rename in workbench/bash to "trace_forwarding".
-        <*> o Aeson..: "tracer"
-        <*> o Aeson..: "tracing_backend"
-        <*> o Aeson..: "rts_flags_override"
-        <*> o Aeson..: "heap_limit"
-        <*> o Aeson..: "shutdown_on_slot_synced"
-        <*> o Aeson..: "shutdown_on_block_synced"
+        <*> o Aeson..:  "tracer"
+        <*> o Aeson..:  "tracing_backend"
+        <*> o Aeson..:  "rts_flags_override"
+        <*> o Aeson..:  "heap_limit"
+        <*> o Aeson..:  "shutdown_on_slot_synced"
+        <*> o Aeson..:  "shutdown_on_block_synced"
 
 -- Properties passed directly to the node(s) "config.json" file.
 newtype NodeVerbatim = NodeVerbatim
@@ -610,7 +613,6 @@ data Cluster = Cluster
   { nomad :: ClusterNomad
   , aws :: ClusterAWS
   , minimun_storage :: Maybe (ByNodeType Int)
-  , ssd_directory :: Maybe String
   , keep_running :: Bool
   }
   deriving (Eq, Show, Generic)
