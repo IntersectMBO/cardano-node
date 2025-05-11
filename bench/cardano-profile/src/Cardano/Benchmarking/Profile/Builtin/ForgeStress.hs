@@ -29,7 +29,6 @@ base =
   . P.p2pOff . P.newTracing
   . P.initCooldown 5
   . P.analysisStandard
-  . V.clusterDefault -- TODO: "cluster" should be "null" here.
 
 -- Helpers by timescale:
 
