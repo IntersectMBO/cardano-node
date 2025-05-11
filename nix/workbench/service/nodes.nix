@@ -54,8 +54,8 @@ let
        else throw "configHardforksIntoEra:  unknown era '${era}'";
 
   liveTablesPath = i: 
-    if (profile.cluster ? "ssd_directory" && profile.cluster.ssd_directory != null)
-    then "${profile.cluster.ssd_directory}/lmdb-node-${toString i}"
+    if (profile.node ? "ssd_directory" && profile.node.ssd_directory != null)
+    then "${profile.node.ssd_directory}/lmdb-node-${toString i}"
     else null;
 
   ##

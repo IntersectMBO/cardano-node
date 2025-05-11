@@ -29,7 +29,6 @@ profilesNoEraDense =
         . V.genesisVariant300
         . E.ciTestDuration
         . P.cBlockMinimumAdoptions 9
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     ciTestDense & P.name "ci-test-dense10" . V.valueLocal . P.traceForwardingOn . P.newTracing . P.p2pOff
   ]
