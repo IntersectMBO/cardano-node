@@ -34,7 +34,6 @@ profilesNoEraChainsync =
          --       Remove and use `V.datasetEmpty` in module "Scenario.Base".
         . P.delegators 0
         . P.analysisPerformance
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
         . P.preset "mainnet"
         . P.desc "Mainnet chain syncing benchmark"
       {--
