@@ -179,6 +179,7 @@ empty = Types.Profile {
   , Types.chaindb = Nothing
   , Types.node = Types.Node {
       Types.utxo_lmdb = False
+    , Types.ssd_directory = Nothing
     , Types.verbatim = Types.NodeVerbatim Nothing
     , Types.trace_forwarding = False
     , Types.tracing_backend = ""
@@ -204,31 +205,7 @@ empty = Types.Profile {
     , Types.ekg = False
     , Types.withresources = False
   }
-  , Types.cluster = Types.Cluster {
-      Types.nomad = Types.ClusterNomad {
-        Types.namespace = "default"
-      , Types.nomad_class = ""
-      , Types.resources = Types.ByNodeType {
-          Types.producer = Types.Resources 0 0 0
-        , Types.explorer = Just $ Types.Resources 0 0 0
-        }
-      , Types.host_volumes = Nothing
-      , Types.fetch_logs_ssh = False
-      }
-    , Types.aws = Types.ClusterAWS {
-        Types.instance_type = Types.ByNodeType {
-          Types.producer = ""
-        , Types.explorer = Nothing
-        }
-      , Types.use_public_routing = False
-      }
-    , Types.minimun_storage = Just $ Types.ByNodeType {
-        Types.producer = 0
-      , Types.explorer = Nothing
-      }
-    , Types.ssd_directory = Nothing
-    , Types.keep_running = False
-  }
+  , Types.cluster = Nothing
   , Types.analysis = Types.Analysis {
       Types.analysisType = Nothing
     , Types.cluster_base_startup_overhead_s = 0
@@ -620,6 +597,9 @@ node f p = p {Types.node = f (Types.node p)}
 lmdb :: Types.Profile -> Types.Profile
 lmdb = node (\n -> n {Types.utxo_lmdb = True})
 
+ssdDirectory :: String -> Types.Profile -> Types.Profile
+ssdDirectory str = node (\n -> n {Types.ssd_directory = Just str})
+
 -- P2P.
 -------
 
@@ -846,14 +826,41 @@ tracerWithresources = tracer (\t -> t {Types.withresources = True})
 -- Cluster.
 --------------------------------------------------------------------------------
 
+clusterEmpty :: Types.Cluster
+clusterEmpty =
+  Types.Cluster {
+    Types.nomad = Types.ClusterNomad {
+      Types.namespace = "default"
+    , Types.nomad_class = ""
+    , Types.resources = Types.ByNodeType {
+        Types.producer = Types.Resources 0 0 0
+      , Types.explorer = Just $ Types.Resources 0 0 0
+      }
+    , Types.host_volumes = Nothing
+    , Types.fetch_logs_ssh = False
+    }
+  , Types.aws = Types.ClusterAWS {
+      Types.instance_type = Types.ByNodeType {
+        Types.producer = ""
+      , Types.explorer = Nothing
+      }
+    , Types.use_public_routing = False
+    }
+  , Types.minimun_storage = Just $ Types.ByNodeType {
+      Types.producer = 0
+    , Types.explorer = Nothing
+    }
+  , Types.keep_running = False
+  }
+
 cluster :: (Types.Cluster -> Types.Cluster) -> Types.Profile -> Types.Profile
-cluster f p = p {Types.cluster = f (Types.cluster p)}
+cluster f p = p {Types.cluster = Just $ case Types.cluster p of
+                                          Nothing -> f clusterEmpty
+                                          (Just c) -> f c
+              }
 
 clusterMinimunStorage :: Maybe (Types.ByNodeType Int) -> Types.Profile -> Types.Profile
 clusterMinimunStorage ms = cluster (\c -> c {Types.minimun_storage = ms})
-
-ssdDirectory :: String -> Types.Profile -> Types.Profile
-ssdDirectory str = cluster (\c -> c {Types.ssd_directory = Just str})
 
 clusterKeepRunningOn :: Types.Profile -> Types.Profile
 clusterKeepRunningOn = cluster (\c -> c {Types.keep_running = True})
