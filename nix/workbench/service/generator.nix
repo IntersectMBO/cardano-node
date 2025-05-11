@@ -55,7 +55,7 @@ let
                               then "plutus-datum.json"
                               else null
         ;
-      } // optionalAttrs profile.node.tracer {
+      } // optionalAttrs profile.node.trace_forwarding {
         tracerSocketPath = "../tracer/tracer.socket";
       } // optionalAttrs backend.useCabalRun {
         executable     = "tx-generator";

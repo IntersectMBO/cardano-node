@@ -371,7 +371,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -757,7 +757,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -1143,7 +1143,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -1536,7 +1536,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -2370,7 +2370,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 1800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -3206,7 +3206,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 3600,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -4045,7 +4045,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 3600,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -4881,7 +4881,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 14400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -5720,7 +5720,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 14400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -6559,7 +6559,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 1800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -6950,7 +6950,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 38901589,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -7340,7 +7340,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 38901589,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -7730,7 +7730,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 38901589,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -8120,7 +8120,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 38901589,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -8512,7 +8512,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 237599,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -8902,7 +8902,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 237599,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -9292,7 +9292,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 237599,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -9679,7 +9679,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -10065,7 +10065,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -10452,7 +10452,7 @@
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
       "ssd_directory": "/tmp",
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": true,
       "verbatim": {
@@ -10873,7 +10873,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -11294,7 +11294,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -11680,7 +11680,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -12099,7 +12099,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {
@@ -12487,7 +12487,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -13069,7 +13069,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -13663,7 +13663,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -14257,7 +14257,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -14837,7 +14837,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -15690,7 +15690,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -16578,7 +16578,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -17467,7 +17467,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -17853,7 +17853,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -18239,7 +18239,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -18629,7 +18629,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -19210,7 +19210,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -19631,7 +19631,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -20052,7 +20052,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -20438,7 +20438,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -20857,7 +20857,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -21243,7 +21243,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -21636,7 +21636,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -22022,7 +22022,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 8,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -22409,7 +22409,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -22829,7 +22829,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -23251,7 +23251,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -23638,7 +23638,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -24028,7 +24028,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -24415,7 +24415,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -24802,7 +24802,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -25192,7 +25192,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -25582,7 +25582,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -25968,7 +25968,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 900,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -26354,7 +26354,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -26962,7 +26962,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -27572,7 +27572,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -28188,7 +28188,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -28576,7 +28576,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -28962,7 +28962,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -29348,7 +29348,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -29741,7 +29741,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -30127,7 +30127,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -30513,7 +30513,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 1,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -30900,7 +30900,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -31730,7 +31730,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 4800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -32117,7 +32117,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -32507,7 +32507,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -32899,7 +32899,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -33478,7 +33478,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -33865,7 +33865,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -34695,7 +34695,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 4800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -35527,7 +35527,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 4800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -36359,7 +36359,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 4800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -37192,7 +37192,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 4800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -38026,7 +38026,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 4800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -38413,7 +38413,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -38803,7 +38803,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -39192,7 +39192,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -39582,7 +39582,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -39971,7 +39971,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -40361,7 +40361,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -40750,7 +40750,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -41139,7 +41139,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -41715,7 +41715,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -42291,7 +42291,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 4800,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -42867,7 +42867,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 1200,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -43443,7 +43443,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 2400,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -44019,7 +44019,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 1200,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -44407,7 +44407,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -44794,7 +44794,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -45181,7 +45181,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -45568,7 +45568,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -46176,7 +46176,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -46804,7 +46804,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -47711,7 +47711,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 56000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -48607,7 +48607,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 56000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -49485,7 +49485,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 56000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -50363,7 +50363,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 56000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -50750,7 +50750,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -51170,7 +51170,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {
@@ -51592,7 +51592,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -52171,7 +52171,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -52785,7 +52785,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -53401,7 +53401,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -54017,7 +54017,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -54633,7 +54633,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -55249,7 +55249,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -55842,7 +55842,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -56470,7 +56470,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -57065,7 +57065,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -57693,7 +57693,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -58563,7 +58563,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -59447,7 +59447,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -60329,7 +60329,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -61200,7 +61200,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -62140,7 +62140,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -63094,7 +63094,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -64047,7 +64047,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -64677,7 +64677,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -65560,7 +65560,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -66442,7 +66442,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -67351,7 +67351,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -68247,7 +68247,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -69142,7 +69142,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -70038,7 +70038,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -70939,7 +70939,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -71819,7 +71819,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -72707,7 +72707,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 9000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -73642,7 +73642,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -74580,7 +74580,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -75518,7 +75518,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -76442,7 +76442,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -77367,7 +77367,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -78292,7 +78292,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 72000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -78680,7 +78680,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -79066,7 +79066,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": false,
+      "trace_forwarding": false,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -79452,7 +79452,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -79838,7 +79838,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": 15,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -80224,7 +80224,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 1200,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -80610,7 +80610,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 1200,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -80998,7 +80998,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": null,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -81616,7 +81616,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 7200,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -82234,7 +82234,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 7200,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -82852,7 +82852,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 7200,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -83465,7 +83465,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -84078,7 +84078,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -84691,7 +84691,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -85304,7 +85304,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -85917,7 +85917,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -86535,7 +86535,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -87148,7 +87148,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {
@@ -87761,7 +87761,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "iohk-monitoring",
       "utxo_lmdb": false,
       "verbatim": {}
@@ -88624,7 +88624,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -89492,7 +89492,7 @@
       ],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -90429,7 +90429,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -91380,7 +91380,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {
@@ -92330,7 +92330,7 @@
       "rts_flags_override": [],
       "shutdown_on_block_synced": null,
       "shutdown_on_slot_synced": 64000,
-      "tracer": true,
+      "trace_forwarding": true,
       "tracing_backend": "trace-dispatcher",
       "utxo_lmdb": false,
       "verbatim": {

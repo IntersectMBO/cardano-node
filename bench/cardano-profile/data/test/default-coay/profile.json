@@ -283,8 +283,8 @@
     "shutdown_on_slot_synced": null,
     "shutdown_on_block_synced": null,
     "ssd_directory": null,
+    "trace_forwarding": true,
     "tracing_backend": "trace-dispatcher",
-    "tracer": true,
     "utxo_lmdb": false,
     "verbatim": {}
   },

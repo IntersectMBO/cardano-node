@@ -397,8 +397,7 @@ data Node = Node
   -- TODO: Move up "EnableP2P". A new level only for this?
   , verbatim :: NodeVerbatim
 
-  -- TODO: "tracing_backend" is null or has a backend name!
-  , trace_forwarding :: Bool -- TODO: Rename in workbench/bash from "tracer"
+  , trace_forwarding :: Bool
   , tracing_backend :: String
 
   -- TODO: Create an RTS property.
@@ -411,35 +410,11 @@ data Node = Node
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Node where
-  toJSON n =
-    Aeson.object
-      [ "utxo_lmdb"                Aeson..= utxo_lmdb n
-      , "ssd_directory"            Aeson..= ssd_directory n
-      , "verbatim"                 Aeson..= verbatim n
-      -- TODO: Rename in workbench/bash to "trace_forwarding".
-      , "tracer"                   Aeson..= trace_forwarding n
-      , "tracing_backend"          Aeson..= tracing_backend n
-      , "rts_flags_override"       Aeson..= rts_flags_override n
-      , "heap_limit"               Aeson..= heap_limit n
-      , "shutdown_on_slot_synced"  Aeson..= shutdown_on_slot_synced n
-      , "shutdown_on_block_synced" Aeson..= shutdown_on_block_synced n
-      ]
+instance Aeson.ToJSON Node
 
 instance Aeson.FromJSON Node where
-  parseJSON =
-    Aeson.withObject "Node" $ \o -> do
-      Node
-        <$> o Aeson..:  "utxo_lmdb"
-        <*> o Aeson..:? "ssd_directory"
-        <*> o Aeson..:  "verbatim"
-        -- TODO: Rename in workbench/bash to "trace_forwarding".
-        <*> o Aeson..:  "tracer"
-        <*> o Aeson..:  "tracing_backend"
-        <*> o Aeson..:  "rts_flags_override"
-        <*> o Aeson..:  "heap_limit"
-        <*> o Aeson..:  "shutdown_on_slot_synced"
-        <*> o Aeson..:  "shutdown_on_block_synced"
+  parseJSON = Aeson.genericParseJSON
+    (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
 -- Properties passed directly to the node(s) "config.json" file.
 newtype NodeVerbatim = NodeVerbatim

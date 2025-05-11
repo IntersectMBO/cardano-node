@@ -742,7 +742,7 @@ let
           ## If using oneTracerPerNode no "tracer volumes" need to be mounted
           ## (because of no socket sharing between tasks), and tracer files are
           ## created using templates.
-          (lib.optionals (profile.node.tracer && oneTracerPerNode) [
+          (lib.optionals (profile.node.trace_forwarding && oneTracerPerNode) [
             ## Tracer start.sh script.
             {
               env = false;
@@ -1016,7 +1016,7 @@ let
       in lib.listToAttrs (
         # If not oneTracerPerNode, an individual tracer task is needed (instead
         # of running a tracer alongside a node with supervisor)
-        lib.optionals (profile.node.tracer && !oneTracerPerNode) [
+        lib.optionals (profile.node.trace_forwarding && !oneTracerPerNode) [
           {
             name = "tracer";
             value = valueF

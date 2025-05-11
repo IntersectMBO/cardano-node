@@ -88,7 +88,7 @@ let
           {
             inherit (pkgs) lib;
             inherit nodeSpec;
-            inherit (profile.node) tracing_backend tracer;
+            inherit (profile.node) tracing_backend trace_forwarding;
           }
           (recursiveUpdate
             (recursiveUpdate
@@ -154,7 +154,7 @@ let
       operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
       kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";
       vrfKey                 = "../genesis/node-keys/node-vrf${toString i}.skey";
-    } // optionalAttrs profile.node.tracer {
+    } // optionalAttrs profile.node.trace_forwarding {
       tracerSocketPathConnect = mkDefault "../tracer/tracer.socket";
     };
 

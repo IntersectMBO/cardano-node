@@ -282,8 +282,8 @@
     "heap_limit": null,
     "shutdown_on_slot_synced": null,
     "shutdown_on_block_synced": 3,
+    "trace_forwarding": true,
     "tracing_backend": "trace-dispatcher",
-    "tracer": true,
     "utxo_lmdb": false,
     "verbatim": {}
   },
