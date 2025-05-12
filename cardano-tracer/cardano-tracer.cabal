@@ -181,9 +181,10 @@ library
                       , filepath
                       , http-types
                       , mime-mail
+                      , network
                       , network-mux >= 0.5
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.21
+                      , ouroboros-network 
                       , ouroboros-network-api ^>= 0.14
                       , ouroboros-network-framework
                       , signal
@@ -250,7 +251,7 @@ library demo-forwarder-lib
                       , generic-data
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , tasty-quickcheck
                       , time
@@ -293,10 +294,10 @@ library demo-acceptor-lib
                       , filepath
                       , generic-data
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network-api
                       , stm <2.5.2 || >=2.5.3
-                      , text
                       , tasty-quickcheck
+                      , text
                       , trace-forward
                       , vector
                       , vector-algorithms
@@ -352,7 +353,7 @@ test-suite cardano-tracer-test
                       , generic-data
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , stm <2.5.2 || >=2.5.3
                       , tasty
@@ -411,8 +412,8 @@ test-suite cardano-tracer-test-ext
                       , Glob
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network ^>= 0.21
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , process
                       , QuickCheck

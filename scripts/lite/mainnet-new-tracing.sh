@@ -18,7 +18,7 @@ cabal run exe:cardano-node -- run \
   --topology "${configuration}/mainnet-topology.json" \
   --database-path "${db_dir}" \
   --socket-path "${socket_dir}/node-1-socket" \
-  --tracer-socket-path-connect "${socket_dir}/tracer.socket" \
+  --tracer-socket-network-connect "0.0.0.0:2250" \
   --host-addr "0.0.0.0" \
   --port "3001"
 
