@@ -2,6 +2,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Tracing.API
   ( initTraceDispatcher
@@ -10,7 +11,7 @@ module Cardano.Node.Tracing.API
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
-import           Cardano.Node.Configuration.NodeAddress (File (..), PortNumber)
+import           Cardano.Node.Configuration.NodeAddress (PortNumber)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
@@ -43,10 +44,11 @@ import           Control.DeepSeq (deepseq)
 import           Control.Monad (forM_)
 import           "contra-tracer" Control.Tracer (traceWith)
 import           "trace-dispatcher" Control.Tracer (nullTracer)
-import           Data.Bifunctor (first)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import           Data.Text (Text)
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Word (Word16)
 import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Network.Socket (HostName)
 import           System.Metrics as EKG
@@ -98,12 +100,14 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
     nodeKernel
     (fromMaybe 2000 (tcPeerFrequency trConfig))
 
-
   pure tracers
  where
   -- this is the backwards compatible default: block producers emit these metrics every second, relays never.
   ledgerMetricsDefaultFreq = if noBlockForging then 0 else 1
 
+  mkTracers
+    :: TraceConfig
+    -> IO (IO (), Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO)
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore
@@ -121,7 +125,11 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
         then do
           -- TODO: check if this is the correct way to use withIOManager
           (forwardSink, dpStore, kickoffForwarder) <- withIOManager $ \iomgr -> do
-            let tracerSocketMode = Just . first unFile =<< ncTraceForwardSocket nc
+            let -- tracerSocketMode :: Maybe (FilePath, ForwarderMode)
+                tracerSocketMode :: Maybe (Either String (Text, Word16), ForwarderMode)
+                tracerSocketMode = ncTraceForwardSocket nc
+
+                forwardingConf :: TraceOptionForwarder
                 forwardingConf = fromMaybe defaultForwarder (tcForwarder trConfig)
             initForwardingDelayed iomgr forwardingConf networkMagic (Just ekgStore) tracerSocketMode
           pure (forwardTracer forwardSink, dataPointTracer dpStore, kickoffForwarder)
@@ -151,8 +159,10 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
                     , PrometheusSimple noSuff mHost portNo <- backends'
                     ]
 
+    forwarderBackendEnabled :: Bool
     forwarderBackendEnabled =
       (any (any checkForwarder) . Map.elems) $ tcOptions trConfig
 
+    checkForwarder :: ConfigOption -> Bool
     checkForwarder (ConfBackend backends') = Forwarder `elem` backends'
     checkForwarder _ = False

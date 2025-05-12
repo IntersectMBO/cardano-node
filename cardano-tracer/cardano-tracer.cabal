@@ -181,6 +181,7 @@ library
                       , filepath
                       , http-types
                       , mime-mail
+                      , network
                       , network-mux >= 0.5
                       , optparse-applicative
                       , ouroboros-network ^>= 0.21
@@ -293,10 +294,11 @@ library demo-acceptor-lib
                       , filepath
                       , generic-data
                       , optparse-applicative-fork >= 0.18.1
+                      , ouroboros-network ^>= 0.20
                       , ouroboros-network-api ^>= 0.14
                       , stm <2.5.2 || >=2.5.3
-                      , text
                       , tasty-quickcheck
+                      , text
                       , trace-forward
                       , vector
                       , vector-algorithms

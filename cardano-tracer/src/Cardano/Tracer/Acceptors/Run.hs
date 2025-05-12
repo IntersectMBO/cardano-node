@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors.Run
@@ -11,11 +12,13 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils
+import           Cardano.Logging.Types (TraceObject)
 
 import           Control.Concurrent.Async (forConcurrently_)
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe)
+import qualified Data.Text as Text
 import           Data.Time.Clock (secondsToNominalDiffTime)
 import qualified System.Metrics.Configuration as EKGF
 import qualified System.Metrics.ReqResp as EKGF
@@ -23,6 +26,11 @@ import qualified System.Metrics.ReqResp as EKGF
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TOF
 import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
+
+toAddress :: HowToConnect -> String
+toAddress = \case
+  LocalPipe pipe -> pipe
+  RemoteSocket host port -> Text.unpack host ++ ":" ++ show port
 
 -- | Run acceptors for all supported protocols.
 --
@@ -33,21 +41,22 @@ runAcceptors :: TracerEnv -> TracerEnvRTView -> IO ()
 runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
   traceWith teTracer $ TracerStartedAcceptors network
   case network of
-    AcceptAt (LocalSocket p) ->
+    AcceptAt howToConnect ->
       -- Run one server that accepts connections from the nodes.
       runInLoop
-        (runAcceptorsServer tracerEnv tracerEnvRTView p $ acceptorsConfigs p)
-        verbosity p initialPauseInSec
+        (runAcceptorsServer tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (toAddress howToConnect))
+        verbosity (toAddress howToConnect) initialPauseInSec
     ConnectTo localSocks ->
       -- Run N clients that initiate connections to the nodes.
-      forConcurrently_ (NE.nub localSocks) $ \(LocalSocket p) ->
+      forConcurrently_ (NE.nub localSocks) \howToConnect ->
         runInLoop
-          (runAcceptorsClient tracerEnv tracerEnvRTView p $ acceptorsConfigs p)
-          verbosity p initialPauseInSec
+          (runAcceptorsClient tracerEnv tracerEnvRTView howToConnect $ acceptorsConfigs (toAddress howToConnect))
+          verbosity (toAddress howToConnect) initialPauseInSec
  where
   TracerConfig{network, ekgRequestFreq, verbosity, ekgRequestFull} = teConfig tracerEnv
   ekgUseFullRequests = fromMaybe False ekgRequestFull
 
+  acceptorsConfigs :: FilePath -> (EKGF.AcceptorConfiguration, TOF.AcceptorConfiguration TraceObject, DPF.AcceptorConfiguration)
   acceptorsConfigs p =
     ( EKGF.AcceptorConfiguration
         { EKGF.acceptorTracer    = mkVerbosity verbosity
