@@ -189,7 +189,7 @@ library
                       , ouroboros-consensus ^>= 0.27
                       , ouroboros-consensus-cardano ^>= 0.25
                       , ouroboros-consensus-diffusion ^>= 0.23
-                      , ouroboros-consensus-protocol
+                      , ouroboros-consensus-protocol ^>= 0.12
                       , ouroboros-network-api ^>= 0.14
                       , ouroboros-network ^>= 0.21.2
                       , ouroboros-network-framework ^>= 0.18.0.1

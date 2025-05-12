@@ -32,6 +32,7 @@ import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.NodeInfo () -- MetaTrace NodeInfo
 import           Ouroboros.Network.IOManager (IOManager)
@@ -121,7 +122,7 @@ initTxGenTracers mbForwarding = do
     \(iomgr, networkId, tracerSocket) -> do
         let forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
         (forwardSink :: ForwardSink TraceObject, dpStore, kickoffForwarder) <-
-            initForwardingDelayed iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
+            initForwardingDelayed iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (Net.LocalPipe tracerSocket, Initiator)
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
         -- to the acceptor application (for example, 'cardano-tracer').

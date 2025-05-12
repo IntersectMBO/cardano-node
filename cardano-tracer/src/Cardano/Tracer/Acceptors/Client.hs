@@ -5,6 +5,7 @@ module Cardano.Tracer.Acceptors.Client
   ) where
 
 import           Cardano.Logging (TraceObject)
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
                    forwardingCodecCBORTerm, forwardingVersionCodec)
 #if RTVIEW
@@ -26,22 +27,26 @@ import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), OuroborosApplication (..),
-                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun,
+                   OuroborosApplicationWithMinimalCtx)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                   codecHandshake, noTimeLimitsHandshake)
+                   codecHandshake, timeLimitsHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
-                   localAddressFromPath, localSnocket, makeLocalBearer)
+                   localAddressFromPath, localSnocket, socketSnocket, makeSocketBearer, makeLocalBearer)
 import           Ouroboros.Network.Socket (ConnectionId (..), ConnectToArgs (..),
                    HandshakeCallbacks (..), connectToNode, nullNetworkConnectTracers)
 
 import           Codec.CBOR.Term (Term)
 import           Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.List.NonEmpty (NonEmpty((:|)))
 import           Data.Void (Void, absurd)
+import qualified Data.Text as Text
 import           Data.Word (Word32)
+import qualified Network.Socket as Socket
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsInit)
 
@@ -53,26 +58,46 @@ import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsInit)
 runAcceptorsClient
   :: TracerEnv
   -> TracerEnvRTView
-  -> FilePath
+  -> Net.HowToConnect
   -> ( EKGF.AcceptorConfiguration
      , TF.AcceptorConfiguration TraceObject
      , DPF.AcceptorConfiguration
      )
   -> IO ()
-runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) = withIOManager \iocp -> do
-  traceWith (teTracer tracerEnv) $ TracerSockConnecting p
-  doConnectToForwarder
-    (localSnocket iocp)
-    (localAddressFromPath p)
-    (TC.networkMagic $ teConfig tracerEnv)
-    noTimeLimitsHandshake $
-    -- Please note that we always run all the supported protocols,
-    -- there is no mechanism to disable some of them.
-    appInitiator
-      [ (runEKGAcceptorInit          tracerEnv ekgConfig errorHandler, 1)
-      , (runTraceObjectsAcceptorInit tracerEnv tracerEnvRTView tfConfig errorHandler, 2)
-      , (runDataPointsAcceptorInit   tracerEnv dpfConfig errorHandler, 3)
-      ]
+runAcceptorsClient tracerEnv tracerEnvRTView howToConnect (ekgConfig, tfConfig, dpfConfig) = withIOManager \iocp -> do
+  traceWith (teTracer tracerEnv) $ TracerSockConnecting
+    (case howToConnect of
+       Net.LocalPipe p -> p
+       Net.RemoteSocket host port -> Text.unpack host ++ ":" ++ show port)
+  case howToConnect of
+    Net.LocalPipe p -> do
+      doConnectToForwarderLocal
+        (localSnocket iocp)
+        (localAddressFromPath p)
+        (TC.networkMagic $ teConfig tracerEnv)
+        noTimeLimitsHandshake $
+        -- Please note that we always run all the supported protocols,
+        -- there is no mechanism to disable some of them.
+        appInitiator
+          [ (runEKGAcceptorInit          tracerEnv ekgConfig errorHandler, 1)
+          , (runTraceObjectsAcceptorInit tracerEnv tracerEnvRTView tfConfig errorHandler, 2)
+          , (runDataPointsAcceptorInit   tracerEnv dpfConfig errorHandler, 3)
+          ]
+    Net.RemoteSocket host port -> do
+      listenAddress:|_ <- Socket.getAddrInfo Nothing (Just (Text.unpack host)) (Just (show port))
+      doConnectToForwarderSocket
+        (socketSnocket iocp)
+        (Socket.addrAddress listenAddress)
+        (TC.networkMagic $ teConfig tracerEnv)
+        timeLimitsHandshake $
+        -- Please note that we always run all the supported protocols,
+        -- there is no mechanism to disable some of them.
+        appInitiator
+          [ (runEKGAcceptorInit          tracerEnv ekgConfig errorHandler, 1)
+          , (runTraceObjectsAcceptorInit tracerEnv tracerEnvRTView tfConfig errorHandler, 2)
+          , (runDataPointsAcceptorInit   tracerEnv dpfConfig errorHandler, 3)
+          ]
+
  where
   appInitiator protocolsWithNums =
     OuroborosApplication
@@ -84,6 +109,7 @@ runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) 
          }
       | (protocol, num) <- protocolsWithNums
       ]
+  errorHandler :: Show addr => ConnectionId addr -> IO ()
   errorHandler connId = do
     deregisterNodeId tracerEnv (connIdToNodeId connId)
     removeDisconnectedNode tracerEnv connId
@@ -91,7 +117,7 @@ runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) 
     notifyAboutNodeDisconnected tracerEnvRTView connId
 #endif
 
-doConnectToForwarder
+doConnectToForwarderLocal
   :: Snocket IO LocalSocket LocalAddress
   -> LocalAddress
   -> Word32
@@ -101,7 +127,7 @@ doConnectToForwarder
                           (ResponderContext LocalAddress)
                           LBS.ByteString IO () Void
   -> IO ()
-doConnectToForwarder snocket address netMagic timeLimits app = do
+doConnectToForwarderLocal snocket address netMagic timeLimits app = do
   done <- connectToNode
     snocket
     makeLocalBearer
@@ -127,12 +153,47 @@ doConnectToForwarder snocket address netMagic timeLimits app = do
       ctaConnectTracers = nullNetworkConnectTracers,
       ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
 
+doConnectToForwarderSocket
+  :: Snocket IO Socket.Socket Socket.SockAddr
+  -> Socket.SockAddr
+  -> Word32
+  -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
+  -> OuroborosApplicationWithMinimalCtx
+                  Mux.InitiatorMode Socket.SockAddr LBS.ByteString IO () Void
+  -> IO ()
+doConnectToForwarderSocket snocket address netMagic timeLimits app = do
+  done <- connectToNode
+    snocket
+    makeSocketBearer
+    args
+    mempty -- LocalSocket does not require to be configured
+    (simpleSingletonVersions
+       ForwardingV_1
+       (ForwardingVersionData $ NetworkMagic netMagic)
+       (const app)
+    )
+    Nothing
+    address
+  case done of
+    Left err -> throwIO err
+    Right choice -> case choice of
+      Left () -> return ()
+      Right void -> absurd void
+  where
+    args = ConnectToArgs {
+      ctaHandshakeCodec = codecHandshake forwardingVersionCodec,
+      ctaHandshakeTimeLimits = timeLimits,
+      ctaVersionDataCodec = cborTermVersionDataCodec forwardingCodecCBORTerm,
+      ctaConnectTracers = nullNetworkConnectTracers,
+      ctaHandshakeCallbacks = HandshakeCallbacks acceptableVersion queryVersion }
+
 runEKGAcceptorInit
-  :: TracerEnv
+  :: Show addr
+  => TracerEnv
   -> EKGF.AcceptorConfiguration
-  -> (ConnectionId LocalAddress -> IO ())
+  -> (ConnectionId addr -> IO ())
   -> RunMiniProtocol 'Mux.InitiatorMode
-                     (MinimalInitiatorContext LocalAddress)
+                     (MinimalInitiatorContext addr)
                      respoinderCtx
                      LBS.ByteString IO () Void
 runEKGAcceptorInit tracerEnv ekgConfig errorHandler =
@@ -142,12 +203,13 @@ runEKGAcceptorInit tracerEnv ekgConfig errorHandler =
     (errorHandler . micConnectionId)
 
 runTraceObjectsAcceptorInit
-  :: TracerEnv
+  :: Show addr
+  => TracerEnv
   -> TracerEnvRTView
   -> TF.AcceptorConfiguration TraceObject
-  -> (ConnectionId LocalAddress -> IO ())
+  -> (ConnectionId addr -> IO ())
   -> RunMiniProtocol 'Mux.InitiatorMode
-                     (MinimalInitiatorContext LocalAddress)
+                     (MinimalInitiatorContext addr)
                      responderCtx
                      LBS.ByteString IO () Void
 runTraceObjectsAcceptorInit tracerEnv tracerEnvRTView tfConfig errorHandler =
@@ -157,11 +219,12 @@ runTraceObjectsAcceptorInit tracerEnv tracerEnvRTView tfConfig errorHandler =
     (errorHandler . micConnectionId)
 
 runDataPointsAcceptorInit
-  :: TracerEnv
+  :: Show addr
+  => TracerEnv
   -> DPF.AcceptorConfiguration
-  -> (ConnectionId LocalAddress -> IO ())
+  -> (ConnectionId addr -> IO ())
   -> RunMiniProtocol 'Mux.InitiatorMode
-                     (MinimalInitiatorContext LocalAddress)
+                     (MinimalInitiatorContext addr)
                      responderCtx
                      LBS.ByteString IO () Void
 runDataPointsAcceptorInit tracerEnv dpfConfig errorHandler =

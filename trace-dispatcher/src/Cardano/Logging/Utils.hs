@@ -2,6 +2,7 @@ module Cardano.Logging.Utils
        ( module Cardano.Logging.Utils )
        where
 
+import           Cardano.Logging.Types (HowToConnect)
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
 import           Control.Tracer (stdoutTracer, traceWith)
@@ -15,13 +16,13 @@ import           GHC.Conc (labelThread, myThreadId)
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
-runInLoop :: IO () -> FilePath -> Word -> Word -> IO ()
-runInLoop action localSocket prevDelayInSecs maxReconnectDelay =
+runInLoop :: IO () -> HowToConnect -> Word -> Word -> IO ()
+runInLoop action howToConnect prevDelayInSecs maxReconnectDelay =
   tryJust excludeAsyncExceptions action >>= \case
     Left e -> do
-      logTrace $ "connection with " <> show localSocket <> " failed: " <> show e
+      logTrace $ "connection with " <> show howToConnect <> " failed: " <> show e
       threadDelay . fromIntegral $ currentDelayInSecs * 1000000
-      runInLoop action localSocket currentDelayInSecs maxReconnectDelay
+      runInLoop action howToConnect currentDelayInSecs maxReconnectDelay
     Right _ -> return ()
  where
   excludeAsyncExceptions e =
