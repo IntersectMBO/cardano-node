@@ -1,5 +1,8 @@
 # ChangeLog
 
+## 0.3.4 (June, 2025)
+* Forwarding protocol supports connections over TCP socket, in addition to Unix domain sockets.
+
 ## 0.3.3 (April, 2025)
 * Redesigned `Cardano.Tracer.Handlers.Notifications.Timer` interface with IO-actions instead of TVars.
 * Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`

@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -53,6 +54,7 @@ module Cardano.Logging.Types (
   , unfold
   , TraceObject(..)
   , PreFormatted(..)
+  , HowToConnect(..)
 ) where
 
 
@@ -63,6 +65,7 @@ import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
 import           Data.Bool (bool)
+import           Data.Kind (Type)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map.Strict (Map)
@@ -74,6 +77,7 @@ import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Text.Read as T (decimal)
 import           Data.Time (UTCTime)
+import           Data.Word (Word16)
 import           GHC.Generics
 import           Network.HostName (HostName)
 import           Network.Socket (PortNumber)
@@ -599,3 +603,18 @@ instance LogFormatting b => LogFormatting (Folding a b) where
   forMachine v (Folding b) =  forMachine v b
   forHuman (Folding b)     =  forHuman b
   asMetrics (Folding b)    =  asMetrics b
+
+-- | Specifies how to connect to the peer.
+--
+-- Taken from ekg-forward:System.Metrics.Configuration, to avoid dependency.
+type Host :: Type
+type Host = Text
+
+type Port :: Type
+type Port = Word16
+
+type HowToConnect :: Type
+data HowToConnect
+  = LocalPipe    !FilePath    -- ^ Local pipe (UNIX or Windows).
+  | RemoteSocket !Host !Port  -- ^ Remote socket (host and port).
+  deriving stock (Eq, Show, Generic)

@@ -1,10 +1,15 @@
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+
 module Cardano.Tracer.Test.Utils
   ( module Cardano.Tracer.Test.Utils
   , module Data.Functor.Identity
   ) where
 
 import           Cardano.Tracer.Test.TestSetup
+import           Cardano.Logging.Types (HowToConnect)
+import qualified Cardano.Logging.Types as Net
 
 import           Data.Functor.Identity
 import           Data.Vector (Vector)
@@ -27,7 +32,7 @@ false msg = return . counterexample msg $ property False
 propRunInLogsStructure
   :: TestSetup Identity -> (FilePath -> FilePath -> IO Property)
   -> Property
-propRunInLogsStructure TestSetup{..} testAction = ioProperty $ do
+propRunInLogsStructure TestSetup{..} testAction = ioProperty do
   (rootDir, _) <- newTempDirWithin (unI tsWorkDir)
   testAction rootDir
     (prepareLocalSock $ unI tsSockInternal)
@@ -40,6 +45,40 @@ propRunInLogsStructure2 TestSetup{..} testAction = ioProperty $ do
   testAction rootDir
     (prepareLocalSock . replaceExtension "1.sock" $ unI tsSockInternal)
     (prepareLocalSock . replaceExtension "2.sock" $ unI tsSockInternal)
+
+propRunInLogsStructureLocal
+  :: TestSetup Identity -> (FilePath -> HowToConnect -> IO Property)
+  -> Property
+propRunInLogsStructureLocal TestSetup{..} testAction = ioProperty $ do
+  (rootDir, _) <- newTempDirWithin (unI tsWorkDir)
+  testAction rootDir
+    (Net.LocalPipe (prepareLocalSock $ unI tsSockInternal))
+
+propRunInLogsStructureLocal2
+  :: TestSetup Identity -> (FilePath -> HowToConnect -> HowToConnect -> IO Property)
+  -> Property
+propRunInLogsStructureLocal2 TestSetup{..} testAction = ioProperty $ do
+  (rootDir, _) <- newTempDirWithin (unI tsWorkDir)
+  testAction rootDir
+    (Net.LocalPipe . prepareLocalSock . replaceExtension "1.sock" $ unI tsSockInternal)
+    (Net.LocalPipe . prepareLocalSock . replaceExtension "2.sock" $ unI tsSockInternal)
+
+propRunInLogsStructurePort
+  :: TestSetup Identity -> (FilePath -> HowToConnect -> IO Property)
+  -> Property
+propRunInLogsStructurePort TestSetup{..} testAction = ioProperty do
+  (rootDir, _) <- newTempDirWithin (unI tsWorkDir)
+  testAction rootDir
+    (Net.RemoteSocket "127.0.0.1" 15373)
+
+propRunInLogsStructurePort2
+  :: TestSetup Identity -> (FilePath -> HowToConnect -> HowToConnect -> IO Property)
+  -> Property
+propRunInLogsStructurePort2 TestSetup{..} testAction = ioProperty do
+  (rootDir, _) <- newTempDirWithin (unI tsWorkDir)
+  testAction rootDir
+    (Net.RemoteSocket "127.0.0.1" 15373)
+    (Net.RemoteSocket "127.0.0.1" 15374)
 
 prepareLocalSock :: FilePath -> FilePath
 prepareLocalSock localSock

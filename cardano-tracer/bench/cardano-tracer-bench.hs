@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Cardano.Logging hiding (LocalSocket)
+import qualified Cardano.Logging.Types as Net
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
@@ -139,7 +140,7 @@ main = do
   mkConfig :: FilePath -> LogFormat -> TracerConfig
   mkConfig root format = TracerConfig
     { networkMagic   = 764824073
-    , network        = AcceptAt (LocalSocket "")
+    , network        = AcceptAt (Net.LocalPipe "")
     , loRequestNum   = Nothing
     , ekgRequestFreq = Nothing
     , hasEKG         = Nothing

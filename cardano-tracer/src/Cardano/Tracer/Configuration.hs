@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -10,7 +11,8 @@
 {- HLINT ignore "Use any" -}
 
 module Cardano.Tracer.Configuration
-  ( Address (..)
+  ( Address -- (..)
+  , Net.HowToConnect (..)
   , Endpoint (..)
   , setEndpoint
   , FileOrMap (..)
@@ -22,15 +24,20 @@ module Cardano.Tracer.Configuration
   , TracerConfig (..)
   , Verbosity (..)
   , readTracerConfig
+  , parseHostPort
   ) where
 
 import qualified Cardano.Logging.Types as Log
 
 import           Control.Applicative ((<|>))
-import           Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:))
+import           Data.Aeson (FromJSON (..), ToJSON (..), withText, withObject, (.:))
+import           Data.Aeson.Types (Parser, Value)
+import qualified Data.Aeson.Types as Aeson
+import           Data.Char (isDigit)
 import           Data.Fixed (Pico)
 import           Data.Function ((&))
 import           Data.Functor ((<&>))
+import           Data.Kind (Type)
 import           Data.List (intercalate, nub)
 import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
@@ -39,16 +46,54 @@ import           Data.Map.Strict (Map)
 import           Data.Maybe (catMaybes)
 import           Data.String (fromString)
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           Network.Wai.Handler.Warp (HostPreference, Port, Settings, setHost, setPort)
 import           System.Exit (die)
+import           Text.Read (readMaybe)
 
--- | Only local socket is supported, to avoid unauthorized connections.
-newtype Address = LocalSocket FilePath
-  deriving stock (Eq, Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+import           Cardano.Logging.Types (HowToConnect)
+import qualified Cardano.Logging.Types as Net
+
+type Address :: Type
+type Address = HowToConnect
+
+-- first try to host:port, and if that fails revert to parsing any
+-- string literal and assume it is a localpipe.
+instance FromJSON HowToConnect where
+  parseJSON :: Value -> Parser HowToConnect
+  parseJSON = withText "HowToConnect" $ \t -> do
+    let str = Text.unpack t
+    pure case parseHostPort str of
+      Left {} ->
+        Net.LocalPipe str
+      Right (host, port) -> do
+        Net.RemoteSocket host port
+
+instance ToJSON HowToConnect where
+  toJSON :: HowToConnect -> Value
+  toJSON = \case
+    Net.LocalPipe str          -> Aeson.String (Text.pack str)
+    Net.RemoteSocket host port -> Aeson.String (host <> ":" <> Text.pack (show port))
+
+parseHostPort :: String -> Either String (Text, Word16)
+parseHostPort s
+  | (portRev, ':' : hostRev) <- break (== ':') (reverse s)
+  = if
+    | null hostRev        -> Left "parseHostPort: Empty host."
+    | null portRev        -> Left "parseHostPort: Empty port."
+    | all isDigit portRev
+    , Just port <- readMaybe @Word16 (reverse portRev) -> if
+      | 0 <= port, port <= 65535 -> Right
+        ( Text.pack (reverse hostRev)
+        , port
+        )
+      | otherwise -> Left ("parseHostPort: Numeric port '" ++ show port ++ "' out of range: 0 - 65535)")
+    | otherwise -> Left "parseHostPort: Non-numeric port."
+  | otherwise
+  = Left "parseHostPort: No colon found."
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
@@ -215,7 +260,8 @@ wellFormed TracerConfig
   check _   False = Nothing
 
   nullAddress :: Address -> Bool
-  nullAddress (LocalSocket address) = null address
+  nullAddress (Net.LocalPipe address)       = null address
+  nullAddress (Net.RemoteSocket host _port) = Text.null host
 
   nullEndpoint :: Endpoint -> Bool
   nullEndpoint (Endpoint host _port) = null host
