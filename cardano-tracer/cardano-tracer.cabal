@@ -184,6 +184,7 @@ library
                       , filepath
                       , http-types
                       , mime-mail
+                      , network
                       , network-mux >= 0.8
                       , optparse-applicative
                       , ouroboros-network ^>= 0.21.2
@@ -251,11 +252,13 @@ library demo-forwarder-lib
                       , extra
                       , filepath
                       , generic-data
+                      , network
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , tasty-quickcheck
+                      , text
                       , time
                       , trace-dispatcher
                       , trace-forward
@@ -272,6 +275,7 @@ executable demo-forwarder
   main-is:              forwarder.hs
 
   build-depends:        demo-forwarder-lib
+                      , trace-dispatcher
 
   ghc-options:          -threaded
                         -rtsopts
@@ -296,10 +300,11 @@ library demo-acceptor-lib
                       , filepath
                       , generic-data
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network-api
                       , stm <2.5.2 || >=2.5.3
-                      , text
                       , tasty-quickcheck
+                      , text
+                      , trace-dispatcher
                       , trace-forward
                       , vector
                       , vector-algorithms
@@ -353,9 +358,10 @@ test-suite cardano-tracer-test
                       , extra
                       , filepath
                       , generic-data
+                      , network
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-network-api ^>= 0.14
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , stm <2.5.2 || >=2.5.3
                       , tasty
@@ -412,6 +418,7 @@ test-suite cardano-tracer-test-ext
                       , filepath
                       , generic-data
                       , Glob
+                      , network
                       , network-mux
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-network ^>= 0.21.2

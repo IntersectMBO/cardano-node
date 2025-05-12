@@ -10,6 +10,7 @@ module Cardano.Tracer.Test.Acceptor
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import qualified Cardano.Logging.Types as Net
 #if RTVIEW
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
@@ -103,8 +104,8 @@ launchAcceptorsSimple mode localSock dpName = do
   mkConfig = TracerConfig
     { networkMagic   = 764824073
     , network        = case mode of
-                         Initiator -> ConnectTo $ NE.fromList [LocalSocket localSock]
-                         Responder -> AcceptAt (LocalSocket localSock)
+                         Initiator -> ConnectTo $ NE.fromList [Net.LocalPipe localSock]
+                         Responder -> AcceptAt (Net.LocalPipe localSock)
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
     , hasEKG         = Nothing

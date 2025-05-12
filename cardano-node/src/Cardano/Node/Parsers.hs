@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -9,11 +10,13 @@ module Cardano.Node.Parsers
   , parserHelpHeader
   , parserHelpOptions
   , renderHelpDoc
+  , parseHostPort
   ) where
 
 import           Cardano.Logging.Types
-import           Cardano.Node.Configuration.NodeAddress (File (..),
-                   NodeHostIPv4Address (NodeHostIPv4Address),
+import qualified Cardano.Logging.Types as Net
+import           Cardano.Node.Configuration.NodeAddress (
+                   NodeHostIPv4Address (NodeHostIPv4Address), File (..),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Configuration.Socket
@@ -24,10 +27,12 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
 
 import           Data.Foldable
+import           Data.Char (isDigit)
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import           Data.Word (Word32)
+import qualified Data.Text as Text
+import           Data.Word (Word16, Word32)
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
@@ -143,16 +148,46 @@ parseSocketPath helpMessage =
     , metavar "FILEPATH"
     ]
 
-parseTracerSocketMode :: Parser (SocketPath, ForwarderMode)
+
+-- leave hostname untouched, non-empty
+-- 0 <= port <= 65535
+parseNodeAddress :: Opt.ReadM Net.HowToConnect
+parseNodeAddress = Opt.eitherReader parseHostPort
+
+parseHostPort :: String -> Either String Net.HowToConnect
+parseHostPort str
+  | (portRev, ':' : hostRev) <- break (== ':') (reverse str)
+  = if
+    | null hostRev        -> Left "parseHostPort: Empty host."
+    | null portRev        -> Left "parseHostPort: Empty port."
+    | all isDigit portRev
+    , Just port <- readMaybe @Word16 (reverse portRev) -> if
+      | 0 <= port, port <= 65535 -> Right (Net.RemoteSocket (Text.pack (reverse hostRev)) port)
+      | otherwise -> Left ("parseHostPort: Numeric port '" ++ show port ++ "' out of range: 0 - 65535)")
+    | otherwise -> Left "parseHostPort: Non-numeric port."
+  | otherwise
+  = Left "parseHostPort: No colon found."
+
+parseTracerSocketMode :: Parser (Net.HowToConnect, ForwarderMode)
 parseTracerSocketMode =
   asum
-    [ fmap ((, Responder) . File) $ strOption $ mconcat
+    [ fmap (, Responder) $ option parseNodeAddress $ mconcat
+      [ long "tracer-socket-network-accept"
+      , help "Accept incoming cardano-tracer connection at local socket"
+      , metavar "HOST:PORT"
+      ]
+    , fmap (, Initiator) $ option parseNodeAddress $ mconcat
+      [ long "tracer-socket-network-connect"
+      , help "Connect to incoming cardano-tracer connection at HOST:PORT."
+      , metavar "HOST:PORT"
+      ]
+    , fmap (\host -> (Net.LocalPipe host, Responder)) $ strOption $ mconcat
       [ long "tracer-socket-path-accept"
       , help "Accept incoming cardano-tracer connection at local socket"
       , completer (bashCompleter "file")
       , metavar "FILEPATH"
       ]
-    , fmap ((, Initiator) . File) $ strOption $ mconcat
+    , fmap (\host -> (Net.LocalPipe host, Initiator)) $ strOption $ mconcat
       [ long "tracer-socket-path-connect"
       , help "Connect to cardano-tracer listening on a local socket"
       , completer (bashCompleter "file")
