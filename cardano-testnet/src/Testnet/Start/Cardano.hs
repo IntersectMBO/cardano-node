@@ -19,6 +19,7 @@ module Testnet.Start.Cardano
 
   , cardanoTestnet
   , cardanoTestnetDefault
+  , createTestnetEnv
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
   , retryOnAddressInUseError
@@ -79,6 +80,101 @@ testMinimumConfigurationRequirements CardanoTestnetOptions{cardanoNodes} = withF
         UserProvidedNodeOptions _ -> 1
         AutomaticNodeOptions nodesOptions ->
           length [ () | SpoNodeOptions{} <- nodesOptions]
+
+createTestnetEnv
+  :: ()
+  => HasCallStack
+  => CardanoTestnetOptions
+  -> GenesisOptions
+  -> UserProvidedData ShelleyGenesis
+  -> UserProvidedData AlonzoGenesis
+  -> UserProvidedData ConwayGenesis
+  -> Conf
+  -> H.Integration ()
+createTestnetEnv
+  testnetOptions genesisOptions
+  mShelleyGenesis mAlonzoGenesis mConwayGenesis
+  Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
+
+  let CardanoTestnetOptions
+        { cardanoNodeLoggingFormat=_nodeLoggingFormat
+        , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
+        , cardanoNodes
+        , cardanoNodeEra=asbe
+        } = testnetOptions
+      testnetMagic = genesisTestnetMagic genesisOptions
+      nPools = cardanoNumPools testnetOptions
+
+  AnyShelleyBasedEra sbe <- pure asbe
+  _ <- createSPOGenesisAndFiles testnetOptions genesisOptions mShelleyGenesis mAlonzoGenesis mConwayGenesis (TmpAbsolutePath tmpAbsPath)
+
+  configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
+  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+  config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+  H.evalIO $ LBS.writeFile configurationFile config
+
+prepareRuntimeEnv :: ()
+  => HasCallStack
+  => Int
+  -> Int
+  -> FilePath
+  -> H.Integration [PaymentKeyInfo]
+prepareRuntimeEnv portNumber testnetMagic tmpAbsPath = do
+  -- portNumbersWithNodeOptions <-
+  --   case cardanoNodes of
+  --     UserProvidedNodeOptions _ -> do
+  --       -- Only one node
+  --       port <- H.randomPort testnetDefaultIpv4Address
+  --       return [(Nothing, port)]
+  --     AutomaticNodeOptions automatic -> do
+  --       -- Possibly multiple nodes
+  --       forM automatic (\a -> (Just a, ) <$> H.randomPort testnetDefaultIpv4Address)
+
+  
+
+  portNumbers <- replicateM portNumber $ H.randomPort testnetDefaultIpv4Address
+
+  forM_ (zip [1..] portNumbers) $ \(i, port) -> do
+    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
+    H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
+    H.writeFile (nodeDataDir </> "port") (show port)
+    -- Make Non P2P topology files
+    -- TODO: if the user provided its own configuration file, and requested a P2P topology file,
+    -- we should generate a P2P topology file instead of a non-P2P one.
+    let producers = flip map (filter (/= port) portNumbers) $ \otherProducerPort ->
+          RemoteAddress
+            { raAddress = showIpv4Address testnetDefaultIpv4Address
+            , raPort = otherProducerPort
+            , raValency = 1
+            }
+    H.lbsWriteFile (tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json") . encode $
+      RealNodeTopology producers
+
+  forM [1..3] $ \idx -> do
+    let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
+    let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
+
+    execCli_
+      [ "latest", "address", "build"
+      , "--payment-verification-key-file", unFile verificationKey
+      , "--testnet-magic", show testnetMagic
+      , "--out-file", paymentAddrFile
+      ]
+
+    paymentAddr <- H.readFile paymentAddrFile
+
+    pure $ PaymentKeyInfo
+      { paymentKeyInfoPair = utxoKeys
+      , paymentKeyInfoAddr = Text.pack paymentAddr
+      }
+
+  where
+    -- TODO: This should come from the configuration!
+    makePathsAbsolute :: (Element a ~ FilePath, MonoFunctor a) => a -> a
+    makePathsAbsolute = omap (tmpAbsPath </>)
+    mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
+    mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
+
 
 -- | Like 'cardanoTestnet', but passing 'NoUserProvidedData' for you.
 -- See 'cardanoTestnet' for additional documentation.
@@ -277,18 +373,6 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
       , paymentKeyInfoAddr = Text.pack paymentAddr
       }
 
-  _delegators <- forM [1..3] $ \(idx :: Int) -> do
-    pure $ Delegator
-      { paymentKeyPair = KeyPair
-        { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".skey"
-        , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".vkey"
-        }
-      , stakingKeyPair = KeyPair
-        { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".skey"
-        , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
-        }
-      }
-
   portNumbersWithNodeOptions <-
     case cardanoNodes of
       UserProvidedNodeOptions _ -> do
@@ -301,7 +385,7 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
 
   let portNumbers = snd <$> portNumbersWithNodeOptions
 
-  forM_ (zip [1..] portNumbersWithNodeOptions) $ \(i, (_nodeOptions, portNumber)) -> do
+  forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
     H.writeFile (nodeDataDir </> "port") (show portNumber)
@@ -365,10 +449,6 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
   --  assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
-
-  forM_ wallets $ \wallet -> do
-    H.cat . signingKeyFp $ paymentKeyInfoPair wallet
-    H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
