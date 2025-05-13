@@ -11,9 +11,9 @@ import           Prelude
 
 import qualified Data.Aeson as A
 import           Data.Aeson.Encode.Pretty (encodePretty)
-import Data.Maybe
 import qualified Data.Aeson.KeyMap as A
 import           Data.Default.Class (def)
+import           Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Time.Clock as Time
 import qualified System.Directory as IO
@@ -30,7 +30,7 @@ import           Cardano.Prelude (canonicalEncodePretty, whenM)
 import           Cardano.Testnet hiding (shelleyGenesisFile)
 import           Testnet.Components.Configuration (startTimeOffsetSeconds)
 -- import           Testnet.Property.Util (integrationWorkspace)
-import           Testnet.Start.Types (ConfigFilesBehaviour (..), GenesisOptions (..))
+import           Testnet.Start.Types (ConfigFilesBehaviour (..), GenesisOptions (..), UserProvidedData (NoUserProvidedData))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -68,6 +68,14 @@ hprop_dump_config = integration $ H.runFinallies $ do -- integrationWorkspace "d
         }
   confGenerate <- mkConf tmpConfigDir
   _ <- cardanoTestnetDefault generateTestnetOptions shelleyOptions confGenerate
+  testWallets <- createTestnetEnv
+    generateTestnetOptions shelleyOptions
+    NoUserProvidedData NoUserProvidedData NoUserProvidedData
+    confGenerate
+
+  H.noteShow_ testWallets
+
+  H.failure
 
   currentTime <- H.noteShowIO Time.getCurrentTime
   startTime <- H.noteShow $ Time.addUTCTime startTimeOffsetSeconds currentTime
