@@ -524,7 +524,7 @@ instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr lAddr) where
      PeerStatusChanged {}       -> Info
      PeerStatusChangeFailure {} -> Error
      PeerMonitoringError {}     -> Error
-     PeerMonitoringResult {}    -> Debug
+     PeerMonitoringResult {}    -> Info
      AcquireConnectionError {}  -> Error
 
 instance HasPrivacyAnnotation (PeerSelectionCounters extraCounters)
