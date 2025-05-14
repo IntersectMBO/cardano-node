@@ -36,7 +36,6 @@ import           Prelude hiding (lines)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
-import           Control.Monad.Extra (whenM)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
@@ -84,20 +83,13 @@ createTestnetEnv :: ()
   -> UserProvidedData AlonzoGenesis
   -> UserProvidedData ConwayGenesis
   -> Conf
-  -> H.Integration ()
+  -> H.Integration FilePath
 createTestnetEnv
-  testnetOptions genesisOptions
+  testnetOptions@CardanoTestnetOptions{cardanoNodeEra=asbe} genesisOptions
   mShelleyGenesis mAlonzoGenesis mConwayGenesis
   Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
 
-  let CardanoTestnetOptions
-        { cardanoNodeLoggingFormat=_nodeLoggingFormat
-        , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
-        , cardanoNodes
-        , cardanoNodeEra=asbe
-        } = testnetOptions
-      testnetMagic = genesisTestnetMagic genesisOptions
-      nPools = cardanoNumPools testnetOptions
+  testMinimumConfigurationRequirements testnetOptions
 
   AnyShelleyBasedEra sbe <- pure asbe
   _ <- createSPOGenesisAndFiles testnetOptions genesisOptions mShelleyGenesis mAlonzoGenesis mConwayGenesis (TmpAbsolutePath tmpAbsPath)
@@ -107,60 +99,7 @@ createTestnetEnv
   config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
   H.evalIO $ LBS.writeFile configurationFile config
 
-prepareRuntimeEnv :: ()
-  => HasCallStack
-  => CardanoTestnetOptions
-  -> GenesisOptions
-  -> Conf
-  -> H.Integration [PaymentKeyInfo]
-prepareRuntimeEnv
-  CardanoTestnetOptions{cardanoNodes}
-  GenesisOptions{genesisTestnetMagic=testnetMagic}
-  Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
-
-  portNumbers <- forM cardanoNodes $ const $ H.randomPort testnetDefaultIpv4Address
-
-  forM_ (zip [1..] portNumbers) $ \(i, port) -> do
-    let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-    H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
-    H.writeFile (nodeDataDir </> "port") (show port)
-    -- Make Non P2P topology files
-    -- TODO: if the user provided its own configuration file, and requested a P2P topology file,
-    -- we should generate a P2P topology file instead of a non-P2P one.
-    let producers = flip map (filter (/= port) portNumbers) $ \otherProducerPort ->
-          RemoteAddress
-            { raAddress = showIpv4Address testnetDefaultIpv4Address
-            , raPort = otherProducerPort
-            , raValency = 1
-            }
-    H.lbsWriteFile (tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json") . encode $
-      RealNodeTopology producers
-
-  forM [1..3] $ \idx -> do
-    let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
-    let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
-
-    execCli_
-      [ "latest", "address", "build"
-      , "--payment-verification-key-file", unFile verificationKey
-      , "--testnet-magic", show testnetMagic
-      , "--out-file", paymentAddrFile
-      ]
-
-    paymentAddr <- H.readFile paymentAddrFile
-
-    pure $ PaymentKeyInfo
-      { paymentKeyInfoPair = utxoKeys
-      , paymentKeyInfoAddr = Text.pack paymentAddr
-      }
-
-  where
-    -- TODO: This should come from the configuration!
-    makePathsAbsolute :: (Element a ~ FilePath, MonoFunctor a) => a -> a
-    makePathsAbsolute = omap (tmpAbsPath </>)
-    mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
-    mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
-
+  return configurationFile
 
 -- | Like 'cardanoTestnet', but passing 'NoUserProvidedData' for you.
 -- See 'cardanoTestnet' for additional documentation.
@@ -259,52 +198,22 @@ cardanoTestnet :: ()
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnet
-  testnetOptions genesisOptions
+  testnetOptions@CardanoTestnetOptions{cardanoConfigFilesBehaviour=configFilesBehaviour}
+  genesisOptions@GenesisOptions{genesisTestnetMagic=testnetMagic}
   mShelleyGenesis mAlonzoGenesis mConwayGenesis
-  Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
-  let CardanoTestnetOptions
-        { cardanoNodeEra=asbe
-        , cardanoConfigFilesBehaviour=configFilesBehaviour
-        , cardanoNodes
-        } = testnetOptions
-      testnetMagic = fromIntegral $ genesisTestnetMagic genesisOptions
-  AnyShelleyBasedEra sbe <- pure asbe
-
+  conf@Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
   -- TODO check consistency of the paths to genesis files in the node configuration file (if any)
   -- with the genesis data provided in mShelleyGenesis, mAlonzoGenesis, and mConwayGenesis.
 
-  testMinimumConfigurationRequirements testnetOptions
-
   H.note_ OS.os
 
-  _ <- createSPOGenesisAndFiles testnetOptions genesisOptions mShelleyGenesis mAlonzoGenesis mConwayGenesis (TmpAbsolutePath tmpAbsPath)
-
-  nodeConfigFile <- do
-    configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
-    -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-    H.evalIO $ LBS.writeFile configurationFile config
-    return configurationFile
+  nodeConfigFile <- createTestnetEnv
+    testnetOptions genesisOptions
+    mShelleyGenesis mAlonzoGenesis mConwayGenesis
+    conf
 
   case configFilesBehaviour of
     OnlyGenerate ->
-      -- Remove everything except config files from tmpAbsPath
-      let
-        genesisFiles = fmap (tmpAbsPath </>)
-          [ Defaults.defaultGenesisFilepath AlonzoEra
-          , Defaults.defaultGenesisFilepath ByronEra
-          , Defaults.defaultGenesisFilepath ConwayEra
-          , Defaults.defaultGenesisFilepath ShelleyEra
-          ]
-        removeUnwantedFile path =
-          let fullPath = tmpAbsPath </> path in
-          when (fullPath `notElem` nodeConfigFile:genesisFiles) $ do
-            whenM (IO.doesFileExist fullPath) $
-              IO.removeFile fullPath
-            whenM (IO.doesDirectoryExist fullPath) $
-              IO.removeDirectoryRecursive fullPath
-      in do
-      () <- H.evalIO $ IO.listDirectory tmpAbsPath >>= mapM_ removeUnwantedFile
       pure $ TestnetRuntime
         { configurationFile = File nodeConfigFile
         , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
@@ -323,20 +232,12 @@ cardanoTestnet' :: ()
   -> FilePath -- ^ Path to the test sandbox
   -> FilePath -- ^ Path to the config file
   -> H.Integration TestnetRuntime
-cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
+cardanoTestnet' testnetOptions GenesisOptions{genesisTestnetMagic=testnetMagic} tmpAbsPath nodeConfigFile = do
   let CardanoTestnetOptions
-        { cardanoNodeLoggingFormat=_nodeLoggingFormat
-        , cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
+        { cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
         } = testnetOptions
-      testnetMagic = fromIntegral $ genesisTestnetMagic genesisOptions
       nPools = cardanoNumPools testnetOptions
-
-  -- TODO: This should come from the configuration!
-  let makePathsAbsolute :: (Element a ~ FilePath, MonoFunctor a) => a -> a
-      makePathsAbsolute = omap (tmpAbsPath </>)
-      mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
-      mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
 
   wallets <- forM [1..3] $ \idx -> do
     let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
@@ -356,7 +257,8 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
       , paymentKeyInfoAddr = Text.pack paymentAddr
       }
 
-  portNumbersWithNodeOptions <- forM cardanoNodes (\a -> (Just a, ) <$> H.randomPort testnetDefaultIpv4Address)
+  portNumbersWithNodeOptions <- forM cardanoNodes
+    (\nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address)
 
   let portNumbers = snd <$> portNumbersWithNodeOptions
 
@@ -386,9 +288,8 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
     H.note_ $ "Node name: " <> nodeName
     let (mKeys, spoNodeCliArgs) =
           case nodeOptions of
-            Just RelayNodeOptions{} -> (Nothing, [])
-            Just SpoNodeOptions{} -> (Just keys, shelleyCliArgs <> byronCliArgs)
-            Nothing -> (Just keys, shelleyCliArgs)
+            RelayNodeOptions{} -> (Nothing, [])
+            SpoNodeOptions{} -> (Just keys, shelleyCliArgs <> byronCliArgs)
           where
             shelleyCliArgs = [ "--shelley-kes-key", nodePoolKeysDir </> "kes.skey"
                              , "--shelley-vrf-key", unFile $ signingKey poolNodeKeysVrf
@@ -407,7 +308,7 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
         , "--database-path", nodeDataDir </> "db"
         ]
         <> spoNodeCliArgs
-        <> maybe [] extraCliArgs nodeOptions
+        <> extraCliArgs nodeOptions
     pure $ eRuntime <&> \rt -> rt{poolKeys=mKeys}
 
   let (failedNodes, testnetNodes') = partitionEithers eTestnetNodes
@@ -463,6 +364,11 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
     extraCliArgs = \case
       SpoNodeOptions args -> args
       RelayNodeOptions args -> args
+    -- TODO: This should come from the configuration!
+    makePathsAbsolute :: (Element a ~ FilePath, MonoFunctor a) => a -> a
+    makePathsAbsolute = omap (tmpAbsPath </>)
+    mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
+    mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
 
 -- | Retry an action when `NodeAddressAlreadyInUseError` gets thrown from an action
 retryOnAddressInUseError
