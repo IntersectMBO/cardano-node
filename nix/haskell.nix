@@ -22,8 +22,8 @@ let
       src = ../.;
       name = "cardano-node";
       compiler-nix-name = lib.mkDefault "ghc96";
-      # extra-compilers
-      flake.variants = lib.genAttrs ["ghc8107"] (x: {compiler-nix-name = x;});
+      # Extra-compilers
+      # flake.variants = lib.genAttrs ["ghc$VERSION"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
@@ -44,6 +44,7 @@ let
         # These programs will be available inside the nix-shell.
         nativeBuildInputs = with pkgs.pkgsBuildBuild; [
           alejandra
+          lmdb
           nix-prefetch-git
           pkg-config
           hlint
@@ -133,10 +134,6 @@ let
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
-            # Remvoe this once mingwx is mapped to null in haskell.nix (haskell.nix#2032), and we bumped _past_ that.
-            # we need to plugin in pthreads as force overrides https://github.com/input-output-hk/haskell.nix/blob/9823e12d5b6e66150ddeea146aea682f44ee4d44/overlays/windows.nix#L109.
-            packages.unix-time.components.library.libs = lib.mkForce [ pkgs.windows.mingw_w64_pthreads ];
-
             # This fix seems fairly fishy; but somehow it's required to make this work :confused_parrot:
             packages.unix-compat.postPatch = ''
               sed -i 's/msvcrt//g' unix-compat.cabal
@@ -418,17 +415,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
             (name: { flags.asserts = true; });
         }];
       };
-      eventlogged = final.appendModule
-        {
-          # From 9.2+
-          # on the commandline: error: [-Wdeprecated-flags, Werror=deprecated-flags]
-          #     -eventlog is deprecated: the eventlog is now enabled in all runtime system ways
-          modules = [({ lib, pkgs, config, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.2" < 0) {
-            packages = final.pkgs.lib.genAttrs [ "cardano-node" ]
-              (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
-          })];
-        };
-      # add passthru and gitrev to hsPkgs:
+      # add passthru to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
           if (lib.isAttrs value) then
@@ -439,7 +426,6 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                 passthru = {
                   profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
-                  eventlogged = lib.getAttrFromPath path final.eventlogged.hsPkgs;
                 };
               }
           else value)
