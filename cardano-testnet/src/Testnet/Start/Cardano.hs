@@ -12,7 +12,7 @@
 module Testnet.Start.Cardano
   ( CardanoTestnetCliOptions(..)
   , CardanoTestnetOptions(..)
-  , TestnetNodeOptions(..)
+  , NodeOption(..)
   , cardanoDefaultTestnetNodeOptions
 
   , TestnetRuntime (..)
@@ -67,22 +67,16 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
-testMinimumConfigurationRequirements :: HasCallStack
-                                        => MonadTest m
-                                        => CardanoTestnetOptions -> m ()
-testMinimumConfigurationRequirements CardanoTestnetOptions{cardanoNodes} = withFrozenCallStack $ do
-  when (nSpoNodes < 1) $ do
-     H.note_ "Need at least one SPO node to produce blocks, but got none."
-     H.failure
-  where
-    nSpoNodes =
-      case cardanoNodes of
-        UserProvidedNodeOptions _ -> 1
-        AutomaticNodeOptions nodesOptions ->
-          length [ () | SpoNodeOptions{} <- nodesOptions]
+testMinimumConfigurationRequirements :: ()
+  => HasCallStack
+  => MonadTest m
+  => CardanoTestnetOptions -> m ()
+testMinimumConfigurationRequirements options = withFrozenCallStack $ do
+  when (cardanoNumPools options < 1) $ do
+    H.note_ "Need at least one SPO node to produce blocks, but got none."
+    H.failure
 
-createTestnetEnv
-  :: ()
+createTestnetEnv :: ()
   => HasCallStack
   => CardanoTestnetOptions
   -> GenesisOptions
@@ -115,24 +109,16 @@ createTestnetEnv
 
 prepareRuntimeEnv :: ()
   => HasCallStack
-  => Int
-  -> Int
-  -> FilePath
+  => CardanoTestnetOptions
+  -> GenesisOptions
+  -> Conf
   -> H.Integration [PaymentKeyInfo]
-prepareRuntimeEnv portNumber testnetMagic tmpAbsPath = do
-  -- portNumbersWithNodeOptions <-
-  --   case cardanoNodes of
-  --     UserProvidedNodeOptions _ -> do
-  --       -- Only one node
-  --       port <- H.randomPort testnetDefaultIpv4Address
-  --       return [(Nothing, port)]
-  --     AutomaticNodeOptions automatic -> do
-  --       -- Possibly multiple nodes
-  --       forM automatic (\a -> (Just a, ) <$> H.randomPort testnetDefaultIpv4Address)
+prepareRuntimeEnv
+  CardanoTestnetOptions{cardanoNodes}
+  GenesisOptions{genesisTestnetMagic=testnetMagic}
+  Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
 
-  
-
-  portNumbers <- replicateM portNumber $ H.randomPort testnetDefaultIpv4Address
+  portNumbers <- forM cardanoNodes $ const $ H.randomPort testnetDefaultIpv4Address
 
   forM_ (zip [1..] portNumbers) $ \(i, port) -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
@@ -293,15 +279,12 @@ cardanoTestnet
 
   _ <- createSPOGenesisAndFiles testnetOptions genesisOptions mShelleyGenesis mAlonzoGenesis mConwayGenesis (TmpAbsolutePath tmpAbsPath)
 
-  nodeConfigFile <- case cardanoNodes of
-    AutomaticNodeOptions _ -> do
-      configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
-      -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-      config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
-      H.evalIO $ LBS.writeFile configurationFile config
-      return configurationFile
-    UserProvidedNodeOptions userSubmittedNodeConfigFile ->
-      liftIO $ IO.makeAbsolute userSubmittedNodeConfigFile
+  nodeConfigFile <- do
+    configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
+    -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
+    H.evalIO $ LBS.writeFile configurationFile config
+    return configurationFile
 
   case configFilesBehaviour of
     OnlyGenerate ->
@@ -373,15 +356,7 @@ cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile = do
       , paymentKeyInfoAddr = Text.pack paymentAddr
       }
 
-  portNumbersWithNodeOptions <-
-    case cardanoNodes of
-      UserProvidedNodeOptions _ -> do
-        -- Only one node
-        port <- H.randomPort testnetDefaultIpv4Address
-        return [(Nothing, port)]
-      AutomaticNodeOptions automatic -> do
-        -- Possibly multiple nodes
-        forM automatic (\a -> (Just a, ) <$> H.randomPort testnetDefaultIpv4Address)
+  portNumbersWithNodeOptions <- forM cardanoNodes (\a -> (Just a, ) <$> H.randomPort testnetDefaultIpv4Address)
 
   let portNumbers = snd <$> portNumbersWithNodeOptions
 
