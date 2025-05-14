@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Parsers.Run
@@ -65,31 +66,37 @@ runTestnetCmd = \case
 
 
 runCardanoOptions :: CardanoTestnetCliOptions -> IO ()
-runCardanoOptions (CardanoTestnetCliOptions testnetOptions genesisOptions) =
-    case cardanoNodes testnetOptions of
-      AutomaticNodeOptions _ -> runTestnet testnetOptions $ cardanoTestnetDefault testnetOptions genesisOptions
-      UserProvidedNodeOptions nodeInputConfigFile -> do
-        nodeConfigFile <- readNodeConfigurationFile nodeInputConfigFile
-        let protocolConfig :: NodeProtocolConfiguration =
-              case getLast $ pncProtocolConfig nodeConfigFile of
-                Nothing -> error $ "Genesis files not specified in node configuration file: " <> nodeInputConfigFile
-                Just x -> x
-            adjustedProtocolConfig =
-              -- Make all the files be relative to the location of the config file.
-              adjustFilePaths (takeDirectory nodeInputConfigFile </>) protocolConfig
-            (shelley, alonzo, conway) = getShelleyGenesises adjustedProtocolConfig
-        shelleyGenesis :: UserProvidedData ShelleyGenesis <-
-          genesisFilepathToData $ npcShelleyGenesisFile shelley
-        alonzoGenesis :: UserProvidedData AlonzoGenesis <-
-          genesisFilepathToData $ npcAlonzoGenesisFile alonzo
-        conwayGenesis :: UserProvidedData ConwayGenesis <-
-          genesisFilepathToData $ npcConwayGenesisFile conway
-        runTestnet testnetOptions $ cardanoTestnet
-          testnetOptions
-          genesisOptions
-          shelleyGenesis
-          alonzoGenesis
-          conwayGenesis
+runCardanoOptions CardanoTestnetCliOptions
+  { cliTestnetOptions=testnetOptions
+  , cliGenesisOptions=genesisOptions
+  , cliNodeEnvironment=env
+  } =
+    case env of
+      -- TODO: push the switch down to `cardanoTestnet`, or do everything here
+      Nothing -> runTestnet testnetOptions $ cardanoTestnetDefault testnetOptions genesisOptions
+      Just _nodeEnvPath -> do
+        undefined
+        -- nodeConfigFile <- readNodeConfigurationFile nodeInputConfigFile
+        -- let protocolConfig :: NodeProtocolConfiguration =
+        --       case getLast $ pncProtocolConfig nodeConfigFile of
+        --         Nothing -> error $ "Genesis files not specified in node configuration file: " <> nodeInputConfigFile
+        --         Just x -> x
+        --     adjustedProtocolConfig =
+        --       -- Make all the files be relative to the location of the config file.
+        --       adjustFilePaths (takeDirectory nodeInputConfigFile </>) protocolConfig
+        --     (shelley, alonzo, conway) = getShelleyGenesises adjustedProtocolConfig
+        -- shelleyGenesis :: UserProvidedData ShelleyGenesis <-
+        --   genesisFilepathToData $ npcShelleyGenesisFile shelley
+        -- alonzoGenesis :: UserProvidedData AlonzoGenesis <-
+        --   genesisFilepathToData $ npcAlonzoGenesisFile alonzo
+        -- conwayGenesis :: UserProvidedData ConwayGenesis <-
+        --   genesisFilepathToData $ npcConwayGenesisFile conway
+        -- runTestnet testnetOptions $ cardanoTestnet
+        --   testnetOptions
+        --   genesisOptions
+        --   shelleyGenesis
+        --   alonzoGenesis
+        --   conwayGenesis
   where
     getShelleyGenesises (NodeProtocolConfigurationCardano _byron shelley alonzo conway _hardForkConfig _checkPointConfig) =
       (shelley, alonzo, conway)
