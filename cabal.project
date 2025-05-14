@@ -32,8 +32,6 @@ packages:
   trace-resources
   trace-forward
 
-extra-packages: Cabal
-
 program-options
   ghc-options: -Werror
 
