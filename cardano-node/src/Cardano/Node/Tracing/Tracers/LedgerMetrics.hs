@@ -54,7 +54,7 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData = do
   where
     ledgerMetricsThread :: IO ()
     ledgerMetricsThread = do
-      myThreadId >>= flip labelThread "Peer Tracer"
+      myThreadId >>= flip labelThread "Ledger Metrics"
       go 1 SNothing
       where
         go :: Int -> StrictMaybe SlotNo -> IO ()
@@ -83,6 +83,7 @@ data LedgerMetrics =
         tsSlotNo       :: SlotNo
       , tsUtxoSize     :: Int
       , tsDelegMapSize :: Int
+-- Temporarily disabled: uncomment after benchmarking and approval
 --      , tsDRepCount    :: Int
 --      , tsDRepMapSize  :: Int
       , tsChainDensity :: Double
@@ -105,6 +106,7 @@ traceLedgerMetrics nodeKern slotNo tracer = do
                 (,,) -- (,,,,)
                   <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
                   <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
+-- Temporarily disabled: uncomment after benchmarking and approval
 --                  <*> nkQueryLedger (ledgerDRepCount . ledgerState) nk
 --                  <*> nkQueryLedger (ledgerDRepMapSize . ledgerState) nk
                   <*> nkQueryChain fragmentChainDensity nk)
@@ -116,6 +118,7 @@ traceLedgerMetrics nodeKern slotNo tracer = do
                     slotNo
                     utxoSize
                     delegMapSize
+-- Temporarily disabled: uncomment after benchmarking and approval
 --                    drepCount
 --                    drepMapSize
                     (fromRational chainDensity)
@@ -131,6 +134,7 @@ instance LogFormatting LedgerMetrics where
                 , "slot" .= toJSON (unSlotNo tsSlotNo)
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                 , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
+-- Temporarily disabled: uncomment after benchmarking and approval
 --                , "drepCount" .= Number (fromIntegral tsDRepCount)
 --                , "drepMapSize" .= Number (fromIntegral tsDRepMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
@@ -139,12 +143,14 @@ instance LogFormatting LedgerMetrics where
       "Ledger metrics "
       <> " utxoSize "     <> showT tsUtxoSize
       <> " delegMapSize " <> showT tsDelegMapSize
+-- Temporarily disabled: uncomment after benchmarking and approval
 --      <> " drepCount"     <> showT tsDRepCount
 --      <> " drepMapSize"   <> showT tsDRepMapSize
       <> " chainDensity " <> showT tsChainDensity
   asMetrics LedgerMetrics {..} =
     [ IntM "utxoSize"     (fromIntegral tsUtxoSize)
     , IntM "delegMapSize" (fromIntegral tsDelegMapSize)
+-- Temporarily disabled: uncomment after benchmarking and approval
 --    , IntM "drepCount"    (fromIntegral tsDRepCount)
 --    , IntM "drepMapSize"  (fromIntegral tsDRepMapSize)
     ]
@@ -158,6 +164,7 @@ instance MetaTrace LedgerMetrics where
   metricsDocFor (Namespace _ ["LedgerMetrics"]) =
       [ ("utxoSize",      "Size of the current UTxO set (number of entries)")
       , ("delegMapSize",  "Size of the delegation map (number of delegators)")
+-- Temporarily disabled: uncomment after benchmarking and approval
 --      , ("drepCount",     "Number of active DReps (Delegated Representatives)")
 --      , ("drepMapSize",   "Size of the DRep map (number of stake keys mapped to DReps)")
       ]
@@ -174,7 +181,8 @@ instance MetaTrace LedgerMetrics where
 
   allNamespaces = [Namespace [] ["LedgerMetrics"]]
 
-
+-- NOTE: DRep-related fields are currently excluded from logs until benchmarked
+-- and confirmed for production readiness.
 
 
 
