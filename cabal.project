@@ -90,3 +90,11 @@ if impl (ghc >= 9.12)
     -- https://github.com/haskell-servant/servant/pull/1810
     , servant:base
     , servant-server:base
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  --sha256: sha256-F1foQA5U8vWpDpHN4EYNeoNlNn2j6bJQojeuD5V0x4Y=
+  tag: 1eafe7bc742da1709fc98c62c48c519bbce503c0
+  subdir:
+    ouroboros-network
