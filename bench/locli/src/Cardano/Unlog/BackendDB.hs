@@ -164,13 +164,15 @@ selectAll = sqlOrdered
   , sqlGetTxns
   , sqlGetResource
   , sqlGetSlot
+  , sqlGetLMetrics
   ]
 
-sqlGetEvent, sqlGetTxns, sqlGetResource, sqlGetSlot :: SQLSelect6Cols
-sqlGetEvent    = mkSQLSelectFrom "event"    Nothing                              (Just "slot")  (Just "block")     Nothing             (Just "hash")
-sqlGetTxns     = mkSQLSelectFrom "txns"     Nothing                              (Just "count") (Just "rejected")  Nothing             (Just "tid")
-sqlGetResource = mkSQLSelectFrom "resource" (Just "LOResources")                 Nothing        Nothing            Nothing             (Just "as_blob")
-sqlGetSlot     = mkSQLSelectFrom "slot"     (Just "LOTraceStartLeadershipCheck") (Just "slot")  (Just "utxo_size") (Just "chain_dens") Nothing
+sqlGetEvent, sqlGetTxns, sqlGetResource, sqlGetSlot, sqlGetLMetrics :: SQLSelect6Cols
+sqlGetEvent    = mkSQLSelectFrom "event"          Nothing                              (Just "slot")  (Just "block")     Nothing             (Just "hash")
+sqlGetTxns     = mkSQLSelectFrom "txns"           Nothing                              (Just "count") (Just "rejected")  Nothing             (Just "tid")
+sqlGetResource = mkSQLSelectFrom "resource"       (Just "LOResources")                 Nothing        Nothing            Nothing             (Just "as_blob")
+sqlGetSlot     = mkSQLSelectFrom "slot"           (Just "LOTraceStartLeadershipCheck") (Just "slot")  (Just "utxo_size") (Just "chain_dens") Nothing
+sqlGetLMetrics = mkSQLSelectFrom "ledgermetrics"  (Just "LOLedgerMetrics")             (Just "slot")  (Just "utxo_size") (Just "chain_dens") Nothing
 
 getSummary :: SQLite SummaryDB
 getSummary =
@@ -187,6 +189,10 @@ loadHostLogsDB loadMode HostLogs{..} =
   case fst hlLogs of
     log@(LogObjectSourceSQLite dbFile) ->
       withDb (fromString dbFile) $ do
+
+        -- mini-migration for backwards compatibility with DBs based on the old TraceStartLeadershipCheckPlus
+        _ <- run createLMetricsIfNotExists
+
         summary@SummaryDB{..} <- getSummary
         traceFreqs            <- if loadTraceFreqs loadMode
                                    then getTraceFreqs
