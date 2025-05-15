@@ -42,6 +42,7 @@ import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
+import           Testnet.Process.Cli.Transaction (retrieveTransactionId)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
@@ -195,10 +196,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     ]
 -- }}}
 
-  txidString <- mconcat . lines <$> execCli' execConfig
-    [ "latest", "transaction", "txid"
-    , "--tx-file", txbodySignedFp
-    ]
+  txIdString <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
 
   currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
@@ -213,7 +211,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
     execCli' execConfig
       [ eraName, "governance", "vote", "create"
       , "--yes"
-      , "--governance-action-tx-id", txidString
+      , "--governance-action-tx-id", txIdString
       , "--governance-action-index", show governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n
