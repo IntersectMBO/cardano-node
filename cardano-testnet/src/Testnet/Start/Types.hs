@@ -6,8 +6,8 @@
 
 module Testnet.Start.Types
   ( CardanoTestnetCliOptions(..)
+  , CardanoTestnetCreateEnvOptions (..)
   , CardanoTestnetOptions(..)
-  , ConfigFilesBehaviour(..)
   , InputNodeConfigFile(..)
   , NumDReps(..)
   , NumPools(..)
@@ -24,6 +24,7 @@ module Testnet.Start.Types
   , cardanoDefaultTestnetNodeOptions
   , GenesisOptions(..)
   , UserProvidedData(..)
+  , UserProvidedEnv(..)
 
   , NodeLoggingFormat(..)
   , Conf(..)
@@ -49,11 +50,12 @@ import qualified Hedgehog.Extras as H
 
 -- | Command line options for the @cardano-testnet@ executable. They are used
 -- in the parser, and then get split into 'CardanoTestnetOptions' and
--- 'GenesisOptions'
+-- 'GenesisOptions'. If 'cliNodeEnvironment' is provided, don't create a
+-- sandbox environment, use the one at the given path.
 data CardanoTestnetCliOptions = CardanoTestnetCliOptions
   { cliTestnetOptions :: CardanoTestnetOptions
   , cliGenesisOptions :: GenesisOptions
-  , cliNodeEnvironment :: Maybe FilePath
+  , cliNodeEnvironment :: UserProvidedEnv
   } deriving (Eq, Show)
 
 instance Default CardanoTestnetCliOptions where
@@ -62,6 +64,20 @@ instance Default CardanoTestnetCliOptions where
     , cliGenesisOptions = def
     , cliNodeEnvironment = def
     }
+
+data UserProvidedEnv
+  = NoUserProvidedEnv
+  | UserProvidedEnv FilePath
+  deriving (Eq, Show)
+
+instance Default UserProvidedEnv where
+  def = NoUserProvidedEnv
+
+data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
+  { createEnvTestnetOptions :: CardanoTestnetOptions
+  , createEnvGenesisOptions :: GenesisOptions
+  , createEnvOutputDir :: FilePath
+  } deriving (Eq, Show)
 
 -- | Options which, contrary to 'GenesisOptions' are not implemented
 -- by tuning the genesis files.
@@ -74,8 +90,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: NumDReps -- ^ The number of DReps to generate at creation
   , cardanoEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
-  , cardanoConfigFilesBehaviour :: ConfigFilesBehaviour -- ^ Whether to continue tests after generating config files.
-  , cardanoOutputDir :: Maybe FilePath -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
+  , cardanoOutputDir :: UserProvidedEnv -- ^ The output directory where to store files, sockets, and so on. If unset, a temporary directory is used.
   } deriving (Eq, Show)
 
 -- | Path to the configuration file of the node, specified by the user
@@ -102,9 +117,6 @@ newtype NumRelays = NumRelays Int
 newtype NumDReps = NumDReps Int
   deriving (Show, Read, Eq, Enum, Ord, Num, Real, Integral) via Int
 
-data ConfigFilesBehaviour = OnlyGenerate | GenerateAndRun
-  deriving (Eq, Show)
-
 instance Default CardanoTestnetOptions where
   def = CardanoTestnetOptions
     { cardanoNodes = cardanoDefaultTestnetNodeOptions
@@ -113,8 +125,7 @@ instance Default CardanoTestnetOptions where
     , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
     , cardanoNumDReps = 3
     , cardanoEnableNewEpochStateLogging = True
-    , cardanoConfigFilesBehaviour = GenerateAndRun
-    , cardanoOutputDir = Nothing
+    , cardanoOutputDir = def
     }
 
 -- | Options that are implemented by writing fields in the Shelley genesis file.

@@ -18,7 +18,6 @@ module Testnet.Start.Cardano
   , TestnetRuntime (..)
 
   , cardanoTestnet
-  , cardanoTestnetDefault
   , createTestnetEnv
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
@@ -28,8 +27,6 @@ module Testnet.Start.Cardano
 
 import           Cardano.Api
 
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Cardano.Node.Configuration.Topology
 
 import           Prelude hiding (lines)
@@ -79,42 +76,24 @@ createTestnetEnv :: ()
   => HasCallStack
   => CardanoTestnetOptions
   -> GenesisOptions
-  -> UserProvidedData ShelleyGenesis
-  -> UserProvidedData AlonzoGenesis
-  -> UserProvidedData ConwayGenesis
   -> Conf
-  -> H.Integration FilePath
+  -> H.Integration ()
 createTestnetEnv
   testnetOptions@CardanoTestnetOptions{cardanoNodeEra=asbe} genesisOptions
-  mShelleyGenesis mAlonzoGenesis mConwayGenesis
   Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
 
   testMinimumConfigurationRequirements testnetOptions
 
   AnyShelleyBasedEra sbe <- pure asbe
-  _ <- createSPOGenesisAndFiles testnetOptions genesisOptions mShelleyGenesis mAlonzoGenesis mConwayGenesis (TmpAbsolutePath tmpAbsPath)
+  _ <- createSPOGenesisAndFiles
+    testnetOptions genesisOptions
+    NoUserProvidedData NoUserProvidedData NoUserProvidedData
+    (TmpAbsolutePath tmpAbsPath)
 
   configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
   H.evalIO $ LBS.writeFile configurationFile config
-
-  return configurationFile
-
--- | Like 'cardanoTestnet', but passing 'NoUserProvidedData' for you.
--- See 'cardanoTestnet' for additional documentation.
-cardanoTestnetDefault
-  :: ()
-  => HasCallStack
-  => CardanoTestnetOptions
-  -> GenesisOptions
-  -> Conf
-  -> H.Integration TestnetRuntime
-cardanoTestnetDefault testnetOptions genesisOptions conf = do
-  cardanoTestnet
-    testnetOptions genesisOptions
-    NoUserProvidedData NoUserProvidedData NoUserProvidedData
-    conf
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:
@@ -186,58 +165,20 @@ cardanoTestnet :: ()
   => HasCallStack
   => CardanoTestnetOptions -- ^ The options to use
   -> GenesisOptions
-  -> UserProvidedData ShelleyGenesis
-  -- ^ The shelley genesis to use, One possible way to provide this value is to use 'getDefaultShelleyGenesis'
-  -- and customize it. Generated if omitted.
-  -> UserProvidedData AlonzoGenesis
-  -- ^ The alonzo genesis to use. One possible way to provide this value is to use 'getDefaultAlonzoGenesis'
-  -- and customize it. Generated if omitted.
-  -> UserProvidedData ConwayGenesis
-  -- ^ The conway genesis to use. One possible way to provide this value is to use 'defaultConwayGenesis'
-  -- and customize it. Generated if omitted.
-  -> Conf
+  -> Conf -- ^ Path to the test sandbox
   -> H.Integration TestnetRuntime
 cardanoTestnet
-  testnetOptions@CardanoTestnetOptions{cardanoConfigFilesBehaviour=configFilesBehaviour}
-  genesisOptions@GenesisOptions{genesisTestnetMagic=testnetMagic}
-  mShelleyGenesis mAlonzoGenesis mConwayGenesis
-  conf@Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
-  -- TODO check consistency of the paths to genesis files in the node configuration file (if any)
-  -- with the genesis data provided in mShelleyGenesis, mAlonzoGenesis, and mConwayGenesis.
-
-  H.note_ OS.os
-
-  nodeConfigFile <- createTestnetEnv
-    testnetOptions genesisOptions
-    mShelleyGenesis mAlonzoGenesis mConwayGenesis
-    conf
-
-  case configFilesBehaviour of
-    OnlyGenerate ->
-      pure $ TestnetRuntime
-        { configurationFile = File nodeConfigFile
-        , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
-        , testnetMagic
-        , testnetNodes = []
-        , wallets = []
-        , delegators = []
-        }
-    GenerateAndRun ->
-      cardanoTestnet' testnetOptions genesisOptions tmpAbsPath nodeConfigFile
-
-cardanoTestnet' :: ()
-  => HasCallStack
-  => CardanoTestnetOptions -- ^ The options to use
-  -> GenesisOptions
-  -> FilePath -- ^ Path to the test sandbox
-  -> FilePath -- ^ Path to the config file
-  -> H.Integration TestnetRuntime
-cardanoTestnet' testnetOptions GenesisOptions{genesisTestnetMagic=testnetMagic} tmpAbsPath nodeConfigFile = do
+  testnetOptions
+  GenesisOptions{genesisTestnetMagic=testnetMagic}
+  Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
   let CardanoTestnetOptions
         { cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
         , cardanoNodes
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
+      nodeConfigFile = tmpAbsPath </> "configuration.yaml"
+
+  H.note_ OS.os
 
   wallets <- forM [1..3] $ \idx -> do
     let utxoKeys@KeyPair{verificationKey} = makePathsAbsolute $ Defaults.defaultUtxoKeys idx
