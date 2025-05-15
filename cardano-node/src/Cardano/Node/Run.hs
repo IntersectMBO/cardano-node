@@ -247,6 +247,7 @@ handleNodeWithTracers cmdPc nc0 p@(SomeConsensusProtocol blockType runP) = do
             EnabledP2PMode -> nc0
       case ncTraceConfig nc of
         TraceDispatcher{} -> do
+          blockForging <- snd (Api.protocolInfo runP)
           tracers <-
             initTraceDispatcher
               nc
@@ -254,12 +255,12 @@ handleNodeWithTracers cmdPc nc0 p@(SomeConsensusProtocol blockType runP) = do
               networkMagic
               nodeKernelData
               p2pMode
+              (null blockForging)
 
           startupInfo <- getStartupInfo nc p fp
           mapM_ (traceWith $ startupTracer tracers) startupInfo
           traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
           -- sends initial BlockForgingUpdate
-          blockForging <- snd (Api.protocolInfo runP)
           let isNonProducing = ncStartAsNonProducingNode nc
           traceWith (startupTracer tracers)
                     (BlockForgingUpdate (if isNonProducing || null blockForging
