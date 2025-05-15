@@ -65,8 +65,9 @@ initTraceDispatcher ::
   -> NetworkMagic
   -> NodeKernelData blk
   -> NetworkP2PMode p2p
+  -> Bool
   -> IO (Tracers RemoteAddress LocalAddress blk p2p Cardano.ExtraState Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers RemoteAddress) (Cardano.ExtraPeerSelectionSetsWithSizes RemoteAddress) IO)
-initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
+initTraceDispatcher nc p networkMagic nodeKernel p2pMode noBlockForging = do
   trConfig <- readConfigurationWithDefault
                 (unConfigPath $ ncConfigFile nc)
                 defaultCardanoConfig
@@ -89,7 +90,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
 
   startLedgerMetricsTracer
     (ledgerMetricsTracer tracers)
-    (fromMaybe 1 (tcLedgerMetricsFrequency trConfig)) -- default is every slot
+    (fromMaybe ledgerMetricsDefaultFreq (tcLedgerMetricsFrequency trConfig))
     nodeKernel
 
   startPeerTracer
@@ -100,6 +101,9 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
 
   pure tracers
  where
+  -- this is the backwards compatible default: block producers emit these metrics every second, relays never.
+  ledgerMetricsDefaultFreq = if noBlockForging then 0 else 1
+
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore

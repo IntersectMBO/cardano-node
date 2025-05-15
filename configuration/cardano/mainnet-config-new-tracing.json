@@ -90,6 +90,9 @@
     "Net.ConnectionManager.Remote.ConnectionManagerCounters": {
       "severity": "Silence"
     },
+    "LedgerMetrics": {
+      "severity": "Silence"
+    },
     "Resources": {
       "severity": "Silence"
     },
