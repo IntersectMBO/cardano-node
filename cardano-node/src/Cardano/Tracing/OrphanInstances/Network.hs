@@ -2374,11 +2374,9 @@ instance Show vNumber => ToJSON (HandshakeException vNumber) where
                  ]
 
 instance ToJSON NodeToNodeVersion where
-  toJSON NodeToNodeV_13  = Number 13
   toJSON NodeToNodeV_14  = Number 14
 
 instance FromJSON NodeToNodeVersion where
-  parseJSON (Number 13) = return NodeToNodeV_13
   parseJSON (Number 14) = return NodeToNodeV_14
   parseJSON (Number x) = fail ("FromJSON.NodeToNodeVersion: unsupported node-to-node protocol version " ++ show x)
   parseJSON x          = fail ("FromJSON.NodeToNodeVersion: error parsing NodeToNodeVersion: " ++ show x)

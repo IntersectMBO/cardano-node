@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-04-16T18:30:40Z
-  , cardano-haskell-packages 2025-05-15T08:36:14Z
+  , cardano-haskell-packages 2025-05-16T20:03:45Z
 
 packages:
   cardano-node
@@ -59,6 +59,7 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+  , ekg-forward:ouroboros-network-framework
   , ekg-wai:time
 
 -- IMPORTANT
@@ -90,3 +91,10 @@ if impl (ghc >= 9.12)
     -- https://github.com/haskell-servant/servant/pull/1810
     , servant:base
     , servant-server:base
+
+    , cardano-ping:base
+    , network-mux:base
+    , ouroboros-network:base
+    , ouroboros-network-api:base
+    , ouroboros-network-framework:base
+    , ouroboros-network-protocols:base
