@@ -222,18 +222,6 @@ cardanoTestnet
       , paymentKeyInfoAddr = Text.pack paymentAddr
       }
 
-  _delegators <- forM [1..3] $ \(idx :: Int) -> do
-    pure $ Delegator
-      { paymentKeyPair = KeyPair
-        { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".skey"
-        , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".vkey"
-        }
-      , stakingKeyPair = KeyPair
-        { signingKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".skey"
-        , verificationKey = File $ tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
-        }
-      }
-
   nodeConfigFile <- case cardanoNodes of
     AutomaticNodeOptions _ -> do
       configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
@@ -256,7 +244,7 @@ cardanoTestnet
 
   let portNumbers = snd <$> portNumbersWithNodeOptions
 
-  forM_ (zip [1..] portNumbersWithNodeOptions) $ \(i, (_nodeOptions, portNumber)) -> do
+  forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     H.evalIO $ IO.createDirectoryIfMissing True nodeDataDir
     H.writeFile (nodeDataDir </> "port") (show portNumber)
@@ -320,10 +308,6 @@ cardanoTestnet
     assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
-
-  forM_ wallets $ \wallet -> do
-    H.cat . signingKeyFp $ paymentKeyInfoPair wallet
-    H.cat . verificationKeyFp $ paymentKeyInfoPair wallet
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile
