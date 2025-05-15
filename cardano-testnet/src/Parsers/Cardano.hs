@@ -2,6 +2,7 @@
 
 module Parsers.Cardano
   ( cmdCardano
+  , cmdCreateEnv
   ) where
 
 import           Cardano.Api (AnyShelleyBasedEra (AnyShelleyBasedEra), EraInEon (..))
@@ -29,6 +30,12 @@ optsTestnet envCli = CardanoTestnetCliOptions
   <*> pGenesisOptions
   <*> pNodeEnvironment
 
+optsCreateTestnet :: EnvCli -> Parser CardanoTestnetCreateEnvOptions
+optsCreateTestnet envCli = CardanoTestnetCreateEnvOptions
+  <$> pCardanoTestnetCliOptions envCli
+  <*> pGenesisOptions
+  <*> pEnvOutputDir
+
 pCardanoTestnetCliOptions :: EnvCli -> Parser CardanoTestnetOptions
 pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
   <$> pTestnetNodeOptions
@@ -53,16 +60,11 @@ pCardanoTestnetCliOptions envCli = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
-  <*> OA.flag GenerateAndRun OnlyGenerate
-      (   OA.long "only-generate-config-files"
-      <>  OA.help "Do not actually run anything, only generate config files and output them in 'output-dir'"
-      <>  OA.showDefault
-      )
-  <*> optional (OA.strOption
+  <*> (maybe NoUserProvidedEnv UserProvidedEnv <$> optional (OA.strOption
       (   OA.long "output-dir"
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."
       <>  OA.metavar "DIRECTORY"
-      ))
+      )))
   where
     pAnyShelleyBasedEra' :: Parser AnyShelleyBasedEra
     pAnyShelleyBasedEra' =
@@ -72,20 +74,29 @@ pTestnetNodeOptions :: Parser [NodeOption]
 pTestnetNodeOptions =
   -- If `--num-pool-nodes N` is present, return N nodes with option `SpoNodeOptions []`.
   -- Otherwise, return `cardanoDefaultTestnetNodeOptions`
-  maybe cardanoDefaultTestnetNodeOptions (`L.replicate` defaultSpoOptions) <$>
-    OA.option OA.auto
-    (   OA.long "num-pool-nodes"
-    <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
-    <>  OA.metavar "COUNT"
-    )
+  fmap (maybe cardanoDefaultTestnetNodeOptions (`L.replicate` defaultSpoOptions)) <$>
+    optional $ OA.option OA.auto
+      (   OA.long "num-pool-nodes"
+      <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
+      <>  OA.metavar "COUNT"
+      )
   where
     defaultSpoOptions = SpoNodeOptions []
 
-pNodeEnvironment :: Parser (Maybe FilePath)
-pNodeEnvironment = OA.option OA.auto $
-     OA.long "node-env"
-  <> OA.metavar "FILEPATH"
-  <> OA.help "Path to the node's environment (which is generated otherwise). You can generate a default environment with the TODO command, then modify it and pass it with this argument."
+pNodeEnvironment :: Parser UserProvidedEnv
+pNodeEnvironment = fmap (maybe NoUserProvidedEnv UserProvidedEnv) <$>
+  optional $ OA.strOption
+    (  OA.long "node-env"
+    <> OA.metavar "FILEPATH"
+    <> OA.help "Path to the node's environment (which is generated otherwise). You can generate a default environment with the TODO command, then modify it and pass it with this argument."
+    )
+
+pEnvOutputDir :: Parser FilePath
+pEnvOutputDir = OA.strOption
+  (   OA.long "output"
+  <>  OA.help "Directory where to create the sandbox environment."
+  <>  OA.metavar "DIRECTORY"
+  )
 
 pGenesisOptions :: Parser GenesisOptions
 pGenesisOptions =
@@ -125,6 +136,10 @@ pGenesisOptions =
 
 cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetCliOptions
 cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)
+
+cmdCreateEnv :: EnvCli -> Mod CommandFields CardanoTestnetCreateEnvOptions
+-- TODO: make it a subcommand of `cardano`
+cmdCreateEnv envCli = command' "create-test-env" "Create a test sandbox for Cardano testnet" (optsCreateTestnet envCli)
 
 pNetworkId :: Parser Int
 pNetworkId =

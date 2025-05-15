@@ -38,11 +38,11 @@ import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
 
-runTestnet :: CardanoTestnetOptions -> (Conf -> H.Integration a) -> IO ()
-runTestnet tnOpts tn = do
+runTestnet :: UserProvidedEnv -> (Conf -> H.Integration a) -> IO ()
+runTestnet env tn = do
   tvRunning <- STM.newTVarIO False
 
-  void . H.check $ testnetProperty tnOpts $ \c -> do
+  void . H.check $ testnetProperty env $ \c -> do
     void $ tn c
     H.evalIO . STM.atomically $ STM.writeTVar tvRunning True
 
@@ -63,22 +63,22 @@ runTestnet tnOpts tn = do
       IO.exitFailure
 
 
-testnetProperty :: CardanoTestnetOptions -> (Conf -> H.Integration ()) -> H.Property
-testnetProperty CardanoTestnetOptions{cardanoOutputDir} runTn =
-  case cardanoOutputDir of
-      Nothing -> do
+testnetProperty :: UserProvidedEnv -> (Conf -> H.Integration ()) -> H.Property
+testnetProperty env runTn =
+  case env of
+      NoUserProvidedEnv -> do
         integrationWorkspace "testnet" $ \workspaceDir -> do
           mkConf workspaceDir >>= forkAndRunTestnet
-      Just userOutputDir ->
+      UserProvidedEnv userOutputDir ->
         integration $ do
           absUserOutputDir <- H.evalIO $ makeAbsolute userOutputDir
           dirExists <- H.evalIO $ doesDirectoryExist absUserOutputDir
-          (if dirExists then
-            -- Likely dangerous, but who are we to judge the user?
+          if dirExists then
+            -- Happens when the environment has previously been created by the user
             H.note_ $ "Reusing " <> absUserOutputDir
           else do
             liftIO $ createDirectory absUserOutputDir
-            H.note_ $ "Created " <> absUserOutputDir)
+            H.note_ $ "Created " <> absUserOutputDir
           conf <- mkConf absUserOutputDir
           forkAndRunTestnet conf
   where
