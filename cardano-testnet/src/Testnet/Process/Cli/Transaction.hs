@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Process.Cli.Transaction
   ( mkSimpleSpendOutputsOnlyTx
@@ -23,20 +25,24 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
+import qualified Data.Aeson.Lens as A
 import           Data.List (isInfixOf)
+import           Data.String (fromString)
 import qualified Data.Text as T
 import           Data.Typeable (Typeable)
+import qualified Data.Yaml as A
 import           GHC.IO.Exception (ExitCode (..))
 import           GHC.Stack
+import           Lens.Micro
 import           System.FilePath ((</>))
-
-import           Hedgehog (MonadTest)
-import qualified Hedgehog.Extras as H
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey)
 import           Testnet.Process.Run (execCli')
 import           Testnet.Start.Types (anyEraToString)
 import           Testnet.Types
+
+import           Hedgehog (MonadTest)
+import qualified Hedgehog.Extras as H
 
 -- Transaction signing
 data VoteFile
@@ -231,5 +237,6 @@ retrieveTransactionId execConfig signedTxBody = do
     [ "latest", "transaction", "txid"
     , "--tx-file", unFile signedTxBody
     ]
-  return $ mconcat $ lines txidOutput
+  result <- H.leftFail $ A.decodeEither' @A.Value $ fromString txidOutput
+  H.nothingFail . fmap T.unpack $ result ^? A.key "txhash" . A._String
 

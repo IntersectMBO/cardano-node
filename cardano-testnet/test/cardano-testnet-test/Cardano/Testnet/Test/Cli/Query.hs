@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Cli.Query (
     hprop_cli_queries
@@ -36,10 +37,10 @@ import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as Aeson
-import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Default.Class
 import qualified Data.Map as Map
+import           Data.Map.Strict (Map)
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -179,10 +180,11 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       do
         -- to stdout
         stakePoolsOut <- execCli' execConfig [ eraName, "query", "stake-pools" ]
-        H.assertWith stakePoolsOut $ \pools ->
-          NumPools (length $ lines pools) == nPools
+        stakePools <- H.noteShowM $ H.leftFail $ Aeson.eitherDecode @[String] $ fromString stakePoolsOut
+        H.assertWith stakePools $ \pools ->
+          NumPools (length pools) == nPools
         -- Light test of the query's answer, the ids should exist:
-        forM_ (lines stakePoolsOut) $ \stakePoolId -> do
+        forM_ stakePools $ \stakePoolId -> do
           execCli' execConfig [ eraName, "query", "pool-state"
                               , "--stake-pool-id", stakePoolId ]
         -- to a file
@@ -199,22 +201,15 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       do
         -- to stdout
         stakeDistrOut <- execCli' execConfig [ eraName, "query", "stake-distribution" ]
-        -- stake addresses with stake
-        let stakeAddresses :: [(Text, Text)] =
-              map
-              ( bimap T.strip T.strip
-                . T.breakOn " " -- separate address and stake
-                . T.strip
-                . fromString )
-              . drop 2 -- drop header
-              . lines
-              $ stakeDistrOut
-        H.assertWith stakeAddresses $ \sa ->
+        stakeDistr <- H.leftFail $ Aeson.eitherDecode @(Map String Aeson.Value) $ fromString stakeDistrOut
+        H.note_ stakeDistrOut
+        let stakePools = Map.keys stakeDistr
+        H.assertWith stakePools $ \sa ->
           NumPools (length sa) == nPools
         -- Light test of the query's answer, the ids should exist:
-        forM_ stakeAddresses $ \(stakePoolId, _) -> do
+        forM_ stakePools $ \stakePoolId -> do
           execCli' execConfig [ eraName, "query", "pool-state"
-                              , "--stake-pool-id", T.unpack stakePoolId ]
+                              , "--stake-pool-id", stakePoolId ]
         -- to a file
         let stakePoolsOutFile = work </> "stake-distribution-out.json"
         H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-distribution"

@@ -248,10 +248,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   waitForGovActionVotes epochStateView (EpochInterval 1)
 
-  txid <- execCli' execConfig [ eraName, "transaction", "txid", "--tx-file", unFile signedProposalTx ]
-
-  let txNoNewline = Text.unpack (Text.strip (Text.pack txid))
-  H.noteShow_ txNoNewline
+  txId <- H.noteShowM $ retrieveTransactionId execConfig signedProposalTx
 
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.
@@ -275,7 +272,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
   proposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
-                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txNoNewline
+                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txId
                                     , "--governance-action-index", "0"
                                     ]
 
@@ -289,7 +286,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   -- Check TxId returned is the same as the one we used
   proposalsTxId <- H.evalMaybe $ proposal ^? Aeson.key "actionId" . Aeson.key "txId" . Aeson._String
-  proposalsTxId === Text.pack txNoNewline
+  proposalsTxId === Text.pack txId
 
   -- Check that committeeVotes is an empty object
   proposalsCommitteeVotes <- H.evalMaybe $ proposal ^? Aeson.key "committeeVotes" . Aeson._Object
