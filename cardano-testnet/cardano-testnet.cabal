@@ -36,7 +36,7 @@ library
                       , ansi-terminal
                       , bytestring
                       , cardano-api ^>= 10.16
-                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.9
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.8
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -72,7 +72,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.20
+                      , ouroboros-network 
                       , ouroboros-network-api
                       , prettyprinter
                       , process
