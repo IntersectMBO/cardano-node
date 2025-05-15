@@ -1082,7 +1082,7 @@ traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
         !query <- mapNodeKernelDataIO
                     (\nk ->
                        (,,)
-                         <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
+                         <$> fmap (maybe 0 LedgerDB.ledgerTableSize) (ChainDB.getStatistics $ getChainDB nk)
                          <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                          <*> nkQueryChain fragmentChainDensity nk)
                     nodeKern
