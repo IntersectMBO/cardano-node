@@ -18,7 +18,6 @@ module Testnet.Start.Cardano
 
   , cardanoTestnet
   , createTestnetEnv
-  , createTestnetEnvDefault
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
   , retryOnAddressInUseError
@@ -27,8 +26,6 @@ module Testnet.Start.Cardano
 
 import           Cardano.Api
 
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import           Cardano.Node.Configuration.Topology
 
 import           Prelude hiding (lines)
@@ -78,37 +75,24 @@ createTestnetEnv :: ()
   => HasCallStack
   => CardanoTestnetOptions
   -> GenesisOptions
-  -> UserProvidedData ShelleyGenesis
-  -> UserProvidedData AlonzoGenesis
-  -> UserProvidedData ConwayGenesis
   -> Conf
   -> H.Integration ()
 createTestnetEnv
   testnetOptions@CardanoTestnetOptions{cardanoNodeEra=asbe} genesisOptions
-  mShelleyGenesis mAlonzoGenesis mConwayGenesis
   Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
 
   testMinimumConfigurationRequirements testnetOptions
 
   AnyShelleyBasedEra sbe <- pure asbe
-  _ <- createSPOGenesisAndFiles testnetOptions genesisOptions mShelleyGenesis mAlonzoGenesis mConwayGenesis (TmpAbsolutePath tmpAbsPath)
+  _ <- createSPOGenesisAndFiles
+    testnetOptions genesisOptions
+    NoUserProvidedData NoUserProvidedData NoUserProvidedData
+    (TmpAbsolutePath tmpAbsPath)
 
   configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   config <- createConfigJson (TmpAbsolutePath tmpAbsPath) sbe
   H.evalIO $ LBS.writeFile configurationFile config
-
--- | Like 'createTestnetEnv', but passing 'NoUserProvidedData' for you.
-createTestnetEnvDefault :: ()
-  => HasCallStack
-  => CardanoTestnetOptions
-  -> GenesisOptions
-  -> Conf
-  -> H.Integration ()
-createTestnetEnvDefault testnetOptions genesisOptions =
-  createTestnetEnv
-    testnetOptions genesisOptions
-    NoUserProvidedData NoUserProvidedData NoUserProvidedData
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
 -- field in the 'CardanoTestnetOptions' argument. Regarding this field, you can either:
