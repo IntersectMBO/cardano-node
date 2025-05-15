@@ -114,16 +114,17 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
   getCandidates
     :: STM.STM IO (Map peer (ChainSyncClientHandle IO blk))
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
-  getCandidates handle = viewChainSyncState handle csCandidate
+  getCandidates _handle = error "TODO: viewChainSyncState handle csCandidate"
 
   extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [PeerT blk]
   extractPeers kernel = do
-    peerStates <- fmap tuple3pop <$> (   STM.atomically
-                                       . (>>= traverse readFetchClientState)
-                                       . Net.readFetchClientsStateVars
-                                       . getFetchClientRegistry $ kernel
-                                     )
+    peerStates <- fmap tuple3pop <$> error "TODO"
+                                    --  (   STM.atomically
+                                    --    . (>>= traverse readFetchClientState)
+                                    --    . Net.readFetchClientsStateVars
+                                    --    . getFetchClientRegistry $ kernel
+                                    --  )
     candidates <- STM.atomically . getCandidates . cschcMap . getChainSyncHandles $ kernel
 
     let peers = flip Map.mapMaybeWithKey candidates $ \cid af ->
