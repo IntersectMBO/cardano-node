@@ -5,7 +5,6 @@ module Cardano.Testnet (
 
   -- ** Start a testnet
   cardanoTestnet,
-  cardanoTestnetDefault,
   createTestnetEnv,
   retryOnAddressInUseError,
 
