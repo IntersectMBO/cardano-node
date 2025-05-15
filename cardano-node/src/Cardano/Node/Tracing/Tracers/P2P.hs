@@ -708,6 +708,7 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     severityFor (Namespace [] ["PromoteWarmFailed"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmDone"]) _ = Just Info
     severityFor (Namespace [] ["PromoteWarmAborted"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmBigLedgerPeerAborted"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmFailed"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmDone"]) _ = Just Info
@@ -1760,7 +1761,7 @@ instance MetaTrace (InboundGovernor.Trace addr) where
 
     severityFor (Namespace _ ["NewConnection"]) _ = Just Debug
     severityFor (Namespace _ ["ResponderRestarted"]) _ = Just Debug
-    severityFor (Namespace _ ["ResponderStartFailure"]) _ = Just Error
+    severityFor (Namespace _ ["ResponderStartFailure"]) _ = Just Info
     severityFor (Namespace _ ["ResponderErrored"]) _ = Just Info
     severityFor (Namespace _ ["ResponderStarted"]) _ = Just Debug
     severityFor (Namespace _ ["ResponderTerminated"]) _ = Just Debug
