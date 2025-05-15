@@ -1,5 +1,9 @@
 # Revision history for locli
 
+## 2.2 -- May 2025
+
+* New log object `LOLedgerMetrics` (and corresponding DB table) for ledger metrics traces, retaining full backwards compatibility to the former `TraceStartLeadershipCheckPlus`.
+
 ## 2.1 -- Feb 2025
 
 * New CLI command `dump-tracefreqs` to write out per-host trace frequencies JSON files

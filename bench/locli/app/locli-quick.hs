@@ -171,7 +171,7 @@ data LoadTimestamps = LoadTimestamps
 instance LoadFromDB LoadTimestamps where
   type instance LoadResult LoadTimestamps = (UTCTime, SMaybe SlotNo)
 
-  loadQuery _ = Just $ "SELECT at, slot FROM slot" <> from "resource" <> from "txns" <> from "event" <> " ORDER BY at ASC"
+  loadQuery _ = Just $ "SELECT at, slot FROM slot" <> from "resource" <> from "txns" <> from "event" <> from "ledgermetrics" <> " ORDER BY at ASC"
     where from t = " UNION SELECT at, null FROM " <> t
 
   loadConvert _ _ = \case

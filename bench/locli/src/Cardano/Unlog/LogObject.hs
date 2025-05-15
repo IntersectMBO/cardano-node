@@ -271,18 +271,25 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <*> (v .:? "chainLengthDelta"
                 -- Compat for node versions 1.27 and older:
                  <&> fromMaybe 1)
+
   , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
             <*> ((v .: "blockSize") <&> SJust)
             <*> pure 1
 
-  -- Ledger snapshots:
+  -- Ledger related:
   , (,,,) "TraceSnapshotEvent.TookSnapshot" "TraceLedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
   -- If needed, this could track slot and duration (SMaybe):
   -- {"at":"2024-10-19T10:16:27.459112022Z","ns":"ChainDB.LedgerEvent.TookSnapshot","data":{"enclosedTime":{"tag":"RisingEdge"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 5319) adefbb19d6284aa68f902d33018face42d37e1a7970415d2a81bd4c2dea585ba"},"sev":"Info","thread":"81","host":"client-us-04"}
   -- {"at":"2024-10-19T10:16:45.925381225Z","ns":"ChainDB.LedgerEvent.TookSnapshot","data":{"enclosedTime":{"contents":18.466253914,"tag":"FallingEdgeWith"},"kind":"TookSnapshot","snapshot":{"kind":"snapshot"},"tip":"RealPoint (SlotNo 5319) adefbb19d6284aa68f902d33018face42d37e1a7970415d2a81bd4c2dea585ba"},"sev":"Info","thread":"81","host":"client-us-04"}
+
+  , (,,,) "LedgerMetrics" "LedgerMetrics" "LedgerMetrics" $
+    \v -> LOLedgerMetrics
+            <$> v .: "slot"
+            <*> v .: "utxoSize"
+            <*> v .: "chainDensity"
 
   -- Tx receive path & mempool:
   , (,,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
@@ -399,8 +406,13 @@ data LOBody
     , loSize             :: !(SMaybe Int)
     , loLength           :: !Int
     }
-  -- Ledger snapshots:
+  -- Ledger related:
   | LOLedgerTookSnapshot
+  | LOLedgerMetrics
+    { loSlotNo           :: !SlotNo
+    , loUtxoSize         :: !Word64
+    , loChainDensity     :: !Double
+    }
   -- Tx receive path & mempool:
   | LOTxsAcked !(Vector Text)
   | LOTxsCollected !Word64
