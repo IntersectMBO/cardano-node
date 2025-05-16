@@ -23,6 +23,7 @@ module Cardano.Node.Run
   ) where
 
 import           Cardano.Api (File (..), FileDirection (..))
+import           Cardano.Api.Internal.Error (displayError)
 import qualified Cardano.Api as Api
 import           System.Random (randomIO)
 
@@ -58,7 +59,7 @@ import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
-import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
+import           Cardano.Prelude (FatalError (..), bool, (:~:) (..), stderr, )
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
 
@@ -123,7 +124,7 @@ import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
 
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId, getNumCapabilities)
 import           Control.Concurrent.Class.MonadSTM.Strict
-import           Control.Exception (try, IOException)
+import           Control.Exception (try, Exception, IOException)
 import qualified Control.Exception as Exception
 import           Control.Monad (forM, forM_, unless, void, when)
 import           Control.Monad.Class.MonadThrow (MonadThrow (..))
@@ -153,6 +154,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+import           System.IO (hPutStrLn)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
@@ -185,34 +187,24 @@ runNode cmdPc = do
 
     putStrLn $ "Node configuration: " <> show nc
 
-    case shelleyVRFFile $ ncProtocolFiles nc of
-      Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions (File vrfFp)
-                       case vrf of
-                         Left err -> Exception.throwIO err
-                         Right () ->
-                           pure ()
-      Nothing -> pure ()
+    case ncProtocolFiles nc of
+      ProtocolFilepaths{shelleyVRFFile=Just vrfFp} ->
+        runThrowExceptT $
+          checkVRFFilePermissions stdoutTracer (File vrfFp)
+      _ -> pure ()
 
-    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
-                                         (ncProtocolConfig nc)
-                                         -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
-                                         -- don't need these.
-                                         (Just $ ncProtocolFiles nc)
+    consensusProtocol <-
+      runThrowExceptT $
+        mkConsensusProtocol
+         (ncProtocolConfig nc)
+         -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
+         -- don't need these.
+         (Just $ ncProtocolFiles nc)
 
-    p :: SomeConsensusProtocol <-
-      case eitherSomeProtocol of
-        Left err -> Exception.throwIO err
-        Right p  -> pure p
+    handleNodeWithTracers cmdPc nc consensusProtocol
 
-    let networkMagic :: Api.NetworkMagic =
-          case p of
-            SomeConsensusProtocol _ runP ->
-              let ProtocolInfo { pInfoConfig } = fst $ Api.protocolInfo @IO runP
-              in getNetworkMagic $ Consensus.configBlock pInfoConfig
-
-    case p of
-      SomeConsensusProtocol blockType runP ->
-        handleNodeWithTracers cmdPc nc p networkMagic blockType runP
+runThrowExceptT :: Exception e => ExceptT e IO a -> IO a
+runThrowExceptT act = runExceptT act >>= either Exception.throwIO pure
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
@@ -233,17 +225,13 @@ installSigTermHandler = do
   return ()
 
 handleNodeWithTracers
-  :: ( TraceConstraints blk
-     , Api.Protocol IO blk
-     )
-  => PartialNodeConfiguration
+  :: PartialNodeConfiguration
   -> NodeConfiguration
   -> SomeConsensusProtocol
-  -> Api.NetworkMagic
-  -> Api.BlockType blk
-  -> Api.ProtocolInfoArgs blk
   -> IO ()
-handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
+handleNodeWithTracers cmdPc nc0 p@(SomeConsensusProtocol blockType runP) = do
+  let ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
+      networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
@@ -913,17 +901,17 @@ canonDbPath NodeConfiguration{ncDatabaseFile = nodeDatabaseFps} =
 
 -- | Make sure the VRF private key file is readable only
 -- by the current process owner the node is running under.
-checkVRFFilePermissions :: File content direction -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+checkVRFFilePermissions :: Tracer IO String -> File content direction -> ExceptT VRFPrivateKeyFilePermissionError IO ()
 #ifdef UNIX
-checkVRFFilePermissions (File vrfPrivKey) = do
+checkVRFFilePermissions tracer (File vrfPrivKey) = do
   fs <- liftIO $ getFileStatus vrfPrivKey
   let fm = fileMode fs
   -- Check the the VRF private key file does not give read/write/exec permissions to others.
-  when (hasOtherPermissions fm)
-       (left $ OtherPermissionsExist vrfPrivKey)
+  when (hasOtherPermissions fm) $
+     left $ OtherPermissionsExist vrfPrivKey
   -- Check the the VRF private key file does not give read/write/exec permissions to any group.
-  when (hasGroupPermissions fm)
-       (left $ GroupPermissionsExist vrfPrivKey)
+  when (hasGroupPermissions fm) $
+     liftIO $ traceWith tracer $ ("WARNING: " <>) .  displayError $ GroupPermissionsExist vrfPrivKey
  where
   hasPermission :: FileMode -> FileMode -> Bool
   hasPermission fModeA fModeB = fModeA `intersectFileModes` fModeB /= nullFileMode
@@ -934,7 +922,7 @@ checkVRFFilePermissions (File vrfPrivKey) = do
   hasGroupPermissions :: FileMode -> Bool
   hasGroupPermissions fm' = fm' `hasPermission` groupModes
 #else
-checkVRFFilePermissions (File vrfPrivKey) = do
+checkVRFFilePermissions _ (File vrfPrivKey) = do
   attribs <- liftIO $ getFileAttributes vrfPrivKey
   -- https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea
   -- https://docs.microsoft.com/en-us/windows/win32/fileio/file-access-rights-constants
