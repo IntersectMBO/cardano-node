@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-04-16T18:30:40Z
-  , cardano-haskell-packages 2025-05-15T08:36:14Z
+  , cardano-haskell-packages 2025-05-16T15:25:35Z
 
 packages:
   cardano-node
@@ -34,8 +34,8 @@ packages:
 
 extra-packages: Cabal
 
-program-options
-  ghc-options: -Werror
+-- program-options
+--   ghc-options: -Werror
 
 test-show-details: direct
 
@@ -59,6 +59,7 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+  , ekg-forward:ouroboros-network-framework
   , ekg-wai:time
 
 -- IMPORTANT
@@ -90,3 +91,22 @@ if impl (ghc >= 9.12)
     -- https://github.com/haskell-servant/servant/pull/1810
     , servant:base
     , servant-server:base
+
+    , cardano-ping:base
+    , network-mux:base 
+    , ouroboros-network:base 
+    , ouroboros-network-api:base 
+    , ouroboros-network-framework:base 
+    , ouroboros-network-protocols:base 
+
+
+
+
+source-repository-package
+   type:     git
+   location: https://github.com/IntersectMBO/cardano-cli.git
+   tag: d9d05dedc423475f320e6a8e3128849d08c26512
+   --sha256: sha256-r/V0PaU0T0WN0SIb0L3DSMXxqWtfLF1FLWhkr1dNYrs=
+   subdir: 
+     cardano-cli
+
