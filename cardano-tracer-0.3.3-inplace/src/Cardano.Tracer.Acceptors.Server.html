@@ -1,0 +1,703 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Acceptors.Server</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Server.html#runAcceptorsServer"><span class="hs-identifier">runAcceptorsServer</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#TraceObject"><span class="hs-identifier">TraceObject</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html"><span class="hs-identifier">Cardano.Logging.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#ForwardingVersion"><span class="hs-identifier">ForwardingVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#ForwardingVersionData"><span class="hs-identifier">ForwardingVersionData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>                   </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#forwardingCodecCBORTerm"><span class="hs-identifier">forwardingCodecCBORTerm</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#forwardingVersionCodec"><span class="hs-identifier">forwardingVersionCodec</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#if RTVIEW
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Cardano.Tracer.Acceptors.Utils</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">notifyAboutNodeDisconnected</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>                   </span><span class="hs-identifier">prepareDataPointRequestor</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">prepareMetricsStores</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">removeDisconnectedNode</span><span class="hs-special">)</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html"><span class="hs-identifier">Cardano.Tracer.Acceptors.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#prepareDataPointRequestor"><span class="hs-identifier">prepareDataPointRequestor</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#prepareMetricsStores"><span class="hs-identifier">prepareMetricsStores</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>                   </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#removeDisconnectedNode"><span class="hs-identifier">removeDisconnectedNode</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Tracer.Configuration.html"><span class="hs-identifier">Cardano.Tracer.Configuration</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TC</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Logs.TraceObjects.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Logs.TraceObjects</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.Logs.TraceObjects.html#deregisterNodeId"><span class="hs-identifier">deregisterNodeId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Logs.TraceObjects.html#traceObjectsHandler"><span class="hs-identifier">traceObjectsHandler</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.MetaTrace.html"><span class="hs-identifier">Cardano.Tracer.MetaTrace</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Utils.html"><span class="hs-identifier">Cardano.Tracer.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier">connIdToNodeId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.html"><span class="hs-identifier">Network.Mux</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mux</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html"><span class="hs-identifier">Ouroboros.Network.Context</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#MinimalInitiatorContext"><span class="hs-identifier">MinimalInitiatorContext</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#ResponderContext"><span class="hs-identifier">ResponderContext</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Driver.Limits.html"><span class="hs-identifier">Ouroboros.Network.Driver.Limits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Protocol.Limits.html#ProtocolTimeLimits"><span class="hs-identifier">ProtocolTimeLimits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.ErrorPolicy.html"><span class="hs-identifier">Ouroboros.Network.ErrorPolicy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.ErrorPolicy.html#nullErrorPolicies"><span class="hs-identifier">nullErrorPolicies</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.IOManager.html"><span class="hs-identifier">Ouroboros.Network.IOManager</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">withIOManager</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Magic.html"><span class="hs-identifier">Ouroboros.Network.Magic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier">NetworkMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html"><span class="hs-identifier">Ouroboros.Network.Mux</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocol"><span class="hs-identifier">MiniProtocol</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#MiniProtocolLimits"><span class="hs-identifier">MiniProtocolLimits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>                   </span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier">MiniProtocolNum</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosApplication"><span class="hs-identifier">OuroborosApplication</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#miniProtocolLimits"><span class="hs-identifier">miniProtocolLimits</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#miniProtocolNum"><span class="hs-identifier">miniProtocolNum</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#miniProtocolRun"><span class="hs-identifier">miniProtocolRun</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Codec.html"><span class="hs-identifier">Ouroboros.Network.Protocol.Handshake.Codec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Codec.html#cborTermVersionDataCodec"><span class="hs-identifier">cborTermVersionDataCodec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Codec.html#codecHandshake"><span class="hs-identifier">codecHandshake</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Codec.html#noTimeLimitsHandshake"><span class="hs-identifier">noTimeLimitsHandshake</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Type.html"><span class="hs-identifier">Ouroboros.Network.Protocol.Handshake.Type</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Type.html#Handshake"><span class="hs-identifier">Handshake</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Version.html"><span class="hs-identifier">Ouroboros.Network.Protocol.Handshake.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Handshake.Acceptable.html#acceptableVersion"><span class="hs-identifier">acceptableVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Handshake.Queryable.html#queryVersion"><span class="hs-identifier">queryVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Version.html#simpleSingletonVersions"><span class="hs-identifier">simpleSingletonVersions</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html"><span class="hs-identifier">Ouroboros.Network.Snocket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier">LocalAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalSocket"><span class="hs-identifier">LocalSocket</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#Snocket"><span class="hs-identifier">Snocket</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#localAddressFromPath"><span class="hs-identifier">localAddressFromPath</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#localSnocket"><span class="hs-identifier">localSnocket</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#makeLocalBearer"><span class="hs-identifier">makeLocalBearer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html"><span class="hs-identifier">Ouroboros.Network.Socket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Server.RateLimiting.html#AcceptedConnectionsLimit"><span class="hs-identifier">AcceptedConnectionsLimit</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier">ConnectionId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Handshake.html#HandshakeCallbacks"><span class="hs-identifier">HandshakeCallbacks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#SomeResponderApplication"><span class="hs-identifier">SomeResponderApplication</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#cleanNetworkMutableState"><span class="hs-identifier">cleanNetworkMutableState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#newNetworkMutableState"><span class="hs-identifier">newNetworkMutableState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#nullNetworkServerTracers"><span class="hs-identifier">nullNetworkServerTracers</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#withServerNode"><span class="hs-identifier">withServerNode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/j556r2x3bw9j16ww6y5wpg5pgdib890y-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Term.html"><span class="hs-identifier">Codec.CBOR.Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/j556r2x3bw9j16ww6y5wpg5pgdib890y-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Term.html#Term"><span class="hs-identifier">Term</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/wjvjvk0080jnwynr4cqzf3rvi4d5n0j0-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Control.Concurrent.Async.html"><span class="hs-identifier">Control.Concurrent.Async</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">race_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">wait</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Void.html"><span class="hs-identifier">Data.Void</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier">Void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word32"><span class="hs-identifier">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ekg-forward-0.9-a6a6dd46b176d22b9f97d292336b51d86a1a39f3725e60c8fb56ef99e5695258/share/doc/html/src/System.Metrics.Configuration.html"><span class="hs-identifier">System.Metrics.Configuration</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">EKGF</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ekg-forward-0.9-a6a6dd46b176d22b9f97d292336b51d86a1a39f3725e60c8fb56ef99e5695258/share/doc/html/src/System.Metrics.Network.Acceptor.html"><span class="hs-identifier">System.Metrics.Network.Acceptor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ekg-forward-0.9-a6a6dd46b176d22b9f97d292336b51d86a1a39f3725e60c8fb56ef99e5695258/share/doc/html/src/System.Metrics.Network.Acceptor.html#acceptEKGMetricsResp"><span class="hs-identifier">acceptEKGMetricsResp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Configuration.DataPoint.html"><span class="hs-identifier">Trace.Forward.Configuration.DataPoint</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DPF</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Configuration.TraceObject.html"><span class="hs-identifier">Trace.Forward.Configuration.TraceObject</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TF</span></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Run.DataPoint.Acceptor.html"><span class="hs-identifier">Trace.Forward.Run.DataPoint.Acceptor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Run.DataPoint.Acceptor.html#acceptDataPointsResp"><span class="hs-identifier">acceptDataPointsResp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Run.TraceObject.Acceptor.html"><span class="hs-identifier">Trace.Forward.Run.TraceObject.Acceptor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Run.TraceObject.Acceptor.html#acceptTraceObjectsResp"><span class="hs-identifier">acceptTraceObjectsResp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Cardano.Tracer.Acceptors.Server.html#runAcceptorsServer"><span class="hs-identifier hs-type">runAcceptorsServer</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnvRTView"><span class="hs-identifier hs-type">TracerEnvRTView</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ekg-forward-0.9-a6a6dd46b176d22b9f97d292336b51d86a1a39f3725e60c8fb56ef99e5695258/share/doc/html/src/System.Metrics.Configuration.html#AcceptorConfiguration"><span class="hs-identifier hs-type">EKGF.AcceptorConfiguration</span></a></span><span>
+</span><span id="line-62"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Configuration.TraceObject.html#AcceptorConfiguration"><span class="hs-identifier hs-type">TF.AcceptorConfiguration</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#TraceObject"><span class="hs-identifier hs-type">TraceObject</span></a></span><span>
+</span><span id="line-63"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Configuration.DataPoint.html#AcceptorConfiguration"><span class="hs-identifier hs-type">DPF.AcceptorConfiguration</span></a></span><span>
+</span><span id="line-64"></span><span>     </span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span id="runAcceptorsServer"><span class="annot"><span class="annottext">runAcceptorsServer :: TracerEnv
+-&gt; TracerEnvRTView
+-&gt; FilePath
+-&gt; (AcceptorConfiguration, AcceptorConfiguration TraceObject,
+    AcceptorConfiguration)
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#runAcceptorsServer"><span class="hs-identifier hs-var hs-var">runAcceptorsServer</span></a></span></span><span> </span><span id="local-6989586621679297244"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span id="local-6989586621679297245"><span class="annot"><span class="annottext">TracerEnvRTView
+</span><a href="#local-6989586621679297245"><span class="hs-identifier hs-var">tracerEnvRTView</span></a></span></span><span> </span><span id="local-6989586621679297246"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679297246"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679297247"><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297247"><span class="hs-identifier hs-var">ekgConfig</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679297248"><span class="annot"><span class="annottext">AcceptorConfiguration TraceObject
+</span><a href="#local-6989586621679297248"><span class="hs-identifier hs-var">tfConfig</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679297249"><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297249"><span class="hs-identifier hs-var">dpfConfig</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">(IOManager -&gt; IO ()) -&gt; IO ()
+WithIOManager
+</span><span class="hs-identifier hs-var">withIOManager</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679297250"><span class="annot"><span class="annottext">IOManager
+</span><a href="#local-6989586621679297250"><span class="hs-identifier hs-var">iocp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv -&gt; Trace IO TracerTrace
+</span><a href="Cardano.Tracer.Environment.html#teTracer"><span class="hs-identifier hs-var">teTracer</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(TracerTrace -&gt; IO ()) -&gt; TracerTrace -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerSockListen"><span class="hs-identifier hs-var">TracerSockListen</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679297246"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">Snocket IO LocalSocket LocalAddress
+-&gt; LocalAddress
+-&gt; Word32
+-&gt; ProtocolTimeLimits (Handshake ForwardingVersion Term)
+-&gt; OuroborosApplication
+     'ResponderMode
+     (MinimalInitiatorContext LocalAddress)
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#doListenToForwarder"><span class="hs-identifier hs-var">doListenToForwarder</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IOManager -&gt; Snocket IO LocalSocket LocalAddress
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#localSnocket"><span class="hs-identifier hs-var">localSnocket</span></a></span><span> </span><span class="annot"><span class="annottext">IOManager
+</span><a href="#local-6989586621679297250"><span class="hs-identifier hs-var">iocp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; LocalAddress
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#localAddressFromPath"><span class="hs-identifier hs-var">localAddressFromPath</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679297246"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerConfig -&gt; Word32
+</span><a href="Cardano.Tracer.Configuration.html#%24sel%3AnetworkMagic%3ATracerConfig"><span class="hs-identifier hs-var">TC.networkMagic</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerConfig -&gt; Word32) -&gt; TracerConfig -&gt; Word32
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv -&gt; TracerConfig
+</span><a href="Cardano.Tracer.Environment.html#teConfig"><span class="hs-identifier hs-var">teConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">ProtocolTimeLimits (Handshake ForwardingVersion Term)
+forall {k} (vNumber :: k).
+ProtocolTimeLimits (Handshake vNumber Term)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Codec.html#noTimeLimitsHandshake"><span class="hs-identifier hs-var">noTimeLimitsHandshake</span></a></span><span> </span><span class="annot"><span class="annottext">(OuroborosApplication
+   'ResponderMode
+   (MinimalInitiatorContext LocalAddress)
+   (ResponderContext LocalAddress)
+   ByteString
+   IO
+   Void
+   ()
+ -&gt; IO ())
+-&gt; OuroborosApplication
+     'ResponderMode
+     (MinimalInitiatorContext LocalAddress)
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+-&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- Please note that we always run all the supported protocols,</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- there is no mechanism to disable some of them.</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">[(RunMiniProtocol
+    'ResponderMode
+    (MinimalInitiatorContext LocalAddress)
+    (ResponderContext LocalAddress)
+    ByteString
+    IO
+    Void
+    (),
+  Word16)]
+-&gt; OuroborosApplication
+     'ResponderMode
+     (MinimalInitiatorContext LocalAddress)
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+forall {mode :: Mode} {initiatorCtx} {responderCtx} {bytes}
+       {m :: * -&gt; *} {a} {b}.
+[(RunMiniProtocol mode initiatorCtx responderCtx bytes m a b,
+  Word16)]
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bytes m a b
+</span><a href="#local-6989586621679297257"><span class="hs-identifier hs-var">appResponder</span></a></span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv
+-&gt; AcceptorConfiguration
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     (MinimalInitiatorContext LocalAddress)
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+forall initiatorCtx.
+TracerEnv
+-&gt; AcceptorConfiguration
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#runEKGAcceptor"><span class="hs-identifier hs-var">runEKGAcceptor</span></a></span><span>          </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297247"><span class="hs-identifier hs-var">ekgConfig</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297259"><span class="hs-identifier hs-var">errorHandler</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv
+-&gt; TracerEnvRTView
+-&gt; AcceptorConfiguration TraceObject
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     (MinimalInitiatorContext LocalAddress)
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+forall initiatorCtx.
+TracerEnv
+-&gt; TracerEnvRTView
+-&gt; AcceptorConfiguration TraceObject
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#runTraceObjectsAcceptor"><span class="hs-identifier hs-var">runTraceObjectsAcceptor</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnvRTView
+</span><a href="#local-6989586621679297245"><span class="hs-identifier hs-var">tracerEnvRTView</span></a></span><span> </span><span class="annot"><span class="annottext">AcceptorConfiguration TraceObject
+</span><a href="#local-6989586621679297248"><span class="hs-identifier hs-var">tfConfig</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297259"><span class="hs-identifier hs-var">errorHandler</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv
+-&gt; AcceptorConfiguration
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     (MinimalInitiatorContext LocalAddress)
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+forall initiatorCtx.
+TracerEnv
+-&gt; AcceptorConfiguration
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#runDataPointsAcceptor"><span class="hs-identifier hs-var">runDataPointsAcceptor</span></a></span><span>   </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297249"><span class="hs-identifier hs-var">dpfConfig</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297259"><span class="hs-identifier hs-var">errorHandler</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679297257"><span class="annot"><span class="annottext">appResponder :: [(RunMiniProtocol mode initiatorCtx responderCtx bytes m a b,
+  Word16)]
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bytes m a b
+</span><a href="#local-6989586621679297257"><span class="hs-identifier hs-var hs-var">appResponder</span></a></span></span><span> </span><span id="local-6989586621679297264"><span class="annot"><span class="annottext">[(RunMiniProtocol mode initiatorCtx responderCtx bytes m a b,
+  Word16)]
+</span><a href="#local-6989586621679297264"><span class="hs-identifier hs-var">protocolsWithNums</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">[MiniProtocol mode initiatorCtx responderCtx bytes m a b]
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bytes m a b
+forall (mode :: Mode) initiatorCtx responderCtx bytes (m :: * -&gt; *)
+       a b.
+[MiniProtocol mode initiatorCtx responderCtx bytes m a b]
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bytes m a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosApplication"><span class="hs-identifier hs-var">OuroborosApplication</span></a></span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocol"><span class="hs-identifier hs-type">MiniProtocol</span></a></span><span>
+</span><span id="line-85"></span><span>         </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">miniProtocolNum :: MiniProtocolNum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#miniProtocolNum"><span class="hs-identifier hs-var">miniProtocolNum</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; MiniProtocolNum
+</span><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-var">MiniProtocolNum</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679297268"><span class="hs-identifier hs-var">num</span></a></span><span>
+</span><span id="line-86"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">miniProtocolStart :: StartOnDemandOrEagerly
+</span><a href="#local-6989586621679297269"><span class="hs-identifier hs-var">miniProtocolStart</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StartOnDemandOrEagerly
+</span><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.html#StartEagerly"><span class="hs-identifier hs-var">Mux.StartEagerly</span></a></span><span>
+</span><span id="line-87"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">miniProtocolLimits :: MiniProtocolLimits
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#miniProtocolLimits"><span class="hs-identifier hs-var">miniProtocolLimits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#MiniProtocolLimits"><span class="hs-identifier hs-type">MiniProtocolLimits</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">maximumIngressQueue :: Int
+</span><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#maximumIngressQueue"><span class="hs-identifier hs-var">maximumIngressQueue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-88"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">miniProtocolRun :: RunMiniProtocol mode initiatorCtx responderCtx bytes m a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#miniProtocolRun"><span class="hs-identifier hs-var">miniProtocolRun</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RunMiniProtocol mode initiatorCtx responderCtx bytes m a b
+</span><a href="#local-6989586621679297274"><span class="hs-identifier hs-var">protocol</span></a></span><span>
+</span><span id="line-89"></span><span>         </span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679297274"><span class="annot"><span class="annottext">RunMiniProtocol mode initiatorCtx responderCtx bytes m a b
+</span><a href="#local-6989586621679297274"><span class="hs-identifier hs-var">protocol</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679297268"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679297268"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(RunMiniProtocol mode initiatorCtx responderCtx bytes m a b,
+  Word16)]
+</span><a href="#local-6989586621679297264"><span class="hs-identifier hs-var">protocolsWithNums</span></a></span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679297259"><span class="annot"><span class="annottext">errorHandler :: ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297259"><span class="hs-identifier hs-var hs-var">errorHandler</span></a></span></span><span> </span><span id="local-6989586621679297278"><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679297278"><span class="hs-identifier hs-var">connId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">TracerEnv -&gt; NodeId -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Logs.TraceObjects.html#deregisterNodeId"><span class="hs-identifier hs-var">deregisterNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; NodeId
+forall addr. Show addr =&gt; ConnectionId addr -&gt; NodeId
+</span><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier hs-var">connIdToNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679297278"><span class="hs-identifier hs-var">connId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">TracerEnv -&gt; ConnectionId LocalAddress -&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#removeDisconnectedNode"><span class="hs-identifier hs-var">removeDisconnectedNode</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297244"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679297278"><span class="hs-identifier hs-var">connId</span></a></span><span class="hs-cpp">
+#if RTVIEW
+</span><span>    </span><span class="hs-identifier">notifyAboutNodeDisconnected</span><span> </span><span class="hs-identifier">tracerEnvRTView</span><span> </span><span class="hs-identifier">connId</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Cardano.Tracer.Acceptors.Server.html#doListenToForwarder"><span class="hs-identifier hs-type">doListenToForwarder</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#Snocket"><span class="hs-identifier hs-type">Snocket</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalSocket"><span class="hs-identifier hs-type">LocalSocket</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Protocol.Limits.html#ProtocolTimeLimits"><span class="hs-identifier hs-type">ProtocolTimeLimits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Type.html#Handshake"><span class="hs-identifier hs-type">Handshake</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#ForwardingVersion"><span class="hs-identifier hs-type">ForwardingVersion</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/j556r2x3bw9j16ww6y5wpg5pgdib890y-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosApplication"><span class="hs-identifier hs-type">OuroborosApplication</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">Mux.ResponderMode</span></a></span><span>
+</span><span id="line-105"></span><span>                          </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#MinimalInitiatorContext"><span class="hs-identifier hs-type">MinimalInitiatorContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>                          </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#ResponderContext"><span class="hs-identifier hs-type">ResponderContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>                          </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span id="doListenToForwarder"><span class="annot"><span class="annottext">doListenToForwarder :: Snocket IO LocalSocket LocalAddress
+-&gt; LocalAddress
+-&gt; Word32
+-&gt; ProtocolTimeLimits (Handshake ForwardingVersion Term)
+-&gt; OuroborosApplication
+     'ResponderMode
+     (MinimalInitiatorContext LocalAddress)
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#doListenToForwarder"><span class="hs-identifier hs-var hs-var">doListenToForwarder</span></a></span></span><span> </span><span id="local-6989586621679297279"><span class="annot"><span class="annottext">Snocket IO LocalSocket LocalAddress
+</span><a href="#local-6989586621679297279"><span class="hs-identifier hs-var">snocket</span></a></span></span><span> </span><span id="local-6989586621679297280"><span class="annot"><span class="annottext">LocalAddress
+</span><a href="#local-6989586621679297280"><span class="hs-identifier hs-var">address</span></a></span></span><span> </span><span id="local-6989586621679297281"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679297281"><span class="hs-identifier hs-var">netMagic</span></a></span></span><span> </span><span id="local-6989586621679297282"><span class="annot"><span class="annottext">ProtocolTimeLimits (Handshake ForwardingVersion Term)
+</span><a href="#local-6989586621679297282"><span class="hs-identifier hs-var">timeLimits</span></a></span></span><span> </span><span id="local-6989586621679297283"><span class="annot"><span class="annottext">OuroborosApplication
+  'ResponderMode
+  (MinimalInitiatorContext LocalAddress)
+  (ResponderContext LocalAddress)
+  ByteString
+  IO
+  Void
+  ()
+</span><a href="#local-6989586621679297283"><span class="hs-identifier hs-var">app</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621679297284"><span class="annot"><span class="annottext">NetworkMutableState LocalAddress
+</span><a href="#local-6989586621679297284"><span class="hs-identifier hs-var">networkState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (NetworkMutableState LocalAddress)
+forall addr. IO (NetworkMutableState addr)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#newNetworkMutableState"><span class="hs-identifier hs-var">newNetworkMutableState</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; IO Void -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO ()
+</span><span class="hs-identifier hs-var">race_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NetworkMutableState LocalAddress -&gt; IO ()
+forall addr. NetworkMutableState addr -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#cleanNetworkMutableState"><span class="hs-identifier hs-var">cleanNetworkMutableState</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkMutableState LocalAddress
+</span><a href="#local-6989586621679297284"><span class="hs-identifier hs-var">networkState</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">Snocket IO LocalSocket LocalAddress
+-&gt; MakeBearer IO LocalSocket
+-&gt; (LocalSocket -&gt; LocalAddress -&gt; IO ())
+-&gt; NetworkServerTracers LocalAddress ForwardingVersion
+-&gt; NetworkMutableState LocalAddress
+-&gt; AcceptedConnectionsLimit
+-&gt; LocalAddress
+-&gt; Codec
+     (Handshake ForwardingVersion Term) DeserialiseFailure IO ByteString
+-&gt; ProtocolTimeLimits (Handshake ForwardingVersion Term)
+-&gt; VersionDataCodec Term ForwardingVersion ForwardingVersionData
+-&gt; HandshakeCallbacks ForwardingVersionData
+-&gt; Versions
+     ForwardingVersion
+     ForwardingVersionData
+     (SomeResponderApplication LocalAddress ByteString IO ())
+-&gt; ErrorPolicies
+-&gt; (LocalAddress -&gt; Async IO Void -&gt; IO Void)
+-&gt; IO Void
+forall vNumber vData t fd addr b.
+(Ord vNumber, Typeable vNumber, Show vNumber, Ord addr) =&gt;
+Snocket IO fd addr
+-&gt; MakeBearer IO fd
+-&gt; (fd -&gt; addr -&gt; IO ())
+-&gt; NetworkServerTracers addr vNumber
+-&gt; NetworkMutableState addr
+-&gt; AcceptedConnectionsLimit
+-&gt; addr
+-&gt; Codec (Handshake vNumber Term) DeserialiseFailure IO ByteString
+-&gt; ProtocolTimeLimits (Handshake vNumber Term)
+-&gt; VersionDataCodec Term vNumber vData
+-&gt; HandshakeCallbacks vData
+-&gt; Versions
+     vNumber vData (SomeResponderApplication addr ByteString IO b)
+-&gt; ErrorPolicies
+-&gt; (addr -&gt; Async IO Void -&gt; IO t)
+-&gt; IO t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#withServerNode"><span class="hs-identifier hs-var">withServerNode</span></a></span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">Snocket IO LocalSocket LocalAddress
+</span><a href="#local-6989586621679297279"><span class="hs-identifier hs-var">snocket</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">MakeBearer IO LocalSocket
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#makeLocalBearer"><span class="hs-identifier hs-var">makeLocalBearer</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">LocalSocket -&gt; LocalAddress -&gt; IO ()
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-comment">-- LocalSocket does not need to be configured</span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><span class="annottext">NetworkServerTracers LocalAddress ForwardingVersion
+forall addr vNumber. NetworkServerTracers addr vNumber
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#nullNetworkServerTracers"><span class="hs-identifier hs-var">nullNetworkServerTracers</span></a></span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">NetworkMutableState LocalAddress
+</span><a href="#local-6989586621679297284"><span class="hs-identifier hs-var">networkState</span></a></span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; Word32 -&gt; DiffTime -&gt; AcceptedConnectionsLimit
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Server.RateLimiting.html#AcceptedConnectionsLimit"><span class="hs-identifier hs-var">AcceptedConnectionsLimit</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">LocalAddress
+</span><a href="#local-6989586621679297280"><span class="hs-identifier hs-var">address</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CodecCBORTerm (Text, Maybe Int) ForwardingVersion
+-&gt; Codec
+     (Handshake ForwardingVersion Term) DeserialiseFailure IO ByteString
+forall vNumber (m :: * -&gt; *) failure.
+(MonadST m, Ord vNumber, Show failure) =&gt;
+CodecCBORTerm (failure, Maybe Int) vNumber
+-&gt; Codec (Handshake vNumber Term) DeserialiseFailure m ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Codec.html#codecHandshake"><span class="hs-identifier hs-var">codecHandshake</span></a></span><span> </span><span class="annot"><span class="annottext">CodecCBORTerm (Text, Maybe Int) ForwardingVersion
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#forwardingVersionCodec"><span class="hs-identifier hs-var">forwardingVersionCodec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">ProtocolTimeLimits (Handshake ForwardingVersion Term)
+</span><a href="#local-6989586621679297282"><span class="hs-identifier hs-var">timeLimits</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ForwardingVersion -&gt; CodecCBORTerm Text ForwardingVersionData)
+-&gt; VersionDataCodec Term ForwardingVersion ForwardingVersionData
+forall vNumber vData.
+(vNumber -&gt; CodecCBORTerm Text vData)
+-&gt; VersionDataCodec Term vNumber vData
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Codec.html#cborTermVersionDataCodec"><span class="hs-identifier hs-var">cborTermVersionDataCodec</span></a></span><span> </span><span class="annot"><span class="annottext">ForwardingVersion -&gt; CodecCBORTerm Text ForwardingVersionData
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#forwardingCodecCBORTerm"><span class="hs-identifier hs-var">forwardingCodecCBORTerm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ForwardingVersionData
+ -&gt; ForwardingVersionData -&gt; Accept ForwardingVersionData)
+-&gt; (ForwardingVersionData -&gt; Bool)
+-&gt; HandshakeCallbacks ForwardingVersionData
+forall vData.
+(vData -&gt; vData -&gt; Accept vData)
+-&gt; (vData -&gt; Bool) -&gt; HandshakeCallbacks vData
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Handshake.html#HandshakeCallbacks"><span class="hs-identifier hs-var">HandshakeCallbacks</span></a></span><span> </span><span class="annot"><span class="annottext">ForwardingVersionData
+-&gt; ForwardingVersionData -&gt; Accept ForwardingVersionData
+forall v. Acceptable v =&gt; v -&gt; v -&gt; Accept v
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Handshake.Acceptable.html#acceptableVersion"><span class="hs-identifier hs-var">acceptableVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ForwardingVersionData -&gt; Bool
+forall v. Queryable v =&gt; v -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Handshake.Queryable.html#queryVersion"><span class="hs-identifier hs-var">queryVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForwardingVersion
+-&gt; ForwardingVersionData
+-&gt; (ForwardingVersionData
+    -&gt; SomeResponderApplication LocalAddress ByteString IO ())
+-&gt; Versions
+     ForwardingVersion
+     ForwardingVersionData
+     (SomeResponderApplication LocalAddress ByteString IO ())
+forall vNum vData r.
+vNum -&gt; vData -&gt; (vData -&gt; r) -&gt; Versions vNum vData r
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Version.html#simpleSingletonVersions"><span class="hs-identifier hs-var">simpleSingletonVersions</span></a></span><span>
+</span><span id="line-125"></span><span>        </span><span class="annot"><span class="annottext">ForwardingVersion
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#ForwardingV_1"><span class="hs-identifier hs-var">ForwardingV_1</span></a></span><span>
+</span><span id="line-126"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NetworkMagic -&gt; ForwardingVersionData
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Version.html#ForwardingVersionData"><span class="hs-identifier hs-var">ForwardingVersionData</span></a></span><span> </span><span class="annot"><span class="annottext">(NetworkMagic -&gt; ForwardingVersionData)
+-&gt; NetworkMagic -&gt; ForwardingVersionData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; NetworkMagic
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-api-0.13.0.0-de1a04548668ad10e0869da83d9b6137dcea5f228f4d37d9ca8be469951ba810/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier hs-var">NetworkMagic</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679297281"><span class="hs-identifier hs-var">netMagic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">ForwardingVersionData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OuroborosApplication
+  'ResponderMode
+  (MinimalInitiatorContext LocalAddress)
+  (ResponderContext LocalAddress)
+  ByteString
+  IO
+  Void
+  ()
+-&gt; SomeResponderApplication LocalAddress ByteString IO ()
+forall (muxMode :: Mode) addr bytes (m :: * -&gt; *) a b.
+(HasResponder muxMode ~ 'True) =&gt;
+OuroborosApplicationWithMinimalCtx muxMode addr bytes m a b
+-&gt; SomeResponderApplication addr bytes m b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Socket.html#SomeResponderApplication"><span class="hs-identifier hs-var">SomeResponderApplication</span></a></span><span> </span><span class="annot"><span class="annottext">OuroborosApplication
+  'ResponderMode
+  (MinimalInitiatorContext LocalAddress)
+  (ResponderContext LocalAddress)
+  ByteString
+  IO
+  Void
+  ()
+</span><a href="#local-6989586621679297283"><span class="hs-identifier hs-var">app</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">ErrorPolicies
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.ErrorPolicy.html#nullErrorPolicies"><span class="hs-identifier hs-var">nullErrorPolicies</span></a></span><span>
+</span><span id="line-130"></span><span>      </span><span class="annot"><span class="annottext">((LocalAddress -&gt; Async IO Void -&gt; IO Void) -&gt; IO Void)
+-&gt; (LocalAddress -&gt; Async IO Void -&gt; IO Void) -&gt; IO Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">LocalAddress
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679297291"><span class="annot"><span class="annottext">Async IO Void
+</span><a href="#local-6989586621679297291"><span class="hs-identifier hs-var">serverAsync</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Async Void -&gt; IO Void
+forall a. Async a -&gt; IO a
+</span><span class="hs-identifier hs-var">wait</span></span><span> </span><span class="annot"><span class="annottext">Async Void
+Async IO Void
+</span><a href="#local-6989586621679297291"><span class="hs-identifier hs-var">serverAsync</span></a></span><span> </span><span class="hs-comment">-- Block until async exception.</span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span id="local-6989586621679297089"><span class="annot"><a href="Cardano.Tracer.Acceptors.Server.html#runEKGAcceptor"><span class="hs-identifier hs-type">runEKGAcceptor</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ekg-forward-0.9-a6a6dd46b176d22b9f97d292336b51d86a1a39f3725e60c8fb56ef99e5695258/share/doc/html/src/System.Metrics.Configuration.html#AcceptorConfiguration"><span class="hs-identifier hs-type">EKGF.AcceptorConfiguration</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier hs-type">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">Mux.ResponderMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679297089"><span class="hs-identifier hs-type">initiatorCtx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#ResponderContext"><span class="hs-identifier hs-type">ResponderContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-137"></span><span id="runEKGAcceptor"><span class="annot"><span class="annottext">runEKGAcceptor :: forall initiatorCtx.
+TracerEnv
+-&gt; AcceptorConfiguration
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#runEKGAcceptor"><span class="hs-identifier hs-var hs-var">runEKGAcceptor</span></a></span></span><span> </span><span id="local-6989586621679297292"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297292"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span id="local-6989586621679297293"><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297293"><span class="hs-identifier hs-var">ekgConfig</span></a></span></span><span> </span><span id="local-6989586621679297294"><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297294"><span class="hs-identifier hs-var">errorHandler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><span class="annottext">AcceptorConfiguration
+-&gt; (ResponderContext LocalAddress
+    -&gt; IO (Store, TVar MetricsLocalStore))
+-&gt; (ResponderContext LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+forall responderCtx initiatorCtx.
+AcceptorConfiguration
+-&gt; (responderCtx -&gt; IO (Store, TVar MetricsLocalStore))
+-&gt; (responderCtx -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode initiatorCtx responderCtx ByteString IO Void ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ekg-forward-0.9-a6a6dd46b176d22b9f97d292336b51d86a1a39f3725e60c8fb56ef99e5695258/share/doc/html/src/System.Metrics.Network.Acceptor.html#acceptEKGMetricsResp"><span class="hs-identifier hs-var">acceptEKGMetricsResp</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297293"><span class="hs-identifier hs-var">ekgConfig</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv
+-&gt; ConnectionId LocalAddress -&gt; IO (Store, TVar MetricsLocalStore)
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#prepareMetricsStores"><span class="hs-identifier hs-var">prepareMetricsStores</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297292"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(ConnectionId LocalAddress -&gt; IO (Store, TVar MetricsLocalStore))
+-&gt; (ResponderContext LocalAddress -&gt; ConnectionId LocalAddress)
+-&gt; ResponderContext LocalAddress
+-&gt; IO (Store, TVar MetricsLocalStore)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResponderContext LocalAddress -&gt; ConnectionId LocalAddress
+forall addr. ResponderContext addr -&gt; ConnectionId addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#rcConnectionId"><span class="hs-identifier hs-var">rcConnectionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297294"><span class="hs-identifier hs-var">errorHandler</span></a></span><span> </span><span class="annot"><span class="annottext">(ConnectionId LocalAddress -&gt; IO ())
+-&gt; (ResponderContext LocalAddress -&gt; ConnectionId LocalAddress)
+-&gt; ResponderContext LocalAddress
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResponderContext LocalAddress -&gt; ConnectionId LocalAddress
+forall addr. ResponderContext addr -&gt; ConnectionId addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#rcConnectionId"><span class="hs-identifier hs-var">rcConnectionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span id="local-6989586621679297090"><span class="annot"><a href="Cardano.Tracer.Acceptors.Server.html#runTraceObjectsAcceptor"><span class="hs-identifier hs-type">runTraceObjectsAcceptor</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnvRTView"><span class="hs-identifier hs-type">TracerEnvRTView</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Configuration.TraceObject.html#AcceptorConfiguration"><span class="hs-identifier hs-type">TF.AcceptorConfiguration</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-dispatcher-2.9.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#TraceObject"><span class="hs-identifier hs-type">TraceObject</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier hs-type">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">Mux.ResponderMode</span></a></span><span>
+</span><span id="line-149"></span><span>                     </span><span class="annot"><a href="#local-6989586621679297090"><span class="hs-identifier hs-type">initiatorCtx</span></a></span><span>
+</span><span id="line-150"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#ResponderContext"><span class="hs-identifier hs-type">ResponderContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>                     </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-152"></span><span id="runTraceObjectsAcceptor"><span class="annot"><span class="annottext">runTraceObjectsAcceptor :: forall initiatorCtx.
+TracerEnv
+-&gt; TracerEnvRTView
+-&gt; AcceptorConfiguration TraceObject
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#runTraceObjectsAcceptor"><span class="hs-identifier hs-var hs-var">runTraceObjectsAcceptor</span></a></span></span><span> </span><span id="local-6989586621679297303"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297303"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621679297304"><span class="annot"><span class="annottext">TracerEnvRTView
+</span><a href="#local-6989586621679297304"><span class="hs-identifier hs-var">tracerEnvRTView</span></a></span></span><span>
+</span><span id="line-154"></span><span>  </span><span id="local-6989586621679297305"><span class="annot"><span class="annottext">AcceptorConfiguration TraceObject
+</span><a href="#local-6989586621679297305"><span class="hs-identifier hs-var">tfConfig</span></a></span></span><span> </span><span id="local-6989586621679297306"><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297306"><span class="hs-identifier hs-var">errorHandler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><span class="annottext">AcceptorConfiguration TraceObject
+-&gt; (ResponderContext LocalAddress -&gt; [TraceObject] -&gt; IO ())
+-&gt; (ResponderContext LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+forall lo responderCtx initiatorCtx.
+(Serialise lo, ShowProxy lo, Typeable lo) =&gt;
+AcceptorConfiguration lo
+-&gt; (responderCtx -&gt; [lo] -&gt; IO ())
+-&gt; (responderCtx -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode initiatorCtx responderCtx ByteString IO Void ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Run.TraceObject.Acceptor.html#acceptTraceObjectsResp"><span class="hs-identifier hs-var">acceptTraceObjectsResp</span></a></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="annottext">AcceptorConfiguration TraceObject
+</span><a href="#local-6989586621679297305"><span class="hs-identifier hs-var">tfConfig</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv -&gt; TracerEnvRTView -&gt; NodeId -&gt; [TraceObject] -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Logs.TraceObjects.html#traceObjectsHandler"><span class="hs-identifier hs-var">traceObjectsHandler</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297303"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnvRTView
+</span><a href="#local-6989586621679297304"><span class="hs-identifier hs-var">tracerEnvRTView</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeId -&gt; [TraceObject] -&gt; IO ())
+-&gt; (ResponderContext LocalAddress -&gt; NodeId)
+-&gt; ResponderContext LocalAddress
+-&gt; [TraceObject]
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; NodeId
+forall addr. Show addr =&gt; ConnectionId addr -&gt; NodeId
+</span><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier hs-var">connIdToNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">(ConnectionId LocalAddress -&gt; NodeId)
+-&gt; (ResponderContext LocalAddress -&gt; ConnectionId LocalAddress)
+-&gt; ResponderContext LocalAddress
+-&gt; NodeId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResponderContext LocalAddress -&gt; ConnectionId LocalAddress
+forall addr. ResponderContext addr -&gt; ConnectionId addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#rcConnectionId"><span class="hs-identifier hs-var">rcConnectionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297306"><span class="hs-identifier hs-var">errorHandler</span></a></span><span> </span><span class="annot"><span class="annottext">(ConnectionId LocalAddress -&gt; IO ())
+-&gt; (ResponderContext LocalAddress -&gt; ConnectionId LocalAddress)
+-&gt; ResponderContext LocalAddress
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResponderContext LocalAddress -&gt; ConnectionId LocalAddress
+forall addr. ResponderContext addr -&gt; ConnectionId addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#rcConnectionId"><span class="hs-identifier hs-var">rcConnectionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span id="local-6989586621679297091"><span class="annot"><a href="Cardano.Tracer.Acceptors.Server.html#runDataPointsAcceptor"><span class="hs-identifier hs-type">runDataPointsAcceptor</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Configuration.DataPoint.html#AcceptorConfiguration"><span class="hs-identifier hs-type">DPF.AcceptorConfiguration</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier hs-type">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///nix/store/94v0ggn94wpwa44pn7kjq3mqsdilzrq7-network-mux-lib-network-mux-0.7-haddock-doc/share/doc/network-mux/html/src/Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">Mux.ResponderMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679297091"><span class="hs-identifier hs-type">initiatorCtx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#ResponderContext"><span class="hs-identifier hs-type">ResponderContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-165"></span><span id="runDataPointsAcceptor"><span class="annot"><span class="annottext">runDataPointsAcceptor :: forall initiatorCtx.
+TracerEnv
+-&gt; AcceptorConfiguration
+-&gt; (ConnectionId LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+</span><a href="Cardano.Tracer.Acceptors.Server.html#runDataPointsAcceptor"><span class="hs-identifier hs-var hs-var">runDataPointsAcceptor</span></a></span></span><span> </span><span id="local-6989586621679297307"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297307"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span id="local-6989586621679297308"><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297308"><span class="hs-identifier hs-var">dpfConfig</span></a></span></span><span> </span><span id="local-6989586621679297309"><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297309"><span class="hs-identifier hs-var">errorHandler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><span class="annottext">AcceptorConfiguration
+-&gt; (ResponderContext LocalAddress -&gt; IO DataPointRequestor)
+-&gt; (ResponderContext LocalAddress -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode
+     initiatorCtx
+     (ResponderContext LocalAddress)
+     ByteString
+     IO
+     Void
+     ()
+forall responderCtx initiatorCtx.
+AcceptorConfiguration
+-&gt; (responderCtx -&gt; IO DataPointRequestor)
+-&gt; (responderCtx -&gt; IO ())
+-&gt; RunMiniProtocol
+     'ResponderMode initiatorCtx responderCtx ByteString IO Void ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.5/trace-forward-2.2.11/doc/html/trace-forward/src/Trace.Forward.Run.DataPoint.Acceptor.html#acceptDataPointsResp"><span class="hs-identifier hs-var">acceptDataPointsResp</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="annottext">AcceptorConfiguration
+</span><a href="#local-6989586621679297308"><span class="hs-identifier hs-var">dpfConfig</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv -&gt; ConnectionId LocalAddress -&gt; IO DataPointRequestor
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#prepareDataPointRequestor"><span class="hs-identifier hs-var">prepareDataPointRequestor</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679297307"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(ConnectionId LocalAddress -&gt; IO DataPointRequestor)
+-&gt; (ResponderContext LocalAddress -&gt; ConnectionId LocalAddress)
+-&gt; ResponderContext LocalAddress
+-&gt; IO DataPointRequestor
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResponderContext LocalAddress -&gt; ConnectionId LocalAddress
+forall addr. ResponderContext addr -&gt; ConnectionId addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#rcConnectionId"><span class="hs-identifier hs-var">rcConnectionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; IO ()
+</span><a href="#local-6989586621679297309"><span class="hs-identifier hs-var">errorHandler</span></a></span><span> </span><span class="annot"><span class="annottext">(ConnectionId LocalAddress -&gt; IO ())
+-&gt; (ResponderContext LocalAddress -&gt; ConnectionId LocalAddress)
+-&gt; ResponderContext LocalAddress
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResponderContext LocalAddress -&gt; ConnectionId LocalAddress
+forall addr. ResponderContext addr -&gt; ConnectionId addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.5/ouroboros-network-framework-0.17.0.0-84ea91a609ac83728cd2f76faae409084941bde7a9618670b2d6d5561827620e/share/doc/html/src/Ouroboros.Network.Context.html#rcConnectionId"><span class="hs-identifier hs-var">rcConnectionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span></pre></body></html>

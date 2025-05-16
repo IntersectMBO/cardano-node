@@ -1,0 +1,222 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs               #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds           #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies        #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- This is already implied by the -Wall in the .cabal file, but lets just be</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- completely explicit about it too, since we rely on the completeness</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- checking in the cases below for the completeness of our proofs.</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wincomplete-patterns #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | Proofs about the typed protocol framework.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- It also provides helpful testing utilities.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.TypedProtocol.Stateful.Proofs</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Stateful.Proofs.html#connect"><span class="hs-identifier">connect</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TerminalStates</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Stateful.Proofs.html#removeState"><span class="hs-identifier">removeState</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadSTM</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Kind.html"><span class="hs-identifier">Data.Kind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Singletons</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.TypedProtocol.Core</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html"><span class="hs-identifier">Network.TypedProtocol.Stateful.Peer</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ST</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.TypedProtocol.Peer</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.TypedProtocol.Proofs</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TerminalStates</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.TypedProtocol.Proofs</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TP</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | Remove state for non-pipelined peers.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- TODO: There's a difficulty to write `removeState` for pipelined peers which</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- is type safe.  The `Peer` doesn't track all pipelined transitions, just the</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- depth of pipelining, so we cannot push `f st` to a queue which type is</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- linked to `Peer`.  For a similar reason there's no way to write</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- `forgetPipelined` function.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- However, this is possible if `Peer` tracks all transitions.</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span id="local-6989586621679051540"><span id="local-6989586621679051542"><span id="local-6989586621679051543"><span id="local-6989586621679051544"><span id="local-6989586621679051545"><span id="local-6989586621679051546"><span class="annot"><a href="Network.TypedProtocol.Stateful.Proofs.html#removeState"><span class="hs-identifier hs-type">removeState</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051542"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679051543"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051544"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Peer"><span class="hs-identifier hs-type">ST.Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051540"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051545"><span class="hs-identifier hs-type">pr</span></a></span><span>              </span><span class="annot"><a href="#local-6989586621679051544"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051543"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051542"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051546"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Peer</span></span><span> </span><span class="annot"><a href="#local-6989586621679051540"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051545"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NonPipelined</span></span><span> </span><span class="annot"><a href="#local-6989586621679051544"><span class="hs-identifier hs-type">st</span></a></span><span>   </span><span class="annot"><a href="#local-6989586621679051542"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051546"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span></span></span><span>
+</span><span id="line-53"></span><span id="removeState"><span class="annot"><span class="annottext">removeState :: forall (m :: * -&gt; *) ps (f :: ps -&gt; *) (st :: ps) (pr :: PeerRole)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="Network.TypedProtocol.Stateful.Proofs.html#removeState"><span class="hs-identifier hs-var hs-var">removeState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+forall ps (pr :: PeerRole) (st :: ps) (f :: ps -&gt; *) (m :: * -&gt; *)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="#local-6989586621679051633"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><a href="#local-6989586621679051633"><span class="hs-identifier hs-type">go</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679051556"><span class="annot"><a href="#local-6989586621679051556"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051560"><span class="annot"><a href="#local-6989586621679051560"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PeerRole</span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>                </span><span class="hs-special">(</span><span id="local-6989586621679051559"><span class="annot"><a href="#local-6989586621679051559"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051556"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>                </span><span class="hs-special">(</span><span id="local-6989586621679051558"><span class="annot"><a href="#local-6989586621679051558"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051556"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>                </span><span id="local-6989586621679051557"><span class="annot"><a href="#local-6989586621679051557"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679051561"><span class="annot"><a href="#local-6989586621679051561"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-60"></span><span>         </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051557"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679051558"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051559"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Peer"><span class="hs-identifier hs-type">ST.Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051556"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051560"><span class="hs-identifier hs-type">pr</span></a></span><span>              </span><span class="annot"><a href="#local-6989586621679051559"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051558"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051557"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051561"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-glyph">-&gt;</span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Peer</span></span><span> </span><span class="annot"><a href="#local-6989586621679051556"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051560"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NonPipelined</span></span><span> </span><span class="annot"><a href="#local-6989586621679051559"><span class="hs-identifier hs-type">st</span></a></span><span>   </span><span class="annot"><a href="#local-6989586621679051557"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051561"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679051633"><span class="annot"><span class="annottext">go :: forall ps (pr :: PeerRole) (st :: ps) (f :: ps -&gt; *) (m :: * -&gt; *)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="#local-6989586621679051633"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679051637"><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051637"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Effect"><span class="hs-identifier hs-type">ST.Effect</span></a></span><span> </span><span id="local-6989586621679051639"><span class="annot"><span class="annottext">m (Peer ps pr st f m a)
+</span><a href="#local-6989586621679051639"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (Peer ps pr 'NonPipelined st m a)
+-&gt; Peer ps pr 'NonPipelined st m a
+forall ps (pr :: PeerRole) (pl :: IsPipelined) (st :: ps)
+       (m :: * -&gt; *) a.
+m (Peer ps pr pl st m a) -&gt; Peer ps pr pl st m a
+</span><span class="hs-identifier hs-var">Effect</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+forall ps (pr :: PeerRole) (st :: ps) (f :: ps -&gt; *) (m :: * -&gt; *)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="#local-6989586621679051633"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051637"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a)
+-&gt; m (Peer ps pr st f m a) -&gt; m (Peer ps pr 'NonPipelined st m a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (Peer ps pr st f m a)
+</span><a href="#local-6989586621679051639"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="#local-6989586621679051633"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">f st
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Yield"><span class="hs-identifier hs-type">ST.Yield</span></a></span><span> </span><span id="local-6989586621679051652"><span class="annot"><span class="annottext">WeHaveAgencyProof pr st
+</span><a href="#local-6989586621679051652"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679051653"><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051653"><span class="hs-identifier hs-var">_f</span></a></span></span><span> </span><span id="local-6989586621679051654"><span class="annot"><span class="annottext">f st'
+</span><a href="#local-6989586621679051654"><span class="hs-identifier hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679051655"><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679051655"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span id="local-6989586621679051656"><span class="annot"><span class="annottext">Peer ps pr st' f m a
+</span><a href="#local-6989586621679051656"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st
+-&gt; Message ps st st'
+-&gt; Peer ps pr 'NonPipelined st' m a
+-&gt; Peer ps pr 'NonPipelined st m a
+forall ps (pr :: PeerRole) (pl :: IsPipelined) (st :: ps)
+       (st' :: ps) (m :: * -&gt; *) a.
+(StateTokenI st, StateTokenI st', ActiveState st,
+ Outstanding pl ~ 'Z) =&gt;
+WeHaveAgencyProof pr st
+-&gt; Message ps st st'
+-&gt; Peer ps pr pl st' m a
+-&gt; Peer ps pr pl st m a
+</span><span class="hs-identifier hs-var">Yield</span></span><span> </span><span class="annot"><span class="annottext">WeHaveAgencyProof pr st
+</span><a href="#local-6989586621679051652"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679051655"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f st' -&gt; Peer ps pr st' f m a -&gt; Peer ps pr 'NonPipelined st' m a
+forall ps (pr :: PeerRole) (st :: ps) (f :: ps -&gt; *) (m :: * -&gt; *)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="#local-6989586621679051633"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">f st'
+</span><a href="#local-6989586621679051654"><span class="hs-identifier hs-var">f'</span></a></span><span> </span><span class="annot"><span class="annottext">Peer ps pr st' f m a
+</span><a href="#local-6989586621679051656"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><a href="#local-6989586621679051633"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679051658"><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051658"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Await"><span class="hs-identifier hs-type">ST.Await</span></a></span><span> </span><span id="local-6989586621679051666"><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st
+</span><a href="#local-6989586621679051666"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679051667"><span class="annot"><span class="annottext">forall (st' :: ps).
+f st -&gt; Message ps st st' -&gt; (Peer ps pr st' f m a, f st')
+</span><a href="#local-6989586621679051667"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st
+-&gt; (forall {st' :: ps}.
+    Message ps st st' -&gt; Peer ps pr 'NonPipelined st' m a)
+-&gt; Peer ps pr 'NonPipelined st m a
+forall ps (pr :: PeerRole) (pl :: IsPipelined) (st :: ps)
+       (m :: * -&gt; *) a.
+(StateTokenI st, ActiveState st, Outstanding pl ~ 'Z) =&gt;
+TheyHaveAgencyProof pr st
+-&gt; (forall (st' :: ps). Message ps st st' -&gt; Peer ps pr pl st' m a)
+-&gt; Peer ps pr pl st m a
+</span><span class="hs-identifier hs-var">Await</span></span><span> </span><span class="annot"><span class="annottext">TheyHaveAgencyProof pr st
+</span><a href="#local-6989586621679051666"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">((forall {st' :: ps}.
+  Message ps st st' -&gt; Peer ps pr 'NonPipelined st' m a)
+ -&gt; Peer ps pr 'NonPipelined st m a)
+-&gt; (forall {st' :: ps}.
+    Message ps st st' -&gt; Peer ps pr 'NonPipelined st' m a)
+-&gt; Peer ps pr 'NonPipelined st m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679051670"><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679051670"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">f st -&gt; Message ps st st' -&gt; (Peer ps pr st' f m a, f st')
+forall (st' :: ps).
+f st -&gt; Message ps st st' -&gt; (Peer ps pr st' f m a, f st')
+</span><a href="#local-6989586621679051667"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051658"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Message ps st st'
+</span><a href="#local-6989586621679051670"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-68"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679051671"><span class="annot"><span class="annottext">Peer ps pr st' f m a
+</span><a href="#local-6989586621679051671"><span class="hs-identifier hs-var">k'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679051672"><span class="annot"><span class="annottext">f st'
+</span><a href="#local-6989586621679051672"><span class="hs-identifier hs-var">f'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">f st' -&gt; Peer ps pr st' f m a -&gt; Peer ps pr 'NonPipelined st' m a
+forall ps (pr :: PeerRole) (st :: ps) (f :: ps -&gt; *) (m :: * -&gt; *)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="#local-6989586621679051633"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">f st'
+</span><a href="#local-6989586621679051672"><span class="hs-identifier hs-var">f'</span></a></span><span> </span><span class="annot"><span class="annottext">Peer ps pr st' f m a
+</span><a href="#local-6989586621679051671"><span class="hs-identifier hs-var">k'</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><a href="#local-6989586621679051633"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">f st
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Done"><span class="hs-identifier hs-type">ST.Done</span></a></span><span> </span><span id="local-6989586621679051682"><span class="annot"><span class="annottext">NobodyHasAgencyProof pr st
+</span><a href="#local-6989586621679051682"><span class="hs-identifier hs-var">refl</span></a></span></span><span> </span><span id="local-6989586621679051683"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679051683"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NobodyHasAgencyProof pr st -&gt; a -&gt; Peer ps pr 'NonPipelined st m a
+forall ps (pr :: PeerRole) (pl :: IsPipelined) (st :: ps)
+       (m :: * -&gt; *) a.
+(StateTokenI st, StateAgency st ~ 'NobodyAgency,
+ Outstanding pl ~ 'Z) =&gt;
+NobodyHasAgencyProof pr st -&gt; a -&gt; Peer ps pr pl st m a
+</span><span class="hs-identifier hs-var">Done</span></span><span> </span><span class="annot"><span class="annottext">NobodyHasAgencyProof pr st
+</span><a href="#local-6989586621679051682"><span class="hs-identifier hs-var">refl</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679051683"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Network.TypedProtocol.Stateful.Proofs.html#connect"><span class="hs-identifier hs-type">connect</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679051602"><span class="annot"><a href="#local-6989586621679051602"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051605"><span class="annot"><a href="#local-6989586621679051605"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PeerRole</span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>               </span><span class="hs-special">(</span><span id="local-6989586621679051608"><span class="annot"><a href="#local-6989586621679051608"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051602"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>               </span><span class="hs-special">(</span><span id="local-6989586621679051607"><span class="annot"><a href="#local-6989586621679051607"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051602"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>               </span><span id="local-6989586621679051603"><span class="annot"><a href="#local-6989586621679051603"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679051609"><span class="annot"><a href="#local-6989586621679051609"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679051611"><span class="annot"><a href="#local-6989586621679051611"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-77"></span><span>       </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679051603"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SingI</span></span><span> </span><span class="annot"><a href="#local-6989586621679051605"><span class="hs-identifier hs-type">pr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679051607"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051608"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Peer"><span class="hs-identifier hs-type">ST.Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051602"><span class="hs-identifier hs-type">ps</span></a></span><span>             </span><span class="annot"><a href="#local-6989586621679051605"><span class="hs-identifier hs-type">pr</span></a></span><span>  </span><span class="annot"><a href="#local-6989586621679051608"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051607"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051603"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051609"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Stateful.Peer.html#Peer"><span class="hs-identifier hs-type">ST.Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051602"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FlipAgency</span></span><span> </span><span class="annot"><a href="#local-6989586621679051605"><span class="hs-identifier hs-type">pr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679051608"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051607"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051603"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051611"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679051603"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679051609"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679051611"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TerminalStates</span></span><span> </span><span class="annot"><a href="#local-6989586621679051602"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span id="connect"><span class="annot"><span class="annottext">connect :: forall ps (pr :: PeerRole) (st :: ps) (f :: ps -&gt; *) (m :: * -&gt; *)
+       a b.
+(MonadSTM m, SingI pr) =&gt;
+f st
+-&gt; Peer ps pr st f m a
+-&gt; Peer ps (FlipAgency pr) st f m b
+-&gt; m (a, b, TerminalStates ps)
+</span><a href="Network.TypedProtocol.Stateful.Proofs.html#connect"><span class="hs-identifier hs-var hs-var">connect</span></a></span></span><span> </span><span id="local-6989586621679051697"><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051697"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679051698"><span class="annot"><span class="annottext">Peer ps pr st f m a
+</span><a href="#local-6989586621679051698"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679051699"><span class="annot"><span class="annottext">Peer ps (FlipAgency pr) st f m b
+</span><a href="#local-6989586621679051699"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Peer ps pr 'NonPipelined st m a
+-&gt; Peer ps (FlipAgency pr) 'NonPipelined st m b
+-&gt; m (a, b, TerminalStates ps)
+forall ps (pr :: PeerRole) (initSt :: ps) (m :: * -&gt; *) a b.
+(Monad m, SingI pr) =&gt;
+Peer ps pr 'NonPipelined initSt m a
+-&gt; Peer ps (FlipAgency pr) 'NonPipelined initSt m b
+-&gt; m (a, b, TerminalStates ps)
+</span><span class="hs-identifier hs-var">TP.connect</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+forall (m :: * -&gt; *) ps (f :: ps -&gt; *) (st :: ps) (pr :: PeerRole)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="Network.TypedProtocol.Stateful.Proofs.html#removeState"><span class="hs-identifier hs-var">removeState</span></a></span><span> </span><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051697"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Peer ps pr st f m a
+</span><a href="#local-6989586621679051698"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f st
+-&gt; Peer ps (FlipAgency pr) st f m b
+-&gt; Peer ps (FlipAgency pr) 'NonPipelined st m b
+forall (m :: * -&gt; *) ps (f :: ps -&gt; *) (st :: ps) (pr :: PeerRole)
+       a.
+Functor m =&gt;
+f st -&gt; Peer ps pr st f m a -&gt; Peer ps pr 'NonPipelined st m a
+</span><a href="Network.TypedProtocol.Stateful.Proofs.html#removeState"><span class="hs-identifier hs-var">removeState</span></a></span><span> </span><span class="annot"><span class="annottext">f st
+</span><a href="#local-6989586621679051697"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Peer ps (FlipAgency pr) st f m b
+</span><a href="#local-6989586621679051699"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span></pre></body></html>

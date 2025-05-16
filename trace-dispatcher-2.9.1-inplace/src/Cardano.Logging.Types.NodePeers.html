@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Types.NodePeers</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.NodePeers.html#NodePeers"><span class="hs-identifier">NodePeers</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.NodePeers.html#PeerInfoPP"><span class="hs-identifier">PeerInfoPP</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">type</span><span> </span><span id="PeerInfoPP"><span class="annot"><a href="Cardano.Logging.Types.NodePeers.html#PeerInfoPP"><span class="hs-identifier hs-var">PeerInfoPP</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-comment">-- The result of 'ppPeer' function.</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- | This type contains an information about current peers of the node.</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--   It will be asked by external applications as a DataPoint.</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">newtype</span><span> </span><span id="NodePeers"><span class="annot"><a href="Cardano.Logging.Types.NodePeers.html#NodePeers"><span class="hs-identifier hs-var">NodePeers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NodePeers"><span class="annot"><a href="Cardano.Logging.Types.NodePeers.html#NodePeers"><span class="hs-identifier hs-var">NodePeers</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Logging.Types.NodePeers.html#PeerInfoPP"><span class="hs-identifier hs-type">PeerInfoPP</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>    </span><span id="local-6989586621679175877"><span id="local-6989586621679175879"><span class="annot"><span class="annottext">(forall x. NodePeers -&gt; Rep NodePeers x)
+-&gt; (forall x. Rep NodePeers x -&gt; NodePeers) -&gt; Generic NodePeers
+forall x. Rep NodePeers x -&gt; NodePeers
+forall x. NodePeers -&gt; Rep NodePeers x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. NodePeers -&gt; Rep NodePeers x
+from :: forall x. NodePeers -&gt; Rep NodePeers x
+$cto :: forall x. Rep NodePeers x -&gt; NodePeers
+to :: forall x. Rep NodePeers x -&gt; NodePeers
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/base-4.18.2.1/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679175883"><span class="annot"><span class="annottext">NodePeers -&gt; ()
+(NodePeers -&gt; ()) -&gt; NFData NodePeers
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: NodePeers -&gt; ()
+rnf :: NodePeers -&gt; ()
+</span><a href="file:///nix/store/ahd0dyjy54gfbx667iq5s68d85igqdgv-ghc-9.6.5-doc/share/doc/ghc-9.6.5/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679175900"><span id="local-6989586621679175907"><span id="local-6989586621679175910"><span id="local-6989586621679175913"><span id="local-6989586621679175916"><span class="annot"><span class="annottext">[NodePeers] -&gt; Value
+[NodePeers] -&gt; Encoding
+NodePeers -&gt; Bool
+NodePeers -&gt; Value
+NodePeers -&gt; Encoding
+(NodePeers -&gt; Value)
+-&gt; (NodePeers -&gt; Encoding)
+-&gt; ([NodePeers] -&gt; Value)
+-&gt; ([NodePeers] -&gt; Encoding)
+-&gt; (NodePeers -&gt; Bool)
+-&gt; ToJSON NodePeers
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: NodePeers -&gt; Value
+toJSON :: NodePeers -&gt; Value
+$ctoEncoding :: NodePeers -&gt; Encoding
+toEncoding :: NodePeers -&gt; Encoding
+$ctoJSONList :: [NodePeers] -&gt; Value
+toJSONList :: [NodePeers] -&gt; Value
+$ctoEncodingList :: [NodePeers] -&gt; Encoding
+toEncodingList :: [NodePeers] -&gt; Encoding
+$comitField :: NodePeers -&gt; Bool
+omitField :: NodePeers -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679175970"><span id="local-6989586621679175977"><span id="local-6989586621679175980"><span class="annot"><span class="annottext">Maybe NodePeers
+Value -&gt; Parser [NodePeers]
+Value -&gt; Parser NodePeers
+(Value -&gt; Parser NodePeers)
+-&gt; (Value -&gt; Parser [NodePeers])
+-&gt; Maybe NodePeers
+-&gt; FromJSON NodePeers
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser NodePeers
+parseJSON :: Value -&gt; Parser NodePeers
+$cparseJSONList :: Value -&gt; Parser [NodePeers]
+parseJSONList :: Value -&gt; Parser [NodePeers]
+$comittedField :: Maybe NodePeers
+omittedField :: Maybe NodePeers
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span></pre></body></html>
