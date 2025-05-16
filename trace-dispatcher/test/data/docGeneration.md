@@ -36,7 +36,7 @@
 > We record both the current slot number as well as the slot number of the
 > block at the tip of the chain.
 >
-> See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
+> See also <https://github.com/IntersectMBO/ouroboros-consensus/issues/732>
 
 
 Severity:  `Error`
@@ -69,7 +69,7 @@ Filtered Invisible by config value: `Silence`
 > We record both the current slot number as well as the tip of the
 > ImmutableDB.
 >
-> See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
+> See also <https://github.com/IntersectMBO/ouroboros-consensus/issues/732>
 
 
 Severity:  `Error`
@@ -113,7 +113,7 @@ Filtered Invisible by config value: `Silence`
 > We record both the current slot number as well as the slot number of the
 > block at the tip of the chain.
 >
-> See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
+> See also <https://github.com/IntersectMBO/ouroboros-consensus/issues/732>
 
 
 Severity:  `Error`
@@ -146,7 +146,7 @@ Filtered Invisible by config value: `Silence`
 > We record both the current slot number as well as the tip of the
 > ImmutableDB.
 >
-> See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
+> See also <https://github.com/IntersectMBO/ouroboros-consensus/issues/732>
 
 
 Severity:  `Error`
