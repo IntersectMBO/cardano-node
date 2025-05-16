@@ -44,7 +44,7 @@ import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
-import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types (GenesisOptions (..), cardanoNumPools)

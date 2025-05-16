@@ -69,7 +69,7 @@ instance ToJSON (SigningKey PaymentKey) where
 instance FromJSON (SigningKey PaymentKey) where
   parseJSON o = do
     te <- parseJSON o
-    case deserialiseFromTextEnvelope (AsSigningKey AsPaymentKey) te of
+    case deserialiseFromTextEnvelope te of
       Right k   -> pure k
       Left err  -> fail $ show err
 
