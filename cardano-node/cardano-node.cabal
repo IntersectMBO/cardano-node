@@ -192,9 +192,9 @@ library
                       , network-mux >= 0.5
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.26.0.1
+                      , ouroboros-consensus ^>= 0.27
                       , ouroboros-consensus-cardano ^>= 0.25
-                      , ouroboros-consensus-diffusion ^>= 0.22
+                      , ouroboros-consensus-diffusion ^>= 0.23
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.13
                       , ouroboros-network ^>= 0.20

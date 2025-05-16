@@ -21,7 +21,7 @@ module Cardano.Tracing.OrphanInstances.Consensus () where
 
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
-import           Cardano.Prelude (maximumDef)
+import           Cardano.Prelude (Typeable, maximumDef)
 import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Network ()
@@ -74,8 +74,8 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), MaxSlotNo(..), SlotNo (..), StandardHash,
-                   Tip (..), blockHash, pointSlot, tipFromHeader)
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), MaxSlotNo (..),
+                   SlotNo (..), StandardHash, Tip (..), blockHash, pointSlot, tipFromHeader)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
@@ -131,6 +131,12 @@ instance ConvertRawHash blk => ConvertRawHash (Header blk) where
   toShortRawHash _ = toShortRawHash (Proxy @blk)
   fromShortRawHash _ = fromShortRawHash (Proxy @blk)
   hashSize :: proxy (Header blk) -> Word32
+  hashSize _ = hashSize (Proxy @blk)
+
+instance ConvertRawHash blk => ConvertRawHash (HeaderWithTime blk) where
+  toShortRawHash _ = toShortRawHash (Proxy @blk)
+  fromShortRawHash _ = fromShortRawHash (Proxy @blk)
+  hashSize :: proxy (HeaderWithTime blk) -> Word32
   hashSize _ = hashSize (Proxy @blk)
 
 --
@@ -1779,10 +1785,10 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
 instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
 instance HasSeverityAnnotation (TraceGDDEvent peer blk) where
   getSeverityAnnotation _ = Debug
-instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
+instance (Typeable blk, ToObject peer, ConvertRawHash blk, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
   trTransformer = trStructured
 
-instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
+instance (Typeable blk, ToObject peer, ConvertRawHash blk, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
   toObject verb (TraceGDDDebug (GDDDebugInfo {..})) = mconcat $
     [ "kind" .= String "TraceGDDEvent"
     , "losingPeers".= toJSON (map (toObject verb) losingPeers)
@@ -1828,7 +1834,7 @@ instance (ToObject peer, ConvertRawHash blk, GetHeader blk) => ToObject (TraceGD
     , "peer" .= toJSON (map (toObject verb) $ toList peer)
     ]
 
-instance (ConvertRawHash blk, GetHeader blk) => ToObject (DensityBounds blk) where
+instance (Typeable blk, ConvertRawHash blk, GetHeader blk) => ToObject (DensityBounds blk) where
   toObject verb DensityBounds {..} = mconcat
     [ "kind" .= String "DensityBounds"
     , "clippedFragment" .= toObject verb clippedFragment
