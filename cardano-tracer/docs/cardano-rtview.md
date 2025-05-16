@@ -10,20 +10,20 @@ guarantee it remains buildable and usable in its current state.
 
 # Contents
 
-1. [Introduction](#Introduction)
-   1. [Motivation](#Motivation)
-   2. [Overview](#Overview)
-2. [TL;DR: Quick Start](#TL;DR:-Quick-Start)
-3. [Configuration](#Configuration)
-4. [Notifications](#Notifications)
-   1. [SMTP settings](#SMTP-settings)
-   2. [Note for Gmail users](#Note-for-Gmail-users)
-   3. [Events](#Events)
-   4. [Notify period](#Notify-period)
-5. [UI](#UI)
-   1. [Security Alert](#Security-Alert)
-   2. [Missing Metrics](#Missing-Metrics)
-   3. [Producer or Relay?](#Producer-or-Relay?)
+1. [Introduction](#introduction)
+   1. [Motivation](#motivation)
+   2. [Overview](#overview)
+2. [TL;DR: Quick Start](#tldr-quick-start)
+3. [Configuration](#configuration)
+4. [Notifications](#notifications)
+   1. [SMTP settings](#smtp-settings)
+   2. [Note for Gmail users](#note-for-gmail-users)
+   3. [Events](#events)
+   4. [Notify period](#notify-period)
+5. [UI](#ui)
+   1. [Security Alert](#security-alert)
+   2. [Missing Metrics](#missing-metrics)
+   3. [Producer or Relay?](#producer-or-relay)
 
 # Introduction
 
