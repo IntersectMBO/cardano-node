@@ -24,7 +24,7 @@ let
           profile = profileBundle.profile.value;
           nodeSpecs = profileBundle.node-specs.value;
           withGenerator = true;
-          withTracer = profileBundle.profile.value.node.tracer;
+          withTracer = profileBundle.profile.value.node.trace_forwarding;
           withSsh = false;
           inetHttpServerPort = "127.0.0.1:9001";
         };
