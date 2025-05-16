@@ -547,8 +547,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               )
               Nothing
 #endif
-        nForkPolicy <- getForkPolicy $ ncForkPolicy nc
-        cForkPolicy <- getForkPolicy $ ncForkPolicy nc
+        nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
+        cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
         void $
           let diffusionArgumentsExtra =
                 mkP2PArguments nForkPolicy cForkPolicy nc
