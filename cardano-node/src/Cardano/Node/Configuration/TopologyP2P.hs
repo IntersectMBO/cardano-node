@@ -1,8 +1,8 @@
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 
 module Cardano.Node.Configuration.TopologyP2P
   ( TopologyError(..)
@@ -24,7 +24,7 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
-import           Cardano.Network.ConsensusMode (ConsensusMode(..))
+import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.NodeAddress
@@ -41,10 +41,7 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
                    WarmValency (..))
 
 import           Control.Applicative (Alternative (..))
-import           Control.Exception (IOException)
-import qualified Control.Exception as Exception
-import           Control.Exception.Base (Exception (..))
-import           Control.Monad.Trans.Except.Extra
+import           Control.Exception.Safe (Exception (..), IOException, handleAny, try)
 import qualified "contra-tracer" Control.Tracer as CT
 import           Data.Aeson
 import qualified Data.ByteString as BS
@@ -52,6 +49,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           System.FilePath (takeDirectory, (</>))
 
 data NodeSetup = NodeSetup
   { nodeId          :: !Word64
@@ -216,7 +214,7 @@ instance ToJSON NetworkTopology where
 --
 readTopologyFile :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text NetworkTopology)
 readTopologyFile nc tr = do
-  eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
+  eBs <- try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e
@@ -273,11 +271,17 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
-readPeerSnapshotFile :: PeerSnapshotFile -> IO LedgerPeerSnapshot
-readPeerSnapshotFile (PeerSnapshotFile psf) = either error pure =<< runExceptT
-  (handleLeftT (left . ("Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <>)) $ do
-    bs <- BS.readFile psf `catchIOExceptT` displayException
-    hoistEither (eitherDecode . LBS.fromStrict $ bs))
+readPeerSnapshotFile
+  :: TopologyFile -- ^ use as a base directory when peer snapshot file is a relative path
+  -> PeerSnapshotFile
+  -> IO LedgerPeerSnapshot
+readPeerSnapshotFile (TopologyFile topologyFile) (PeerSnapshotFile peerSnapshotFile) = do
+  -- if peerSnapshotFile is absolute, then the part before </> is ignored
+  let path = takeDirectory topologyFile </> peerSnapshotFile
+  handleException $
+    either error pure =<< eitherDecodeFileStrict path
+  where
+    handleException = handleAny $ \e -> error $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> displayException e
 
 --
 -- Checking for chance of progress in bootstrap phase
