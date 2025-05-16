@@ -27,6 +27,7 @@ module Cardano.Unlog.LogObjectDB
        , traceFreqsToSql
 
        , createSchema
+       , createLMetricsIfNotExists
        , runSqlRunnable
 
        , fromSqlDataPair
@@ -115,6 +116,7 @@ createSchema =
   , createSlot
   , createEvent
   , createTxns
+  , createLMetricsIfNotExists
   ]
 
 -- table error
@@ -178,6 +180,16 @@ slotArgs :: UTCTime -> ArgNTuple -> [SQLData]
 slotArgs at args@Triple{}   = toSqlData at : toArgs args
 slotArgs _  _               = error "slotArgs: three arguments expected"
 
+-- table ledgermetrics
+
+createLMetricsIfNotExists, insertLMetrics :: SQL
+createLMetricsIfNotExists = "CREATE TABLE IF NOT EXISTS ledgermetrics (at REAL NOT NULL, slot INTEGER, utxo_size INTEGER, chain_dens REAL)"
+insertLMetrics            = "INSERT INTO ledgermetrics VALUES (?,?,?,?)"
+
+lMetricsArgs :: UTCTime -> ArgNTuple -> [SQLData]
+lMetricsArgs at args@Triple{}   = toSqlData at : toArgs args
+lMetricsArgs _  _               = error "lMetricsArgs: three arguments expected"
+
 -- tables event and txns
 
 createEvent, createTxns :: SQL
@@ -226,6 +238,8 @@ logObjectToSql lo@LogObject{loAt, loBody, loTid} =
                                   -> newLOEvent $ Triple    ("slot", mSz) ("block", len) ("hash", h)
 
     LOLedgerTookSnapshot          -> newLOEvent Empty
+    LOLedgerMetrics slot utxoSize chainDensity
+                                  -> Just (insertLMetrics, lMetricsArgs loAt (Triple ("", slot) ("", utxoSize) ("", chainDensity)))
 
     -- txn receive path
     LOTxsCollected c              -> newLOTxns $ Tuple      ("count", c) ("tid", loTid)
@@ -343,6 +357,9 @@ toLOBodyConverters args = ML.fromList
     )
 
   , ( "LOLedgerTookSnapshot", LOLedgerTookSnapshot)
+  , ( "LOLedgerMetrics"
+    , LOLedgerMetrics (fromSqlData slot) (fromSqlData utxoSize) (fromSqlData chainDens)
+    )  
 
   -- txn receive path
   , ( "LOTxsCollected",       LOTxsCollected (fromSqlData count))
@@ -367,7 +384,7 @@ toLOBodyConverters args = ML.fromList
     -- table: event
     slot : block : _ : hash : _ = args
 
-    -- table: slot
+    -- table: slot, ledgermetrics
     _ : utxoSize : chainDens : _ = args
 
     -- table: txns

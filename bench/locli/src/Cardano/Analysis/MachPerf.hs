@@ -172,8 +172,9 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
     (\sl@SlotStats{..} ->
         sl { slCountStarts = slCountStarts + 1
            , slStarted = SJust loAt
-           , slUtxoSize = utxo
-           , slDensity = density
+           -- these metrics have moved to LOLedgerMetrics, but we still support values from former TraceStartLeadershipCheckPlus parses
+           , slUtxoSize = if utxo > 0 then utxo else slUtxoSize
+           , slDensity = if density > 0.0 then density else slDensity
            })
   -- Next, events that technically should extend the timeline,
   -- but we don't really care for their misattribution to incur the overhead:
@@ -188,6 +189,9 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
   LogObject{loBody=LOLedgerTookSnapshot} ->
     forTAHead accum
       (\s-> s { slChainDBSnap = slChainDBSnap cur + 1 })
+  LogObject{loBody=LOLedgerMetrics _ utxo density} ->
+    forTAHead accum
+      (\s-> s { slUtxoSize = utxo, slDensity = density })
   LogObject{loBody=LOTxsCollected coll, loTid, loAt} ->
     (forTAHead accum
       \s-> s { slTxsCollected = slTxsCollected cur + max 0 (fromIntegral coll) })

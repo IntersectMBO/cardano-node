@@ -189,6 +189,7 @@ nullTracersP2P = Tracers
   , nodeVersionTracer = nullTracer
   , resourcesTracer = nullTracer
   , peersTracer = nullTracer
+  , ledgerMetricsTracer = nullTracer
   }
 
 nullTracersNonP2P :: Tracers peer localPeer blk 'Diffusion.NonP2P extraState extraDebugState extraFlags extraPeers extraCounters m
@@ -207,6 +208,7 @@ nullTracersNonP2P = Tracers
   , nodeVersionTracer = nullTracer
   , resourcesTracer = nullTracer
   , peersTracer = nullTracer
+  , ledgerMetricsTracer = nullTracer
   }
 
 indexGCType :: ChainDB.TraceGCEvent a -> Int
@@ -400,6 +402,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
     , nodeStateTracer = nullTracer
     , resourcesTracer = nullTracer
     , peersTracer = nullTracer
+    , ledgerMetricsTracer = nullTracer
     }
  where
    traceForgeEnabledMetric :: Maybe EKGDirect -> StartupTrace blk -> IO ()
@@ -582,6 +585,7 @@ mkTracers _ _ _ _ _ enableP2P =
     , nodeVersionTracer = nullTracer
     , resourcesTracer = nullTracer
     , peersTracer = nullTracer
+    , ledgerMetricsTracer = nullTracer
     }
 
 --------------------------------------------------------------------------------
