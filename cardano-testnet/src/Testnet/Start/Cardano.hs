@@ -50,7 +50,7 @@ import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli', execCli_, mkExecConfig)
-import           Testnet.Property.Assert ( assertExpectedSposInLedgerState)
+import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
 import           Testnet.Start.Types
 import           Testnet.Types as TR hiding (shelleyGenesis)
@@ -172,6 +172,7 @@ cardanoTestnet
   Conf{tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
   let CardanoTestnetOptions
         { cardanoEnableNewEpochStateLogging=enableNewEpochStateLogging
+        , cardanoNodeLoggingFormat=nodeLoggingFormat
         , cardanoNodes
         } = testnetOptions
       nPools = cardanoNumPools testnetOptions
@@ -260,9 +261,9 @@ cardanoTestnet
 
   -- FIXME: use foldEpochState waiting for chain extensions
   now <- H.noteShowIO DTC.getCurrentTime
-  _deadline <- H.noteShow $ DTC.addUTCTime 45 now
-  --forM_ (map nodeStdout testnetNodes') $ \nodeStdoutFile -> do
-  --  assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
+  deadline <- H.noteShow $ DTC.addUTCTime 45 now
+  forM_ (map nodeStdout testnetNodes') $ \nodeStdoutFile -> do
+    assertChainExtended deadline nodeLoggingFormat nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
