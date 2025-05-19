@@ -24,6 +24,8 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
+import           Cardano.Api (handleIOExceptionsLiftWith, liftEither, runExceptT, throwError)
+
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
@@ -41,9 +43,12 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
                    WarmValency (..))
 
 import           Control.Applicative (Alternative (..))
-import           Control.Exception.Safe (Exception (..), IOException, handleAny, try)
+import           Control.Exception.Safe (Exception (..), IOException, handleAny)
+import           Control.Monad
+import           Control.Monad.IO.Class
 import qualified "contra-tracer" Control.Tracer as CT
 import           Data.Aeson
+import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
@@ -111,7 +116,7 @@ rootConfigToRelayAccessPoint
   :: RootConfig
   -> [(RelayAccessPoint, PeerAdvertise)]
 rootConfigToRelayAccessPoint RootConfig { rootAccessPoints, rootAdvertise  } =
-    [ (ap, rootAdvertise) | ap <- rootAccessPoints ]
+    [ (accessPoint, rootAdvertise) | accessPoint <- rootAccessPoints ]
 
 
 -- | A local root peers group.  Local roots are treated by the outbound
@@ -187,6 +192,10 @@ data NetworkTopology = RealNodeTopology { ntLocalRootPeersGroups :: !LocalRootPe
                                         }
   deriving (Eq, Show)
 
+instance AdjustFilePaths NetworkTopology where
+  adjustFilePaths f nt@(RealNodeTopology _ _ _ _ mPeerSnapshotPath) =
+    nt{ntPeerSnapshotPath = PeerSnapshotFile . f . unPeerSnapshotFile <$> mPeerSnapshotPath}
+
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o ->
                 RealNodeTopology <$> (o .: "localRoots"                                  )
@@ -211,27 +220,23 @@ instance ToJSON NetworkTopology where
                                    ]
 
 -- | Read the `NetworkTopology` configuration from the specified file.
---
 readTopologyFile :: NodeConfiguration -> CT.Tracer IO (StartupTrace blk) -> IO (Either Text NetworkTopology)
-readTopologyFile nc tr = do
-  eBs <- try $ BS.readFile (unTopology $ ncTopologyFile nc)
+readTopologyFile NodeConfiguration{ncTopologyFile=TopologyFile topologyFilePath, ncConsensusMode} tracer = runExceptT $ do
+  bs <- handleIOExceptionsLiftWith handler $ BS.readFile topologyFilePath
+  topology@RealNodeTopology{ntUseBootstrapPeers} <-
+    liftEither . first handlerJSON $
+      eitherDecode $ LBS.fromStrict bs
 
-  case eBs of
-    Left e -> return . Left $ handler e
-    Right bs ->
-      let bs' = LBS.fromStrict bs in
-        case eitherDecode bs' of
-          Left err -> return $ Left (handlerJSON err)
-          Right t
-            | isValidTrustedPeerConfiguration t ->
-                if isGenesisCompatible (ncConsensusMode nc) (ntUseBootstrapPeers t)
-                  then return (Right t)
-                  else do
-                    CT.traceWith tr $
-                      NetworkConfigUpdateError genesisIncompatible
-                    return . Right $ t { ntUseBootstrapPeers = DontUseBootstrapPeers }
-            | otherwise ->
-                pure $ Left handlerBootstrap
+  unless (isValidTrustedPeerConfiguration topology) $
+    throwError handlerBootstrap
+
+  -- make all relative paths in the topology file relative to the topology file location
+  adjustFilePaths (takeDirectory topologyFilePath </>) <$>
+    if isGenesisCompatible ncConsensusMode ntUseBootstrapPeers
+       then pure topology
+       else do
+         liftIO $ CT.traceWith tracer $ NetworkConfigUpdateError genesisIncompatible
+         pure $ topology{ntUseBootstrapPeers = DontUseBootstrapPeers}
   where
     handler :: IOException -> Text
     handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
@@ -271,15 +276,10 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
-readPeerSnapshotFile
-  :: TopologyFile -- ^ use as a base directory when peer snapshot file is a relative path
-  -> PeerSnapshotFile
-  -> IO LedgerPeerSnapshot
-readPeerSnapshotFile (TopologyFile topologyFile) (PeerSnapshotFile peerSnapshotFile) = do
-  -- if peerSnapshotFile is absolute, then the part before </> is ignored
-  let path = takeDirectory topologyFile </> peerSnapshotFile
+readPeerSnapshotFile :: PeerSnapshotFile -> IO LedgerPeerSnapshot
+readPeerSnapshotFile  (PeerSnapshotFile peerSnapshotFile) =
   handleException $
-    either error pure =<< eitherDecodeFileStrict path
+    either error pure =<< eitherDecodeFileStrict peerSnapshotFile
   where
     handleException = handleAny $ \e -> error $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> displayException e
 
