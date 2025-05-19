@@ -119,12 +119,11 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
   extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [Peer blk]
   extractPeers kernel = do
-    peerStates <- fmap tuple3pop <$> error "TODO"      
-                                            -- (   STM.atomically
-                                            --   . (>>= traverse readFetchClientState)
-                                            --   . Net.readFetchClientsStateVars
-                                            --   . getFetchClientRegistry $ kernel
-                                            -- )
+    peerStates <- fmap tuple3pop <$> ( STM.atomically
+                                     . (>>= traverse readFetchClientState)
+                                     . Net.readFetchClientsStateVars
+                                     . getFetchClientRegistry $ kernel
+                                     )
     candidates <- STM.atomically . getCandidates . cschcMap . getChainSyncHandles $ kernel
 
     let peers = flip Map.mapMaybeWithKey candidates $ \cid af ->
