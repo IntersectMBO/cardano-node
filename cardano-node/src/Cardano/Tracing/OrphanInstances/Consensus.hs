@@ -1450,7 +1450,7 @@ instance ( LedgerSupportsProtocol blk,
     mconcat [ "kind" .= String "JumpInfo"
               , "mostRecentIntersection" .= toObject verb (ChainSync.Client.jMostRecentIntersection info)
               , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
-              , error "TODO"  -- "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info)) 
+              , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info))
               ]
 
 instance HasPrivacyAnnotation (ChainSync.Client.TraceEventCsj peer blk) where
