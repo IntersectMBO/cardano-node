@@ -33,7 +33,7 @@ import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -45,7 +45,7 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @cabal test cardano-testnet-test --test-options '-p "/Propose New Constitution SPO/"'@
 hprop_ledger_events_propose_new_constitution_spo :: Property
-hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_propose_new_constitution_spo = integrationRetryWorkspace 2 "propose-new-constitution-spo" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

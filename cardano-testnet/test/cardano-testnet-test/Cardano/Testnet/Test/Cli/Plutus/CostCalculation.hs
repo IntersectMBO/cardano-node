@@ -40,13 +40,6 @@ import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Golden as H
-import qualified Hedgehog.Extras.Test.TestWatchdog as H
-
 import           Testnet.Components.Query (findLargestUtxoForPaymentKey, getEpochStateView, getTxIx,
                    watchEpochStateUpdate)
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
@@ -56,6 +49,13 @@ import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
 import           Testnet.Types (PaymentKeyInfo (paymentKeyInfoAddr), paymentKeyInfoPair,
                    verificationKey)
+
+import           Hedgehog (Property)
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 -- @DISABLE_RETRIES=1 cabal run cardano-testnet-test -- -p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Ref Script/"@
 hprop_ref_plutus_cost_calculation :: Property
@@ -183,7 +183,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
     execCli'
       execConfig
       [ eraName
-      , "transaction", "calculate-plutus-script-cost"
+      , "transaction", "calculate-plutus-script-cost", "online"
       , "--tx-file", unFile signedUnlockTx
       , "--out-file", unFile txCostOutput
       ]
@@ -199,7 +199,7 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref plutus scri
       execCli'
         execConfig
         [ eraName
-        , "transaction", "calculate-plutus-script-cost"
+        , "transaction", "calculate-plutus-script-cost", "online"
         , "--tx-file", unFile signedUnlockTx
         ]
 
@@ -306,7 +306,7 @@ hprop_included_plutus_cost_calculation = integrationRetryWorkspace 2 "included p
     execCli'
       execConfig
       [ eraName
-      , "transaction", "calculate-plutus-script-cost"
+      , "transaction", "calculate-plutus-script-cost", "online"
       , "--tx-file", unFile signedIncludedScript
       , "--out-file", unFile includedScriptCostOutput
       ]
@@ -421,7 +421,7 @@ hprop_included_simple_script_cost_calculation = integrationRetryWorkspace 2 "inc
       execCli'
         execConfig
         [ eraName
-        , "transaction", "calculate-plutus-script-cost"
+        , "transaction", "calculate-plutus-script-cost", "online"
         , "--tx-file", unFile signedScriptUnlock
         ]
 

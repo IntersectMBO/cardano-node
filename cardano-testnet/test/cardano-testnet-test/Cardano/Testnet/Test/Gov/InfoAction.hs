@@ -39,6 +39,7 @@ import           Testnet.Components.Query
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
+import           Testnet.Process.Cli.Transaction (retrieveTransactionId)
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
@@ -189,14 +190,11 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     , "--tx-file", txbodySignedFp
     ]
 
-  txidString <- mconcat . lines <$> execCli' execConfig
-    [ "latest", "transaction", "txid"
-    , "--tx-file", txbodySignedFp
-    ]
+  txIdString <- H.noteShowM $ retrieveTransactionId execConfig (File txbodySignedFp)
 
   governanceActionIndex <-
     H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString txidString) anyNewEpochState
+      pure $ maybeExtractGovernanceActionIndex (fromString txIdString) anyNewEpochState
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
@@ -206,7 +204,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 2 "info-hash" $ \tem
     execCli' execConfig
       [ eraName, "governance", "vote", "create"
       , "--yes"
-      , "--governance-action-tx-id", txidString
+      , "--governance-action-tx-id", txIdString
       , "--governance-action-index", show @Word16 governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n

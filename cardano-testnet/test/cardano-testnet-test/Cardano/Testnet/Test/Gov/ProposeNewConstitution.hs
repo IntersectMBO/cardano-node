@@ -47,7 +47,7 @@ import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (addEnvVarsToConfig, execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -58,7 +58,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Propose And Ratify New Constitution/"'@
 hprop_ledger_events_propose_new_constitution :: Property
-hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "propose-new-constitution" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -248,10 +248,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   waitForGovActionVotes epochStateView (EpochInterval 1)
 
-  txid <- execCli' execConfig [ eraName, "transaction", "txid", "--tx-file", unFile signedProposalTx ]
-
-  let txNoNewline = Text.unpack (Text.strip (Text.pack txid))
-  H.noteShow_ txNoNewline
+  txId <- H.noteShowM $ retrieveTransactionId execConfig signedProposalTx
 
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.
@@ -275,7 +272,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
   proposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
-                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txNoNewline
+                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txId
                                     , "--governance-action-index", "0"
                                     ]
 
@@ -289,7 +286,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   -- Check TxId returned is the same as the one we used
   proposalsTxId <- H.evalMaybe $ proposal ^? Aeson.key "actionId" . Aeson.key "txId" . Aeson._String
-  proposalsTxId === Text.pack txNoNewline
+  proposalsTxId === Text.pack txId
 
   -- Check that committeeVotes is an empty object
   proposalsCommitteeVotes <- H.evalMaybe $ proposal ^? Aeson.key "committeeVotes" . Aeson._Object
