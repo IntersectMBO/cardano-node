@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# LANGUAGE TypeApplications #-}
@@ -14,7 +15,10 @@ module Test.Cardano.Node.FilePermissions
   ) where
 
 import           Control.Monad.Except
+import           "contra-tracer" Control.Tracer
+import           Control.Tracer.Arrow
 import           Data.Foldable
+import           Data.IORef
 import           System.Directory (removeFile)
 
 import           Cardano.Api
@@ -31,21 +35,21 @@ import           Data.Function (const, ($), (.))
 import qualified Data.List as L
 import           Data.Maybe (Maybe (..))
 import           Data.Semigroup (Semigroup (..))
-import           Hedgehog (Property, PropertyT, property, success)
-import qualified Hedgehog
+import           Hedgehog
 import           Hedgehog.Internal.Property (Group (..), failWith)
 import           System.IO (FilePath, IO)
 import           Text.Show (Show (..))
+import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
 
 #ifdef UNIX
-import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
 
 import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
 import           Control.Exception (bracket)
-import           Hedgehog (Gen, classify, forAll)
+import           Hedgehog
+import           Hedgehog.Extras
 import qualified Hedgehog.Gen as Gen
 #endif
 
@@ -56,10 +60,10 @@ prop_createVRFFileWithOwnerPermissions :: Property
 prop_createVRFFileWithOwnerPermissions =
   property $ do
     let vrfSign = "vrf-signing-key"
-    vrfSkey <- liftIO $ generateSigningKey AsVrfKey
+    vrfSkey <- evalIO $ generateSigningKey AsVrfKey
     createFileWithOwnerPermissions vrfSign vrfSkey
 
-    fResult <- liftIO . runExceptT $ checkVRFFilePermissions vrfSign
+    fResult <- evalIO . runExceptT $ checkVRFFilePermissions nullTracer vrfSign
     case fResult of
       Left err -> failWith Nothing $ show err
       Right () -> liftIO (removeFile (unFile vrfSign)) >> success
@@ -84,7 +88,7 @@ prop_sanityCheck_checkVRFFilePermissions =
     correctResult <-
       liftIO $ bracket  (createFile (unFile vrfPrivateKeyCorrect) correctPermission)
                         (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyCorrect))
-                        (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyCorrect)
+                        (const . liftIO . runExceptT $ checkVRFFilePermissions nullTracer vrfPrivateKeyCorrect)
     case correctResult of
       Left err ->
         failWith Nothing $ "checkVRFFilePermissions should not have failed with error: "
@@ -105,7 +109,7 @@ prop_sanityCheck_checkVRFFilePermissions =
                             setFileMode (unFile vrfPrivateKeyOther) $ createPermissions oPermissions
                             return h)
                         (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyOther))
-                        (const .liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyOther)
+                        (const .liftIO . runExceptT $ checkVRFFilePermissions nullTracer vrfPrivateKeyOther)
     case otherResult of
       Left (OtherPermissionsExist _) -> success
       Left err ->
@@ -120,6 +124,7 @@ prop_sanityCheck_checkVRFFilePermissions =
     classify "VRF File has one group permission" $ length gPermissions == 1
     classify "VRF File has two group permissions" $ length gPermissions == 2
     classify "VRF File has three group permissions" $ length gPermissions == 3
+    (capturingTracer, messagesIor) <- mkCapturingTracer
     groupResult <-
       -- Creating a file with group permissions appears to not work
       -- it instead creates a file with owner permissions. Therefore we must
@@ -128,14 +133,19 @@ prop_sanityCheck_checkVRFFilePermissions =
                             setFileMode (unFile vrfPrivateKeyGroup) $ createPermissions gPermissions
                             return h)
                         (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyGroup))
-                        (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyGroup)
+                        (const . liftIO . runExceptT $ checkVRFFilePermissions capturingTracer vrfPrivateKeyGroup)
     case groupResult of
-      Left (GroupPermissionsExist _) -> success
+      Left (GroupPermissionsExist _) -> do
+        note_ "Group permissions check should not fail"
+        failure
       Left err ->
         failWith Nothing $ "checkVRFFilePermissions should not have failed with error: "
                          <> show err
-      Right () ->
-        failWith Nothing "This should have failed as Group permissions exist"
+      Right () -> do
+        messages <- evalIO $ readIORef messagesIor
+        ["WARNING: VRF private key file at: vrf-private-key-group has \"group\" file permissions. Please remove all \"group\" file permissions."]
+          === messages
+
 
 createPermissions :: [FileMode] -> FileMode
 createPermissions = foldl' unionFileModes (ownerReadMode `unionFileModes` ownerWriteMode)
@@ -151,13 +161,20 @@ genOtherPermissions =
   let oPermissions = [otherReadMode, otherWriteMode, otherExecuteMode]
   in do subSeq <- Gen.filter (not . L.null) $ Gen.subsequence oPermissions
         Gen.frequency [(3, return oPermissions), (12, return subSeq)]
+
+mkCapturingTracer :: MonadIO m => m (Tracer IO String, IORef [String])
+mkCapturingTracer = do
+  messages <- liftIO $ newIORef []
+  let registerMessage :: String -> IO ()
+      registerMessage msg = atomicModifyIORef messages (\msgs -> (msgs <> [msg], ()))
+  pure (Tracer registerMessage, messages)
 #endif
 
 -- -----------------------------------------------------------------------------
 
 tests :: IO Bool
 tests =
-  Hedgehog.checkParallel $ Group "Test.Cardano.Node.FilePermissons"
+  checkParallel $ Group "Test.Cardano.Node.FilePermissons"
 #ifdef UNIX
     [ ("prop_createVRFFileWithOwnerPermissions", prop_createVRFFileWithOwnerPermissions)
     , ("prop_sanityCheck_checkVRFFilePermissions", prop_sanityCheck_checkVRFFilePermissions)

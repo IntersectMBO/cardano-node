@@ -265,6 +265,7 @@ test-suite cardano-node-test
                       , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting
+                      , contra-tracer
                       , directory
                       , filepath
                       , hedgehog
@@ -279,6 +280,7 @@ test-suite cardano-node-test
                       , ouroboros-network-api
                       , strict-sop-core
                       , text
+                      , trace-dispatcher
                       , transformers
                       , vector
                       , yaml
