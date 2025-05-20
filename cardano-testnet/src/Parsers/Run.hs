@@ -11,6 +11,7 @@ module Parsers.Run
 
 import           Cardano.Api.Shelley (ShelleyGenesis)
 
+import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..))
 import           Cardano.CLI.Environment
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
@@ -51,11 +52,13 @@ data CardanoTestnetCommands
 commands :: EnvCli -> Parser CardanoTestnetCommands
 commands envCli =
   asum
-    [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
+    [ fmap StartCardanoTestnet (subparser (cmdCardano envCli'))
     , fmap GetVersion (subparser cmdVersion)
-    , fmap (Help pref (opts envCli)) (subparser cmdHelp)
+    , fmap (Help pref (opts envCli')) (subparser cmdHelp)
     ]
-
+  where
+    -- Override default era to Conway instead of Babbage in parsers
+    envCli' = envCli{envCliAnyCardanoEra = Just $ AnyCardanoEra ConwayEra}
 
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
