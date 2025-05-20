@@ -187,7 +187,8 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
       return ()
 
-
+-- Execute this test with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Shutdown On SlotSynced/"'@
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
