@@ -688,7 +688,7 @@ defaultPartialNodeConfiguration =
     PeerSelectionTargets {
       targetNumberOfRootPeers = deadlineRoots,
       targetNumberOfKnownPeers = deadlineKnown,
-      targetNumberOfEstablishedPeers = deadlineEstablished,
+      targetNumberOfEstablishedPeers = _deadlineEstablished,
       targetNumberOfActivePeers = deadlineActive,
       targetNumberOfKnownBigLedgerPeers = deadlineBigKnown,
       targetNumberOfEstablishedBigLedgerPeers = deadlineBigEst,
@@ -696,7 +696,7 @@ defaultPartialNodeConfiguration =
     PeerSelectionTargets {
       targetNumberOfActivePeers = syncActive,
       targetNumberOfKnownBigLedgerPeers = syncBigKnown,
-      targetNumberOfEstablishedBigLedgerPeers = syncBigEst,
+      targetNumberOfEstablishedBigLedgerPeers = _syncBigEst,
       targetNumberOfActiveBigLedgerPeers = syncBigAct } = Cardano.defaultSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
