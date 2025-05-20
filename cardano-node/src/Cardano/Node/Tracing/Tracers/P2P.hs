@@ -736,6 +736,7 @@ instance MetaTrace (TracePeerSelection extraDebugState extraFlags extraPeers Soc
     severityFor (Namespace [] ["DemoteWarmBigLedgerPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmBigLedgerPeerFailed"]) _ = Just Info
     severityFor (Namespace [] ["DemoteWarmBigLedgerPeerFailed", "CoolingToColdTimeout"]) _ = Just Error
+    severityFor (Namespace [] ["DemoteWarmBigLedgerPeerDone"]) _ = Just Info
     severityFor (Namespace [] ["DemoteHotPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteLocalHotPeers"]) _ = Just Info
     severityFor (Namespace [] ["DemoteHotFailed"]) _ = Just Info

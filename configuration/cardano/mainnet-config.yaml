@@ -41,11 +41,6 @@ TargetNumberOfActivePeers: 20
 TargetNumberOfEstablishedPeers: 30
 TargetNumberOfKnownPeers: 150
 TargetNumberOfRootPeers: 60
-SyncTargetNumberOfActivePeers: 0
-SyncTargetNumberOfActiveBigLedgerPeers: 30
-SyncTargetNumberOfEstablishedBigLedgerPeers: 40
-SyncTargetNumberOfKnownBigLedgerPeers: 100
-MinBigLedgerPeersForTrustedState: 5
 
 ##### Consensus Configuration #####
 
