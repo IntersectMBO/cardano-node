@@ -38,7 +38,7 @@ MaxKnownMajorProtocolVersion: 2
 
 PeerSharing: True
 TargetNumberOfActivePeers: 20
-TargetNumberOfEstablishedPeers: 40
+TargetNumberOfEstablishedPeers: 30
 TargetNumberOfKnownPeers: 150
 TargetNumberOfRootPeers: 60
 
@@ -48,7 +48,7 @@ TargetNumberOfRootPeers: 60
 ConsensusMode: PraosMode
 SyncTargetNumberOfActivePeers: 0
 SyncTargetNumberOfActiveBigLedgerPeers: 30
-SyncTargetNumberOfEstablishedBigLedgerPeers: 50
+SyncTargetNumberOfEstablishedBigLedgerPeers: 40
 SyncTargetNumberOfKnownBigLedgerPeers: 100
 MinBigLedgerPeersForTrustedState: 5
 
