@@ -465,7 +465,7 @@ let
       //
       # If it needs host volumes add the constraints (can't be "null" or "[]".)
       ### - https://developer.hashicorp.com/nomad/tutorials/stateful-workloads/stateful-workloads-host-volumes
-      (lib.optionalAttrs (profile.cluster.nomad.host_volumes != null) {
+      (lib.optionalAttrs ((profile.cluster or null) != null && profile.cluster.nomad.host_volumes != null) {
         volume = lib.listToAttrs (lib.lists.imap0
           (i: v: {
             # Internal name, reference to mount in this group's tasks below.
@@ -559,7 +559,7 @@ let
               # When using dedicated Nomad clusters on AWS we want to use public
               # IPs/routing, all the other cloud runs will run behind a
               # VPC/firewall.
-              if profile.cluster.aws.use_public_routing
+              if (profile.cluster or null) != null && profile.cluster.aws.use_public_routing
               then "\${attr.unique.platform.aws.public-ipv4}"
               else "" # Local runs just use 127.0.0.1.
             ;
@@ -591,7 +591,7 @@ let
           };
 
           # If it needs host volumes mount them (defined above if any).
-          volume_mount = if profile.cluster.nomad.host_volumes != null
+          volume_mount = if (profile.cluster or null) != null && profile.cluster.nomad.host_volumes != null
             then lib.lists.imap0
               (i: v: {
                 # Internal name, defined above in the group's specification.
@@ -742,7 +742,7 @@ let
           ## If using oneTracerPerNode no "tracer volumes" need to be mounted
           ## (because of no socket sharing between tasks), and tracer files are
           ## created using templates.
-          (lib.optionals (profile.node.tracer && oneTracerPerNode) [
+          (lib.optionals (profile.node.trace_forwarding && oneTracerPerNode) [
             ## Tracer start.sh script.
             {
               env = false;
@@ -1016,7 +1016,7 @@ let
       in lib.listToAttrs (
         # If not oneTracerPerNode, an individual tracer task is needed (instead
         # of running a tracer alongside a node with supervisor)
-        lib.optionals (profile.node.tracer && !oneTracerPerNode) [
+        lib.optionals (profile.node.trace_forwarding && !oneTracerPerNode) [
           {
             name = "tracer";
             value = valueF
@@ -1306,7 +1306,7 @@ let
       [
         # Address string to
         (
-          if profile.cluster.aws.use_public_routing
+          if (profile.cluster or null) != null && profile.cluster.aws.use_public_routing
           then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
           else ''--host-addr 0.0.0.0''
         )

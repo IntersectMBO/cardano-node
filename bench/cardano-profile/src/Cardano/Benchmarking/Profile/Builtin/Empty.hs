@@ -114,7 +114,6 @@ profilesNoEraEmpty = map baseNoDataset
   let fast =
           P.empty & V.datasetEmpty . genesis . fastDuration
         . P.uniCircle . P.loopback
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
       fast1 = fast & V.hosts 1
       fast2 = fast & V.hosts 2
   in [
@@ -134,7 +133,6 @@ profilesNoEraEmpty = map baseNoDataset
   let ciTest =
           P.empty & V.datasetEmpty . genesis . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
   -- Local
     ciTest & P.name "ci-test"          . V.valueLocal . P.traceForwardingOn  . P.newTracing . P.p2pOff
@@ -152,7 +150,6 @@ profilesNoEraEmpty = map baseNoDataset
           P.empty & V.datasetEmpty . V.genesisVariantPreVoltaire . ciTestDuration
         . P.uniCircle . V.hosts 2 . P.loopback
         . P.analysisSizeSmall
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
      -- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus
     ciTestHydra & P.name "ci-test-hydra" . P.txFeeOverwrite 1380000 . V.plutusLoop . P.traceForwardingOn  . P.newTracing . P.p2pOn . P.blocksize64k
@@ -166,7 +163,6 @@ profilesNoEraEmpty = map baseNoDataset
         -- TODO: "default-*" uses 6 nodes and `uniCircle`.
         . P.torus . V.hosts 6 . P.loopback
         . P.tracerWithresources
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
       bench = trace & traceBenchDuration
       full  = trace & traceFullDuration
   in [
@@ -190,7 +186,6 @@ profilesNoEraEmpty = map baseNoDataset
         -- TODO: The only one without 0 delegators.
         --       Fix and remove `baseNoDataset` (Same `base` for all).
         . P.utxo 0 . P.delegators 6 . P.dreps 0
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
       value  = noCliStop & V.genesisVariant300
       -- TODO: "fast-plutus" and "ci-test-plutus" are using `genesisVariant300`.
       plutus = noCliStop & V.genesisVariantPreVoltaire
@@ -214,7 +209,6 @@ profilesNoEraEmpty = map baseNoDataset
   let ep =
           P.empty & V.datasetEmpty . genesis . epochTransitionDuration
         . P.uniCircle . V.hosts 2 . P.loopback
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     ep & P.name "epoch-transition" . V.valueLocal . P.traceForwardingOn . P.newTracing . P.p2pOff
   ]

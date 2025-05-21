@@ -1,7 +1,7 @@
 { lib
 , nodeSpec
-, tracer
 , tracing_backend
+, trace_forwarding
 }:
 cfg:
 
@@ -25,7 +25,7 @@ let
           backends = [
             "Stdout MachineFormat"
             "EKGBackend"
-            ] ++ optional tracer
+            ] ++ optional trace_forwarding
                  "Forwarder";
         };
 

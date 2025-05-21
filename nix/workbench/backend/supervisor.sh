@@ -120,16 +120,18 @@ case "$op" in
 
         if jqtest '.node.tracing_backend == "trace-dispatcher"' "$dir"/profile.json
         then
-            local basePort=$(                   envjq 'basePortTracer')
-            local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
-            local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
-            local port_rtview=$((    basePort+$(envjq 'port_shift_rtview')))
-            cat <<EOF
+            if jqtest '.node.trace_forwarding' "$dir"/profile.json
+            then
+                local basePort=$(                   envjq 'basePortTracer')
+                local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
+                local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
+                local port_rtview=$((    basePort+$(envjq 'port_shift_rtview')))
+                cat <<EOF
   - EKG URL (node-0):                                  http://localhost:$port_ekg/node-0
   - Prometheus URL (node-0):                           http://localhost:$port_prometheus/node-0
   - RTView URL (depending on cardano-tracer build):    http://localhost:$port_rtview
 EOF
-
+            fi
         else cat <<EOF
   - EKG URL (node-0):                                  http://localhost:12788
   - Prometheus URL (node-0):                           http://localhost:12798/metrics
@@ -224,7 +226,7 @@ EOF
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        if jqtest '.node.tracing_backend == "trace-dispatcher"' "$dir"/profile.json
+        if jqtest '.node.tracing_backend == "trace-dispatcher" and .node.trace_forwarding' "$dir"/profile.json
         then if ! supervisorctl start tracer
              then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
                   echo "$(red config.json) -------------------------------------" >&2
@@ -260,7 +262,7 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
-        ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
+        ls -l $dir/node-{0,1}/node.socket || true
         if ! supervisorctl start healthcheck
         then progress "supervisor" "$(red fatal: failed to start) $(white healthcheck)"
              echo "$(red healthcheck stdout) -----------------------------------" >&2
@@ -281,7 +283,7 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
-        ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
+        ls -l $dir/node-{0,1}/node.socket || true
         if ! supervisorctl start generator
         then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
              echo "$(red run-script.json) ------------------------------------" >&2

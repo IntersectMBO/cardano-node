@@ -1516,7 +1516,7 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
                 , "slot" .= toJSON (unSlotNo tsSlotNo)
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                 , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
-                , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
+                , "chainDensity" .= toJSON tsChainDensity
                 ]
   forHuman TraceStartLeadershipCheckPlus {..} =
       "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)

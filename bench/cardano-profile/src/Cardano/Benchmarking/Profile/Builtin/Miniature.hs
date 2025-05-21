@@ -64,7 +64,6 @@ profilesNoEraMiniature =
         . P.desc "Miniature dataset, CI-friendly duration, bench scale"
         . P.uniCircle . P.loopback
         . benchDuration
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
       -- Helpers by size:
       ciBench02  = ciBench & V.hosts  2
       ciBench10  = ciBench & V.hosts 10
@@ -114,7 +113,6 @@ profilesNoEraMiniature =
         . P.dreps 0
         . P.p2pOn
         . P.analysisSizeFull . P.analysisUnitary
-        . V.clusterDefault -- TODO: "cluster" should be "null" here.
   in [
     dense & P.name "6-dense"            . V.valueCloud . duration30  . P.traceForwardingOn . P.newTracing
   , dense & P.name "6-dense-rtsprof"    . V.valueCloud . duration30  . P.traceForwardingOn . P.newTracing . P.rtsHeapProf . P.rtsEventlogged
