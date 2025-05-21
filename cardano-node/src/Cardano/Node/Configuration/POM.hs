@@ -45,14 +45,14 @@ import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Node.Genesis (GenesisConfig, GenesisConfigFlags,
                    defaultGenesisConfigFlags, mkGenesisConfig)
-import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
-import           Ouroboros.Network.Mux (ForkPolicy, noBindForkPolicy, responderForkPolicy)
-import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 import           Ouroboros.Consensus.Storage.LedgerDB.Args (QueryBatchSize (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..))
 import           Ouroboros.Network.Diffusion.Configuration as Configuration
+import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
+import           Ouroboros.Network.Mux (ForkPolicy, noBindForkPolicy, responderForkPolicy)
+import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
