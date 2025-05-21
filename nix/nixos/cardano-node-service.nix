@@ -594,6 +594,9 @@ in {
           Cardano-node topology files will be stored in /etc as:
             /etc/cardano-node/topology-''${toString i}.yaml
 
+          For peerSharing enabled networks, peer sharing files will be stored in /etc as:
+            /etc/cardano-node/peer-sharing-''${toString i}.json
+
           Enabling this option will also allow direct topology edits for tests when a full
           service re-deployment is not desired.
         '';
@@ -723,11 +726,20 @@ in {
 
       peerSnapshotFile = mkOption {
         type = funcToOr nullOrStr;
-        default = null;
+        default = i:
+          # Node config in 10.5 will default to genesis mode for preview and preprod.
+          if cfg.useNewTopology && elem cfg.environment ["preview" "preprod"]
+          then
+            if cfg.useSystemdReload
+            then "peer-snapshot-${toString i}.json"
+            else toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot))
+          else null;
         example = i: "/etc/cardano-node/peer-snapshot-${toString i}.json";
         apply = x: if lib.isFunction x then x else _: x;
         description = ''
-          If set, cardano-node will load a peer snapshot file from the declared absolute path.
+          If set, cardano-node will load a peer snapshot file from the declared path which can
+          be absolute or relative.  If a relative path is given, it will be interpreted relative
+          to the location of the topology file which it is declared in.
 
           The peer snapshot file contains a snapshot of big ledger peers taken at some arbitrary slot.
           These are the largest pools that cumulatively hold 90% of total stake.
@@ -752,9 +764,18 @@ in {
         isSystemUser = true;
       };
 
-      environment.etc = mkIf cfg.useSystemdReload (foldl'
-        (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.yaml".source = selectTopology i;}) {}
-      (range 0 (cfg.instances - 1)));
+      environment.etc = mkMerge [
+        (mkIf cfg.useSystemdReload
+          (foldl'
+            (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.yaml".source = selectTopology i;}) {}
+          (range 0 (cfg.instances - 1)))
+        )
+        (mkIf (cfg.useNewTopology && cfg.useSystemdReload)
+          (foldl'
+            (acc: i: recursiveUpdate acc {"cardano-node/peer-snapshot-${toString i}.json".source = toFile "peer-snapshot.json" (toJSON (envConfig.peerSnapshot));}) {}
+          (range 0 (cfg.instances - 1)))
+        )
+      ];
 
       ## TODO:  use http://hackage.haskell.org/package/systemd for:
       ##   1. only declaring success after we perform meaningful init (local state recovery)
