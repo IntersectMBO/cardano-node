@@ -82,7 +82,7 @@ let
       exec ${pkgs.${exe}}/bin/${exe} $@
     ${clusterStatements}
     else
-      echo "Managed configuration for network "$NETWORK" does not exist"
+      echo "[Error] Managed configuration for network "$NETWORK" does not exist"
     fi
   '';
 
