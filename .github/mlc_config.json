@@ -8,9 +8,13 @@
         },
         {
             "pattern": "https://iohk.zendesk.com"
+        },
+        {
+            "pattern": "^#$"
         }
     ],
     "retryOn429": true,
+    "retryCount": 4,
     "aliveStatusCodes": [
         200,
         206

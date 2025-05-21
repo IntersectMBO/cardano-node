@@ -162,7 +162,7 @@ None
 - Fixed interoperability bug in non-p2p networking code base which was exposed
   by p2p nodes. (issue [ouroboros-network#4465])
 
-[ouroboros-network#4465]: https://github.com/input-output-hk/ouroboros-network/issues/4465
+[ouroboros-network#4465]: https://github.com/IntersectMBO/ouroboros-network/issues/4465
 
 ## 1.35.6 -- March 2023
 

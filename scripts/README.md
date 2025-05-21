@@ -1,7 +1,7 @@
 # Scripts Overview
 
 The `scripts` directory consists of the following directories:
-- [benchmarking](#benchmarking)
+- benchmarking
 - [lite](#lite)
 - [shelley-from-scratch](#shelley-from-scratch)
 - [byron-to-alonzo](#byron-to-alonzo)

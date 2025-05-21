@@ -1931,7 +1931,7 @@ instance MetaTrace (TraceForgeEvent blk) where
     , "  We record both the current slot number as well as the tip of the"
     , "  ImmutableDB."
     , " "
-    , " See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+    , " See also <https://github.com/IntersectMBO/ouroboros-consensus/issues/732>"
     ]
   documentFor (Namespace _ ["BlockFromFuture"]) = Just $ mconcat
     [ "Leadership check failed: the current chain contains a block from a slot"
@@ -1942,7 +1942,7 @@ instance MetaTrace (TraceForgeEvent blk) where
     , "  We record both the current slot number as well as the slot number of the"
     , "  block at the tip of the chain."
     , " "
-    , "  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+    , "  See also <https://github.com/IntersectMBO/ouroboros-consensus/issues/732>"
     ]
   documentFor (Namespace _ ["BlockContext"]) = Just $ mconcat
     [ "We found out to which block we are going to connect the block we are about"
