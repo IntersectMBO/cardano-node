@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -20,12 +19,6 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
--- needs different instances on ghc8 and on ghc9
-#if __GLASGOW_HASKELL__ < 904
--- Pattern synonym record fields with GHC-8.10 is issuing the `-Wname-shadowing`
--- warning.
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-#endif
 
 
 module Cardano.Tracing.Tracers

@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -9,12 +8,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
--- needs different instances on ghc8 and on ghc9
-#if __GLASGOW_HASKELL__ < 904
--- Pattern synonym record fields with GHC-8.10 is issuing the `-Wname-shadowing`
--- warning.
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-#endif
 
 module Cardano.Node.Tracing.Tracers.P2P
   () where

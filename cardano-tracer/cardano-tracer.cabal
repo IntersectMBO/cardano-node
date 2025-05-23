@@ -56,6 +56,9 @@ common project-config
                         -Wredundant-constraints
                         -Wunused-packages
 
+  if impl(ghc >= 9.8)
+    ghc-options:        -Wno-x-partial
+
 library
   import:               project-config
 
