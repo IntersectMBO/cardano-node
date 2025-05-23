@@ -1,6 +1,9 @@
 # Revision history for trace-dispatcher
 
-## 2.9.1 (April, 2025)
+## 2.9.2 -- May 2025
+* New config field `traceOptionLedgerMetricsFrequency`.
+
+## 2.9.1 -- Apr 2025
 * Removed `cardano-node' as a dependency from `cardano-tracer'. This necessitated moving `NodeInfo`
   (from `cardano-tracer:Cardano.Node.Startup` to `trace-dispatcher:Cardano.Logging.Types.NodeInfo`), `NodePeers`
   (from `cardano-node:Cardano.Node.Tracing.Peers` to `trace-dispatcher:Cardano.Logging.Types.NodePeers`), and

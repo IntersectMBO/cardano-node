@@ -193,8 +193,8 @@ library
                       , string-qq
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.9.1
-                      , trace-forward ^>= 2.2.10
+                      , trace-dispatcher ^>= 2.9.2
+                      , trace-forward ^>= 2.2.11
                       , trace-resources ^>= 0.2.3
                       , wai ^>= 3.2
                       , warp ^>= 3.4
@@ -254,8 +254,8 @@ library demo-forwarder-lib
                       , ouroboros-network-framework
                       , tasty-quickcheck
                       , time
-                      , trace-dispatcher ^>= 2.9
-                      , trace-forward ^>= 2.2.10
+                      , trace-dispatcher
+                      , trace-forward
                       , vector
                       , vector-algorithms
                       , QuickCheck
@@ -297,7 +297,7 @@ library demo-acceptor-lib
                       , stm <2.5.2 || >=2.5.3
                       , text
                       , tasty-quickcheck
-                      , trace-forward ^>= 2.2.10
+                      , trace-forward
                       , vector
                       , vector-algorithms
                       , QuickCheck
@@ -359,8 +359,8 @@ test-suite cardano-tracer-test
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.9
-                      , trace-forward ^>= 2.2.10
+                      , trace-dispatcher
+                      , trace-forward
                       , unix-compat
                       , vector
                       , vector-algorithms
@@ -420,8 +420,8 @@ test-suite cardano-tracer-test-ext
                       , tasty-quickcheck
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.9
-                      , trace-forward ^>= 2.2.10
+                      , trace-dispatcher
+                      , trace-forward
                       , unix-compat
                       , vector
                       , vector-algorithms
@@ -447,7 +447,7 @@ benchmark cardano-tracer-bench
                       , extra
                       , filepath
                       , time
-                      , trace-dispatcher ^>= 2.9
+                      , trace-dispatcher
 
   ghc-options:          -threaded
                         -rtsopts
