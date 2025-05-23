@@ -35,6 +35,7 @@ data ConfigRepresentation = ConfigRepresentation {
   , traceOptionMetricsPrefix      :: Maybe Text
   , traceOptionPeerFrequency      :: Maybe Int
   , traceOptionResourceFrequency  :: Maybe Int
+  , traceOptionLedgerMetricsFrequency :: Maybe Int
   }
   deriving (Eq, Ord, Show)
 
@@ -46,6 +47,7 @@ instance AE.FromJSON ConfigRepresentation where
                            <*> obj .:? "TraceOptionMetricsPrefix"
                            <*> obj .:? "TraceOptionPeerFrequency"
                            <*> obj .:? "TraceOptionResourceFrequency"
+                           <*> obj .:? "TraceOptionLedgerMetricsFrequency"
     parseJSON _ = mempty
 
 instance AE.ToJSON ConfigRepresentation where
@@ -56,6 +58,7 @@ instance AE.ToJSON ConfigRepresentation where
     , "TraceOptionMetricsPrefix"      .= traceOptionMetricsPrefix
     , "TraceOptionPeerFrequency"      .= traceOptionPeerFrequency
     , "TraceOptionResourceFrequency"  .= traceOptionResourceFrequency
+    , "TraceOptionLedgerMetricsFrequency" .= traceOptionLedgerMetricsFrequency
     ]
 
 type OptionsRepresentation = Map.Map Text ConfigOptionRep
@@ -76,6 +79,7 @@ instance AE.FromJSON ConfigOptionRep where
                          <*> obj .:? "detail"
                          <*> obj .:? "backends"
                          <*> obj .:? "maxFrequency"
+
   parseJSON _ = mempty
 
 instance AE.ToJSON ConfigOptionRep where
@@ -113,6 +117,7 @@ readConfigurationWithDefault fp defaultConf = do
         (tcMetricsPrefix fileConf <|> tcMetricsPrefix defaultConf)
         (tcPeerFrequency fileConf <|> tcPeerFrequency defaultConf)
         (tcResourceFrequency fileConf <|> tcResourceFrequency defaultConf)
+        (tcLedgerMetricsFrequency fileConf <|> tcLedgerMetricsFrequency defaultConf)
 
 -- | Parse the byteString as external representation and converts to internal
 -- representation
@@ -145,6 +150,8 @@ parseRepresentation bs = transform (decodeEither' bs)
           (traceOptionMetricsPrefix cr)
           (traceOptionPeerFrequency cr)
           (traceOptionResourceFrequency cr)
+          (traceOptionLedgerMetricsFrequency cr)
+
 
     -- | Convert from external to internal representation
     toConfigOptions :: ConfigOptionRep -> [ConfigOption]
@@ -166,6 +173,7 @@ configToRepresentation traceConfig =
         (tcMetricsPrefix traceConfig)
         (tcPeerFrequency traceConfig)
         (tcResourceFrequency traceConfig)
+        (tcLedgerMetricsFrequency traceConfig)
   where
     toOptionRepresentation :: Map.Map [Text] [ConfigOption]
                               ->  Map.Map Text ConfigOptionRep

@@ -1,6 +1,6 @@
 {
-  "Forge.DelegMapSize": "Delegation map size",
-  "Forge.UtxoSize": "UTxO set size",
+  "delegMapSize": "Delegation map size",
+  "utxoSize": "UTxO set size",
   "Forge.forged": "Counter of forged blocks",
   "Mem.resident": "Kernel-reported RSS (resident set size)",
   "RTS.alloc": "RTS-reported bytes allocated",

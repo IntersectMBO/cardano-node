@@ -12,9 +12,10 @@ import qualified Data.Map.Strict as Map
 defaultCardanoConfig :: TraceConfig
 defaultCardanoConfig = emptyTraceConfig {
     tcMetricsPrefix = Just "cardano.node.metrics."
+  , tcLedgerMetricsFrequency = Nothing             -- discard the default from 'trace-dispatcher'; Cardano has own ones, different for block producers and relays
   , tcOptions = Map.fromList
      [([],
-          [ ConfSeverity (SeverityF (Just Notice)) -- Means Silence
+          [ ConfSeverity (SeverityF (Just Notice))
           , ConfDetail DNormal
           , ConfBackend  [Stdout MachineFormat
                          , EKGBackend
@@ -55,6 +56,8 @@ defaultCardanoConfig = emptyTraceConfig {
      ,(["Net", "InboundGovernor"],
           [ ConfSeverity (SeverityF (Just Warning))])
      ,(["Net", "PeerSelection"],
+          [ ConfSeverity (SeverityF Nothing)])
+     ,(["LedgerMetrics"],
           [ ConfSeverity (SeverityF Nothing)])
      ,(["Resources"],
           [ ConfSeverity (SeverityF Nothing)])

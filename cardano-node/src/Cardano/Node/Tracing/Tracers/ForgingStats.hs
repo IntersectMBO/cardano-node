@@ -8,7 +8,6 @@ module Cardano.Node.Tracing.Tracers.ForgingStats
   ) where
 
 import           Cardano.Logging
-import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -82,37 +81,32 @@ emptyForgingStats :: ForgingStats
 emptyForgingStats = ForgingStats 0 0 0 0 0
 
 calcForgeStats :: Trace IO ForgingStats
-  -> IO (Trace IO (ForgeTracerType blk))
+  -> IO (Trace IO (TraceForgeEvent blk))
 calcForgeStats tr =
   let tr' = contramap unfold tr
   in foldCondTraceM calculateForgingStats emptyForgingStats
       (\case
-          Left Consensus.TraceStartLeadershipCheck{} -> True
-          Left _ -> False
-          Right _  -> True
+          Consensus.TraceStartLeadershipCheck{} -> True
+          _  -> False
           )
       tr'
 
 calculateForgingStats :: MonadIO m
   => ForgingStats
   -> LoggingContext
-  -> ForgeTracerType blk
+  -> TraceForgeEvent blk
   -> m ForgingStats
 calculateForgingStats stats _context
-    (Left TraceNodeCannotForge {}) =
-      pure $ stats { fsNodeCannotForgeNum = fsNodeCannotForgeNum stats + 1 }
+    TraceNodeCannotForge {} =
+      pure $ stats  { fsNodeCannotForgeNum  = fsNodeCannotForgeNum stats + 1 }
 calculateForgingStats stats _context
-    (Left (TraceNodeIsLeader (SlotNo slot))) =
-        pure $ stats
-    { fsNodeIsLeaderNum = fsNodeIsLeaderNum stats + 1, fsLastSlot = fromIntegral slot }
+    TraceNodeIsLeader {} =
+        pure $ stats  { fsNodeIsLeaderNum  = fsNodeIsLeaderNum stats + 1 }
 calculateForgingStats stats _context
-    (Left TraceForgedBlock {}) =
-        pure $ stats { fsBlocksForgedNum = fsBlocksForgedNum stats + 1 }
+    TraceForgedBlock {} =
+        pure $ stats  { fsBlocksForgedNum  = fsBlocksForgedNum stats + 1 }
 calculateForgingStats stats _context
-    (Left (TraceNodeNotLeader (SlotNo slot'))) =
-      -- Node is not a leader again: The number of blocks forged by
-      -- this node should now be equal to the number of slots when
-      -- this node was a leader.
+    (TraceNodeNotLeader (SlotNo slot')) =
       let slot = fromIntegral slot'
       in if fsLastSlot stats == 0 || succ (fsLastSlot stats) == slot
             then pure $ stats { fsLastSlot = slot }
